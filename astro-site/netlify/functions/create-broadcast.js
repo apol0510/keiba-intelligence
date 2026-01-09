@@ -48,7 +48,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { subject, body_html, created_by } = JSON.parse(event.body);
+    const { subject, body_html, stage, created_by } = JSON.parse(event.body);
 
     // 管理者権限チェック
     if (!ADMIN_EMAILS.includes(created_by)) {
@@ -60,11 +60,11 @@ exports.handler = async (event) => {
     }
 
     // バリデーション
-    if (!subject || !body_html) {
+    if (!subject || !body_html || !stage) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'subject and body_html are required' }),
+        body: JSON.stringify({ error: 'subject, body_html, and stage are required' }),
       };
     }
 
@@ -81,6 +81,7 @@ exports.handler = async (event) => {
           broadcast_id: broadcastId,
           subject,
           body_html,
+          stage: parseInt(stage, 10),
           status: 'draft',
           created_at: new Date().toISOString(),
           hash,

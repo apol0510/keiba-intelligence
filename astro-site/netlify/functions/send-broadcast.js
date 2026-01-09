@@ -1,7 +1,11 @@
 /**
- * 本番送信API（二重送信防止）
+ * 本番送信API（段階移行対応）
  *
- * 最重要：同一メールアドレスへの二重送信が構造的に不可能
+ * 最重要：
+ * - 有料会員のみを対象（plan_type=paid）
+ * - 段階移行（50→100→300→500→1000→...）
+ * - 配配メールとの併用（send_channel分離）
+ * - 二重送信・誤送信を構造的に防止
  */
 
 const Airtable = require('airtable');
@@ -51,42 +55,50 @@ async function getBroadcast(broadcastId) {
  * 配信ステータスを更新
  */
 async function updateBroadcastStatus(recordId, status, additionalFields = {}) {
-  await broadcastsTable.update([
-    {
-      id: recordId,
-      fields: {
-        status,
-        ...additionalFields,
-      },
-    },
-  ]);
+  const fields = { status, ...additionalFields };
+
+  // locked または sending に遷移する場合、locked_at を記録
+  if (status === 'locked' || status === 'sending') {
+    fields.locked_at = new Date().toISOString();
+  }
+
+  await broadcastsTable.update([{ id: recordId, fields }]);
+  console.log('✅ Broadcast status updated:', status);
 }
 
 /**
  * 配信情報を更新（送信件数など）
  */
 async function updateBroadcast(recordId, fields) {
-  await broadcastsTable.update([
-    {
-      id: recordId,
-      fields,
-    },
-  ]);
+  await broadcastsTable.update([{ id: recordId, fields }]);
 }
 
 /**
- * アクティブ顧客を取得
+ * 配信対象を取得（有料会員のみ・厳格チェック）
  */
-async function getActiveCustomers() {
+async function getTargetCustomers(stage) {
+  console.log('📊 Getting target customers (stage:', stage, ')');
+
+  // 4条件すべてを満たすレコードのみ取得
   const records = await customersTable
     .select({
-      filterByFormula: `{Status} = "active"`,
+      filterByFormula: `AND(
+        {plan_type} = "paid",
+        {Status} = "active",
+        {unsubscribe} != TRUE(),
+        {send_channel} = "sendgrid"
+      )`,
+      maxRecords: stage, // ステージ上限
+      sort: [{ field: 'migrated_at', direction: 'asc' }], // 移行日時順（古い順）
     })
     .all();
+
+  console.log('📊 Target customers found:', records.length);
 
   return records.map((record) => ({
     email: record.fields.Email,
     name: record.fields.Name,
+    plan: record.fields.Plan,
   }));
 }
 
@@ -108,11 +120,7 @@ async function checkAlreadySent(broadcastId, email) {
  * 受信者レコードを作成
  */
 async function createRecipient(data) {
-  await recipientsTable.create([
-    {
-      fields: data,
-    },
-  ]);
+  await recipientsTable.create([{ fields: data }]);
 }
 
 /**
@@ -126,7 +134,83 @@ async function sendEmail(email, subject, bodyHtml) {
     html: bodyHtml,
   };
 
-  await sgMail.send(msg);
+  const response = await sgMail.send(msg);
+
+  // SendGridメッセージIDを取得
+  const messageId = response[0].headers['x-message-id'] || null;
+
+  return messageId;
+}
+
+/**
+ * バッチ送信（レート制御）
+ */
+async function sendBatch(emails, broadcast, broadcastId) {
+  const batchSize = 200; // 200件/バッチ
+  const delay = 2000; // 2秒間隔
+
+  let sentCount = 0;
+  let failedCount = 0;
+  const results = [];
+
+  for (let i = 0; i < emails.length; i += batchSize) {
+    const batch = emails.slice(i, i + batchSize);
+
+    console.log(`📨 Sending batch ${Math.floor(i / batchSize) + 1} (${batch.length} emails)...`);
+
+    for (const email of batch) {
+      try {
+        // 既送信チェック
+        const alreadySent = await checkAlreadySent(broadcastId, email);
+        if (alreadySent) {
+          console.log('⏭️ Already sent to:', email);
+          results.push({ email, status: 'skipped', reason: 'already sent' });
+          continue;
+        }
+
+        // SendGrid送信
+        const messageId = await sendEmail(email, broadcast.subject, broadcast.body_html);
+
+        // ログ記録
+        await createRecipient({
+          broadcast_id: broadcastId,
+          email,
+          send_status: 'sent',
+          provider_message_id: messageId,
+          sent_at: new Date().toISOString(),
+          is_test: false,
+        });
+
+        sentCount++;
+        results.push({ email, status: 'sent', message_id: messageId });
+
+        console.log(`✅ Sent (${sentCount}/${emails.length}):`, email);
+      } catch (error) {
+        console.error('❌ Send error:', email, error.message);
+
+        // エラーログ記録
+        await createRecipient({
+          broadcast_id: broadcastId,
+          email,
+          send_status: 'failed',
+          error_code: error.code || 'UNKNOWN',
+          sent_at: new Date().toISOString(),
+          is_test: false,
+        });
+
+        failedCount++;
+        results.push({ email, status: 'failed', error: error.message });
+      }
+    }
+
+    // バッチ間の待機
+    if (i + batchSize < emails.length) {
+      console.log(`⏳ Waiting ${delay}ms before next batch...`);
+      await sleep(delay);
+    }
+  }
+
+  return { sentCount, failedCount, results };
 }
 
 /**
@@ -152,7 +236,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { broadcast_id, dry_run, confirm, user_email } = JSON.parse(event.body);
+    const { broadcast_id, dry_run, confirm, stage, user_email } = JSON.parse(event.body);
 
     // 管理者権限チェック
     if (!ADMIN_EMAILS.includes(user_email)) {
@@ -163,35 +247,48 @@ exports.handler = async (event) => {
       };
     }
 
+    // ステージ指定必須
+    if (!stage) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'stage is required' }),
+      };
+    }
+
     // 配信情報を取得
     const broadcast = await getBroadcast(broadcast_id);
 
-    console.log('📥 Send broadcast:', broadcast_id, 'status:', broadcast.status, 'dry_run:', dry_run);
+    console.log('📥 Send broadcast:', broadcast_id, 'status:', broadcast.status, 'stage:', stage, 'dry_run:', dry_run);
 
-    // 【最重要】status が sent ならエラー
-    if (broadcast.status === 'sent') {
-      console.error('❌ Broadcast already sent:', broadcast_id);
+    // 【最重要】status チェック
+    if (broadcast.status === 'sent' || broadcast.status === 'locked' || broadcast.status === 'sending') {
+      console.error('❌ Broadcast already sent/locked/sending:', broadcast_id);
       return {
         statusCode: 400,
         headers,
         body: JSON.stringify({
-          error: 'Broadcast already sent',
-          message: 'この配信は既に送信済みです。再送信できません。',
+          error: 'Broadcast already sent/locked/sending',
+          message: 'この配信は既に送信済み、ロック済み、または送信中です。再送信できません。',
         }),
       };
     }
 
-    // 送信対象を取得（Status = active）
-    const customers = await getActiveCustomers();
+    // 送信対象を取得（有料会員のみ）
+    const customers = await getTargetCustomers(stage);
 
     // メールアドレスを unique 化
     const uniqueEmails = [...new Set(customers.map((c) => c.email))];
 
+    console.log('📊 Target customers:', customers.length);
     console.log('📊 Unique emails:', uniqueEmails.length);
 
     // Dry-Run モード
     if (dry_run) {
-      await updateBroadcastStatus(broadcast.id, 'dry-run');
+      await updateBroadcastStatus(broadcast.id, 'dry-run', {
+        stage,
+        recipient_count_planned: uniqueEmails.length,
+      });
 
       return {
         statusCode: 200,
@@ -199,8 +296,15 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           success: true,
           dry_run: true,
-          recipient_count: uniqueEmails.length,
+          stage,
+          recipient_count_planned: uniqueEmails.length,
           unique_emails: uniqueEmails.length,
+          conditions: {
+            plan_type: 'paid',
+            status: 'active',
+            unsubscribe: false,
+            send_channel: 'sendgrid',
+          },
         }),
       };
     }
@@ -217,70 +321,24 @@ exports.handler = async (event) => {
       };
     }
 
-    // 【最重要】先に status を sent に更新（ロック）
+    // 【最重要】先に status を locked に更新（ロック）
     console.log('🔒 Locking broadcast:', broadcast_id);
-    await updateBroadcastStatus(broadcast.id, 'sent', {
-      sent_at: new Date().toISOString(),
+    await updateBroadcastStatus(broadcast.id, 'locked', {
+      stage,
+      recipient_count_planned: uniqueEmails.length,
     });
 
-    // 送信処理（順次送信）
-    const results = [];
-    let sentCount = 0;
-    let failedCount = 0;
+    // 送信中に更新
+    await updateBroadcastStatus(broadcast.id, 'sending');
 
-    for (let i = 0; i < uniqueEmails.length; i++) {
-      const email = uniqueEmails[i];
+    // バッチ送信実行
+    const { sentCount, failedCount, results } = await sendBatch(uniqueEmails, broadcast, broadcast_id);
 
-      try {
-        // 既に送信済みかチェック
-        const alreadySent = await checkAlreadySent(broadcast_id, email);
-        if (alreadySent) {
-          console.log('⏭️ Already sent to:', email);
-          results.push({ email, status: 'skipped', reason: 'already sent' });
-          continue;
-        }
-
-        // SendGrid送信
-        await sendEmail(email, broadcast.subject, broadcast.body_html);
-
-        // BroadcastRecipients に記録
-        await createRecipient({
-          broadcast_id,
-          email,
-          send_status: 'sent',
-          sent_at: new Date().toISOString(),
-          is_test: false,
-        });
-
-        sentCount++;
-        results.push({ email, status: 'sent' });
-
-        console.log(`✅ Sent (${sentCount}/${uniqueEmails.length}):`, email);
-
-        // レート制限対策（10件ごとに1秒待機）
-        if ((i + 1) % 10 === 0) {
-          await sleep(1000);
-        }
-      } catch (error) {
-        console.error('❌ Send error:', email, error.message);
-
-        // エラーログ記録
-        await createRecipient({
-          broadcast_id,
-          email,
-          send_status: 'failed',
-          error_message: error.message,
-          is_test: false,
-        });
-
-        failedCount++;
-        results.push({ email, status: 'failed', error: error.message });
-      }
-    }
-
-    // 送信件数を更新
+    // 送信完了
     await updateBroadcast(broadcast.id, {
-      recipient_count: sentCount,
+      status: 'sent',
+      sent_at: new Date().toISOString(),
+      recipient_count_sent: sentCount,
     });
 
     console.log('🎉 Broadcast sent:', broadcast_id, 'sent:', sentCount, 'failed:', failedCount);
@@ -291,6 +349,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         success: true,
         broadcast_id,
+        stage,
         sent_count: sentCount,
         failed_count: failedCount,
         total: uniqueEmails.length,
