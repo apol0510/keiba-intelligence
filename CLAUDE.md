@@ -98,16 +98,17 @@ grep -r "pattern" ./src/
 
 ### **技術スタック**
 
-| カテゴリ | 技術 |
-|---------|------|
-| フロントエンド | Astro 5.16+ + Sass |
-| ホスティング | Netlify Pro |
-| 決済 | ThriveCart + PayPal |
-| 顧客管理 | Airtable Pro |
-| 自動化 | Zapier Premium |
-| メール | SendGrid Essential 100 |
-| バックエンド | Netlify Functions (Node.js 20) |
-| AI開発 | Claude Pro + ChatGPT Plus |
+| カテゴリ | 技術 | 備考 |
+|---------|------|------|
+| フロントエンド | Astro 5.16+ + Sass | SSR mode（server） |
+| ホスティング | Netlify Pro | Functions/Blobs含む |
+| 決済 | ThriveCart + PayPal | Webhook直接実装 |
+| 顧客管理 | Airtable Pro | 4テーブル運用 |
+| ~~自動化~~ | ~~Zapier Premium~~ | **削減（Functions直接実装）** |
+| メール | SendGrid Essential 100 | 無料枠100,000通/月 |
+| バックエンド | Netlify Functions (Node.js 20) | 12個実装済み |
+| セッション管理 | Netlify Blobs | 7日間TTL |
+| AI開発 | Claude Pro + ChatGPT Plus | 設計・実装支援 |
 
 ### **価格設定**
 
@@ -147,7 +148,7 @@ grep -r "pattern" ./src/
   - アニメーション（fadeIn/slideIn/gradientShift）
 
 - `src/layouts/BaseLayout.astro`
-  - ナビゲーション（sticky、モバイルメニュー）
+  - ナビゲーション（sticky、モバイルメニュー、認証状態表示）
   - フッター（4カラム）
   - SEO最適化（OGP/Twitter Card）
 
@@ -165,24 +166,139 @@ grep -r "pattern" ./src/
 
 ---
 
-## 📋 **次のステップ（Phase 2）** 📋
+### **Phase 2: コア機能実装（80%完了 🚀）**
 
-### **今週実装予定**
+#### **2026-01-10 実施内容**
 
-- [ ] Netlify連携・自動デプロイ設定
-- [ ] 料金プランページ作成（`/pricing`）
-- [ ] 無料予想ページ作成（`/free-prediction`）
-- [ ] 会員認証システム実装（マジックリンク方式）
-- [ ] ThriveCart商品登録（5プラン設定）
-- [ ] Zapier Zap作成（ThriveCart → Airtable自動連携）
+**✅ Netlify連携・自動デプロイ設定**
+- netlify.toml設定完了
+- GitHub連携・自動ビルド設定
+- Netlify Functions設定
+- セキュリティヘッダー・キャッシュ設定
 
-### **来週実装予定**
+**✅ 料金プランページ作成（/pricing）**
+- 5メインプラン + AI Plus表示
+- 月額/年額切り替え機能
+- プラン比較表（8項目）
+- FAQセクション（6項目）
+- レスポンシブ対応（5→3→2→1カラム）
 
-- [ ] 管理画面作成（prediction-converter, results-manager）
-- [ ] SEOページ自動生成（日別/月別実績ページ）
-- [ ] 有料予想ページ作成（4プラン対応）
-- [ ] テスト決済（ThriveCart Test Mode）
-- [ ] 本番デプロイ
+**✅ 無料予想ページ作成（/free-prediction）**
+- 本日の開催情報表示
+- 後半3レース予想（サンプル）
+- レースカード機能（信頼度・オッズ・AIコメント）
+- 買い目ロック（有料プラン誘導）
+- 注意事項セクション
+
+**✅ ThriveCart Webhook実装**
+- `netlify/functions/thrivecart-webhook.js`
+- 購入完了時: Airtable Create + SendGrid Email
+- 解約時: Airtable Update + SendGrid Email
+- Webhook署名検証（HMAC SHA256）
+- **Zapier削減: $73.50/月節約**
+
+**✅ メルマガ配信システム実装**
+- 設計書: `NEWSLETTER_SYSTEM.md`
+- Netlify Functions 5個:
+  - create-broadcast.js
+  - get-broadcasts.js
+  - get-broadcast.js
+  - send-test.js
+  - send-broadcast.js
+- 管理画面3ページ:
+  - /admin/newsletter（一覧）
+  - /admin/newsletter/new（新規作成）
+  - /admin/newsletter/[id]（詳細・送信）
+- 5層の二重送信防止機構
+- 段階的送信システム（50→15,000件）
+
+**✅ メルマガ移行システム設計**
+- 設計書: `NEWSLETTER_MIGRATION.md`
+- 配配メール→SendGrid移行計画（15,000件）
+- 8段階移行（50→100→300→500→1000→3000→7000→15000）
+- send_channelによる分離
+- 4条件フィルタリング（plan_type=paid, status=active, unsubscribe≠true, send_channel=sendgrid）
+
+**✅ 会員認証システム実装**
+- 設計書: `AUTH_SYSTEM.md`
+- Netlify Functions 4個:
+  - send-magic-link.js（マジックリンク送信）
+  - verify-magic-link.js（トークン検証・セッション作成）
+  - get-session.js（セッション確認）
+  - logout.js（ログアウト）
+- ログインページ:
+  - /login（メールアドレス入力）
+  - /auth/verify（トークン検証）
+- 認証ミドルウェア:
+  - AuthCheck.astro（全管理画面に適用）
+- セキュリティ:
+  - HttpOnly/Secure/SameSite Cookie
+  - トークン15分有効期限・単回使用
+  - セッション7日間TTL（Netlify Blobs）
+
+**❌ ThriveCart商品登録（未実施）**
+- 5プラン設定
+- PayPal決済設定
+- Webhook URL設定
+- Test Mode動作確認
+
+---
+
+## 📋 **次のステップ** 📋
+
+### **【優先度高】Phase 2完了タスク**
+
+- [ ] **Airtableテーブルセットアップ**
+  - Customersテーブル拡張（plan_type, send_channel, source, migrated_at, last_sent_at, unsubscribe）
+  - Broadcastsテーブル作成（broadcast_id, subject, body_html, status, stage, etc.）
+  - BroadcastRecipientsテーブル作成（broadcast_id, email, status, sent_at, etc.）
+  - AuthTokensテーブル作成（token, email, created_at, expires_at, used, etc.）
+  - SendGrid_Paid_Active View作成（4条件フィルタ）
+
+- [ ] **Netlify環境変数設定**
+  - AIRTABLE_API_KEY
+  - AIRTABLE_BASE_ID
+  - SENDGRID_API_KEY
+  - THRIVECART_WEBHOOK_SECRET
+
+- [ ] **ThriveCart商品登録**
+  - 5プラン設定（ライト/スタンダード/プレミアム/アルティメット/AI Plus）
+  - PayPal決済設定
+  - Webhook URL設定（https://keiba-intelligence.keiba.link/.netlify/functions/thrivecart-webhook）
+  - Test Mode動作確認
+
+- [ ] **認証システムテスト**
+  - SendGridドメイン認証
+  - マジックリンクメール送信テスト
+  - ログイン→管理画面アクセステスト
+  - ログアウトテスト
+
+### **Phase 3: 管理機能実装（来週実装予定）**
+
+- [ ] **予想管理画面作成**
+  - prediction-converter.astro（特徴量データ→JSON変換）
+  - Git自動コミット機能
+  - プレビュー機能
+
+- [ ] **結果管理画面作成**
+  - results-manager.astro（結果入力→archiveResults.json生成）
+  - 的中率・回収率自動計算
+  - Git自動コミット機能
+
+- [ ] **有料予想ページ作成**
+  - プラン別買い目表示制御
+  - AccessControl.astro実装
+  - セッション認証連携
+
+- [ ] **SEOページ自動生成**
+  - 日別実績ページ（/results/2026/01/10）
+  - 月別実績ページ（/results/2026/01）
+  - コース別統計ページ
+
+- [ ] **本番デプロイ・運用開始**
+  - 全機能テスト
+  - パフォーマンス確認
+  - 監視設定
 
 ---
 
@@ -324,15 +440,19 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## 💰 **月額コスト** 💰
 
-| サービス | プラン | 月額 |
-|---------|--------|------|
-| Netlify | Pro | $19 |
-| Airtable | Pro | $20 |
-| Zapier | Premium | $73.50 |
-| SendGrid | Essential 100 | $0（無料枠） |
-| Claude | Pro | $20 |
-| ChatGPT | Plus | $20 |
-| **合計** | - | **$152.50（約¥22,800）** |
+| サービス | プラン | 月額 | 備考 |
+|---------|--------|------|------|
+| Netlify | Pro | $19 | Functions/Blobs含む |
+| Airtable | Pro | $20 | 250,000件まで |
+| ~~Zapier~~ | ~~Premium~~ | ~~$73.50~~ | **削減（Netlify Functionsで代替）** |
+| SendGrid | Essential 100 | $0（無料枠） | 100,000通/月 |
+| Claude | Pro | $20 | AI開発 |
+| ChatGPT | Plus | $20 | AI開発 |
+| **合計** | - | **$79（約¥11,850）** | **$73.50/月削減 🎉** |
+
+**コスト削減内訳:**
+- Zapier削減: $73.50/月 → Netlify Functions直接実装
+- 10年間削減額: $8,820（約¥1,323,000）
 
 ---
 
@@ -396,34 +516,70 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - 自動化フロー
 - プロジェクト実装計画（2週間）
 
+**NEWSLETTER_SYSTEM.md参照:**
+- メルマガ配信システム設計
+- 5層二重送信防止機構
+- Airtableスキーマ（Broadcasts, BroadcastRecipients）
+- Netlify Functions 5個の詳細
+- 管理画面UI設計
+- 送信フロー（draft → test → dry-run → confirm → send）
+
+**NEWSLETTER_MIGRATION.md参照:**
+- 配配メール→SendGrid移行計画（15,000件）
+- 8段階移行戦略（50→15,000）
+- 4条件フィルタリング（plan_type, status, unsubscribe, send_channel）
+- send_channelによるチャネル分離
+- Airtable View設計（SendGrid_Paid_Active）
+- 初回メール特別対応
+
+**AUTH_SYSTEM.md参照:**
+- マジックリンク認証フロー（4ステップ）
+- Netlify Functions 4個の詳細
+- トークン管理（15分有効期限、単回使用）
+- セッション管理（Netlify Blobs、7日間TTL）
+- セキュリティ対策（HttpOnly/Secure/SameSite Cookie）
+- ログインページUI設計
+
 ---
 
-## 🔐 **環境変数（.envファイル）** 🔐
+## 🔐 **環境変数（Netlify環境変数）** 🔐
+
+**Netlify管理画面で設定（Site settings → Environment variables）:**
 
 ```bash
-# Airtable
+# Airtable（必須）
 AIRTABLE_API_KEY=patxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 AIRTABLE_BASE_ID=appxxxxxxxxxxxxxxx
-AIRTABLE_TABLE_NAME=Customers
 
-# SendGrid
+# SendGrid（必須）
+# 用途: マジックリンク、ウェルカムメール、メルマガ配信、解約通知
 SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-# Brevo (マジックリンク認証用)
-BREVO_API_KEY=xkeysib-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-# GitHub (自動コミット用・Phase 2)
-GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-# ThriveCart
+# ThriveCart（必須）
+# 用途: Webhook署名検証
 THRIVECART_WEBHOOK_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# GitHub（Phase 3で必要）
+# 用途: 管理画面からのGit自動コミット
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
+
+**重要な注意事項:**
+- ❌ **BREVOは使用不可**（ギャンブル系サービスNG）→ SendGridのみ使用
+- ✅ **SendGrid無料枠**: 100,000通/月（メルマガ15,000件 × 6回配信可能）
+- ✅ **Netlify Blobs**: Pro版で自動有効化（セッション保存用）
+
+**Airtable必須テーブル:**
+1. Customers（顧客管理）
+2. Broadcasts（メルマガ配信管理）
+3. BroadcastRecipients（配信履歴）
+4. AuthTokens（認証トークン）
 
 ---
 
 ## 🎊 **チェックリスト** 🎊
 
-### **Phase 1: 基盤構築（完了 ✅）**
+### **Phase 1: 基盤構築（100%完了 ✅）**
 - [x] プロジェクト初期化
 - [x] GitHub連携
 - [x] デザインシステム構築
@@ -431,28 +587,46 @@ THRIVECART_WEBHOOK_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 - [x] トップページ作成
 - [x] ビルド・動作確認
 
-### **Phase 2: 今週実装**
-- [ ] Netlify連携・自動デプロイ設定
-- [ ] 料金プランページ作成
-- [ ] 無料予想ページ作成
-- [ ] 会員認証システム実装
+### **Phase 2: コア機能実装（80%完了 🚀）**
+- [x] Netlify連携・自動デプロイ設定
+- [x] 料金プランページ作成（/pricing）
+- [x] 無料予想ページ作成（/free-prediction）
+- [x] ThriveCart Webhook実装（Zapier代替）
+- [x] メルマガ配信システム実装
+- [x] メルマガ移行システム設計
+- [x] 会員認証システム実装（マジックリンク）
+- [ ] Airtableテーブルセットアップ
+- [ ] Netlify環境変数設定
 - [ ] ThriveCart商品登録
-- [ ] Zapier Zap作成
+- [ ] 認証システムテスト
 
-### **Phase 3: 来週実装**
-- [ ] 管理画面作成
-- [ ] SEOページ自動生成
+### **Phase 3: 管理機能実装（0%）**
+- [ ] 予想管理画面作成（prediction-converter）
+- [ ] 結果管理画面作成（results-manager）
 - [ ] 有料予想ページ作成
-- [ ] テスト決済
+- [ ] SEOページ自動生成
+- [ ] テスト決済（ThriveCart Test Mode）
 - [ ] 本番デプロイ
 
 ---
 
-**📅 最終更新日**: 2026-01-09
-**🏁 Project Phase**: Phase 1完了・Phase 2準備中 ✨
-**🎯 Next Priority**: Netlify連携・料金プランページ作成
-**📊 進捗率**: 15%完了（Phase 1: 100%、Phase 2: 0%、Phase 3: 0%）
-**✨ 本日の成果**: プロジェクト初期化・デザインシステム構築・トップページ作成完了
+**📅 最終更新日**: 2026-01-10
+**🏁 Project Phase**: Phase 2コア機能実装中 🚀（80%完了）
+**🎯 Next Priority**: Airtableテーブルセットアップ → Netlify環境変数設定 → ThriveCart商品登録
+**📊 進捗率**: 60%完了（Phase 1: 100%、Phase 2: 80%、Phase 3: 0%）
+**✨ 本日の成果**:
+  - 料金プラン・無料予想ページ作成
+  - ThriveCart Webhook実装（Zapier削減: $73.50/月）
+  - メルマガ配信システム実装（5層二重送信防止、段階的送信）
+  - メルマガ移行システム設計（配配メール→SendGrid 15,000件）
+  - 会員認証システム実装（マジックリンク、Netlify Blobs、7日間セッション）
+
+**🎉 主要成果**:
+  - Netlify Functions: 12個実装（Webhook, Newsletter 5個, Auth 4個, etc.）
+  - 設計書: 3個作成（NEWSLETTER_SYSTEM.md, NEWSLETTER_MIGRATION.md, AUTH_SYSTEM.md）
+  - 管理画面: 3ページ実装（/admin/newsletter/*）
+  - ログインページ: 2ページ実装（/login, /auth/verify）
+  - コスト削減: $73.50/月（10年間で約¥1,323,000削減）
 
 ---
 
