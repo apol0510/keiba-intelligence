@@ -1,10 +1,12 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import AuthCheck from '../../../components/AuthCheck.astro';
 ---
 
 <BaseLayout
   title="メルマガ配信管理"
   description="KEIBA Intelligence メルマガ配信管理画面">
+  <AuthCheck />
   <section class="admin-newsletter">
     <div class="container">
       <div class="header">

@@ -67,7 +67,9 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
           <a href="/pricing">料金プラン</a>
           <a href="/results">的中実績</a>
           <a href="/about">サイト概要</a>
-          <a href="/login" class="btn btn-primary">ログイン</a>
+          <span id="auth-nav-button">
+            <a href="/login" class="btn btn-primary">ログイン</a>
+          </span>
         </div>
 
         <!-- モバイルメニューボタン -->
@@ -307,6 +309,56 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
         navLinks.style.boxShadow = 'var(--shadow-lg)';
       });
     }
+
+    // 認証状態チェック（ナビゲーションボタン更新）
+    async function updateAuthButton() {
+      const authButton = document.getElementById('auth-nav-button');
+      if (!authButton) return;
+
+      try {
+        const response = await fetch('/.netlify/functions/get-session', {
+          method: 'GET',
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            // ログイン済み → ログアウトボタン表示
+            authButton.innerHTML = `
+              <a href="/admin/newsletter" class="btn btn-secondary">管理画面</a>
+              <form id="logout-form" style="display: inline;">
+                <button type="submit" class="btn btn-outline">ログアウト</button>
+              </form>
+            `;
+
+            // ログアウトフォームのイベントリスナー
+            const logoutForm = document.getElementById('logout-form');
+            if (logoutForm) {
+              logoutForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                try {
+                  await fetch('/.netlify/functions/logout', {
+                    method: 'POST',
+                    credentials: 'include',
+                  });
+                  window.location.href = '/login';
+                } catch (error) {
+                  console.error('Logout error:', error);
+                  window.location.href = '/login';
+                }
+              });
+            }
+          }
+        }
+      } catch (error) {
+        // エラー時はログインボタンのまま（デフォルト）
+        console.log('Not authenticated');
+      }
+    }
+
+    // ページ読み込み時に実行
+    updateAuthButton();
   </script>
 </body>
 </html>

@@ -1,0 +1,197 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export const prerender = true;
+---
+
+<BaseLayout
+  title="認証中... | KEIBA Intelligence"
+  description="ログイン処理中"
+>
+  <section class="verify-section">
+    <div class="container">
+      <div class="verify-card">
+        <div class="verify-content">
+          <div class="spinner"></div>
+          <h1 id="status">認証中...</h1>
+          <p id="message">トークンを確認しています。しばらくお待ちください。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style lang="scss">
+  .verify-section {
+    min-height: calc(100vh - 200px);
+    display: flex;
+    align-items: center;
+    padding: 80px 0;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  }
+
+  .verify-card {
+    max-width: 600px;
+    margin: 0 auto;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 16px;
+    padding: 64px 48px;
+    backdrop-filter: blur(10px);
+  }
+
+  .verify-content {
+    text-align: center;
+
+    .spinner {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 32px;
+      border: 4px solid rgba(59, 130, 246, 0.2);
+      border-top: 4px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 16px;
+    }
+
+    p {
+      color: #94a3b8;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    &.success h1 {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    &.error {
+      .spinner {
+        display: none;
+      }
+
+      h1 {
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+    }
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .btn-primary {
+    display: inline-block;
+    margin-top: 24px;
+    padding: 14px 28px;
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .verify-card {
+      padding: 48px 24px;
+    }
+
+    .verify-content h1 {
+      font-size: 24px;
+    }
+  }
+</style>
+
+<script>
+  const statusEl = document.getElementById('status') as HTMLHeadingElement;
+  const messageEl = document.getElementById('message') as HTMLParagraphElement;
+  const contentEl = document.querySelector('.verify-content') as HTMLDivElement;
+
+  async function verifyToken() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+
+    if (!token) {
+      showError('トークンが見つかりません', 'URLが正しくありません。もう一度ログインしてください。');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/.netlify/functions/verify-magic-link?token=${token}`);
+
+      if (response.redirected) {
+        // リダイレクトされた場合（成功）
+        showSuccess('認証成功！', 'ダッシュボードへリダイレクトしています...');
+        window.location.href = response.url;
+        return;
+      }
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showSuccess('認証成功！', 'ダッシュボードへリダイレクトしています...');
+        // 念のため手動リダイレクト
+        setTimeout(() => {
+          window.location.href = '/admin/newsletter';
+        }, 1000);
+      } else {
+        const errorMessage =
+          response.status === 404
+            ? 'トークンが見つかりません。有効期限が切れている可能性があります。'
+            : response.status === 403
+            ? data.error === 'Token already used'
+              ? 'このリンクは既に使用されています。もう一度ログインしてください。'
+              : 'トークンの有効期限が切れています。もう一度ログインしてください。'
+            : 'エラーが発生しました。もう一度お試しください。';
+
+        showError('認証失敗', errorMessage);
+      }
+    } catch (error) {
+      console.error('Verify error:', error);
+      showError('通信エラー', 'サーバーとの通信に失敗しました。もう一度お試しください。');
+    }
+  }
+
+  function showSuccess(title: string, message: string) {
+    contentEl.classList.add('success');
+    statusEl.textContent = title;
+    messageEl.textContent = message;
+  }
+
+  function showError(title: string, message: string) {
+    contentEl.classList.add('error');
+    statusEl.textContent = title;
+    messageEl.innerHTML = `
+      ${message}
+      <br><br>
+      <a href="/login" class="btn-primary">ログインページへ戻る</a>
+    `;
+  }
+
+  // ページ読み込み時に自動実行
+  verifyToken();
+</script>
