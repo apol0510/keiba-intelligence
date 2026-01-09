@@ -1,0 +1,88 @@
+# Netlify Configuration File
+# KEIBA Intelligence - AI-Powered Intelligence Dashboard for 南関競馬
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--legacy-peer-deps"
+
+# ビルド最適化
+[build.processing]
+  skip_processing = false
+
+[build.processing.css]
+  bundle = true
+  minify = true
+
+[build.processing.js]
+  bundle = true
+  minify = true
+
+[build.processing.html]
+  pretty_urls = true
+
+[build.processing.images]
+  compress = true
+
+# リダイレクト設定（SPA対応）
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# ヘッダー設定（セキュリティ）
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "no-referrer-when-downgrade"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+# 静的アセットのキャッシュ
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Functions設定
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["airtable", "@sendgrid/mail"]
+
+# プラグイン
+[[plugins]]
+  package = "@netlify/plugin-sitemap"
+
+# コンテキスト別設定
+[context.production]
+  command = "npm run build"
+
+[context.deploy-preview]
+  command = "npm run build"
+
+[context.branch-deploy]
+  command = "npm run build"
+
+# 環境変数（実際の値はNetlify UIで設定）
+# AIRTABLE_API_KEY
+# AIRTABLE_BASE_ID
+# AIRTABLE_TABLE_NAME
+# SENDGRID_API_KEY
+# BREVO_API_KEY
+# THRIVECART_WEBHOOK_SECRET
