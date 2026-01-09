@@ -1,0 +1,312 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+}
+
+const {
+  title,
+  description = 'AI-Powered Intelligence Dashboard for 南関競馬。的中率78%、回収率125%を誇る競馬予想プラットフォーム。',
+  ogImage = '/og-image.png'
+} = Astro.props;
+
+const siteTitle = `${title} | KEIBA Intelligence`;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta name="generator" content={Astro.generator}>
+
+  <!-- SEO -->
+  <title>{siteTitle}</title>
+  <meta name="description" content={description}>
+  <link rel="canonical" href={canonicalURL}>
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content={canonicalURL}>
+  <meta property="og:title" content={siteTitle}>
+  <meta property="og:description" content={description}>
+  <meta property="og:image" content={new URL(ogImage, Astro.site)}>
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content={canonicalURL}>
+  <meta property="twitter:title" content={siteTitle}>
+  <meta property="twitter:description" content={description}>
+  <meta property="twitter:image" content={new URL(ogImage, Astro.site)}>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Global Styles -->
+  <style is:global>
+    @import '../styles/global.scss';
+  </style>
+</head>
+<body>
+  <!-- ナビゲーション -->
+  <nav class="main-nav">
+    <div class="container">
+      <div class="nav-content">
+        <a href="/" class="logo">
+          <span class="logo-icon">🧠</span>
+          <span class="logo-text">KEIBA Intelligence</span>
+        </a>
+
+        <div class="nav-links">
+          <a href="/">ホーム</a>
+          <a href="/pricing">料金プラン</a>
+          <a href="/results">的中実績</a>
+          <a href="/about">サイト概要</a>
+          <a href="/login" class="btn btn-primary">ログイン</a>
+        </div>
+
+        <!-- モバイルメニューボタン -->
+        <button class="mobile-menu-btn" aria-label="メニュー">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- メインコンテンツ -->
+  <main>
+    <slot />
+  </main>
+
+  <!-- フッター -->
+  <footer class="main-footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>KEIBA Intelligence</h3>
+          <p>AI-Powered Intelligence Dashboard for 南関競馬</p>
+          <p class="copyright">&copy; 2026 KEIBA Intelligence. All rights reserved.</p>
+        </div>
+
+        <div class="footer-section">
+          <h4>サービス</h4>
+          <ul>
+            <li><a href="/free-prediction">無料予想</a></li>
+            <li><a href="/pricing">料金プラン</a></li>
+            <li><a href="/results">的中実績</a></li>
+            <li><a href="/about">サイト概要</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4>サポート</h4>
+          <ul>
+            <li><a href="/faq">よくある質問</a></li>
+            <li><a href="/contact">お問い合わせ</a></li>
+            <li><a href="/privacy">プライバシーポリシー</a></li>
+            <li><a href="/terms">利用規約</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4>対象競馬場</h4>
+          <ul>
+            <li>大井競馬場</li>
+            <li>川崎競馬場</li>
+            <li>船橋競馬場</li>
+            <li>浦和競馬場</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <style>
+    /* ナビゲーション */
+    .main-nav {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: var(--spacing-md) 0;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+    }
+
+    .nav-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      font-size: 2rem;
+    }
+
+    .logo-text {
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: var(--spacing-lg);
+      align-items: center;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      font-weight: 500;
+      transition: color var(--transition-fast);
+    }
+
+    .nav-links a:hover {
+      color: var(--primary-end);
+    }
+
+    .mobile-menu-btn {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: var(--spacing-sm);
+    }
+
+    .mobile-menu-btn span {
+      display: block;
+      width: 25px;
+      height: 3px;
+      background: var(--text-primary);
+      border-radius: 2px;
+      transition: all var(--transition-fast);
+    }
+
+    /* メインコンテンツ */
+    main {
+      min-height: calc(100vh - 200px);
+      padding: var(--spacing-2xl) 0;
+    }
+
+    /* フッター */
+    .main-footer {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      padding: var(--spacing-2xl) 0 var(--spacing-lg);
+      margin-top: var(--spacing-2xl);
+    }
+
+    .footer-content {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: var(--spacing-2xl);
+    }
+
+    .footer-section h3 {
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .footer-section h4 {
+      color: var(--text-primary);
+      font-size: 1rem;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .footer-section p {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .footer-section ul {
+      list-style: none;
+    }
+
+    .footer-section ul li {
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .footer-section ul li a {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      transition: color var(--transition-fast);
+    }
+
+    .footer-section ul li a:hover {
+      color: var(--primary-end);
+    }
+
+    .copyright {
+      margin-top: var(--spacing-md);
+      padding-top: var(--spacing-md);
+      border-top: 1px solid var(--border-color);
+    }
+
+    /* レスポンシブ */
+    @media (max-width: 1024px) {
+      .footer-content {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+
+      .mobile-menu-btn {
+        display: flex;
+      }
+
+      .footer-content {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-xl);
+      }
+    }
+  </style>
+
+  <script>
+    // モバイルメニュー
+    const menuBtn = document.querySelector('.mobile-menu-btn');
+    const navLinks = document.querySelector('.nav-links');
+
+    if (menuBtn && navLinks) {
+      menuBtn.addEventListener('click', () => {
+        navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
+        navLinks.style.flexDirection = 'column';
+        navLinks.style.position = 'absolute';
+        navLinks.style.top = '100%';
+        navLinks.style.right = '0';
+        navLinks.style.background = 'var(--bg-secondary)';
+        navLinks.style.padding = 'var(--spacing-md)';
+        navLinks.style.borderRadius = 'var(--radius-md)';
+        navLinks.style.boxShadow = 'var(--shadow-lg)';
+      });
+    }
+  </script>
+</body>
+</html>

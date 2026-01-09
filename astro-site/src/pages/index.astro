@@ -1,16 +1,383 @@
 ---
-
+import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<BaseLayout
+  title="ホーム"
+  description="AI-Powered Intelligence Dashboard for 南関競馬。的中率78%、回収率125%を誇る競馬予想プラットフォーム。低価格で始められる競馬予想サービス。"
+>
+  <!-- ヒーローセクション -->
+  <section class="hero gradient-bg-animated">
+    <div class="container">
+      <div class="hero-content">
+        <h1 class="hero-title fade-in">
+          AI-Powered Intelligence Dashboard<br>
+          for 南関競馬
+        </h1>
+        <p class="hero-subtitle slide-in">
+          的中率78%、回収率125%を誇る次世代競馬予想プラットフォーム
+        </p>
+        <div class="hero-cta">
+          <a href="/pricing" class="btn btn-primary btn-lg">今すぐ始める</a>
+          <a href="/free-prediction" class="btn btn-secondary btn-lg">無料予想を見る</a>
+        </div>
+
+        <!-- 統計カード -->
+        <div class="stats-grid">
+          <div class="stat-card card">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-value">78.1%</div>
+            <div class="stat-label">的中率</div>
+          </div>
+          <div class="stat-card card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-value">125.3%</div>
+            <div class="stat-label">回収率</div>
+          </div>
+          <div class="stat-card card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-value">281/360</div>
+            <div class="stat-label">的中数</div>
+          </div>
+          <div class="stat-card card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value">100+</div>
+            <div class="stat-label">会員数</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 特徴セクション -->
+  <section class="features">
+    <div class="container">
+      <h2 class="section-title text-center">KEIBA Intelligenceの特徴</h2>
+
+      <div class="grid grid-3">
+        <div class="feature-card card">
+          <div class="feature-icon">🤖</div>
+          <h3>AI予想システム</h3>
+          <p>
+            最新の機械学習モデルを活用した高精度予想。過去データから学習したAIが最適な買い目を提案します。
+          </p>
+        </div>
+
+        <div class="feature-card card">
+          <div class="feature-icon">💸</div>
+          <h3>低価格プラン</h3>
+          <p>
+            月額¥2,980から始められる低価格設定。1日あたり¥99（缶コーヒー1本分）で本格的な競馬予想が利用可能。
+          </p>
+        </div>
+
+        <div class="feature-card card">
+          <div class="feature-icon">📈</div>
+          <h3>データ可視化</h3>
+          <p>
+            的中率・回収率をグラフで可視化。直感的なダッシュボードで予想の精度を一目で確認できます。
+          </p>
+        </div>
+
+        <div class="feature-card card">
+          <div class="feature-icon">🏇</div>
+          <h3>南関4場対応</h3>
+          <p>
+            大井・川崎・船橋・浦和の南関東4競馬場に完全対応。地方競馬の特性を熟知したAIが予想を提供。
+          </p>
+        </div>
+
+        <div class="feature-card card">
+          <div class="feature-icon">📱</div>
+          <h3>スマホ対応</h3>
+          <p>
+            レスポンシブデザインでスマホでも快適に利用可能。外出先でも予想をチェックできます。
+          </p>
+        </div>
+
+        <div class="feature-card card">
+          <div class="feature-icon">🔒</div>
+          <h3>安心のセキュリティ</h3>
+          <p>
+            マジックリンク認証で安全にログイン。個人情報は厳重に管理され、安心してご利用いただけます。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 料金プラン -->
+  <section class="pricing">
+    <div class="container">
+      <h2 class="section-title text-center">料金プラン</h2>
+      <p class="section-subtitle text-center">
+        低価格で始められる、明確な料金体系
+      </p>
+
+      <div class="grid grid-3">
+        <div class="pricing-card card">
+          <div class="plan-name">ライト</div>
+          <div class="plan-price">
+            <span class="price">¥2,980</span>
+            <span class="period">/月</span>
+          </div>
+          <div class="plan-description">後半3レース買い目</div>
+          <ul class="plan-features">
+            <li>✅ 後半3レース予想</li>
+            <li>✅ 馬単買い目提供</li>
+            <li>✅ 的中実績閲覧</li>
+            <li>❌ 全レース買い目</li>
+          </ul>
+          <a href="/pricing" class="btn btn-primary w-full">プラン詳細</a>
+        </div>
+
+        <div class="pricing-card card featured">
+          <div class="badge badge-success">おすすめ</div>
+          <div class="plan-name">スタンダード</div>
+          <div class="plan-price">
+            <span class="price">¥4,980</span>
+            <span class="period">/月</span>
+          </div>
+          <div class="plan-description">全レース馬単買い目</div>
+          <ul class="plan-features">
+            <li>✅ 全レース予想</li>
+            <li>✅ 馬単買い目提供</li>
+            <li>✅ 的中実績閲覧</li>
+            <li>✅ データ可視化</li>
+          </ul>
+          <a href="/pricing" class="btn btn-primary w-full">プラン詳細</a>
+        </div>
+
+        <div class="pricing-card card">
+          <div class="plan-name">プレミアム</div>
+          <div class="plan-price">
+            <span class="price">¥6,980</span>
+            <span class="period">/月</span>
+          </div>
+          <div class="plan-description">全レース三連複買い目</div>
+          <ul class="plan-features">
+            <li>✅ 全レース予想</li>
+            <li>✅ 三連複買い目提供</li>
+            <li>✅ 高配当狙い</li>
+            <li>✅ 穴馬情報</li>
+          </ul>
+          <a href="/pricing" class="btn btn-primary w-full">プラン詳細</a>
+        </div>
+      </div>
+
+      <p class="text-center mt-4">
+        <a href="/pricing" class="btn btn-secondary">全プランを見る</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta gradient-bg">
+    <div class="container text-center">
+      <h2>今すぐ始めて、勝ち馬を見つけよう</h2>
+      <p class="mb-3">月額¥2,980から。1日あたり¥99で本格的な競馬予想が利用可能</p>
+      <a href="/pricing" class="btn btn-primary btn-lg">今すぐ始める</a>
+    </div>
+  </section>
+
+  <style>
+    /* ヒーローセクション */
+    .hero {
+      padding: var(--spacing-2xl) 0;
+      min-height: 600px;
+      display: flex;
+      align-items: center;
+    }
+
+    .hero-content {
+      text-align: center;
+    }
+
+    .hero-title {
+      font-size: 3rem;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .hero-subtitle {
+      font-size: 1.5rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: center;
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .btn-lg {
+      padding: var(--spacing-md) var(--spacing-xl);
+      font-size: 1.125rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--spacing-lg);
+      margin-top: var(--spacing-2xl);
+    }
+
+    .stat-card {
+      text-align: center;
+    }
+
+    .stat-icon {
+      font-size: 2.5rem;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    /* 特徴セクション */
+    .features {
+      padding: var(--spacing-2xl) 0;
+    }
+
+    .section-title {
+      font-size: 2.5rem;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .section-subtitle {
+      font-size: 1.125rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .feature-card {
+      text-align: center;
+    }
+
+    .feature-icon {
+      font-size: 3rem;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .feature-card h3 {
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .feature-card p {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    /* 料金プラン */
+    .pricing {
+      padding: var(--spacing-2xl) 0;
+      background: var(--bg-secondary);
+    }
+
+    .pricing-card {
+      text-align: center;
+      position: relative;
+    }
+
+    .pricing-card.featured {
+      border: 2px solid var(--primary-end);
+    }
+
+    .pricing-card .badge {
+      position: absolute;
+      top: var(--spacing-md);
+      right: var(--spacing-md);
+    }
+
+    .plan-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .plan-price {
+      margin-bottom: var(--spacing-md);
+    }
+
+    .price {
+      font-size: 3rem;
+      font-weight: 700;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .period {
+      font-size: 1.125rem;
+      color: var(--text-secondary);
+    }
+
+    .plan-description {
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .plan-features {
+      list-style: none;
+      text-align: left;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .plan-features li {
+      padding: var(--spacing-sm) 0;
+      color: var(--text-secondary);
+    }
+
+    .w-full {
+      width: 100%;
+    }
+
+    /* CTA */
+    .cta {
+      padding: var(--spacing-2xl) 0;
+      margin-top: var(--spacing-2xl);
+    }
+
+    /* レスポンシブ */
+    @media (max-width: 1024px) {
+      .hero-title {
+        font-size: 2.5rem;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .hero-title {
+        font-size: 2rem;
+      }
+
+      .hero-subtitle {
+        font-size: 1.125rem;
+      }
+
+      .hero-cta {
+        flex-direction: column;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</BaseLayout>
