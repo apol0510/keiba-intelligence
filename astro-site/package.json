@@ -1,0 +1,23 @@
+{
+  "name": "keiba-intelligence",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "AI-Powered Intelligence Dashboard for 南関競馬",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/netlify": "^6.5.8",
+    "@astrojs/sitemap": "^3.5.0",
+    "@sendgrid/mail": "^8.1.6",
+    "airtable": "^0.12.2",
+    "astro": "^5.16.8",
+    "sass": "^1.90.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^23.5.0"
+  }
+}
