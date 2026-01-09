@@ -7,7 +7,8 @@ import netlify from '@astrojs/netlify';
 export default defineConfig({
   site: 'https://keiba-intelligence.keiba.link',
   base: '/',
-  output: 'static',
+  output: 'server',
+  adapter: netlify(),
 
   // インテグレーション
   integrations: [
