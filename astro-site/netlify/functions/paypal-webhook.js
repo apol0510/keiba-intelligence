@@ -130,8 +130,7 @@ exports.handler = async (event, context) => {
     // 🚨 TODO: マコさんからPayPal plan_idを取得して置き換える
     const planMapping = {
       // PayPal Business管理画面で作成したプランIDを記入
-      // 例: 'P-XXXXXXXXXXXXXXXXXXXXX': 'ライト',
-      'P-LIGHT-PLAN-ID': 'ライト',
+      // 例: 'P-XXXXXXXXXXXXXXXXXXXXX': 'スタンダード',
       'P-STANDARD-PLAN-ID': 'スタンダード',
       'P-PREMIUM-PLAN-ID': 'プレミアム',
       'P-ULTIMATE-PLAN-ID': 'アルティメット'
@@ -492,7 +491,6 @@ exports.handler = async (event, context) => {
 // ウェルカムメールHTML生成（マジックリンク付き）
 function generateWelcomeEmail(customerName, plan, expiryDate, email) {
   const planDescriptions = {
-    'ライト': '後半3レース馬単買い目',
     'スタンダード': '全レース馬単買い目',
     'プレミアム': '全レース三連複買い目',
     'アルティメット': '馬単+三連複+穴馬情報',

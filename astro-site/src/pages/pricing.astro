@@ -23,25 +23,6 @@ const plans = [
     highlighted: false,
   },
   {
-    id: 'light',
-    name: 'ライト',
-    price: 2980,
-    yearlyPrice: 29800,
-    period: '/月',
-    description: '後半3レース買い目',
-    features: [
-      { text: '後半3レース予想', included: true },
-      { text: '馬単買い目提供', included: true },
-      { text: '的中実績閲覧', included: true },
-      { text: 'データ可視化', included: true },
-      { text: '全レース買い目', included: false },
-    ],
-    cta: 'ライトプランを始める',
-    ctaLink: '#thrivecart-light',
-    highlighted: false,
-    dailyPrice: 99,
-  },
-  {
     id: 'standard',
     name: 'スタンダード',
     price: 4980,
@@ -239,7 +220,6 @@ const aiPlusPlan = {
             <tr>
               <th>機能</th>
               <th>フリー</th>
-              <th>ライト</th>
               <th class="highlighted">スタンダード</th>
               <th>プレミアム</th>
               <th>アルティメット</th>
@@ -252,12 +232,10 @@ const aiPlusPlan = {
               <td>✅</td>
               <td>✅</td>
               <td>✅</td>
-              <td>✅</td>
             </tr>
             <tr>
               <td>対象レース</td>
               <td>-</td>
-              <td>後半3R</td>
               <td>全レース</td>
               <td>全レース</td>
               <td>全レース</td>
@@ -266,7 +244,6 @@ const aiPlusPlan = {
               <td>馬単買い目</td>
               <td>❌</td>
               <td>✅</td>
-              <td>✅</td>
               <td>❌</td>
               <td>✅</td>
             </tr>
@@ -274,13 +251,11 @@ const aiPlusPlan = {
               <td>三連複買い目</td>
               <td>❌</td>
               <td>❌</td>
-              <td>❌</td>
               <td>✅</td>
               <td>✅</td>
             </tr>
             <tr>
               <td>穴馬情報</td>
-              <td>❌</td>
               <td>❌</td>
               <td>❌</td>
               <td>✅</td>
@@ -292,11 +267,9 @@ const aiPlusPlan = {
               <td>✅</td>
               <td>✅</td>
               <td>✅</td>
-              <td>✅</td>
             </tr>
             <tr>
               <td>コース別攻略法</td>
-              <td>❌</td>
               <td>❌</td>
               <td>❌</td>
               <td>❌</td>
