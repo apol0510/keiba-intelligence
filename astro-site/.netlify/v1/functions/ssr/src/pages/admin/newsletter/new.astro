@@ -1,10 +1,12 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import AuthCheck from '../../../components/AuthCheck.astro';
 ---
 
 <BaseLayout
   title="新規配信作成"
   description="メルマガ配信を作成">
+  <AuthCheck />
   <section class="admin-newsletter-new">
     <div class="container">
       <div class="header">

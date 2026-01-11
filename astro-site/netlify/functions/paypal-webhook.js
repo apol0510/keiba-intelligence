@@ -1,0 +1,565 @@
+// PayPal Webhook受信Function（REST API Webhook形式）
+// 決済完了時にAirtable登録 + SendGridウェルカムメール送信
+
+const Airtable = require('airtable');
+
+exports.handler = async (event, context) => {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  };
+
+  // OPTIONS対応
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers,
+      body: ''
+    };
+  }
+
+  // POSTメソッドのみ許可
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Method not allowed' })
+    };
+  }
+
+  try {
+    console.log('🎯 PayPal Webhook受信:', new Date().toISOString());
+    console.log('📦 Event body:', event.body);
+    console.log('📋 Headers:', JSON.stringify(event.headers, null, 2));
+
+    // PayPal Webhookペイロード解析（JSON形式）
+    const webhookData = JSON.parse(event.body || '{}');
+
+    console.log('🔍 Webhook Data:', JSON.stringify(webhookData, null, 2));
+
+    // 必須フィールド確認
+    const {
+      id: eventId,
+      event_type: eventType,
+      resource
+    } = webhookData;
+
+    if (!eventId || !eventType || !resource) {
+      throw new Error('Missing required webhook fields');
+    }
+
+    console.log('🔍 Event ID:', eventId);
+    console.log('🔍 Event Type:', eventType);
+
+    // Airtable接続
+    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY })
+      .base(process.env.AIRTABLE_BASE_ID);
+
+    // 🔒 重複排除チェック（event_idベース・冪等性保証）
+    const processedEvents = await base('ProcessedWebhookEvents')
+      .select({
+        filterByFormula: `{EventId} = "${eventId}"`
+      })
+      .firstPage()
+      .catch(() => []);
+
+    if (processedEvents.length > 0) {
+      console.log('⚠️ 重複イベント検出・スキップ:', eventId);
+      return {
+        statusCode: 200,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: 'Duplicate event ignored',
+          eventId
+        })
+      };
+    }
+
+    // イベント記録（重複排除用・処理開始時に即座記録）
+    await base('ProcessedWebhookEvents').create([{
+      fields: {
+        'EventId': eventId,
+        'EventType': eventType,
+        'ProcessedAt': new Date().toISOString(),
+        'Status': 'processing'
+      }
+    }]);
+
+    // 処理対象のイベントのみ処理
+    // 🔧 ハイブリッドアプローチ:
+    // - CREATED: 仮登録のみ（Status: pending、メール送らない）
+    // - ACTIVATED: 本登録（Status: active、AccessEnabled: true、ウェルカムメール送信）
+    // - PAYMENT.SALE.COMPLETED: サブスクならPaidAt更新のみ、AI Plusなら本登録
+    // - CANCELLED/SUSPENDED/EXPIRED: 権限剥奪（Status: cancelled/suspended）
+    const validEventTypes = [
+      'BILLING.SUBSCRIPTION.CREATED',             // サブスク登録（仮登録）
+      'BILLING.SUBSCRIPTION.ACTIVATED',           // サブスク有効化（本登録） ✨
+      'PAYMENT.SALE.COMPLETED',                   // 単品決済完了 or サブスク入金確認
+      'BILLING.SUBSCRIPTION.CANCELLED',           // サブスクキャンセル（権限剥奪）
+      'BILLING.SUBSCRIPTION.SUSPENDED',           // サブスク停止（権限剥奪）
+      'BILLING.SUBSCRIPTION.EXPIRED'              // サブスク期限切れ（権限剥奪）
+    ];
+
+    if (!validEventTypes.includes(eventType)) {
+      console.log('⚠️ 処理対象外のイベント:', eventType);
+
+      // イベント記録を更新
+      const processedRecord = await base('ProcessedWebhookEvents')
+        .select({ filterByFormula: `{EventId} = "${eventId}"` })
+        .firstPage();
+
+      if (processedRecord.length > 0) {
+        await base('ProcessedWebhookEvents').update(processedRecord[0].id, {
+          'Status': 'ignored'
+        });
+      }
+
+      return {
+        statusCode: 200,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Event ignored', eventType })
+      };
+    }
+
+    // 🔧 イベントタイプ別処理分岐
+    let email, customerName, planId, userPlan, subscriptionId;
+    let eventCategory; // 'pending', 'activation', 'payment_confirmation', 'one_time_payment', 'cancellation'
+
+    // プラン名マッピング
+    // 🚨 TODO: マコさんからPayPal plan_idを取得して置き換える
+    const planMapping = {
+      // PayPal Business管理画面で作成したプランIDを記入
+      // 例: 'P-XXXXXXXXXXXXXXXXXXXXX': 'ライト',
+      'P-LIGHT-PLAN-ID': 'ライト',
+      'P-STANDARD-PLAN-ID': 'スタンダード',
+      'P-PREMIUM-PLAN-ID': 'プレミアム',
+      'P-ULTIMATE-PLAN-ID': 'アルティメット'
+      // AI Plusは単品決済なのでplan_id不要
+    };
+
+    // サブスク系イベント（CREATED/ACTIVATED）
+    const isSubscriptionEvent = [
+      'BILLING.SUBSCRIPTION.CREATED',
+      'BILLING.SUBSCRIPTION.ACTIVATED'
+    ].includes(eventType);
+
+    // キャンセル系イベント
+    const isCancellationEvent = [
+      'BILLING.SUBSCRIPTION.CANCELLED',
+      'BILLING.SUBSCRIPTION.SUSPENDED',
+      'BILLING.SUBSCRIPTION.EXPIRED'
+    ].includes(eventType);
+
+    if (isSubscriptionEvent) {
+      // サブスクリプションイベント（仮登録 or 本登録）
+      email = resource.subscriber?.email_address;
+      customerName = `${resource.subscriber?.name?.given_name || ''} ${resource.subscriber?.name?.surname || ''}`.trim();
+      planId = resource.plan_id;
+      subscriptionId = resource.id;
+
+      console.log('🔍 DEBUG - email:', email);
+      console.log('🔍 DEBUG - planId:', planId);
+      console.log('🔍 DEBUG - subscriptionId:', subscriptionId);
+
+      userPlan = planMapping[planId];
+      if (!userPlan) {
+        throw new Error(`Unknown plan_id: ${planId}. Please add to planMapping.`);
+      }
+
+      // イベントカテゴリ判定
+      if (eventType === 'BILLING.SUBSCRIPTION.ACTIVATED') {
+        eventCategory = 'activation'; // サブスク契約開始（アクセス権付与）
+      } else if (eventType === 'BILLING.SUBSCRIPTION.CREATED') {
+        eventCategory = 'pending'; // 仮登録
+      }
+
+    } else if (eventType === 'PAYMENT.SALE.COMPLETED') {
+      // PAYMENT.SALE.COMPLETED: サブスク入金確認 or AI Plus単品決済
+
+      // billing_agreement_id があればサブスク決済、なければ単品決済
+      const billingAgreementId = resource.billing_agreement_id;
+
+      if (billingAgreementId) {
+        // サブスクリプション決済の場合：PaidAt更新のみ
+        subscriptionId = billingAgreementId;
+        eventCategory = 'payment_confirmation'; // 入金確認のみ
+
+        // PayPalSubscriptionIDで顧客を引く
+        const existingRecords = await base('Customers')
+          .select({
+            filterByFormula: `{PayPalSubscriptionID} = "${subscriptionId}"`
+          })
+          .firstPage();
+
+        if (existingRecords.length > 0) {
+          email = existingRecords[0].fields.Email;
+          userPlan = existingRecords[0].fields['プラン'];
+          console.log('✅ サブスク入金確認:', email, '(SubscriptionID:', subscriptionId, ')');
+        } else {
+          console.log('⚠️ 未知のサブスク入金・顧客特定不可（SubscriptionID:', subscriptionId, '）→ スキップ');
+        }
+      } else {
+        // AI Plus単品決済の場合：本登録処理
+        email = resource.payer?.payer_info?.email;
+        customerName = `${resource.payer?.payer_info?.first_name || ''} ${resource.payer?.payer_info?.last_name || ''}`.trim();
+        userPlan = 'AI Plus';
+        eventCategory = 'one_time_payment'; // 単品決済（AI Plus）
+      }
+
+    } else if (isCancellationEvent) {
+      // キャンセル系イベント（権限剥奪）
+      subscriptionId = resource.id;
+      eventCategory = 'cancellation';
+
+      // メール抽出フォールバック
+      email = resource.subscriber?.email_address;
+      if (!email) {
+        // subscription_id で Customers を検索
+        console.log('⚠️ メール取得失敗・subscription_idで検索:', subscriptionId);
+        const existingRecords = await base('Customers')
+          .select({
+            filterByFormula: `{PayPalSubscriptionID} = "${subscriptionId}"`
+          })
+          .firstPage();
+
+        if (existingRecords.length > 0) {
+          email = existingRecords[0].fields.Email;
+          userPlan = existingRecords[0].fields['プラン'];
+          console.log('✅ メール復元成功:', email);
+        } else {
+          throw new Error(`Email not found for subscription_id: ${subscriptionId}`);
+        }
+      }
+    }
+
+    // payment_confirmationはemail不要（SubscriptionIDで顧客特定）
+    if (!email) {
+      if (eventCategory === 'payment_confirmation') {
+        // 入金確認はemail無しでもOK（SubscriptionIDで特定できなかった場合）
+        console.log('⚠️ Email特定不可・入金確認スキップ（SubscriptionID:', subscriptionId, ')');
+
+        // 重複排除記録は残す（再処理防止）
+        const processedRecord = await base('ProcessedWebhookEvents')
+          .select({ filterByFormula: `{EventId} = "${eventId}"` })
+          .firstPage();
+
+        if (processedRecord.length > 0) {
+          await base('ProcessedWebhookEvents').update(processedRecord[0].id, {
+            'Status': 'completed'
+          });
+        }
+
+        return {
+          statusCode: 200,
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'Unknown subscription sale skipped', eventId })
+        };
+      } else {
+        // その他のイベントはemail必須
+        throw new Error('Missing required field: email');
+      }
+    }
+
+    console.log('📧 Email:', email);
+    console.log('📦 User Plan:', userPlan);
+    console.log('🏷️ Event Category:', eventCategory);
+
+    // 有効期限計算（AI Plus以外は1ヶ月後）
+    const now = new Date();
+    let expiryDate;
+
+    if (userPlan === 'AI Plus') {
+      expiryDate = null; // AI Plusは無期限
+    } else {
+      expiryDate = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    }
+    const expiryDateStr = expiryDate ? expiryDate.toISOString().split('T')[0] : '';
+
+    // 既存顧客チェック
+    const existingRecords = await base('Customers')
+      .select({
+        filterByFormula: `{Email} = "${email}"`
+      })
+      .firstPage();
+
+    let customerRecord;
+    let isNewCustomer = false;
+    let shouldSendWelcomeEmail = false;
+
+    // イベントカテゴリ別処理
+    if (eventCategory === 'pending') {
+      // ========================================
+      // A. 仮登録（CREATED）
+      // ========================================
+      console.log('📝 仮登録処理:', email);
+
+      if (existingRecords.length > 0) {
+        const recordId = existingRecords[0].id;
+        customerRecord = await base('Customers').update(recordId, {
+          'Status': 'pending',
+          'PayPalSubscriptionID': subscriptionId || '',
+          'プラン': userPlan
+        });
+        console.log('✅ 既存顧客を仮登録に更新:', recordId);
+      } else {
+        customerRecord = await base('Customers').create([{
+          fields: {
+            'Email': email,
+            '氏名': customerName || '',
+            'プラン': userPlan,
+            'Status': 'pending',
+            'PayPalSubscriptionID': subscriptionId || '',
+            'WithdrawalRequested': false
+          }
+        }]);
+        console.log('✅ 新規顧客を仮登録:', customerRecord[0].id);
+      }
+
+    } else if (eventCategory === 'activation' || eventCategory === 'one_time_payment') {
+      // ========================================
+      // B. 本登録（activation: サブスク契約開始, one_time_payment: 単品決済）
+      // ========================================
+      const categoryLabel = eventCategory === 'activation' ? 'サブスク契約開始' : '単品決済（AI Plus）';
+      console.log(`✅ 本登録処理（${categoryLabel}・アクセス権付与）:`, email);
+
+      if (existingRecords.length > 0) {
+        const recordId = existingRecords[0].id;
+        const welcomeSentAt = existingRecords[0].fields.WelcomeSentAt;
+
+        // ✅ WelcomeSentAt が無い場合のみメール送信
+        shouldSendWelcomeEmail = !welcomeSentAt;
+
+        customerRecord = await base('Customers').update(recordId, {
+          'Status': 'active',
+          'プラン': userPlan,
+          '有効期限': expiryDateStr,
+          'PayPalSubscriptionID': subscriptionId || '',
+          'WithdrawalRequested': false,
+          'WithdrawalDate': null,
+          'WithdrawalReason': null,
+          'AccessEnabled': true
+        });
+        console.log(`✅ 既存顧客を本登録に更新（${categoryLabel}）:`, recordId);
+      } else {
+        isNewCustomer = true;
+        shouldSendWelcomeEmail = true;
+
+        customerRecord = await base('Customers').create([{
+          fields: {
+            'Email': email,
+            '氏名': customerName || '',
+            'プラン': userPlan,
+            '有効期限': expiryDateStr,
+            'Status': 'active',
+            'PayPalSubscriptionID': subscriptionId || '',
+            'WithdrawalRequested': false,
+            'AccessEnabled': true
+          }
+        }]);
+        console.log(`✅ 新規顧客を本登録（${categoryLabel}）:`, customerRecord[0].id);
+      }
+
+    } else if (eventCategory === 'payment_confirmation') {
+      // ========================================
+      // C. 入金確認（PAYMENT.SALE.COMPLETED for subscriptions）
+      // ========================================
+      console.log('💰 入金確認処理（PaidAt更新のみ）:', email, '(SubscriptionID:', subscriptionId, ')');
+
+      if (existingRecords.length > 0) {
+        const recordId = existingRecords[0].id;
+        customerRecord = await base('Customers').update(recordId, {
+          'PaidAt': now.toISOString()
+        });
+        console.log('✅ PaidAt更新完了:', recordId, '(SubscriptionID:', subscriptionId, ')');
+      } else {
+        console.log('⚠️ 顧客が見つからない（未登録？）・SubscriptionID:', subscriptionId);
+      }
+
+    } else if (eventCategory === 'cancellation') {
+      // ========================================
+      // D. 権限剥奪（CANCELLED/SUSPENDED/EXPIRED）
+      // ========================================
+      console.log('⛔ 権限剥奪処理:', email);
+
+      if (existingRecords.length > 0) {
+        const recordId = existingRecords[0].id;
+        const statusMap = {
+          'BILLING.SUBSCRIPTION.CANCELLED': 'cancelled',
+          'BILLING.SUBSCRIPTION.SUSPENDED': 'suspended',
+          'BILLING.SUBSCRIPTION.EXPIRED': 'cancelled'
+        };
+
+        customerRecord = await base('Customers').update(recordId, {
+          'Status': statusMap[eventType] || 'cancelled',
+          'AccessEnabled': false,
+          'CancelledAt': now.toISOString()
+        });
+        console.log('✅ 顧客権限を剥奪:', recordId);
+      } else {
+        console.log('⚠️ 顧客が見つからない（既に削除済み？）');
+      }
+    }
+
+    // 📧 ウェルカムメール送信（本登録かつ未送信の場合のみ）
+    if (shouldSendWelcomeEmail) {
+      console.log('📧 ウェルカムメール送信開始...');
+
+      const sendGridResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          personalizations: [{
+            to: [{ email: email }],
+            subject: `【KEIBA Intelligence】${userPlan}プラン ご登録ありがとうございます`
+          }],
+          from: {
+            email: 'noreply@keiba-intelligence.keiba.link',
+            name: 'KEIBA Intelligence'
+          },
+          content: [{
+            type: 'text/html',
+            value: generateWelcomeEmail(customerName, userPlan, expiryDateStr, email)
+          }]
+        })
+      });
+
+      if (sendGridResponse.ok) {
+        console.log('✅ ウェルカムメール送信完了');
+
+        // WelcomeSentAt を記録（重複送信防止）
+        const recordId = isNewCustomer ? customerRecord[0].id : existingRecords[0].id;
+        await base('Customers').update(recordId, {
+          'WelcomeSentAt': now.toISOString()
+        });
+        console.log('✅ WelcomeSentAt記録完了');
+      } else {
+        const errorText = await sendGridResponse.text();
+        console.error('❌ SendGrid送信失敗:', errorText);
+      }
+    }
+
+    // イベント記録を更新（処理完了）
+    const processedEventRecords = await base('ProcessedWebhookEvents')
+      .select({
+        filterByFormula: `{EventId} = "${eventId}"`
+      })
+      .firstPage();
+
+    if (processedEventRecords.length > 0) {
+      await base('ProcessedWebhookEvents').update(processedEventRecords[0].id, {
+        'Status': 'completed',
+        'CustomerEmail': email,
+        'UserPlan': userPlan
+      });
+    }
+
+    // 成功レスポンス
+    return {
+      statusCode: 200,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        success: true,
+        message: 'Webhook processed successfully',
+        eventId,
+        eventType,
+        customerEmail: email,
+        plan: userPlan,
+        expiryDate: expiryDateStr,
+        isNewCustomer,
+        timestamp: now.toISOString()
+      })
+    };
+
+  } catch (error) {
+    console.error('❌ Webhook処理エラー:', error);
+
+    return {
+      statusCode: 500,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        error: 'Internal server error',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      })
+    };
+  }
+};
+
+// ウェルカムメールHTML生成（マジックリンク付き）
+function generateWelcomeEmail(customerName, plan, expiryDate, email) {
+  const planDescriptions = {
+    'ライト': '後半3レース馬単買い目',
+    'スタンダード': '全レース馬単買い目',
+    'プレミアム': '全レース三連複買い目',
+    'アルティメット': '馬単+三連複+穴馬情報',
+    'AI Plus': '1鞍超精密予想（単品）'
+  };
+
+  const description = planDescriptions[plan] || plan;
+  const expiryText = expiryDate ? `有効期限: ${expiryDate}` : '無期限';
+
+  // マジックリンク生成（send-magic-link.js経由でトークン発行）
+  const loginLink = `https://keiba-intelligence.keiba.link/login?email=${encodeURIComponent(email)}`;
+
+  return `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ご登録ありがとうございます</title>
+</head>
+<body style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="margin: 0; font-size: 24px;">🎉 ご登録ありがとうございます</h1>
+  </div>
+
+  <div style="background: #fff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+    <p>${customerName ? customerName + '様' : 'お客様'}</p>
+
+    <p>KEIBA Intelligenceへのご登録ありがとうございます。<br>
+    以下の内容でご登録が完了しました。</p>
+
+    <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+      <p style="margin: 0 0 10px 0;"><strong>📦 ご契約プラン</strong></p>
+      <p style="margin: 0 0 10px 0; font-size: 18px; color: #1e40af;"><strong>${plan}</strong></p>
+      <p style="margin: 0 0 10px 0; color: #666;">${description}</p>
+      <p style="margin: 0; color: #666;">${expiryText}</p>
+    </div>
+
+    <div style="background: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+      <p style="margin: 0 0 10px 0;"><strong>🔐 ログイン方法</strong></p>
+      <p style="margin: 0 0 15px 0;">下のボタンをクリックすると、ログインページにアクセスできます。<br>
+      メールアドレスを入力してマジックリンクを受け取ってください。</p>
+
+      <div style="text-align: center;">
+        <a href="${loginLink}"
+           style="display: inline-block; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; text-decoration: none; padding: 15px 40px; border-radius: 25px; font-weight: bold;">
+          ログインページへ
+        </a>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <p style="margin: 0 0 15px 0; color: #666;">または、直接サイトにアクセス：</p>
+      <a href="https://keiba-intelligence.keiba.link/"
+         style="display: inline-block; background: #fff; color: #1e40af; text-decoration: none; padding: 12px 30px; border: 2px solid #1e40af; border-radius: 25px; font-weight: bold;">
+        サイトにアクセス
+      </a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+
+    <p style="font-size: 12px; color: #999;">
+      ※ このメールに心当たりがない場合は、お手数ですが削除してください。<br>
+      ※ ご不明な点がございましたら、support@keiba-intelligence.keiba.link までお問い合わせください。
+    </p>
+  </div>
+</body>
+</html>
+  `;
+}

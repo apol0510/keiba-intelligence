@@ -102,7 +102,7 @@ grep -r "pattern" ./src/
 |---------|------|------|
 | フロントエンド | Astro 5.16+ + Sass | SSR mode（server） |
 | ホスティング | Netlify Pro | Functions/Blobs含む |
-| 決済 | ThriveCart + PayPal | Webhook直接実装 |
+| 決済 | PayPal Direct | Webhook直接実装（円決済） |
 | 顧客管理 | Airtable Pro | 4テーブル運用 |
 | ~~自動化~~ | ~~Zapier Premium~~ | **削減（Functions直接実装）** |
 | メール | SendGrid Essential 100 | 無料枠100,000通/月 |
@@ -190,12 +190,16 @@ grep -r "pattern" ./src/
 - 買い目ロック（有料プラン誘導）
 - 注意事項セクション
 
-**✅ ThriveCart Webhook実装**
-- `netlify/functions/thrivecart-webhook.js`
-- 購入完了時: Airtable Create + SendGrid Email
-- 解約時: Airtable Update + SendGrid Email
-- Webhook署名検証（HMAC SHA256）
-- **Zapier削減: $73.50/月節約**
+**✅ PayPal Webhook実装**
+- `netlify/functions/paypal-webhook.js`
+- ハイブリッドアプローチ（4段階処理）
+  - CREATED → 仮登録（Status: pending）
+  - ACTIVATED → 本登録（AccessEnabled: true、ウェルカムメール送信）
+  - PAYMENT.SALE.COMPLETED → PaidAt更新 or AI Plus本登録
+  - CANCELLED/SUSPENDED/EXPIRED → 権限剥奪
+- 重複排除機構（ProcessedWebhookEventsテーブル）
+- マジックリンク付きウェルカムメール
+- **ThriveCart削除・初期費用$0**
 
 **✅ メルマガ配信システム実装**
 - 設計書: `NEWSLETTER_SYSTEM.md`
@@ -236,10 +240,11 @@ grep -r "pattern" ./src/
   - トークン15分有効期限・単回使用
   - セッション7日間TTL（Netlify Blobs）
 
-**❌ ThriveCart商品登録（未実施）**
-- 5プラン設定
-- PayPal決済設定
-- Webhook URL設定
+**❌ PayPal商品登録（未実施）**
+- PayPal Business管理画面で4サブスクプラン作成（ライト/スタンダード/プレミアム/アルティメット）
+- AI Plus単品商品作成
+- Webhook URL設定（https://keiba-intelligence.keiba.link/.netlify/functions/paypal-webhook）
+- plan_id取得 → paypal-webhook.jsのplanMapping更新
 - Test Mode動作確認
 
 ---
@@ -249,22 +254,22 @@ grep -r "pattern" ./src/
 ### **【優先度高】Phase 2完了タスク**
 
 - [ ] **Airtableテーブルセットアップ**
-  - Customersテーブル拡張（plan_type, send_channel, source, migrated_at, last_sent_at, unsubscribe）
+  - Customersテーブル拡張（Email, 氏名, プラン, Status, PayPalSubscriptionID, 有効期限, AccessEnabled, PaidAt, WelcomeSentAt, CancelledAt, WithdrawalRequested）
+  - ProcessedWebhookEventsテーブル作成（EventId, EventType, ProcessedAt, Status, CustomerEmail, UserPlan）
   - Broadcastsテーブル作成（broadcast_id, subject, body_html, status, stage, etc.）
   - BroadcastRecipientsテーブル作成（broadcast_id, email, status, sent_at, etc.）
   - AuthTokensテーブル作成（token, email, created_at, expires_at, used, etc.）
-  - SendGrid_Paid_Active View作成（4条件フィルタ）
 
 - [ ] **Netlify環境変数設定**
   - AIRTABLE_API_KEY
   - AIRTABLE_BASE_ID
   - SENDGRID_API_KEY
-  - THRIVECART_WEBHOOK_SECRET
 
-- [ ] **ThriveCart商品登録**
-  - 5プラン設定（ライト/スタンダード/プレミアム/アルティメット/AI Plus）
-  - PayPal決済設定
-  - Webhook URL設定（https://keiba-intelligence.keiba.link/.netlify/functions/thrivecart-webhook）
+- [ ] **PayPal商品登録**
+  - PayPal Business管理画面で4サブスクプラン作成（ライト/スタンダード/プレミアム/アルティメット）
+  - AI Plus単品商品作成
+  - Webhook URL設定（https://keiba-intelligence.keiba.link/.netlify/functions/paypal-webhook）
+  - plan_id取得 → paypal-webhook.jsのplanMapping更新
   - Test Mode動作確認
 
 - [ ] **認証システムテスト**
@@ -552,12 +557,8 @@ AIRTABLE_API_KEY=patxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 AIRTABLE_BASE_ID=appxxxxxxxxxxxxxxx
 
 # SendGrid（必須）
-# 用途: マジックリンク、ウェルカムメール、メルマガ配信、解約通知
+# 用途: マジックリンク、ウェルカムメール、メルマガ配信
 SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-# ThriveCart（必須）
-# 用途: Webhook署名検証
-THRIVECART_WEBHOOK_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # GitHub（Phase 3で必要）
 # 用途: 管理画面からのGit自動コミット
@@ -571,9 +572,10 @@ GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 **Airtable必須テーブル:**
 1. Customers（顧客管理）
-2. Broadcasts（メルマガ配信管理）
-3. BroadcastRecipients（配信履歴）
-4. AuthTokens（認証トークン）
+2. ProcessedWebhookEvents（Webhook重複排除）
+3. Broadcasts（メルマガ配信管理）
+4. BroadcastRecipients（配信履歴）
+5. AuthTokens（認証トークン）
 
 ---
 
@@ -591,13 +593,13 @@ GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 - [x] Netlify連携・自動デプロイ設定
 - [x] 料金プランページ作成（/pricing）
 - [x] 無料予想ページ作成（/free-prediction）
-- [x] ThriveCart Webhook実装（Zapier代替）
+- [x] PayPal Webhook実装（ハイブリッドアプローチ・重複排除機構）
 - [x] メルマガ配信システム実装
 - [x] メルマガ移行システム設計
 - [x] 会員認証システム実装（マジックリンク）
 - [ ] Airtableテーブルセットアップ
 - [ ] Netlify環境変数設定
-- [ ] ThriveCart商品登録
+- [ ] PayPal商品登録
 - [ ] 認証システムテスト
 
 ### **Phase 3: 管理機能実装（0%）**
@@ -605,28 +607,26 @@ GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 - [ ] 結果管理画面作成（results-manager）
 - [ ] 有料予想ページ作成
 - [ ] SEOページ自動生成
-- [ ] テスト決済（ThriveCart Test Mode）
+- [ ] テスト決済（PayPal Test Mode）
 - [ ] 本番デプロイ
 
 ---
 
-**📅 最終更新日**: 2026-01-10
+**📅 最終更新日**: 2026-01-12
 **🏁 Project Phase**: Phase 2コア機能実装中 🚀（80%完了）
-**🎯 Next Priority**: Airtableテーブルセットアップ → Netlify環境変数設定 → ThriveCart商品登録
+**🎯 Next Priority**: Airtableテーブルセットアップ → Netlify環境変数設定 → PayPal商品登録
 **📊 進捗率**: 60%完了（Phase 1: 100%、Phase 2: 80%、Phase 3: 0%）
-**✨ 本日の成果**:
-  - 料金プラン・無料予想ページ作成
-  - ThriveCart Webhook実装（Zapier削減: $73.50/月）
-  - メルマガ配信システム実装（5層二重送信防止、段階的送信）
-  - メルマガ移行システム設計（配配メール→SendGrid 15,000件）
-  - 会員認証システム実装（マジックリンク、Netlify Blobs、7日間セッション）
+**✨ 本日の成果（2026-01-12）**:
+  - ThriveCart→PayPal Direct移行完了
+  - PayPal Webhook実装（ハイブリッドアプローチ・重複排除機構）
+  - 初期費用$0化（ThriveCart $690削減）
 
-**🎉 主要成果**:
-  - Netlify Functions: 12個実装（Webhook, Newsletter 5個, Auth 4個, etc.）
+**🎉 累積成果**:
+  - Netlify Functions: 12個実装（PayPal Webhook, Newsletter 5個, Auth 4個, etc.）
   - 設計書: 3個作成（NEWSLETTER_SYSTEM.md, NEWSLETTER_MIGRATION.md, AUTH_SYSTEM.md）
   - 管理画面: 3ページ実装（/admin/newsletter/*）
   - ログインページ: 2ページ実装（/login, /auth/verify）
-  - コスト削減: $73.50/月（10年間で約¥1,323,000削減）
+  - コスト削減: ThriveCart $690削減（買い切り費用）+ Zapier $73.50/月削減
 
 ---
 

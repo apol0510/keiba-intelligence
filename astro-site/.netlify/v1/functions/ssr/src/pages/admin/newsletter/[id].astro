@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import AuthCheck from '../../../components/AuthCheck.astro';
 
 export const prerender = false;
 ---
@@ -7,6 +8,7 @@ export const prerender = false;
 <BaseLayout
   title="配信詳細"
   description="メルマガ配信詳細・送信">
+  <AuthCheck />
   <section class="admin-newsletter-detail">
     <div class="container">
       <div class="header">

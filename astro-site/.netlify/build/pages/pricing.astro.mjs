@@ -1,6 +1,6 @@
 import { d as createComponent, i as renderComponent, r as renderTemplate, m as maybeRenderHead, f as addAttribute, j as renderScript } from '../chunks/astro/server_BKC9sGbb.mjs';
 import 'piccolore';
-import { $ as $$BaseLayout } from '../chunks/BaseLayout_ChDee_X0.mjs';
+import { $ as $$BaseLayout } from '../chunks/BaseLayout_EN32_9Bi.mjs';
 /* empty css                                   */
 export { renderers } from '../renderers.mjs';
 
