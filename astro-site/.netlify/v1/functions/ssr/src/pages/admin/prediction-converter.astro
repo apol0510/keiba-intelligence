@@ -431,27 +431,76 @@ function outputJSON(data) {
               )}
             </div>
 
-            <!-- 役割別馬一覧 -->
-            <div class="horses-table">
+            <!-- 役割別馬一覧（元データ風表示） -->
+            <div class="horses-list">
               <h3>役割別馬一覧</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>役割</th>
-                    <th>馬番</th>
-                    <th>馬名</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.horses.map((horse) => (
-                    <tr>
-                      <td><span class={`role-badge role-${horse.role}`}>{horse.role}</span></td>
-                      <td>{horse.horseNumber}</td>
-                      <td>{horse.horseName}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+              {/* 本命 */}
+              {result.horses.filter(h => h.role === '本命').map((horse) => (
+                <div class="horse-item honmei">
+                  <div class="horse-header">
+                    <span class="role-symbol">◎</span>
+                    <span class="horse-number">{horse.horseNumber}</span>
+                    <span class="horse-name">{horse.horseName}</span>
+                    <span class="role-label">本命</span>
+                  </div>
+                  <div class="horse-score">累積スコア: <strong>{horse.pt}pt</strong></div>
+                </div>
+              ))}
+
+              {/* 対抗 */}
+              {result.horses.filter(h => h.role === '対抗').map((horse) => (
+                <div class="horse-item taikou">
+                  <div class="horse-header">
+                    <span class="role-symbol">○</span>
+                    <span class="horse-number">{horse.horseNumber}</span>
+                    <span class="horse-name">{horse.horseName}</span>
+                    <span class="role-label">対抗</span>
+                  </div>
+                  <div class="horse-score">累積スコア: <strong>{horse.pt}pt</strong></div>
+                </div>
+              ))}
+
+              {/* 単穴 */}
+              {result.horses.filter(h => h.role === '単穴').map((horse) => (
+                <div class="horse-item tanana">
+                  <div class="horse-header">
+                    <span class="role-symbol">▲</span>
+                    <span class="horse-number">{horse.horseNumber}</span>
+                    <span class="horse-name">{horse.horseName}</span>
+                    <span class="role-label">単穴</span>
+                  </div>
+                  <div class="horse-score">累積スコア: <strong>{horse.pt}pt</strong></div>
+                </div>
+              ))}
+
+              {/* 連下候補馬 */}
+              {result.horses.filter(h => h.role === '連下').length > 0 && (
+                <div class="horse-group">
+                  <div class="group-header">△ 連下候補馬</div>
+                  <div class="group-content">
+                    {result.horses.filter(h => h.role === '連下').map((horse, index, arr) => (
+                      <span class="horse-short">
+                        {horse.horseNumber} {horse.horseName} ({horse.pt}pt){index < arr.length - 1 ? ', ' : ''}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 抑え候補馬 */}
+              {result.horses.filter(h => h.role === '抑え').length > 0 && (
+                <div class="horse-group osae">
+                  <div class="group-header">× 抑え候補馬</div>
+                  <div class="group-content">
+                    {result.horses.filter(h => h.role === '抑え').map((horse, index, arr) => (
+                      <span class="horse-short">
+                        {horse.horseNumber} {horse.horseName} ({horse.pt}pt){index < arr.length - 1 ? ', ' : ''}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <!-- JSON出力 -->
@@ -617,41 +666,111 @@ function outputJSON(data) {
       margin-top: var(--spacing-sm);
     }
 
-    .horses-table {
+    .horses-list {
       margin-bottom: var(--spacing-xl);
-      overflow-x: auto;
     }
 
-    .horses-table table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .horses-table th,
-    .horses-table td {
-      padding: var(--spacing-sm);
-      text-align: left;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .horses-table th {
+    .horse-item {
+      padding: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+      border-left: 4px solid;
       background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+    }
+
+    .horse-item.honmei {
+      border-left-color: #ef4444;
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, var(--bg-secondary) 50%);
+    }
+
+    .horse-item.taikou {
+      border-left-color: #f59e0b;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, var(--bg-secondary) 50%);
+    }
+
+    .horse-item.tanana {
+      border-left-color: #3b82f6;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, var(--bg-secondary) 50%);
+    }
+
+    .horse-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .role-symbol {
+      font-size: 1.5rem;
       font-weight: 700;
     }
 
-    .role-badge {
-      display: inline-block;
-      padding: var(--spacing-xs) var(--spacing-sm);
-      border-radius: var(--radius-sm);
-      font-size: 0.875rem;
-      font-weight: 600;
+    .horse-item.honmei .role-symbol { color: #ef4444; }
+    .horse-item.taikou .role-symbol { color: #f59e0b; }
+    .horse-item.tanana .role-symbol { color: #3b82f6; }
+
+    .horse-number {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      min-width: 2rem;
     }
 
-    .role-本命 { background: #ef4444; color: white; }
-    .role-対抗 { background: #f59e0b; color: white; }
-    .role-単穴 { background: #3b82f6; color: white; }
-    .role-連下 { background: #6b7280; color: white; }
-    .role-抑え { background: #9ca3af; color: white; }
+    .horse-name {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      flex-grow: 1;
+    }
+
+    .role-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+    }
+
+    .horse-score {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-left: 2.5rem;
+    }
+
+    .horse-score strong {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    .horse-group {
+      padding: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      border-left: 4px solid #6b7280;
+    }
+
+    .horse-group.osae {
+      border-left-color: #9ca3af;
+    }
+
+    .group-header {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .group-content {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      line-height: 1.8;
+    }
+
+    .horse-short {
+      color: var(--text-secondary);
+    }
 
     .json-output {
       margin-top: var(--spacing-xl);
