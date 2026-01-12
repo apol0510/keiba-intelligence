@@ -130,11 +130,9 @@ exports.handler = async (event, context) => {
     // 🚨 TODO: マコさんからPayPal plan_idを取得して置き換える
     const planMapping = {
       // PayPal Business管理画面で作成したプランIDを記入
-      // 例: 'P-XXXXXXXXXXXXXXXXXXXXX': 'スタンダード',
-      'P-STANDARD-PLAN-ID': 'スタンダード',
-      'P-PREMIUM-PLAN-ID': 'プレミアム',
-      'P-ULTIMATE-PLAN-ID': 'アルティメット'
-      // AI Plusは単品決済なのでplan_id不要
+      // 例: 'P-XXXXXXXXXXXXXXXXXXXXX': 'プロ',
+      'P-PRO-PLAN-ID': 'プロ'
+      // プロプラスは後日追加予定
     };
 
     // サブスク系イベント（CREATED/ACTIVATED）
@@ -199,11 +197,11 @@ exports.handler = async (event, context) => {
           console.log('⚠️ 未知のサブスク入金・顧客特定不可（SubscriptionID:', subscriptionId, '）→ スキップ');
         }
       } else {
-        // AI Plus単品決済の場合：本登録処理
+        // 単品決済の場合：本登録処理（将来の拡張用）
         email = resource.payer?.payer_info?.email;
         customerName = `${resource.payer?.payer_info?.first_name || ''} ${resource.payer?.payer_info?.last_name || ''}`.trim();
-        userPlan = 'AI Plus';
-        eventCategory = 'one_time_payment'; // 単品決済（AI Plus）
+        userPlan = '単品'; // 将来的にプラン名を判別する必要がある
+        eventCategory = 'one_time_payment'; // 単品決済
       }
 
     } else if (isCancellationEvent) {
@@ -264,12 +262,12 @@ exports.handler = async (event, context) => {
     console.log('📦 User Plan:', userPlan);
     console.log('🏷️ Event Category:', eventCategory);
 
-    // 有効期限計算（AI Plus以外は1ヶ月後）
+    // 有効期限計算（サブスクは1ヶ月後、単品は無期限）
     const now = new Date();
     let expiryDate;
 
-    if (userPlan === 'AI Plus') {
-      expiryDate = null; // AI Plusは無期限
+    if (userPlan === '単品') {
+      expiryDate = null; // 単品は無期限
     } else {
       expiryDate = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
     }
@@ -491,10 +489,8 @@ exports.handler = async (event, context) => {
 // ウェルカムメールHTML生成（マジックリンク付き）
 function generateWelcomeEmail(customerName, plan, expiryDate, email) {
   const planDescriptions = {
-    'スタンダード': '全レース馬単買い目',
-    'プレミアム': '全レース三連複買い目',
-    'アルティメット': '馬単+三連複+穴馬情報',
-    'AI Plus': '1鞍超精密予想（単品）'
+    'プロ': '全レース馬単買い目',
+    'プロプラス': '馬単+三連複買い目' // 後日追加予定
   };
 
   const description = planDescriptions[plan] || plan;
