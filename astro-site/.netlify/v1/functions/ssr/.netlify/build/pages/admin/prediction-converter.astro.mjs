@@ -41,15 +41,43 @@ const $$PredictionConverter = createComponent(async ($$result, $$props, $$slots)
   function parseInputData(rawInput) {
     const lines = rawInput.trim().split("\n");
     const horses = [];
-    for (const line of lines) {
-      const parts = line.split(/[,\s]+/);
-      if (parts.length >= 3) {
-        const horseNumber = parseInt(parts[0], 10);
-        const horseName = parts[1];
-        const pt = parseFloat(parts[2]);
-        if (!isNaN(horseNumber) && !isNaN(pt)) {
-          horses.push({ horseNumber, horseName, pt });
-        }
+    let currentHorse = null;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const roleMatch = line.match(/^[◎○▲△×]\s+(\d+)\s+(.+?)\s+(?:本命|対抗|単穴)$/);
+      if (roleMatch) {
+        currentHorse = {
+          horseNumber: parseInt(roleMatch[1], 10),
+          horseName: roleMatch[2],
+          pt: null
+        };
+        continue;
+      }
+      const scoreMatch = line.match(/累積スコア[：:]\s*(\d+(?:\.\d+)?)pt/);
+      if (scoreMatch && currentHorse) {
+        currentHorse.pt = parseFloat(scoreMatch[1]);
+        horses.push({ ...currentHorse });
+        currentHorse = null;
+        continue;
+      }
+      const shortMatch = line.match(/^(\d+)\s+(.+?)\s+\((\d+(?:\.\d+)?)pt\)/);
+      if (shortMatch) {
+        horses.push({
+          horseNumber: parseInt(shortMatch[1], 10),
+          horseName: shortMatch[2],
+          pt: parseFloat(shortMatch[3])
+        });
+        continue;
+      }
+      const simpleMatch = line.match(/^(\d+)[,\s]+(.+?)[,\s]+(\d+(?:\.\d+)?)$/);
+      if (simpleMatch) {
+        horses.push({
+          horseNumber: parseInt(simpleMatch[1], 10),
+          horseName: simpleMatch[2],
+          pt: parseFloat(simpleMatch[3])
+        });
+        continue;
       }
     }
     horses.sort((a, b) => {

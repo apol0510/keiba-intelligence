@@ -53,20 +53,54 @@ if (Astro.request.method === 'POST') {
 function parseInputData(rawInput: string) {
   const lines = rawInput.trim().split('\n');
   const horses = [];
+  let currentHorse = null;
 
-  for (const line of lines) {
-    // 馬番,馬名,pt の形式を想定（柔軟に対応）
-    // 例: "1,マコスペシャル,90.5" or "1 マコスペシャル 90.5"
-    const parts = line.split(/[,\s]+/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
 
-    if (parts.length >= 3) {
-      const horseNumber = parseInt(parts[0], 10);
-      const horseName = parts[1];
-      const pt = parseFloat(parts[2]);
+    // パターン1: ◎ 5 バティストゥータ 本命
+    // パターン2: ○ 12 フィリピーヌ 対抗
+    // パターン3: ▲ 8 アイトカコイトカ 単穴
+    const roleMatch = line.match(/^[◎○▲△×]\s+(\d+)\s+(.+?)\s+(?:本命|対抗|単穴)$/);
+    if (roleMatch) {
+      currentHorse = {
+        horseNumber: parseInt(roleMatch[1], 10),
+        horseName: roleMatch[2],
+        pt: null
+      };
+      continue;
+    }
 
-      if (!isNaN(horseNumber) && !isNaN(pt)) {
-        horses.push({ horseNumber, horseName, pt });
-      }
+    // パターン4: 累積スコア: 89pt
+    const scoreMatch = line.match(/累積スコア[：:]\s*(\d+(?:\.\d+)?)pt/);
+    if (scoreMatch && currentHorse) {
+      currentHorse.pt = parseFloat(scoreMatch[1]);
+      horses.push({ ...currentHorse });
+      currentHorse = null;
+      continue;
+    }
+
+    // パターン5: 4 ロードオブキング (80pt) （連下・抑え）
+    const shortMatch = line.match(/^(\d+)\s+(.+?)\s+\((\d+(?:\.\d+)?)pt\)/);
+    if (shortMatch) {
+      horses.push({
+        horseNumber: parseInt(shortMatch[1], 10),
+        horseName: shortMatch[2],
+        pt: parseFloat(shortMatch[3])
+      });
+      continue;
+    }
+
+    // パターン6: 1,マコスペシャル,90.5 （シンプル形式・後方互換）
+    const simpleMatch = line.match(/^(\d+)[,\s]+(.+?)[,\s]+(\d+(?:\.\d+)?)$/);
+    if (simpleMatch) {
+      horses.push({
+        horseNumber: parseInt(simpleMatch[1], 10),
+        horseName: simpleMatch[2],
+        pt: parseFloat(simpleMatch[3])
+      });
+      continue;
     }
   }
 
