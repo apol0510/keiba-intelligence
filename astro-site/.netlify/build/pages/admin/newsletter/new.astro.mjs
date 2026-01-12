@@ -1,7 +1,7 @@
 import { d as createComponent, i as renderComponent, r as renderTemplate, m as maybeRenderHead, j as renderScript } from '../../../chunks/astro/server_BKC9sGbb.mjs';
 import 'piccolore';
-import { $ as $$BaseLayout } from '../../../chunks/BaseLayout_EN32_9Bi.mjs';
-import { $ as $$AuthCheck } from '../../../chunks/AuthCheck_CLXkpNQa.mjs';
+import { $ as $$BaseLayout } from '../../../chunks/BaseLayout_iUX2XXnr.mjs';
+import { $ as $$AuthCheck } from '../../../chunks/AuthCheck_CVoZmkLj.mjs';
 /* empty css                                     */
 export { renderers } from '../../../renderers.mjs';
 

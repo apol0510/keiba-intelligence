@@ -10,7 +10,7 @@ const plans = [
     price: 0,
     yearlyPrice: 0,
     period: '無料',
-    description: '予想閲覧のみ',
+    description: '予想閲覧のみ（買い目なし）',
     features: [
       { text: '当日の予想閲覧', included: true },
       { text: '過去の的中実績確認', included: true },
@@ -23,27 +23,8 @@ const plans = [
     highlighted: false,
   },
   {
-    id: 'light',
-    name: 'ライト',
-    price: 2980,
-    yearlyPrice: 29800,
-    period: '/月',
-    description: '後半3レース買い目',
-    features: [
-      { text: '後半3レース予想', included: true },
-      { text: '馬単買い目提供', included: true },
-      { text: '的中実績閲覧', included: true },
-      { text: 'データ可視化', included: true },
-      { text: '全レース買い目', included: false },
-    ],
-    cta: 'ライトプランを始める',
-    ctaLink: '#thrivecart-light',
-    highlighted: false,
-    dailyPrice: 99,
-  },
-  {
-    id: 'standard',
-    name: 'スタンダード',
+    id: 'pro',
+    name: 'プロ',
     price: 4980,
     yearlyPrice: 49800,
     period: '/月',
@@ -55,69 +36,13 @@ const plans = [
       { text: 'データ可視化', included: true },
       { text: '南関4場対応', included: true },
     ],
-    cta: 'スタンダードプランを始める',
-    ctaLink: '#thrivecart-standard',
+    cta: 'プロプランを始める',
+    ctaLink: '#paypal-pro',
     highlighted: true,
     badge: 'おすすめ',
     dailyPrice: 166,
   },
-  {
-    id: 'premium',
-    name: 'プレミアム',
-    price: 6980,
-    yearlyPrice: 69800,
-    period: '/月',
-    description: '全レース三連複買い目',
-    features: [
-      { text: '全レース予想', included: true },
-      { text: '三連複買い目提供', included: true },
-      { text: '高配当狙い戦略', included: true },
-      { text: '穴馬情報', included: true },
-      { text: 'データ可視化', included: true },
-    ],
-    cta: 'プレミアムプランを始める',
-    ctaLink: '#thrivecart-premium',
-    highlighted: false,
-    dailyPrice: 233,
-  },
-  {
-    id: 'ultimate',
-    name: 'アルティメット',
-    price: 8980,
-    yearlyPrice: 89800,
-    period: '/月',
-    description: '馬単+三連複+穴馬',
-    features: [
-      { text: '全レース予想', included: true },
-      { text: '馬単+三連複買い目', included: true },
-      { text: '穴馬情報', included: true },
-      { text: 'コース別攻略法', included: true },
-      { text: '優先サポート', included: true },
-    ],
-    cta: 'アルティメットプランを始める',
-    ctaLink: '#thrivecart-ultimate',
-    highlighted: false,
-    dailyPrice: 299,
-  },
 ];
-
-const aiPlusPlan = {
-  id: 'ai-plus',
-  name: 'AI Plus',
-  price: 19800,
-  period: '/月',
-  description: '1鞍超精密予想',
-  features: [
-    { text: '1鞍のみ超精密AI予想', included: true },
-    { text: 'マルチ買い目提供', included: true },
-    { text: '特徴量詳細分析', included: true },
-    { text: 'レース展開予測', included: true },
-    { text: '高精度狙い（回収率150%+）', included: true },
-  ],
-  cta: 'AI Plusプランを始める',
-  ctaLink: '#thrivecart-ai-plus',
-  note: '※ 単品購入のみ。他プランとの併用不可。',
-};
 ---
 
 <BaseLayout
@@ -187,47 +112,6 @@ const aiPlusPlan = {
     </div>
   </section>
 
-  <!-- AI Plusプラン（単品） -->
-  <section class="ai-plus-plan">
-    <div class="container">
-      <h2 class="section-title text-center">超精密予想プラン</h2>
-      <p class="section-subtitle text-center">
-        1鞍のみに集中した超精密AI予想。高配当狙いの上級者向け。
-      </p>
-
-      <div class="ai-plus-card card">
-        <div class="badge badge-info">単品プラン</div>
-
-        <div class="plan-header">
-          <div class="plan-name">{aiPlusPlan.name}</div>
-          <div class="plan-price">
-            <span class="price">¥{aiPlusPlan.price.toLocaleString()}</span>
-            <span class="period">{aiPlusPlan.period}</span>
-          </div>
-          <div class="plan-description">{aiPlusPlan.description}</div>
-        </div>
-
-        <div class="ai-plus-content">
-          <ul class="plan-features">
-            {aiPlusPlan.features.map((feature) => (
-              <li class="included">
-                ✅ {feature.text}
-              </li>
-            ))}
-          </ul>
-
-          <div class="ai-plus-note">
-            {aiPlusPlan.note}
-          </div>
-        </div>
-
-        <a href={aiPlusPlan.ctaLink} class="btn btn-secondary w-full btn-lg">
-          {aiPlusPlan.cta}
-        </a>
-      </div>
-    </div>
-  </section>
-
   <!-- プラン比較表 -->
   <section class="plan-comparison">
     <div class="container">
@@ -239,10 +123,7 @@ const aiPlusPlan = {
             <tr>
               <th>機能</th>
               <th>フリー</th>
-              <th>ライト</th>
-              <th class="highlighted">スタンダード</th>
-              <th>プレミアム</th>
-              <th>アルティメット</th>
+              <th class="highlighted">プロ</th>
             </tr>
           </thead>
           <tbody>
@@ -250,23 +131,14 @@ const aiPlusPlan = {
               <td>予想閲覧</td>
               <td>✅</td>
               <td>✅</td>
-              <td>✅</td>
-              <td>✅</td>
-              <td>✅</td>
             </tr>
             <tr>
               <td>対象レース</td>
               <td>-</td>
-              <td>後半3R</td>
-              <td>全レース</td>
-              <td>全レース</td>
               <td>全レース</td>
             </tr>
             <tr>
               <td>馬単買い目</td>
-              <td>❌</td>
-              <td>✅</td>
-              <td>✅</td>
               <td>❌</td>
               <td>✅</td>
             </tr>
@@ -274,31 +146,19 @@ const aiPlusPlan = {
               <td>三連複買い目</td>
               <td>❌</td>
               <td>❌</td>
-              <td>❌</td>
-              <td>✅</td>
-              <td>✅</td>
             </tr>
             <tr>
               <td>穴馬情報</td>
               <td>❌</td>
               <td>❌</td>
-              <td>❌</td>
-              <td>✅</td>
-              <td>✅</td>
             </tr>
             <tr>
               <td>データ可視化</td>
               <td>❌</td>
               <td>✅</td>
-              <td>✅</td>
-              <td>✅</td>
-              <td>✅</td>
             </tr>
             <tr>
-              <td>コース別攻略法</td>
-              <td>❌</td>
-              <td>❌</td>
-              <td>❌</td>
+              <td>南関4場対応</td>
               <td>❌</td>
               <td>✅</td>
             </tr>
@@ -306,9 +166,6 @@ const aiPlusPlan = {
               <td>サポート</td>
               <td>-</td>
               <td>標準</td>
-              <td>標準</td>
-              <td>標準</td>
-              <td>優先</td>
             </tr>
           </tbody>
         </table>

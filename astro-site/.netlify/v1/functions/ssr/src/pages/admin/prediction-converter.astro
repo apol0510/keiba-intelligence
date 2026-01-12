@@ -1,0 +1,597 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import AuthCheck from '../../components/AuthCheck.astro';
+
+export const prerender = false;
+
+let result = null;
+let errorMessage = null;
+
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const raceDate = formData.get('raceDate');
+    const venue = formData.get('venue');
+    const raceNumber = formData.get('raceNumber');
+    const horseData = formData.get('horseData');
+
+    // データ解析（入力→pt抽出）
+    const horses = parseInputData(horseData);
+
+    // 初期役割割当（pt降順仮割当）
+    const rolesAssigned = assignInitialRoles(horses);
+
+    // 役割調整ルール実行（5つのルール順次適用）
+    const rolesAdjusted = applyAdjustmentRules(rolesAssigned);
+
+    // 買い目生成（2段構成）
+    const bettingLines = generateBettingLines(rolesAdjusted);
+
+    // JSON出力（予想ページ用）
+    const predictionJSON = outputJSON({
+      raceDate,
+      venue,
+      raceNumber,
+      horses: rolesAdjusted,
+      bettingLines
+    });
+
+    result = {
+      horses: rolesAdjusted,
+      bettingLines,
+      json: predictionJSON
+    };
+
+  } catch (error) {
+    errorMessage = error.message;
+  }
+}
+
+// ========================================
+// 【関数1】データ解析（入力→pt抽出）
+// ========================================
+function parseInputData(rawInput: string) {
+  const lines = rawInput.trim().split('\n');
+  const horses = [];
+
+  for (const line of lines) {
+    // 馬番,馬名,pt の形式を想定（柔軟に対応）
+    // 例: "1,マコスペシャル,90.5" or "1 マコスペシャル 90.5"
+    const parts = line.split(/[,\s]+/);
+
+    if (parts.length >= 3) {
+      const horseNumber = parseInt(parts[0], 10);
+      const horseName = parts[1];
+      const pt = parseFloat(parts[2]);
+
+      if (!isNaN(horseNumber) && !isNaN(pt)) {
+        horses.push({ horseNumber, horseName, pt });
+      }
+    }
+  }
+
+  // pt降順でソート（同点の場合は馬番昇順）
+  horses.sort((a, b) => {
+    if (b.pt !== a.pt) return b.pt - a.pt;
+    return a.horseNumber - b.horseNumber;
+  });
+
+  return horses;
+}
+
+// ========================================
+// 【関数2】初期役割割当（pt降順仮割当）
+// ========================================
+function assignInitialRoles(horses) {
+  if (horses.length < 4) {
+    throw new Error('最低4頭必要です（本命1/対抗1/単穴2）');
+  }
+
+  // pt降順でソート済みのため、上から順に仮割当
+  return horses.map((horse, index) => {
+    let role = '';
+    if (index === 0) role = '本命';
+    else if (index === 1) role = '対抗';
+    else if (index === 2 || index === 3) role = '単穴';
+    else if (index >= 4 && index < horses.length - 3) role = '連下';
+    else role = '抑え';
+
+    return { ...horse, role };
+  });
+}
+
+// ========================================
+// 【関数3】役割調整ルール（5つのルール順次適用）
+// ========================================
+function applyAdjustmentRules(horses) {
+  let adjusted = [...horses];
+
+  // ルール①：本命ptが 89 <= pt <= 90 の場合 → 本命枠のみ絶対軸固定
+  const honmei = adjusted.find(h => h.role === '本命');
+  const isHonmeiFixed = honmei && honmei.pt >= 89 && honmei.pt <= 90;
+
+  // ルール②：本命と対抗のpt差が3pt以内 → 入れ替え（本命固定時はスキップ）
+  if (!isHonmeiFixed) {
+    const taikou = adjusted.find(h => h.role === '対抗');
+    if (honmei && taikou && (honmei.pt - taikou.pt <= 3)) {
+      // pt差が3pt以内の場合、馬番昇順で優先（小さい方が上位）
+      if (taikou.horseNumber < honmei.horseNumber) {
+        honmei.role = '対抗';
+        taikou.role = '本命';
+      }
+    }
+  }
+
+  // ルール③：本命ptが86pt以下 → 対抗を本命に昇格、単穴最上位を対抗に昇格（本命固定時はスキップ）
+  if (!isHonmeiFixed) {
+    const currentHonmei = adjusted.find(h => h.role === '本命');
+    if (currentHonmei && currentHonmei.pt <= 86) {
+      const currentTaikou = adjusted.find(h => h.role === '対抗');
+      const tananaList = adjusted.filter(h => h.role === '単穴');
+
+      if (currentTaikou && tananaList.length > 0) {
+        // pt降順でソート（同点なら馬番昇順）
+        tananaList.sort((a, b) => {
+          if (b.pt !== a.pt) return b.pt - a.pt;
+          return a.horseNumber - b.horseNumber;
+        });
+
+        currentHonmei.role = '対抗';
+        currentTaikou.role = '本命';
+        tananaList[0].role = '対抗';
+      }
+    }
+  }
+
+  // ルール④：対抗と単穴最上位のpt差が3pt以内 → 昇格/降格
+  const currentTaikou = adjusted.find(h => h.role === '対抗');
+  const tananaList = adjusted.filter(h => h.role === '単穴');
+
+  if (currentTaikou && tananaList.length > 0) {
+    tananaList.sort((a, b) => {
+      if (b.pt !== a.pt) return b.pt - a.pt;
+      return a.horseNumber - b.horseNumber;
+    });
+
+    const topTanana = tananaList[0];
+    if (currentTaikou.pt - topTanana.pt <= 3) {
+      // 馬番昇順で優先
+      if (topTanana.horseNumber < currentTaikou.horseNumber) {
+        currentTaikou.role = '単穴';
+        topTanana.role = '対抗';
+      }
+    }
+  }
+
+  // ルール⑤：単穴下位と連下最上位のpt差が2pt以内 → 入れ替え
+  const finalTananaList = adjusted.filter(h => h.role === '単穴');
+  const renkaList = adjusted.filter(h => h.role === '連下');
+
+  if (finalTananaList.length === 2 && renkaList.length > 0) {
+    finalTananaList.sort((a, b) => {
+      if (b.pt !== a.pt) return b.pt - a.pt;
+      return a.horseNumber - b.horseNumber;
+    });
+
+    renkaList.sort((a, b) => {
+      if (b.pt !== a.pt) return b.pt - a.pt;
+      return a.horseNumber - b.horseNumber;
+    });
+
+    const bottomTanana = finalTananaList[1];
+    const topRenka = renkaList[0];
+
+    if (bottomTanana.pt - topRenka.pt <= 2) {
+      // 馬番昇順で優先
+      if (topRenka.horseNumber < bottomTanana.horseNumber) {
+        bottomTanana.role = '連下';
+        topRenka.role = '単穴';
+      }
+    }
+  }
+
+  // 最終ソート（役割順 → pt降順 → 馬番昇順）
+  const roleOrder = { '本命': 0, '対抗': 1, '単穴': 2, '連下': 3, '抑え': 4 };
+  adjusted.sort((a, b) => {
+    if (roleOrder[a.role] !== roleOrder[b.role]) return roleOrder[a.role] - roleOrder[b.role];
+    if (b.pt !== a.pt) return b.pt - a.pt;
+    return a.horseNumber - b.horseNumber;
+  });
+
+  return adjusted;
+}
+
+// ========================================
+// 【関数4】買い目生成（2段構成）
+// ========================================
+function generateBettingLines(horses) {
+  const honmei = horses.find(h => h.role === '本命');
+  const taikou = horses.find(h => h.role === '対抗');
+  const tanana = horses.filter(h => h.role === '単穴');
+  const renka = horses.filter(h => h.role === '連下');
+  const osae = horses.filter(h => h.role === '抑え');
+
+  if (!honmei) throw new Error('本命が存在しません');
+
+  // 第1段: 本命-対抗.単穴.連下
+  const stage1Horses = [taikou, ...tanana, ...renka].filter(Boolean);
+  const stage1 = stage1Horses.map(h => h.horseNumber).join('.');
+
+  // 第2段: (抑え馬番)
+  const stage2 = osae.length > 0 ? `(抑え${osae.map(h => h.horseNumber).join('.')})` : '';
+
+  return `${honmei.horseNumber}-${stage1}${stage2}`;
+}
+
+// ========================================
+// 【関数5】JSON出力（予想ページ用）
+// ========================================
+function outputJSON(data) {
+  const { raceDate, venue, raceNumber, horses, bettingLines } = data;
+
+  const output = {
+    raceInfo: {
+      date: raceDate,
+      venue: venue,
+      raceNumber: parseInt(raceNumber, 10)
+    },
+    horses: horses.map(h => ({
+      horseNumber: h.horseNumber,
+      horseName: h.horseName,
+      pt: h.pt,
+      role: h.role
+    })),
+    bettingLines: {
+      umatan: bettingLines
+    },
+    generatedAt: new Date().toISOString()
+  };
+
+  return JSON.stringify(output, null, 2);
+}
+---
+
+<AuthCheck />
+
+<BaseLayout
+  title="予想管理画面"
+  description="特徴量データを入力してJSON予想データを生成します"
+>
+  <section class="admin-section">
+    <div class="container">
+      <h1 class="page-title">予想管理画面（Prediction Converter）</h1>
+      <p class="page-description">
+        レース情報と馬データ（pt値）を入力して、予想JSONを生成します。<br>
+        <strong>※ pt値は外部で計算済みの値を入力してください（このツールではpt計算を行いません）</strong>
+      </p>
+
+      <!-- 入力フォーム -->
+      <div class="card form-card">
+        <h2>レース情報・馬データ入力</h2>
+        <form method="POST">
+          <div class="form-group">
+            <label for="raceDate">開催日</label>
+            <input
+              type="date"
+              id="raceDate"
+              name="raceDate"
+              required
+              class="form-input"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="venue">競馬場</label>
+            <select id="venue" name="venue" required class="form-input">
+              <option value="">選択してください</option>
+              <option value="大井">大井</option>
+              <option value="川崎">川崎</option>
+              <option value="船橋">船橋</option>
+              <option value="浦和">浦和</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="raceNumber">レース番号</label>
+            <input
+              type="number"
+              id="raceNumber"
+              name="raceNumber"
+              min="1"
+              max="12"
+              required
+              class="form-input"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="horseData">馬データ（1行1頭：馬番,馬名,pt）</label>
+            <textarea
+              id="horseData"
+              name="horseData"
+              rows="12"
+              required
+              class="form-textarea"
+              placeholder="例:
+1,マコスペシャル,90.5
+2,クロチャンプ,86.2
+3,ケイバスター,82.0
+4,ナンカンキング,77.3
+5,オオイプリンス,70.0"
+            ></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-full">
+            予想データ生成
+          </button>
+        </form>
+      </div>
+
+      <!-- エラー表示 -->
+      {errorMessage && (
+        <div class="card error-card">
+          <h3>エラー</h3>
+          <p>{errorMessage}</p>
+        </div>
+      )}
+
+      <!-- 結果表示 -->
+      {result && (
+        <div class="results-section">
+          <div class="card result-card">
+            <h2>生成結果</h2>
+
+            <!-- 買い目表示 -->
+            <div class="betting-lines">
+              <h3>買い目（馬単）</h3>
+              <div class="betting-display">{result.bettingLines}</div>
+            </div>
+
+            <!-- 役割別馬一覧 -->
+            <div class="horses-table">
+              <h3>役割別馬一覧</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>役割</th>
+                    <th>馬番</th>
+                    <th>馬名</th>
+                    <th>pt</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.horses.map((horse) => (
+                    <tr>
+                      <td><span class={`role-badge role-${horse.role}`}>{horse.role}</span></td>
+                      <td>{horse.horseNumber}</td>
+                      <td>{horse.horseName}</td>
+                      <td>{horse.pt}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- JSON出力 -->
+            <div class="json-output">
+              <h3>JSON出力（予想ページ用）</h3>
+              <textarea
+                readonly
+                rows="20"
+                class="json-textarea"
+              >{result.json}</textarea>
+              <button
+                type="button"
+                class="btn btn-secondary mt-2"
+                onclick="navigator.clipboard.writeText(this.previousElementSibling.value).then(() => alert('JSONをコピーしました！'))"
+              >
+                JSONをコピー
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <!-- 使用方法 -->
+      <div class="card info-card">
+        <h2>使用方法</h2>
+        <ol>
+          <li><strong>pt値の準備:</strong> 外部ツールでpt値を計算してください</li>
+          <li><strong>データ入力:</strong> レース情報と馬データ（馬番,馬名,pt）を入力</li>
+          <li><strong>生成実行:</strong> 「予想データ生成」ボタンをクリック</li>
+          <li><strong>JSON保存:</strong> 生成されたJSONをコピーして、予想データファイルに保存</li>
+          <li><strong>Git管理:</strong> 変更をコミット・プッシュして自動デプロイ</li>
+        </ol>
+
+        <h3>処理ロジック概要</h3>
+        <ul>
+          <li><strong>初期割当:</strong> pt降順で本命/対抗/単穴/連下/抑えを仮割当</li>
+          <li><strong>調整ルール①:</strong> 本命ptが89〜90pt → 本命枠のみ絶対軸固定</li>
+          <li><strong>調整ルール②:</strong> 本命と対抗のpt差が3pt以内 → 入れ替え判定</li>
+          <li><strong>調整ルール③:</strong> 本命ptが86pt以下 → 対抗を本命に昇格</li>
+          <li><strong>調整ルール④:</strong> 対抗と単穴最上位のpt差が3pt以内 → 入れ替え判定</li>
+          <li><strong>調整ルール⑤:</strong> 単穴下位と連下最上位のpt差が2pt以内 → 入れ替え判定</li>
+          <li><strong>同点ルール:</strong> 全ての比較・ソートで馬番昇順を採用</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <style>
+    .admin-section {
+      padding: var(--spacing-2xl) 0;
+      min-height: 100vh;
+    }
+
+    .page-title {
+      font-size: 2rem;
+      margin-bottom: var(--spacing-md);
+      text-align: center;
+    }
+
+    .page-description {
+      text-align: center;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .form-card {
+      max-width: 800px;
+      margin: 0 auto var(--spacing-xl);
+    }
+
+    .form-group {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .form-input,
+    .form-textarea {
+      width: 100%;
+      padding: var(--spacing-sm);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-family: inherit;
+    }
+
+    .form-textarea {
+      font-family: 'Courier New', monospace;
+      resize: vertical;
+    }
+
+    .error-card {
+      max-width: 800px;
+      margin: 0 auto var(--spacing-xl);
+      border: 2px solid var(--error);
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .error-card h3 {
+      color: var(--error);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .results-section {
+      margin-top: var(--spacing-2xl);
+    }
+
+    .result-card {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .betting-lines {
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .betting-display {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      padding: var(--spacing-md);
+      text-align: center;
+      font-family: 'Courier New', monospace;
+    }
+
+    .horses-table {
+      margin-bottom: var(--spacing-xl);
+      overflow-x: auto;
+    }
+
+    .horses-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .horses-table th,
+    .horses-table td {
+      padding: var(--spacing-sm);
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .horses-table th {
+      background: var(--bg-secondary);
+      font-weight: 700;
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .role-本命 { background: #ef4444; color: white; }
+    .role-対抗 { background: #f59e0b; color: white; }
+    .role-単穴 { background: #3b82f6; color: white; }
+    .role-連下 { background: #6b7280; color: white; }
+    .role-抑え { background: #9ca3af; color: white; }
+
+    .json-output {
+      margin-top: var(--spacing-xl);
+    }
+
+    .json-textarea {
+      width: 100%;
+      padding: var(--spacing-md);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      resize: vertical;
+    }
+
+    .info-card {
+      max-width: 1200px;
+      margin: var(--spacing-xl) auto 0;
+      background: var(--bg-secondary);
+    }
+
+    .info-card ol,
+    .info-card ul {
+      margin-left: var(--spacing-lg);
+      color: var(--text-secondary);
+    }
+
+    .info-card li {
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .info-card h3 {
+      margin-top: var(--spacing-lg);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .w-full {
+      width: 100%;
+    }
+
+    .mt-2 {
+      margin-top: var(--spacing-md);
+    }
+
+    @media (max-width: 640px) {
+      .page-title {
+        font-size: 1.5rem;
+      }
+
+      .betting-display {
+        font-size: 1.125rem;
+      }
+    }
+  </style>
+</BaseLayout>
