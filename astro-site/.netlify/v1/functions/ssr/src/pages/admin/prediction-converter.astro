@@ -122,18 +122,33 @@ function assignInitialRoles(horses) {
   }
 
   // pt降順でソート済みのため、上から順に仮割当
-  // 抑えは最下位2-3頭（頭数に応じて調整）
-  const totalHorses = horses.length;
-  const osaeCount = totalHorses <= 8 ? 2 : 3; // 8頭以下なら抑え2頭、9頭以上なら抑え3頭
-  const osaeStartIndex = totalHorses - osaeCount;
+  // 本命/対抗/単穴2頭を確定後、残り馬を連下/抑えに振り分け
 
+  // 残り馬（本命/対抗/単穴を除く）を取得
+  const remaining = horses.slice(4);
+
+  // 残り馬がない場合は本命/対抗/単穴のみ
+  if (remaining.length === 0) {
+    return horses.map((horse, index) => {
+      let role = '';
+      if (index === 0) role = '本命';
+      else if (index === 1) role = '対抗';
+      else if (index === 2 || index === 3) role = '単穴';
+      return { ...horse, role };
+    });
+  }
+
+  // 残り馬の最小ptを取得（抑え = minPt同点クラス）
+  const minPt = Math.min(...remaining.map(h => h.pt));
+
+  // pt == minPt の馬を抑え、それ以外を連下
   return horses.map((horse, index) => {
     let role = '';
     if (index === 0) role = '本命';
     else if (index === 1) role = '対抗';
     else if (index === 2 || index === 3) role = '単穴';
-    else if (index >= 4 && index < osaeStartIndex) role = '連下';
-    else role = '抑え';
+    else if (horse.pt === minPt) role = '抑え';
+    else role = '連下';
 
     return { ...horse, role };
   });
@@ -425,7 +440,6 @@ function outputJSON(data) {
                     <th>役割</th>
                     <th>馬番</th>
                     <th>馬名</th>
-                    <th>pt</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -434,7 +448,6 @@ function outputJSON(data) {
                       <td><span class={`role-badge role-${horse.role}`}>{horse.role}</span></td>
                       <td>{horse.horseNumber}</td>
                       <td>{horse.horseName}</td>
-                      <td>{horse.pt}</td>
                     </tr>
                   ))}
                 </tbody>
