@@ -397,12 +397,12 @@ function outputJSON(data) {
       <!-- 結果表示 -->
       {result && (
         <div class="results-section">
-          <div class="card result-card">
-            <h2>生成結果</h2>
+          <div class="race-card card">
+            <h2 class="section-title">生成結果</h2>
 
             <!-- pt一覧表示 -->
-            <div class="pt-list">
-              <h3>pt一覧（同点馬番昇順）</h3>
+            <div class="pt-summary">
+              <h3>📊 pt一覧（同点馬番昇順）</h3>
               <div class="pt-display">
                 {result.horses.map((h, i) => (
                   <span class="pt-item">
@@ -415,87 +415,76 @@ function outputJSON(data) {
                 class="btn btn-secondary btn-sm mt-2"
                 onclick={`navigator.clipboard.writeText('${result.horses.map(h => `${h.horseNumber}:${h.pt}`).join(' / ')}').then(() => alert('pt一覧をコピーしました！'))`}
               >
-                pt一覧をコピー
+                📋 pt一覧をコピー
               </button>
             </div>
 
             <!-- 買い目表示 -->
-            <div class="betting-lines">
-              <h3>買い目（馬単）2段構成</h3>
-              {Array.isArray(result.bettingLines) ? (
-                result.bettingLines.map((line, index) => (
-                  <div class="betting-display">{line}</div>
-                ))
-              ) : (
-                <div class="betting-display">{result.bettingLines}</div>
-              )}
+            <div class="betting-section">
+              <h3>🎯 買い目（馬単）2段構成</h3>
+              <div class="betting-lines-container">
+                {Array.isArray(result.bettingLines) ? (
+                  result.bettingLines.map((line, index) => (
+                    <div class="betting-line-item">
+                      <span class="line-number">{index === 0 ? '本命軸' : '対抗軸'}</span>
+                      <span class="betting-line">{line}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div class="betting-line-item">
+                    <span class="betting-line">{result.bettingLines}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <!-- 役割別馬一覧（元データ風表示） -->
-            <div class="horses-list">
-              <h3>役割別馬一覧</h3>
+            <!-- 役割別馬一覧 -->
+            <div class="horses-prediction">
+              <h3>🏇 役割別馬一覧</h3>
 
-              {/* 本命 */}
-              {result.horses.filter(h => h.role === '本命').map((horse) => (
-                <div class="horse-item honmei">
-                  <div class="horse-header">
-                    <span class="role-symbol">◎</span>
-                    <span class="horse-number">{horse.horseNumber}</span>
-                    <span class="horse-name">{horse.horseName}</span>
-                    <span class="role-label">本命</span>
+              <!-- 本命・対抗・単穴 -->
+              <div class="top-horses">
+                {result.horses.filter(h => ['本命', '対抗', '単穴'].includes(h.role)).map((horse) => (
+                  <div class={`horse-item ${horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : 'tanana'}`}>
+                    <div class="horse-mark">
+                      {horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : '▲'}
+                    </div>
+                    <div class="horse-info">
+                      <div class="horse-header-line">
+                        <span class="horse-number">{horse.horseNumber}</span>
+                        <span class="horse-name">{horse.horseName}</span>
+                        <span class="role-badge">{horse.role}</span>
+                      </div>
+                      <div class="horse-score">
+                        累積スコア: <strong>{horse.pt}pt</strong>
+                      </div>
+                    </div>
                   </div>
-                  <div class="horse-score">累積スコア: <strong>{horse.pt}pt</strong></div>
-                </div>
-              ))}
+                ))}
+              </div>
 
-              {/* 対抗 */}
-              {result.horses.filter(h => h.role === '対抗').map((horse) => (
-                <div class="horse-item taikou">
-                  <div class="horse-header">
-                    <span class="role-symbol">○</span>
-                    <span class="horse-number">{horse.horseNumber}</span>
-                    <span class="horse-name">{horse.horseName}</span>
-                    <span class="role-label">対抗</span>
-                  </div>
-                  <div class="horse-score">累積スコア: <strong>{horse.pt}pt</strong></div>
-                </div>
-              ))}
-
-              {/* 単穴 */}
-              {result.horses.filter(h => h.role === '単穴').map((horse) => (
-                <div class="horse-item tanana">
-                  <div class="horse-header">
-                    <span class="role-symbol">▲</span>
-                    <span class="horse-number">{horse.horseNumber}</span>
-                    <span class="horse-name">{horse.horseName}</span>
-                    <span class="role-label">単穴</span>
-                  </div>
-                  <div class="horse-score">累積スコア: <strong>{horse.pt}pt</strong></div>
-                </div>
-              ))}
-
-              {/* 連下候補馬 */}
+              <!-- 連下候補馬 -->
               {result.horses.filter(h => h.role === '連下').length > 0 && (
-                <div class="horse-group">
+                <div class="horse-group renka">
                   <div class="group-header">△ 連下候補馬</div>
-                  <div class="group-content">
+                  <div class="group-list">
                     {result.horses.filter(h => h.role === '連下').map((horse, index, arr) => (
-                      <span class="horse-short">
-                        {horse.horseNumber} {horse.horseName} ({horse.pt}pt){index < arr.length - 1 ? ', ' : ''}
+                      <span class="horse-compact">
+                        <strong>{horse.horseNumber}</strong> {horse.horseName} <span class="pt-value">({horse.pt}pt)</span>{index < arr.length - 1 ? '、' : ''}
                       </span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* 抑え候補馬 */}
+              <!-- 抑え候補馬 -->
               {result.horses.filter(h => h.role === '抑え').length > 0 && (
                 <div class="horse-group osae">
                   <div class="group-header">× 抑え候補馬</div>
-                  <div class="group-content">
+                  <div class="group-list">
                     {result.horses.filter(h => h.role === '抑え').map((horse, index, arr) => (
-                      <span class="horse-short">
-                        {horse.horseNumber} {horse.horseName} ({horse.pt}pt){index < arr.length - 1 ? ', ' : ''}
+                      <span class="horse-compact">
+                        <strong>{horse.horseNumber}</strong> {horse.horseName} <span class="pt-value">({horse.pt}pt)</span>{index < arr.length - 1 ? '、' : ''}
                       </span>
                     ))}
                   </div>
@@ -609,32 +598,52 @@ function outputJSON(data) {
       margin-bottom: var(--spacing-sm);
     }
 
+    /* 結果セクション */
     .results-section {
       margin-top: var(--spacing-2xl);
     }
 
-    .result-card {
-      max-width: 1200px;
+    .race-card {
+      max-width: 1000px;
       margin: 0 auto;
+      padding: var(--spacing-xl);
     }
 
-    .pt-list {
+    .section-title {
+      font-size: 1.75rem;
+      font-weight: 700;
       margin-bottom: var(--spacing-xl);
-      padding: var(--spacing-lg);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    /* pt一覧 */
+    .pt-summary {
       background: var(--bg-secondary);
-      border-radius: var(--radius-md);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-2xl);
+      border-left: 4px solid #8b5cf6;
+    }
+
+    .pt-summary h3 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-md);
+      color: var(--text-primary);
     }
 
     .pt-display {
-      font-size: 1.125rem;
+      font-size: 1rem;
       font-weight: 600;
       color: var(--text-primary);
       padding: var(--spacing-md);
       background: var(--bg-card);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-md);
       font-family: 'Courier New', monospace;
       overflow-x: auto;
       white-space: nowrap;
+      line-height: 1.8;
     }
 
     .pt-item {
@@ -646,109 +655,173 @@ function outputJSON(data) {
       font-size: 0.875rem;
     }
 
-    .betting-lines {
-      margin-bottom: var(--spacing-xl);
+    /* 買い目セクション */
+    .betting-section {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-2xl);
+      border-left: 4px solid var(--primary-end);
     }
 
-    .betting-display {
-      font-size: 1.5rem;
+    .betting-section h3 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-md);
+      color: var(--text-primary);
+    }
+
+    .betting-lines-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+    }
+
+    .betting-line-item {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md);
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+    }
+
+    .line-number {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      min-width: 4rem;
+    }
+
+    .betting-line {
+      font-size: 1.25rem;
       font-weight: 700;
       background: var(--primary-gradient);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      padding: var(--spacing-md);
-      text-align: center;
       font-family: 'Courier New', monospace;
+      flex: 1;
     }
 
-    .betting-display + .betting-display {
-      margin-top: var(--spacing-sm);
-    }
-
-    .horses-list {
+    /* 役割別馬一覧 */
+    .horses-prediction {
       margin-bottom: var(--spacing-xl);
     }
 
+    .horses-prediction h3 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-lg);
+      color: var(--text-primary);
+    }
+
+    /* 上位馬（本命・対抗・単穴） */
+    .top-horses {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+    }
+
     .horse-item {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
       padding: var(--spacing-md);
-      margin-bottom: var(--spacing-md);
-      border-left: 4px solid;
       background: var(--bg-secondary);
-      border-radius: var(--radius-md);
+      border-radius: var(--radius-lg);
+      border-left: 4px solid;
+      transition: transform var(--transition-base);
+    }
+
+    .horse-item:hover {
+      transform: translateX(4px);
     }
 
     .horse-item.honmei {
       border-left-color: #ef4444;
-      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, var(--bg-secondary) 50%);
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, var(--bg-secondary) 100%);
     }
 
     .horse-item.taikou {
       border-left-color: #f59e0b;
-      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, var(--bg-secondary) 50%);
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, var(--bg-secondary) 100%);
     }
 
     .horse-item.tanana {
       border-left-color: #3b82f6;
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, var(--bg-secondary) 50%);
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, var(--bg-secondary) 100%);
     }
 
-    .horse-header {
+    .horse-mark {
+      font-size: 2rem;
+      font-weight: 700;
+      min-width: 2.5rem;
+      text-align: center;
+    }
+
+    .horse-item.honmei .horse-mark { color: #ef4444; }
+    .horse-item.taikou .horse-mark { color: #f59e0b; }
+    .horse-item.tanana .horse-mark { color: #3b82f6; }
+
+    .horse-info {
+      flex: 1;
+    }
+
+    .horse-header-line {
       display: flex;
       align-items: center;
       gap: var(--spacing-sm);
       margin-bottom: var(--spacing-xs);
     }
 
-    .role-symbol {
+    .horse-number {
       font-size: 1.5rem;
       font-weight: 700;
-    }
-
-    .horse-item.honmei .role-symbol { color: #ef4444; }
-    .horse-item.taikou .role-symbol { color: #f59e0b; }
-    .horse-item.tanana .role-symbol { color: #3b82f6; }
-
-    .horse-number {
-      font-size: 1.25rem;
-      font-weight: 700;
       color: var(--text-primary);
-      min-width: 2rem;
+      min-width: 2.5rem;
     }
 
     .horse-name {
       font-size: 1.125rem;
       font-weight: 600;
       color: var(--text-primary);
-      flex-grow: 1;
+      flex: 1;
     }
 
-    .role-label {
-      font-size: 0.875rem;
-      font-weight: 600;
+    .role-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
       padding: var(--spacing-xs) var(--spacing-sm);
       border-radius: var(--radius-sm);
-      background: var(--bg-card);
+      background: var(--bg-tertiary);
       color: var(--text-secondary);
     }
 
     .horse-score {
       font-size: 0.875rem;
       color: var(--text-secondary);
-      margin-left: 2.5rem;
+      padding-left: 2.5rem;
     }
 
     .horse-score strong {
       color: var(--text-primary);
       font-weight: 700;
+      font-size: 1rem;
     }
 
+    /* 連下・抑えグループ */
     .horse-group {
       padding: var(--spacing-md);
       margin-bottom: var(--spacing-md);
       background: var(--bg-secondary);
-      border-radius: var(--radius-md);
-      border-left: 4px solid #6b7280;
+      border-radius: var(--radius-lg);
+      border-left: 4px solid;
+    }
+
+    .horse-group.renka {
+      border-left-color: #6b7280;
     }
 
     .horse-group.osae {
@@ -762,14 +835,24 @@ function outputJSON(data) {
       margin-bottom: var(--spacing-sm);
     }
 
-    .group-content {
-      font-size: 0.875rem;
+    .group-list {
+      font-size: 0.9375rem;
       color: var(--text-secondary);
       line-height: 1.8;
     }
 
-    .horse-short {
+    .horse-compact {
       color: var(--text-secondary);
+    }
+
+    .horse-compact strong {
+      color: var(--text-primary);
+      font-size: 1.125rem;
+    }
+
+    .pt-value {
+      color: var(--text-tertiary);
+      font-size: 0.875rem;
     }
 
     .json-output {
