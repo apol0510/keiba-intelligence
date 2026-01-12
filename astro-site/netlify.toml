@@ -28,12 +28,6 @@
 [build.processing.images]
   compress = true
 
-# リダイレクト設定（SPA対応）
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
 # ヘッダー設定（セキュリティ）
 [[headers]]
   for = "/*"
