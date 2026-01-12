@@ -122,12 +122,17 @@ function assignInitialRoles(horses) {
   }
 
   // pt降順でソート済みのため、上から順に仮割当
+  // 抑えは最下位2-3頭（頭数に応じて調整）
+  const totalHorses = horses.length;
+  const osaeCount = totalHorses <= 8 ? 2 : 3; // 8頭以下なら抑え2頭、9頭以上なら抑え3頭
+  const osaeStartIndex = totalHorses - osaeCount;
+
   return horses.map((horse, index) => {
     let role = '';
     if (index === 0) role = '本命';
     else if (index === 1) role = '対抗';
     else if (index === 2 || index === 3) role = '単穴';
-    else if (index >= 4 && index < horses.length - 3) role = '連下';
+    else if (index >= 4 && index < osaeStartIndex) role = '連下';
     else role = '抑え';
 
     return { ...horse, role };
@@ -246,15 +251,20 @@ function generateBettingLines(horses) {
   const osae = horses.filter(h => h.role === '抑え');
 
   if (!honmei) throw new Error('本命が存在しません');
+  if (!taikou) throw new Error('対抗が存在しません');
 
-  // 第1段: 本命-対抗.単穴.連下
-  const stage1Horses = [taikou, ...tanana, ...renka].filter(Boolean);
-  const stage1 = stage1Horses.map(h => h.horseNumber).join('.');
+  // 抑え部分（共通）
+  const osaeStr = osae.length > 0 ? `(抑え${osae.map(h => h.horseNumber).join('.')})` : '';
 
-  // 第2段: (抑え馬番)
-  const stage2 = osae.length > 0 ? `(抑え${osae.map(h => h.horseNumber).join('.')})` : '';
+  // 第1行: 本命-対抗.単穴.連下(抑え...)
+  const line1Horses = [taikou, ...tanana, ...renka].filter(Boolean);
+  const line1 = `${honmei.horseNumber}-${line1Horses.map(h => h.horseNumber).join('.')}${osaeStr}`;
 
-  return `${honmei.horseNumber}-${stage1}${stage2}`;
+  // 第2行: 対抗-本命.単穴.連下(抑え...)
+  const line2Horses = [honmei, ...tanana, ...renka].filter(Boolean);
+  const line2 = `${taikou.horseNumber}-${line2Horses.map(h => h.horseNumber).join('.')}${osaeStr}`;
+
+  return [line1, line2];
 }
 
 // ========================================
@@ -276,7 +286,7 @@ function outputJSON(data) {
       role: h.role
     })),
     bettingLines: {
-      umatan: bettingLines
+      umatan: Array.isArray(bettingLines) ? bettingLines : [bettingLines]
     },
     generatedAt: new Date().toISOString()
   };
@@ -375,10 +385,35 @@ function outputJSON(data) {
           <div class="card result-card">
             <h2>生成結果</h2>
 
+            <!-- pt一覧表示 -->
+            <div class="pt-list">
+              <h3>pt一覧（同点馬番昇順）</h3>
+              <div class="pt-display">
+                {result.horses.map((h, i) => (
+                  <span class="pt-item">
+                    {h.horseNumber}({h.pt}){i < result.horses.length - 1 ? ' / ' : ''}
+                  </span>
+                ))}
+              </div>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm mt-2"
+                onclick={`navigator.clipboard.writeText('${result.horses.map(h => `${h.horseNumber}:${h.pt}`).join(' / ')}').then(() => alert('pt一覧をコピーしました！'))`}
+              >
+                pt一覧をコピー
+              </button>
+            </div>
+
             <!-- 買い目表示 -->
             <div class="betting-lines">
-              <h3>買い目（馬単）</h3>
-              <div class="betting-display">{result.bettingLines}</div>
+              <h3>買い目（馬単）2段構成</h3>
+              {Array.isArray(result.bettingLines) ? (
+                result.bettingLines.map((line, index) => (
+                  <div class="betting-display">{line}</div>
+                ))
+              ) : (
+                <div class="betting-display">{result.bettingLines}</div>
+              )}
             </div>
 
             <!-- 役割別馬一覧 -->
@@ -521,6 +556,34 @@ function outputJSON(data) {
       margin: 0 auto;
     }
 
+    .pt-list {
+      margin-bottom: var(--spacing-xl);
+      padding: var(--spacing-lg);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+    }
+
+    .pt-display {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      padding: var(--spacing-md);
+      background: var(--bg-card);
+      border-radius: var(--radius-sm);
+      font-family: 'Courier New', monospace;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .pt-item {
+      color: var(--text-secondary);
+    }
+
+    .btn-sm {
+      padding: var(--spacing-xs) var(--spacing-md);
+      font-size: 0.875rem;
+    }
+
     .betting-lines {
       margin-bottom: var(--spacing-xl);
     }
@@ -535,6 +598,10 @@ function outputJSON(data) {
       padding: var(--spacing-md);
       text-align: center;
       font-family: 'Courier New', monospace;
+    }
+
+    .betting-display + .betting-display {
+      margin-top: var(--spacing-sm);
     }
 
     .horses-table {
