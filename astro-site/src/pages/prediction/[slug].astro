@@ -120,6 +120,9 @@ const pageTitle = predictionData
                               <span class="horse-name">{horse.horseName}</span>
                               <span class="role-badge">{horse.role}</span>
                             </div>
+                            <div class="horse-score">
+                              総合スコア: <strong>{horse.pt + 90}</strong>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -132,7 +135,7 @@ const pageTitle = predictionData
                         <div class="sub-list">
                           {renka.map((horse, idx, arr) => (
                             <span>
-                              <strong>{horse.horseNumber}</strong> {horse.horseName}{idx < arr.length - 1 ? '、' : ''}
+                              <strong>{horse.horseNumber}</strong> {horse.horseName} <span class="score-value">({horse.pt + 90})</span>{idx < arr.length - 1 ? '、' : ''}
                             </span>
                           ))}
                         </div>
@@ -146,7 +149,7 @@ const pageTitle = predictionData
                         <div class="sub-list">
                           {osae.map((horse, idx, arr) => (
                             <span>
-                              <strong>{horse.horseNumber}</strong> {horse.horseName}{idx < arr.length - 1 ? '、' : ''}
+                              <strong>{horse.horseNumber}</strong> {horse.horseName} <span class="score-value">({horse.pt + 90})</span>{idx < arr.length - 1 ? '、' : ''}
                             </span>
                           ))}
                         </div>
@@ -414,6 +417,16 @@ const pageTitle = predictionData
       font-weight: 600;
     }
 
+    .horse-score {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-top: var(--spacing-xs);
+    }
+
+    .horse-score strong {
+      color: var(--text-primary);
+    }
+
     /* 連下・抑え */
     .sub-horses {
       margin-bottom: var(--spacing-md);
@@ -442,6 +455,11 @@ const pageTitle = predictionData
 
     .sub-list strong {
       color: var(--text-primary);
+    }
+
+    .score-value {
+      font-size: 0.875rem;
+      color: var(--text-tertiary);
     }
 
     /* 注意事項 */
