@@ -265,9 +265,9 @@ function applyAdjustmentRules(horses) {
           return a.horseNumber - b.horseNumber;
         });
 
-        currentHonmei.role = '対抗';
-        currentTaikou.role = '本命';
-        tananaList[0].role = '対抗';
+        currentHonmei.role = '単穴';     // 旧本命を単穴に降格
+        currentTaikou.role = '本命';     // 旧対抗を本命に昇格
+        tananaList[0].role = '対抗';     // 単穴最上位を対抗に昇格
       }
     }
   }
@@ -316,6 +316,47 @@ function applyAdjustmentRules(horses) {
         bottomTanana.role = '連下';
         topRenka.role = '単穴';
       }
+    }
+  }
+
+  // 【役割頭数の最終検証・修正】調整ルール適用後の安全装置
+  // 本命: 必ず1頭、対抗: 必ず1頭、単穴: 最大2頭
+  const honmeiList = adjusted.filter(h => h.role === '本命');
+  const taikouList = adjusted.filter(h => h.role === '対抗');
+  const tananaListFinal = adjusted.filter(h => h.role === '単穴');
+
+  // 本命が複数いる場合: pt最上位（同点なら馬番昇順）のみ残し、残りを対抗に
+  if (honmeiList.length > 1) {
+    honmeiList.sort((a, b) => {
+      if (b.pt !== a.pt) return b.pt - a.pt;
+      return a.horseNumber - b.horseNumber;
+    });
+    for (let i = 1; i < honmeiList.length; i++) {
+      honmeiList[i].role = '対抗';
+    }
+  }
+
+  // 対抗が複数いる場合: pt最上位（同点なら馬番昇順）のみ残し、残りを単穴に
+  const taikouListUpdated = adjusted.filter(h => h.role === '対抗');
+  if (taikouListUpdated.length > 1) {
+    taikouListUpdated.sort((a, b) => {
+      if (b.pt !== a.pt) return b.pt - a.pt;
+      return a.horseNumber - b.horseNumber;
+    });
+    for (let i = 1; i < taikouListUpdated.length; i++) {
+      taikouListUpdated[i].role = '単穴';
+    }
+  }
+
+  // 単穴が3頭以上いる場合: pt上位2頭（同点なら馬番昇順）のみ残し、残りを連下に
+  const tananaListUpdated = adjusted.filter(h => h.role === '単穴');
+  if (tananaListUpdated.length > 2) {
+    tananaListUpdated.sort((a, b) => {
+      if (b.pt !== a.pt) return b.pt - a.pt;
+      return a.horseNumber - b.horseNumber;
+    });
+    for (let i = 2; i < tananaListUpdated.length; i++) {
+      tananaListUpdated[i].role = '連下';
     }
   }
 
@@ -686,10 +727,11 @@ function outputAllRacesJSON(data) {
           <li><strong>初期割当:</strong> pt降順で本命/対抗/単穴/連下/抑えを仮割当</li>
           <li><strong>調整ルール①:</strong> 本命ptが89〜90pt → 本命枠のみ絶対軸固定</li>
           <li><strong>調整ルール②:</strong> 本命と対抗のpt差が3pt以内 → 入れ替え判定</li>
-          <li><strong>調整ルール③:</strong> 本命ptが86pt以下 → 対抗を本命に昇格</li>
+          <li><strong>調整ルール③:</strong> 本命ptが86pt以下 → 対抗を本命に昇格（旧本命は単穴に降格）</li>
           <li><strong>調整ルール④:</strong> 対抗と単穴最上位のpt差が3pt以内 → 入れ替え判定</li>
           <li><strong>調整ルール⑤:</strong> 単穴下位と連下最上位のpt差が2pt以内 → 入れ替え判定</li>
           <li><strong>同点ルール:</strong> 全ての比較・ソートで馬番昇順を採用</li>
+          <li><strong>役割頭数保証:</strong> 本命1頭・対抗1頭・単穴最大2頭を最終検証で強制</li>
         </ul>
       </div>
     </div>

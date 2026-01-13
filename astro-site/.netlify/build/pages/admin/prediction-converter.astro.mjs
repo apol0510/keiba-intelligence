@@ -192,7 +192,7 @@ const $$PredictionConverter = createComponent(async ($$result, $$props, $$slots)
             if (b.pt !== a.pt) return b.pt - a.pt;
             return a.horseNumber - b.horseNumber;
           });
-          currentHonmei.role = "\u5BFE\u6297";
+          currentHonmei.role = "\u5358\u7A74";
           currentTaikou2.role = "\u672C\u547D";
           tananaList2[0].role = "\u5BFE\u6297";
         }
@@ -231,6 +231,38 @@ const $$PredictionConverter = createComponent(async ($$result, $$props, $$slots)
           bottomTanana.role = "\u9023\u4E0B";
           topRenka.role = "\u5358\u7A74";
         }
+      }
+    }
+    const honmeiList = adjusted.filter((h) => h.role === "\u672C\u547D");
+    adjusted.filter((h) => h.role === "\u5BFE\u6297");
+    adjusted.filter((h) => h.role === "\u5358\u7A74");
+    if (honmeiList.length > 1) {
+      honmeiList.sort((a, b) => {
+        if (b.pt !== a.pt) return b.pt - a.pt;
+        return a.horseNumber - b.horseNumber;
+      });
+      for (let i = 1; i < honmeiList.length; i++) {
+        honmeiList[i].role = "\u5BFE\u6297";
+      }
+    }
+    const taikouListUpdated = adjusted.filter((h) => h.role === "\u5BFE\u6297");
+    if (taikouListUpdated.length > 1) {
+      taikouListUpdated.sort((a, b) => {
+        if (b.pt !== a.pt) return b.pt - a.pt;
+        return a.horseNumber - b.horseNumber;
+      });
+      for (let i = 1; i < taikouListUpdated.length; i++) {
+        taikouListUpdated[i].role = "\u5358\u7A74";
+      }
+    }
+    const tananaListUpdated = adjusted.filter((h) => h.role === "\u5358\u7A74");
+    if (tananaListUpdated.length > 2) {
+      tananaListUpdated.sort((a, b) => {
+        if (b.pt !== a.pt) return b.pt - a.pt;
+        return a.horseNumber - b.horseNumber;
+      });
+      for (let i = 2; i < tananaListUpdated.length; i++) {
+        tananaListUpdated[i].role = "\u9023\u4E0B";
       }
     }
     const roleOrder = { "\u672C\u547D": 0, "\u5BFE\u6297": 1, "\u5358\u7A74": 2, "\u9023\u4E0B": 3, "\u6291\u3048": 4 };
@@ -326,7 +358,7 @@ const $$PredictionConverter = createComponent(async ($$result, $$props, $$slots)
 ...
 
 ===12R===
-...</pre> <h3 data-astro-cid-ri35buz5>エラーハンドリング</h3> <ul data-astro-cid-ri35buz5> <li data-astro-cid-ri35buz5>エラーレースは自動でスキップされ、成功分のみ出力されます</li> <li data-astro-cid-ri35buz5>エラー詳細はページ上部に表示されます（レース番号+エラー内容）</li> <li data-astro-cid-ri35buz5>最低4頭（本命/対抗/単穴2）必要です</li> </ul> <h3 data-astro-cid-ri35buz5>処理ロジック概要</h3> <ul data-astro-cid-ri35buz5> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>初期割当:</strong> pt降順で本命/対抗/単穴/連下/抑えを仮割当</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール①:</strong> 本命ptが89〜90pt → 本命枠のみ絶対軸固定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール②:</strong> 本命と対抗のpt差が3pt以内 → 入れ替え判定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール③:</strong> 本命ptが86pt以下 → 対抗を本命に昇格</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール④:</strong> 対抗と単穴最上位のpt差が3pt以内 → 入れ替え判定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール⑤:</strong> 単穴下位と連下最上位のpt差が2pt以内 → 入れ替え判定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>同点ルール:</strong> 全ての比較・ソートで馬番昇順を採用</li> </ul> </div> </div> </section>  ${renderScript($$result2, "/Users/apolon/Library/Mobile Documents/com~apple~CloudDocs/WorkSpace/keiba-intelligence/astro-site/src/pages/admin/prediction-converter.astro?astro&type=script&index=0&lang.ts")} ` })}`;
+...</pre> <h3 data-astro-cid-ri35buz5>エラーハンドリング</h3> <ul data-astro-cid-ri35buz5> <li data-astro-cid-ri35buz5>エラーレースは自動でスキップされ、成功分のみ出力されます</li> <li data-astro-cid-ri35buz5>エラー詳細はページ上部に表示されます（レース番号+エラー内容）</li> <li data-astro-cid-ri35buz5>最低4頭（本命/対抗/単穴2）必要です</li> </ul> <h3 data-astro-cid-ri35buz5>処理ロジック概要</h3> <ul data-astro-cid-ri35buz5> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>初期割当:</strong> pt降順で本命/対抗/単穴/連下/抑えを仮割当</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール①:</strong> 本命ptが89〜90pt → 本命枠のみ絶対軸固定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール②:</strong> 本命と対抗のpt差が3pt以内 → 入れ替え判定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール③:</strong> 本命ptが86pt以下 → 対抗を本命に昇格（旧本命は単穴に降格）</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール④:</strong> 対抗と単穴最上位のpt差が3pt以内 → 入れ替え判定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール⑤:</strong> 単穴下位と連下最上位のpt差が2pt以内 → 入れ替え判定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>同点ルール:</strong> 全ての比較・ソートで馬番昇順を採用</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>役割頭数保証:</strong> 本命1頭・対抗1頭・単穴最大2頭を最終検証で強制</li> </ul> </div> </div> </section>  ${renderScript($$result2, "/Users/apolon/Library/Mobile Documents/com~apple~CloudDocs/WorkSpace/keiba-intelligence/astro-site/src/pages/admin/prediction-converter.astro?astro&type=script&index=0&lang.ts")} ` })}`;
 }, "/Users/apolon/Library/Mobile Documents/com~apple~CloudDocs/WorkSpace/keiba-intelligence/astro-site/src/pages/admin/prediction-converter.astro", void 0);
 
 const $$file = "/Users/apolon/Library/Mobile Documents/com~apple~CloudDocs/WorkSpace/keiba-intelligence/astro-site/src/pages/admin/prediction-converter.astro";
