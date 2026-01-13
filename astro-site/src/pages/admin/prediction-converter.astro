@@ -4,15 +4,12 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 export const prerender = false;
 
-let previewResults = null;
 let generateResults = null;
 let errors = [];
-let action = null;
 
 if (Astro.request.method === 'POST') {
   try {
     const formData = await Astro.request.formData();
-    action = formData.get('action'); // 'preview' or 'generate'
     const raceDate = formData.get('raceDate');
     const venue = formData.get('venue');
     const allRacesData = formData.get('allRacesData');
@@ -20,78 +17,55 @@ if (Astro.request.method === 'POST') {
     // レース区切りでパース
     const racesData = parseAllRaces(allRacesData);
 
-    if (action === 'preview') {
-      // プレビューモード：パースのみ実行
-      previewResults = [];
-      errors = [];
+    // 生成モード：全処理実行
+    generateResults = [];
+    errors = [];
 
-      for (const raceData of racesData) {
-        try {
-          const horses = parseInputData(raceData.horseData);
-          previewResults.push({
-            raceNumber: raceData.raceNumber,
-            horseCount: horses.length,
-            topHorse: horses[0] || null,
-            secondHorse: horses[1] || null
-          });
-        } catch (error) {
-          errors.push({
-            raceNumber: raceData.raceNumber,
-            message: error.message
-          });
-        }
-      }
-    } else if (action === 'generate') {
-      // 生成モード：全処理実行
-      generateResults = [];
-      errors = [];
+    for (const raceData of racesData) {
+      try {
+        // データ解析
+        const horses = parseInputData(raceData.horseData);
 
-      for (const raceData of racesData) {
-        try {
-          // データ解析
-          const horses = parseInputData(raceData.horseData);
+        // 初期役割割当
+        const rolesAssigned = assignInitialRoles(horses);
 
-          // 初期役割割当
-          const rolesAssigned = assignInitialRoles(horses);
+        // 役割調整ルール実行
+        const rolesAdjusted = applyAdjustmentRules(rolesAssigned);
 
-          // 役割調整ルール実行
-          const rolesAdjusted = applyAdjustmentRules(rolesAssigned);
+        // 買い目生成
+        const bettingLines = generateBettingLines(rolesAdjusted);
 
-          // 買い目生成
-          const bettingLines = generateBettingLines(rolesAdjusted);
-
-          // 個別JSON生成
-          const predictionJSON = outputJSON({
-            raceDate,
-            venue,
-            raceNumber: raceData.raceNumber,
-            horses: rolesAdjusted,
-            bettingLines
-          });
-
-          generateResults.push({
-            raceNumber: raceData.raceNumber,
-            horses: rolesAdjusted,
-            bettingLines,
-            json: predictionJSON
-          });
-        } catch (error) {
-          errors.push({
-            raceNumber: raceData.raceNumber,
-            message: error.message
-          });
-        }
-      }
-
-      // 全レース統合JSON生成（成功分のみ）
-      if (generateResults.length > 0) {
-        const allPredictionsJSON = outputAllRacesJSON({
+        // 個別JSON生成
+        const predictionJSON = outputJSON({
           raceDate,
           venue,
-          races: generateResults
+          raceNumber: raceData.raceNumber,
+          horses: rolesAdjusted,
+          bettingLines
         });
-        generateResults.allPredictionsJSON = allPredictionsJSON;
+
+        generateResults.push({
+          raceNumber: raceData.raceNumber,
+          horses: rolesAdjusted,
+          bettingLines,
+          json: predictionJSON
+        });
+      } catch (error) {
+        errors.push({
+          raceNumber: raceData.raceNumber,
+          message: error.message
+        });
       }
+    }
+
+    // 全レース統合JSON生成（成功分のみ）
+    if (generateResults.length > 0) {
+      const allPredictionsJSON = outputAllRacesJSON({
+        raceDate,
+        venue,
+        races: generateResults
+      });
+      generateResults.allPredictionsJSON = allPredictionsJSON;
     }
 
   } catch (error) {
@@ -499,14 +473,9 @@ function outputAllRacesJSON(data) {
             ></textarea>
           </div>
 
-          <div class="button-group">
-            <button type="submit" name="action" value="preview" class="btn btn-secondary btn-lg">
-              📊 プレビュー（確認のみ）
-            </button>
-            <button type="submit" name="action" value="generate" class="btn btn-primary btn-lg">
-              🚀 全レース生成
-            </button>
-          </div>
+          <button type="submit" class="btn btn-primary btn-lg w-full">
+            🚀 全レース生成
+          </button>
         </form>
       </div>
 
@@ -521,32 +490,6 @@ function outputAllRacesJSON(data) {
               </li>
             ))}
           </ul>
-        </div>
-      )}
-
-      <!-- プレビュー結果 -->
-      {previewResults && (
-        <div class="card preview-card">
-          <h2>📊 プレビュー結果（{previewResults.length}レース）</h2>
-          <div class="preview-grid">
-            {previewResults.map(race => (
-              <div class="preview-item">
-                <div class="preview-header">{race.raceNumber}R</div>
-                <div class="preview-body">
-                  <div class="preview-stat">頭数: <strong>{race.horseCount}頭</strong></div>
-                  {race.topHorse && (
-                    <div class="preview-stat">本命候補: <strong>{race.topHorse.horseNumber}.{race.topHorse.horseName} ({race.topHorse.pt}pt)</strong></div>
-                  )}
-                  {race.secondHorse && (
-                    <div class="preview-stat">対抗候補: <strong>{race.secondHorse.horseNumber}.{race.secondHorse.horseName} ({race.secondHorse.pt}pt)</strong></div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-          <p class="preview-note">
-            ✅ 問題なければ「全レース生成」ボタンをクリックして本番生成してください
-          </p>
         </div>
       )}
 
@@ -695,8 +638,7 @@ function outputAllRacesJSON(data) {
         <ol>
           <li><strong>pt値の準備:</strong> 外部ツールで全12レース分のpt値を計算</li>
           <li><strong>データ入力:</strong> 開催日・競馬場を入力後、全レースデータを===1R===区切りで入力</li>
-          <li><strong>プレビュー:</strong> 「プレビュー」ボタンで頭数・本命候補を確認（エラーレース確認）</li>
-          <li><strong>生成実行:</strong> 「全レース生成」ボタンで本番生成</li>
+          <li><strong>生成実行:</strong> 「全レース生成」ボタンでJSON生成</li>
           <li><strong>JSON保存:</strong> 全レース統合JSONをコピーして予想データファイルに保存</li>
           <li><strong>Git管理:</strong> 変更をコミット・プッシュして自動デプロイ</li>
         </ol>
@@ -787,16 +729,6 @@ function outputAllRacesJSON(data) {
       resize: vertical;
     }
 
-    .button-group {
-      display: flex;
-      gap: var(--spacing-md);
-      margin-top: var(--spacing-lg);
-    }
-
-    .button-group .btn {
-      flex: 1;
-    }
-
     /* エラーカード */
     .error-card {
       max-width: 1200px;
@@ -817,61 +749,6 @@ function outputAllRacesJSON(data) {
 
     .error-list li {
       margin-bottom: var(--spacing-sm);
-    }
-
-    /* プレビューカード */
-    .preview-card {
-      max-width: 1200px;
-      margin: 0 auto var(--spacing-xl);
-      border: 2px solid var(--primary-end);
-      background: rgba(96, 165, 250, 0.1);
-    }
-
-    .preview-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: var(--spacing-md);
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .preview-item {
-      background: var(--bg-secondary);
-      border-radius: var(--radius-lg);
-      border-left: 4px solid var(--primary-end);
-      overflow: hidden;
-    }
-
-    .preview-header {
-      background: var(--primary-gradient);
-      color: white;
-      font-weight: 700;
-      font-size: 1.125rem;
-      padding: var(--spacing-sm) var(--spacing-md);
-      text-align: center;
-    }
-
-    .preview-body {
-      padding: var(--spacing-md);
-    }
-
-    .preview-stat {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-xs);
-    }
-
-    .preview-stat strong {
-      color: var(--text-primary);
-      font-weight: 600;
-    }
-
-    .preview-note {
-      font-size: 0.9375rem;
-      color: var(--text-secondary);
-      text-align: center;
-      padding: var(--spacing-md);
-      background: var(--bg-secondary);
-      border-radius: var(--radius-md);
     }
 
     /* 成功カード */
@@ -1235,14 +1112,6 @@ function outputAllRacesJSON(data) {
     @media (max-width: 640px) {
       .page-title {
         font-size: 1.5rem;
-      }
-
-      .button-group {
-        flex-direction: column;
-      }
-
-      .preview-grid {
-        grid-template-columns: 1fr;
       }
     }
   </style>
