@@ -61,15 +61,25 @@ const pageTitle = predictionData
               {predictionData.eventInfo.date} {predictionData.eventInfo.venue}
             </h1>
             <p class="page-subtitle">
-              全{predictionData.eventInfo.totalRaces}R AI予想データ
-            </p>
-            <p class="generated-at">
-              生成日時: {new Date(predictionData.generatedAt).toLocaleString('ja-JP')}
+              全{predictionData.eventInfo.totalRaces}R AI予想
             </p>
           </div>
 
-          <!-- レース一覧 -->
-          <div class="races-container">
+          <!-- レース選択ボタン -->
+          <div class="race-selector">
+            {predictionData.predictions.map((race, index) => (
+              <button
+                class={`race-btn ${index === 0 ? 'active' : ''}`}
+                data-race-index={index}
+                onclick="selectRace(event, this)"
+              >
+                {race.raceInfo.raceNumber}R
+              </button>
+            ))}
+          </div>
+
+          <!-- レース表示エリア -->
+          <div class="race-display-area">
             {predictionData.predictions.map((race, index) => {
               // 役割別馬リスト
               const honmei = race.horses.filter(h => h.role === '本命');
@@ -79,79 +89,69 @@ const pageTitle = predictionData
               const osae = race.horses.filter(h => h.role === '抑え');
 
               return (
-                <div class="race-card">
-                  <!-- レース番号 -->
-                  <div class="race-header">
-                    <h2 class="race-number">{race.raceInfo.raceNumber}R</h2>
+                <div class={`race-content ${index === 0 ? 'active' : ''}`} data-race-index={index}>
+                  <!-- 買い目 -->
+                  <div class="betting-section">
+                    <h2>🎯 買い目（馬単）</h2>
+                    <div class="betting-lines">
+                      {race.bettingLines.umatan.map((line, idx) => (
+                        <div class="betting-line">
+                          <span class="axis-label">{idx === 0 ? '本命軸' : '対抗軸'}</span>
+                          <span class="betting-formula">{line}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
-                  <div class="race-content">
-                    <!-- 買い目（馬単）2段構成 -->
-                    <div class="betting-section">
-                      <h3>🎯 買い目（馬単）2段構成</h3>
-                      <div class="betting-lines-container">
-                        {race.bettingLines.umatan.map((line, idx) => (
-                          <div class="betting-line-item">
-                            <span class="line-number">{idx === 0 ? '本命軸' : '対抗軸'}</span>
-                            <span class="betting-line">{line}</span>
+                  <!-- 出走馬 -->
+                  <div class="horses-section">
+                    <h2>🏇 出走馬</h2>
+
+                    <!-- 本命・対抗・単穴 -->
+                    <div class="main-horses">
+                      {[...honmei, ...taikou, ...tanana].map((horse) => (
+                        <div class={`horse-card ${horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : 'tanana'}`}>
+                          <div class="horse-mark">
+                            {horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : '▲'}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <!-- 役割別馬一覧 -->
-                    <div class="horses-prediction">
-                      <h3>🏇 役割別馬一覧</h3>
-
-                      <!-- 本命・対抗・単穴 -->
-                      <div class="top-horses">
-                        {[...honmei, ...taikou, ...tanana].map((horse) => (
-                          <div class={`horse-item ${horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : 'tanana'}`}>
-                            <div class="horse-mark">
-                              {horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : '▲'}
-                            </div>
-                            <div class="horse-info">
-                              <div class="horse-header-line">
-                                <span class="horse-number">{horse.horseNumber}</span>
-                                <span class="horse-name">{horse.horseName}</span>
-                                <span class="role-badge">{horse.role}</span>
-                              </div>
-                              <div class="horse-score">
-                                累積スコア: <strong>{horse.pt}pt</strong>
-                              </div>
+                          <div class="horse-info">
+                            <div class="horse-header-line">
+                              <span class="horse-number">{horse.horseNumber}</span>
+                              <span class="horse-name">{horse.horseName}</span>
+                              <span class="role-badge">{horse.role}</span>
                             </div>
                           </div>
-                        ))}
-                      </div>
-
-                      <!-- 連下候補馬 -->
-                      {renka.length > 0 && (
-                        <div class="horse-group renka">
-                          <div class="group-header">△ 連下候補馬</div>
-                          <div class="group-list">
-                            {renka.map((horse, idx, arr) => (
-                              <span class="horse-compact">
-                                <strong>{horse.horseNumber}</strong> {horse.horseName} <span class="pt-value">({horse.pt}pt)</span>{idx < arr.length - 1 ? '、' : ''}
-                              </span>
-                            ))}
-                          </div>
                         </div>
-                      )}
-
-                      <!-- 抑え候補馬 -->
-                      {osae.length > 0 && (
-                        <div class="horse-group osae">
-                          <div class="group-header">× 抑え候補馬</div>
-                          <div class="group-list">
-                            {osae.map((horse, idx, arr) => (
-                              <span class="horse-compact">
-                                <strong>{horse.horseNumber}</strong> {horse.horseName} <span class="pt-value">({horse.pt}pt)</span>{idx < arr.length - 1 ? '、' : ''}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      ))}
                     </div>
+
+                    <!-- 連下 -->
+                    {renka.length > 0 && (
+                      <div class="sub-horses renka">
+                        <div class="sub-header">△ 連下</div>
+                        <div class="sub-list">
+                          {renka.map((horse, idx, arr) => (
+                            <span>
+                              <strong>{horse.horseNumber}</strong> {horse.horseName}{idx < arr.length - 1 ? '、' : ''}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <!-- 抑え -->
+                    {osae.length > 0 && (
+                      <div class="sub-horses osae">
+                        <div class="sub-header">× 抑え</div>
+                        <div class="sub-list">
+                          {osae.map((horse, idx, arr) => (
+                            <span>
+                              <strong>{horse.horseNumber}</strong> {horse.horseName}{idx < arr.length - 1 ? '、' : ''}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -160,11 +160,10 @@ const pageTitle = predictionData
 
           <!-- 注意事項 -->
           <div class="card info-card">
-            <h2>📝 ご利用上の注意</h2>
+            <h3>📝 ご利用上の注意</h3>
             <ul>
               <li>この予想はAIによる分析結果であり、的中を保証するものではありません</li>
               <li>馬券の購入は自己責任でお願いします</li>
-              <li>累積スコア（pt）は複数の特徴量を総合評価した値です</li>
               <li>買い目は馬単（2段構成）で提供しています</li>
             </ul>
           </div>
@@ -175,33 +174,27 @@ const pageTitle = predictionData
 
   <style>
     .prediction-section {
-      padding: var(--spacing-2xl) 0;
+      padding: var(--spacing-xl) 0;
       min-height: 100vh;
     }
 
     .page-header {
       text-align: center;
-      margin-bottom: var(--spacing-2xl);
-      padding: var(--spacing-xl);
+      margin-bottom: var(--spacing-xl);
+      padding: var(--spacing-lg);
       background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
       border-radius: var(--radius-lg);
     }
 
     .page-title {
-      font-size: 2rem;
+      font-size: 1.75rem;
       margin-bottom: var(--spacing-sm);
       color: white;
     }
 
     .page-subtitle {
-      font-size: 1.25rem;
+      font-size: 1.125rem;
       color: rgba(255, 255, 255, 0.9);
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .generated-at {
-      font-size: 0.875rem;
-      color: rgba(255, 255, 255, 0.7);
     }
 
     .error-card {
@@ -219,96 +212,133 @@ const pageTitle = predictionData
       color: var(--text-secondary);
     }
 
-    .races-container {
+    /* レース選択ボタン */
+    .race-selector {
       display: flex;
-      flex-direction: column;
-      gap: var(--spacing-xl);
-      margin-bottom: var(--spacing-2xl);
-    }
-
-    .race-card {
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+      justify-content: center;
+      margin-bottom: var(--spacing-xl);
+      padding: var(--spacing-md);
       background: var(--bg-secondary);
       border-radius: var(--radius-lg);
-      overflow: hidden;
-      border: 1px solid var(--border-color);
-      transition: transform 0.2s, box-shadow 0.2s;
     }
 
-    .race-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    .race-btn {
+      padding: var(--spacing-sm) var(--spacing-lg);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
     }
 
-    .race-header {
-      background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
-      padding: var(--spacing-md) var(--spacing-lg);
-    }
-
-    .race-number {
-      font-size: 1.5rem;
-      font-weight: 700;
+    .race-btn:hover {
+      background: var(--primary-start);
+      border-color: var(--primary-end);
       color: white;
-      margin: 0;
+    }
+
+    .race-btn.active {
+      background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+      border-color: var(--primary-end);
+      color: white;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    /* レース表示エリア */
+    .race-display-area {
+      position: relative;
+      min-height: 500px;
     }
 
     .race-content {
-      padding: var(--spacing-lg);
+      display: none;
     }
 
+    .race-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* 買い目セクション */
     .betting-section {
+      background: var(--bg-secondary);
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-lg);
       margin-bottom: var(--spacing-xl);
-      padding: var(--spacing-lg);
-      background: var(--bg-tertiary);
-      border-radius: var(--radius-md);
       border-left: 4px solid #8b5cf6;
     }
 
-    .betting-section h3 {
+    .betting-section h2 {
+      font-size: 1.25rem;
       margin-bottom: var(--spacing-md);
-      font-size: 1.125rem;
     }
 
-    .betting-lines-container {
+    .betting-lines {
       display: flex;
       flex-direction: column;
-      gap: var(--spacing-sm);
-    }
-
-    .betting-line-item {
-      display: flex;
-      align-items: center;
       gap: var(--spacing-md);
-      padding: var(--spacing-sm);
-      background: var(--bg-secondary);
-      border-radius: var(--radius-sm);
-    }
-
-    .line-number {
-      font-weight: 600;
-      color: var(--primary-end);
-      min-width: 60px;
     }
 
     .betting-line {
-      font-family: 'Courier New', monospace;
-      font-size: 1.125rem;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md);
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-md);
+    }
+
+    .axis-label {
       font-weight: 600;
+      color: var(--primary-end);
+      min-width: 70px;
+    }
+
+    .betting-formula {
+      font-family: 'Courier New', monospace;
+      font-size: 1.25rem;
+      font-weight: 700;
       color: var(--text-primary);
     }
 
-    .horses-prediction h3 {
-      margin-bottom: var(--spacing-md);
-      font-size: 1.125rem;
+    /* 出走馬セクション */
+    .horses-section {
+      background: var(--bg-secondary);
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--spacing-xl);
     }
 
-    .top-horses {
+    .horses-section h2 {
+      font-size: 1.25rem;
+      margin-bottom: var(--spacing-md);
+    }
+
+    /* 本命・対抗・単穴 */
+    .main-horses {
       display: flex;
       flex-direction: column;
       gap: var(--spacing-md);
       margin-bottom: var(--spacing-lg);
     }
 
-    .horse-item {
+    .horse-card {
       display: flex;
       align-items: center;
       gap: var(--spacing-md);
@@ -318,17 +348,17 @@ const pageTitle = predictionData
       border-left: 4px solid var(--border-color);
     }
 
-    .horse-item.honmei {
+    .horse-card.honmei {
       border-left-color: #ef4444;
       background: rgba(239, 68, 68, 0.1);
     }
 
-    .horse-item.taikou {
+    .horse-card.taikou {
       border-left-color: #3b82f6;
       background: rgba(59, 130, 246, 0.1);
     }
 
-    .horse-item.tanana {
+    .horse-card.tanana {
       border-left-color: #10b981;
       background: rgba(16, 185, 129, 0.1);
     }
@@ -340,15 +370,15 @@ const pageTitle = predictionData
       text-align: center;
     }
 
-    .horse-item.honmei .horse-mark {
+    .horse-card.honmei .horse-mark {
       color: #ef4444;
     }
 
-    .horse-item.taikou .horse-mark {
+    .horse-card.taikou .horse-mark {
       color: #3b82f6;
     }
 
-    .horse-item.tanana .horse-mark {
+    .horse-card.tanana .horse-mark {
       color: #10b981;
     }
 
@@ -360,15 +390,14 @@ const pageTitle = predictionData
       display: flex;
       align-items: center;
       gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-xs);
       flex-wrap: wrap;
     }
 
     .horse-number {
-      font-size: 1.25rem;
+      font-size: 1.5rem;
       font-weight: 700;
       color: var(--primary-end);
-      min-width: 30px;
+      min-width: 35px;
     }
 
     .horse-name {
@@ -377,7 +406,7 @@ const pageTitle = predictionData
     }
 
     .role-badge {
-      padding: 2px 8px;
+      padding: 4px 10px;
       background: var(--primary-end);
       color: white;
       border-radius: var(--radius-sm);
@@ -385,52 +414,45 @@ const pageTitle = predictionData
       font-weight: 600;
     }
 
-    .horse-score {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-    }
-
-    .horse-group {
+    /* 連下・抑え */
+    .sub-horses {
       margin-bottom: var(--spacing-md);
       padding: var(--spacing-md);
       background: var(--bg-tertiary);
       border-radius: var(--radius-md);
     }
 
-    .horse-group.renka {
+    .sub-horses.renka {
       border-left: 4px solid #f59e0b;
     }
 
-    .horse-group.osae {
+    .sub-horses.osae {
       border-left: 4px solid #6b7280;
     }
 
-    .group-header {
+    .sub-header {
       font-weight: 600;
       margin-bottom: var(--spacing-sm);
-      color: var(--text-primary);
     }
 
-    .group-list {
+    .sub-list {
       line-height: 1.8;
       color: var(--text-secondary);
     }
 
-    .horse-compact {
-      display: inline;
+    .sub-list strong {
+      color: var(--text-primary);
     }
 
-    .pt-value {
-      font-size: 0.875rem;
-      color: var(--text-tertiary);
-    }
-
+    /* 注意事項 */
     .info-card {
-      max-width: 800px;
+      max-width: 600px;
       margin: 0 auto;
+      padding: var(--spacing-lg);
     }
 
-    .info-card h2 {
+    .info-card h3 {
+      font-size: 1.125rem;
       margin-bottom: var(--spacing-md);
     }
 
@@ -445,11 +467,11 @@ const pageTitle = predictionData
 
     @media (max-width: 640px) {
       .page-title {
-        font-size: 1.5rem;
+        font-size: 1.25rem;
       }
 
-      .betting-line {
-        font-size: 0.875rem;
+      .betting-formula {
+        font-size: 1rem;
       }
 
       .horse-header-line {
@@ -458,4 +480,31 @@ const pageTitle = predictionData
       }
     }
   </style>
+
+  <script is:inline>
+    function selectRace(event, button) {
+      event.preventDefault();
+
+      const raceIndex = button.getAttribute('data-race-index');
+
+      // すべてのボタンからactiveを削除
+      document.querySelectorAll('.race-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      // クリックされたボタンをアクティブに
+      button.classList.add('active');
+
+      // すべてのレースコンテンツを非表示
+      document.querySelectorAll('.race-content').forEach(content => {
+        content.classList.remove('active');
+      });
+
+      // 選択されたレースを表示
+      const selectedRace = document.querySelector(`.race-content[data-race-index="${raceIndex}"]`);
+      if (selectedRace) {
+        selectedRace.classList.add('active');
+      }
+    }
+  </script>
 </BaseLayout>
