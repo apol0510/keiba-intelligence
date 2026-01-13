@@ -277,12 +277,13 @@ grep -r "pattern" ./src/
   - ログイン→管理画面アクセステスト
   - ログアウトテスト
 
-### **Phase 3: 管理機能実装（来週実装予定）**
+### **Phase 3: 管理機能実装（開始・部分完了）**
 
-- [ ] **予想管理画面作成**
-  - prediction-converter.astro（特徴量データ→JSON変換）
-  - Git自動コミット機能
-  - プレビュー機能
+- [x] **予想管理画面作成（完了）**
+  - prediction-converter.astro（特徴量データ→JSON変換）✅
+  - 全12レース一括生成機能 ✅
+  - Git自動コミット・自動デプロイ機能 ✅
+  - GitHub API連携（save-and-deploy-prediction.js）✅
 
 - [ ] **結果管理画面作成**
   - results-manager.astro（結果入力→archiveResults.json生成）
@@ -559,9 +560,14 @@ AIRTABLE_BASE_ID=appxxxxxxxxxxxxxxx
 # 用途: マジックリンク、ウェルカムメール、メルマガ配信
 SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-# GitHub（Phase 3で必要）
-# 用途: 管理画面からのGit自動コミット
+# GitHub（Phase 3で必須 - prediction-converter.astro実装済み）
+# 用途: 管理画面からのGit自動コミット・自動デプロイ
+# 権限: repo（Contents: Read and Write）
+# 取得方法: GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
 GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+GITHUB_REPO_OWNER=apol0510
+GITHUB_REPO_NAME=keiba-intelligence
+GITHUB_BRANCH=main
 ```
 
 **重要な注意事項:**
@@ -601,8 +607,8 @@ GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 - [ ] PayPal商品登録
 - [ ] 認証システムテスト
 
-### **Phase 3: 管理機能実装（0%）**
-- [ ] 予想管理画面作成（prediction-converter）
+### **Phase 3: 管理機能実装（20%）**
+- [x] 予想管理画面作成（prediction-converter）
 - [ ] 結果管理画面作成（results-manager）
 - [ ] 有料予想ページ作成
 - [ ] SEOページ自動生成
@@ -611,19 +617,23 @@ GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ---
 
-**📅 最終更新日**: 2026-01-12
-**🏁 Project Phase**: Phase 2コア機能実装中 🚀（80%完了）
-**🎯 Next Priority**: Airtableテーブルセットアップ → Netlify環境変数設定 → PayPal商品登録
-**📊 進捗率**: 60%完了（Phase 1: 100%、Phase 2: 80%、Phase 3: 0%）
-**✨ 本日の成果（2026-01-12）**:
-  - ThriveCart→PayPal Direct移行完了
-  - PayPal Webhook実装（ハイブリッドアプローチ・重複排除機構）
-  - 初期費用$0化（ThriveCart $690削減）
+**📅 最終更新日**: 2026-01-13
+**🏁 Project Phase**: Phase 3管理機能実装開始 🚀（Phase 3: 20%完了）
+**🎯 Next Priority**: 結果管理画面作成 → Airtableテーブルセットアップ → Netlify環境変数設定
+**📊 進捗率**: 64%完了（Phase 1: 100%、Phase 2: 80%、Phase 3: 20%）
+**✨ 本日の成果（2026-01-13）**:
+  - 予想管理画面（prediction-converter）完全実装 ✅
+    - 全12レース一括生成機能
+    - 役割割当ロジック完成（本命1/対抗1/単穴max2保証）
+    - 「💾 保存してデプロイ」ボタン実装（GitHub API連携）
+    - Git自動コミット・Netlify自動デプロイ（1-2分）
+  - Netlify Function追加: save-and-deploy-prediction.js
+  - テストケース集作成: tests/prediction-converter-samples.txt（8サンプル）
 
 **🎉 累積成果**:
-  - Netlify Functions: 12個実装（PayPal Webhook, Newsletter 5個, Auth 4個, etc.）
+  - Netlify Functions: 13個実装（PayPal Webhook, Newsletter 5個, Auth 4個, Save-and-Deploy, etc.）
   - 設計書: 3個作成（NEWSLETTER_SYSTEM.md, NEWSLETTER_MIGRATION.md, AUTH_SYSTEM.md）
-  - 管理画面: 3ページ実装（/admin/newsletter/*）
+  - 管理画面: 4ページ実装（/admin/newsletter/*, /admin/prediction-converter）
   - ログインページ: 2ページ実装（/login, /auth/verify）
   - コスト削減: ThriveCart $690削減（買い切り費用）+ Zapier $73.50/月削減
 
