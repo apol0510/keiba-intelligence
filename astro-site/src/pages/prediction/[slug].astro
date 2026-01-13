@@ -94,12 +94,22 @@ const pageTitle = predictionData
                   <div class="betting-section">
                     <h2>🎯 買い目</h2>
                     <div class="betting-lines">
-                      {race.bettingLines.umatan.map((line, idx) => (
-                        <div class="betting-line">
-                          <span class="axis-label">{idx === 0 ? '本命軸' : '対抗軸'}</span>
-                          <span class="betting-formula">{line}</span>
-                        </div>
-                      ))}
+                      {race.bettingLines.umatan.map((line, idx) => {
+                        // 買い目を抑え部分とメイン部分に分割
+                        const parts = line.match(/^(.+?)(\(抑え.+\))?$/);
+                        const mainPart = parts ? parts[1] : line;
+                        const osaePart = parts && parts[2] ? parts[2] : '';
+
+                        return (
+                          <div class="betting-line">
+                            <span class="axis-label">{idx === 0 ? '本命軸' : '対抗軸'}</span>
+                            <span class="betting-formula">
+                              {mainPart}
+                              {osaePart && <span class="osae-part">{osaePart}</span>}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -315,9 +325,17 @@ const pageTitle = predictionData
 
     .betting-formula {
       font-family: 'Courier New', monospace;
-      font-size: 1.25rem;
+      font-size: 1.5rem;
       font-weight: 700;
       color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    .osae-part {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      margin-left: 4px;
     }
 
     /* 出走馬セクション */
@@ -489,7 +507,11 @@ const pageTitle = predictionData
       }
 
       .betting-formula {
-        font-size: 1rem;
+        font-size: 1.125rem;
+      }
+
+      .osae-part {
+        font-size: 0.75rem;
       }
 
       .horse-header-line {
