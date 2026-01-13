@@ -4,47 +4,148 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 export const prerender = false;
 
-let result = null;
-let errorMessage = null;
+let previewResults = null;
+let generateResults = null;
+let errors = [];
+let action = null;
 
 if (Astro.request.method === 'POST') {
   try {
     const formData = await Astro.request.formData();
+    action = formData.get('action'); // 'preview' or 'generate'
     const raceDate = formData.get('raceDate');
     const venue = formData.get('venue');
-    const raceNumber = formData.get('raceNumber');
-    const horseData = formData.get('horseData');
+    const allRacesData = formData.get('allRacesData');
 
-    // データ解析（入力→pt抽出）
-    const horses = parseInputData(horseData);
+    // レース区切りでパース
+    const racesData = parseAllRaces(allRacesData);
 
-    // 初期役割割当（pt降順仮割当）
-    const rolesAssigned = assignInitialRoles(horses);
+    if (action === 'preview') {
+      // プレビューモード：パースのみ実行
+      previewResults = [];
+      errors = [];
 
-    // 役割調整ルール実行（5つのルール順次適用）
-    const rolesAdjusted = applyAdjustmentRules(rolesAssigned);
+      for (const raceData of racesData) {
+        try {
+          const horses = parseInputData(raceData.horseData);
+          previewResults.push({
+            raceNumber: raceData.raceNumber,
+            horseCount: horses.length,
+            topHorse: horses[0] || null,
+            secondHorse: horses[1] || null
+          });
+        } catch (error) {
+          errors.push({
+            raceNumber: raceData.raceNumber,
+            message: error.message
+          });
+        }
+      }
+    } else if (action === 'generate') {
+      // 生成モード：全処理実行
+      generateResults = [];
+      errors = [];
 
-    // 買い目生成（2段構成）
-    const bettingLines = generateBettingLines(rolesAdjusted);
+      for (const raceData of racesData) {
+        try {
+          // データ解析
+          const horses = parseInputData(raceData.horseData);
 
-    // JSON出力（予想ページ用）
-    const predictionJSON = outputJSON({
-      raceDate,
-      venue,
-      raceNumber,
-      horses: rolesAdjusted,
-      bettingLines
-    });
+          // 初期役割割当
+          const rolesAssigned = assignInitialRoles(horses);
 
-    result = {
-      horses: rolesAdjusted,
-      bettingLines,
-      json: predictionJSON
-    };
+          // 役割調整ルール実行
+          const rolesAdjusted = applyAdjustmentRules(rolesAssigned);
+
+          // 買い目生成
+          const bettingLines = generateBettingLines(rolesAdjusted);
+
+          // 個別JSON生成
+          const predictionJSON = outputJSON({
+            raceDate,
+            venue,
+            raceNumber: raceData.raceNumber,
+            horses: rolesAdjusted,
+            bettingLines
+          });
+
+          generateResults.push({
+            raceNumber: raceData.raceNumber,
+            horses: rolesAdjusted,
+            bettingLines,
+            json: predictionJSON
+          });
+        } catch (error) {
+          errors.push({
+            raceNumber: raceData.raceNumber,
+            message: error.message
+          });
+        }
+      }
+
+      // 全レース統合JSON生成（成功分のみ）
+      if (generateResults.length > 0) {
+        const allPredictionsJSON = outputAllRacesJSON({
+          raceDate,
+          venue,
+          races: generateResults
+        });
+        generateResults.allPredictionsJSON = allPredictionsJSON;
+      }
+    }
 
   } catch (error) {
-    errorMessage = error.message;
+    errors.push({
+      raceNumber: 'ALL',
+      message: error.message
+    });
   }
+}
+
+// ========================================
+// 【関数0】全レースパーサー（===1R===区切り）
+// ========================================
+function parseAllRaces(rawInput: string) {
+  const races = [];
+  const lines = rawInput.trim().split('\n');
+  let currentRaceNumber = null;
+  let currentRaceData = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    // レース区切り記号を検出（===1R===, ===2R===, ...）
+    const raceMatch = line.match(/^===(\d+)R===/);
+    if (raceMatch) {
+      // 前のレースデータを保存
+      if (currentRaceNumber !== null && currentRaceData.length > 0) {
+        races.push({
+          raceNumber: currentRaceNumber,
+          horseData: currentRaceData.join('\n')
+        });
+      }
+
+      // 新しいレース開始
+      currentRaceNumber = parseInt(raceMatch[1], 10);
+      currentRaceData = [];
+      continue;
+    }
+
+    // レースデータ行を追加
+    if (currentRaceNumber !== null && line) {
+      currentRaceData.push(line);
+    }
+  }
+
+  // 最後のレースを保存
+  if (currentRaceNumber !== null && currentRaceData.length > 0) {
+    races.push({
+      raceNumber: currentRaceNumber,
+      horseData: currentRaceData.join('\n')
+    });
+  }
+
+  return races;
 }
 
 // ========================================
@@ -283,7 +384,7 @@ function generateBettingLines(horses) {
 }
 
 // ========================================
-// 【関数5】JSON出力（予想ページ用）
+// 【関数5】個別レースJSON出力
 // ========================================
 function outputJSON(data) {
   const { raceDate, venue, raceNumber, horses, bettingLines } = data;
@@ -308,25 +409,48 @@ function outputJSON(data) {
 
   return JSON.stringify(output, null, 2);
 }
+
+// ========================================
+// 【関数6】全レース統合JSON出力
+// ========================================
+function outputAllRacesJSON(data) {
+  const { raceDate, venue, races } = data;
+
+  const output = {
+    eventInfo: {
+      date: raceDate,
+      venue: venue,
+      totalRaces: races.length
+    },
+    predictions: races.map(race => {
+      const raceData = JSON.parse(race.json);
+      return raceData;
+    }),
+    generatedAt: new Date().toISOString()
+  };
+
+  return JSON.stringify(output, null, 2);
+}
 ---
 
 <!-- <AuthCheck /> 一時的に無効化 -->
 
 <BaseLayout
-  title="予想管理画面"
-  description="特徴量データを入力してJSON予想データを生成します"
+  title="予想管理画面（全12レース一括生成）"
+  description="全12レースの特徴量データを一括入力してJSON予想データを生成します"
 >
   <section class="admin-section">
     <div class="container">
-      <h1 class="page-title">予想管理画面（Prediction Converter）</h1>
+      <h1 class="page-title">予想管理画面（全12レース一括生成）</h1>
       <p class="page-description">
-        レース情報と馬データ（pt値）を入力して、予想JSONを生成します。<br>
-        <strong>※ pt値は外部で計算済みの値を入力してください（このツールではpt計算を行いません）</strong>
+        開催日・競馬場を指定し、全12レースのデータを一括入力して予想JSONを生成します。<br>
+        <strong>※ pt値は外部で計算済みの値を入力してください</strong><br>
+        <strong>※ エラーレースはスキップされ、成功分のみ出力されます</strong>
       </p>
 
       <!-- 入力フォーム -->
       <div class="card form-card">
-        <h2>レース情報・馬データ入力</h2>
+        <h2>開催情報・全レースデータ入力</h2>
         <form method="POST">
           <div class="form-group">
             <label for="raceDate">開催日</label>
@@ -351,164 +475,217 @@ function outputJSON(data) {
           </div>
 
           <div class="form-group">
-            <label for="raceNumber">レース番号</label>
-            <input
-              type="number"
-              id="raceNumber"
-              name="raceNumber"
-              min="1"
-              max="12"
-              required
-              class="form-input"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="horseData">馬データ（1行1頭：馬番,馬名,pt）</label>
+            <label for="allRacesData">全12レースデータ（===1R===区切り）</label>
             <textarea
-              id="horseData"
-              name="horseData"
-              rows="12"
+              id="allRacesData"
+              name="allRacesData"
+              rows="30"
               required
               class="form-textarea"
               placeholder="例:
+===1R===
 1,マコスペシャル,90.5
 2,クロチャンプ,86.2
 3,ケイバスター,82.0
 4,ナンカンキング,77.3
-5,オオイプリンス,70.0"
+
+===2R===
+1,オオイプリンス,88.0
+2,カワサキホープ,84.5
+...
+
+===12R===
+..."
             ></textarea>
           </div>
 
-          <button type="submit" class="btn btn-primary btn-lg w-full">
-            予想データ生成
-          </button>
+          <div class="button-group">
+            <button type="submit" name="action" value="preview" class="btn btn-secondary btn-lg">
+              📊 プレビュー（確認のみ）
+            </button>
+            <button type="submit" name="action" value="generate" class="btn btn-primary btn-lg">
+              🚀 全レース生成
+            </button>
+          </div>
         </form>
       </div>
 
-      <!-- エラー表示 -->
-      {errorMessage && (
+      <!-- エラー一覧 -->
+      {errors.length > 0 && (
         <div class="card error-card">
-          <h3>エラー</h3>
-          <p>{errorMessage}</p>
+          <h3>⚠️ エラー一覧（{errors.length}件）</h3>
+          <ul class="error-list">
+            {errors.map(err => (
+              <li>
+                <strong>{err.raceNumber === 'ALL' ? '全体エラー' : `${err.raceNumber}R`}:</strong> {err.message}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
-      <!-- 結果表示 -->
-      {result && (
-        <div class="results-section">
-          <div class="race-card card">
-            <h2 class="section-title">生成結果</h2>
-
-            <!-- pt一覧表示 -->
-            <div class="pt-summary">
-              <h3>📊 pt一覧（同点馬番昇順）</h3>
-              <div class="pt-display">
-                {result.horses.map((h, i) => (
-                  <span class="pt-item">
-                    {h.horseNumber}({h.pt}){i < result.horses.length - 1 ? ' / ' : ''}
-                  </span>
-                ))}
-              </div>
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm mt-2"
-                onclick={`navigator.clipboard.writeText('${result.horses.map(h => `${h.horseNumber}:${h.pt}`).join(' / ')}').then(() => alert('pt一覧をコピーしました！'))`}
-              >
-                📋 pt一覧をコピー
-              </button>
-            </div>
-
-            <!-- 買い目表示 -->
-            <div class="betting-section">
-              <h3>🎯 買い目（馬単）2段構成</h3>
-              <div class="betting-lines-container">
-                {Array.isArray(result.bettingLines) ? (
-                  result.bettingLines.map((line, index) => (
-                    <div class="betting-line-item">
-                      <span class="line-number">{index === 0 ? '本命軸' : '対抗軸'}</span>
-                      <span class="betting-line">{line}</span>
-                    </div>
-                  ))
-                ) : (
-                  <div class="betting-line-item">
-                    <span class="betting-line">{result.bettingLines}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <!-- 役割別馬一覧 -->
-            <div class="horses-prediction">
-              <h3>🏇 役割別馬一覧</h3>
-
-              <!-- 本命・対抗・単穴 -->
-              <div class="top-horses">
-                {result.horses.filter(h => ['本命', '対抗', '単穴'].includes(h.role)).map((horse) => (
-                  <div class={`horse-item ${horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : 'tanana'}`}>
-                    <div class="horse-mark">
-                      {horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : '▲'}
-                    </div>
-                    <div class="horse-info">
-                      <div class="horse-header-line">
-                        <span class="horse-number">{horse.horseNumber}</span>
-                        <span class="horse-name">{horse.horseName}</span>
-                        <span class="role-badge">{horse.role}</span>
-                      </div>
-                      <div class="horse-score">
-                        累積スコア: <strong>{horse.pt}pt</strong>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <!-- 連下候補馬 -->
-              {result.horses.filter(h => h.role === '連下').length > 0 && (
-                <div class="horse-group renka">
-                  <div class="group-header">△ 連下候補馬</div>
-                  <div class="group-list">
-                    {result.horses.filter(h => h.role === '連下').map((horse, index, arr) => (
-                      <span class="horse-compact">
-                        <strong>{horse.horseNumber}</strong> {horse.horseName} <span class="pt-value">({horse.pt}pt)</span>{index < arr.length - 1 ? '、' : ''}
-                      </span>
-                    ))}
-                  </div>
+      <!-- プレビュー結果 -->
+      {previewResults && (
+        <div class="card preview-card">
+          <h2>📊 プレビュー結果（{previewResults.length}レース）</h2>
+          <div class="preview-grid">
+            {previewResults.map(race => (
+              <div class="preview-item">
+                <div class="preview-header">{race.raceNumber}R</div>
+                <div class="preview-body">
+                  <div class="preview-stat">頭数: <strong>{race.horseCount}頭</strong></div>
+                  {race.topHorse && (
+                    <div class="preview-stat">本命候補: <strong>{race.topHorse.horseNumber}.{race.topHorse.horseName} ({race.topHorse.pt}pt)</strong></div>
+                  )}
+                  {race.secondHorse && (
+                    <div class="preview-stat">対抗候補: <strong>{race.secondHorse.horseNumber}.{race.secondHorse.horseName} ({race.secondHorse.pt}pt)</strong></div>
+                  )}
                 </div>
-              )}
-
-              <!-- 抑え候補馬 -->
-              {result.horses.filter(h => h.role === '抑え').length > 0 && (
-                <div class="horse-group osae">
-                  <div class="group-header">× 抑え候補馬</div>
-                  <div class="group-list">
-                    {result.horses.filter(h => h.role === '抑え').map((horse, index, arr) => (
-                      <span class="horse-compact">
-                        <strong>{horse.horseNumber}</strong> {horse.horseName} <span class="pt-value">({horse.pt}pt)</span>{index < arr.length - 1 ? '、' : ''}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <!-- JSON出力 -->
-            <div class="json-output">
-              <h3>JSON出力（予想ページ用）</h3>
-              <textarea
-                readonly
-                rows="20"
-                class="json-textarea"
-              >{result.json}</textarea>
-              <button
-                type="button"
-                class="btn btn-secondary mt-2"
-                onclick="navigator.clipboard.writeText(this.previousElementSibling.value).then(() => alert('JSONをコピーしました！'))"
-              >
-                JSONをコピー
-              </button>
-            </div>
+              </div>
+            ))}
           </div>
+          <p class="preview-note">
+            ✅ 問題なければ「全レース生成」ボタンをクリックして本番生成してください
+          </p>
+        </div>
+      )}
+
+      <!-- 生成結果 -->
+      {generateResults && generateResults.length > 0 && (
+        <div class="results-section">
+          <div class="card success-card">
+            <h2>✅ 生成成功（{generateResults.length}レース）</h2>
+          </div>
+
+          <!-- 全レース統合JSON -->
+          <div class="card all-json-card">
+            <h2>📦 全レース統合JSON（{generateResults.length}レース分）</h2>
+            <textarea
+              readonly
+              rows="15"
+              class="json-textarea"
+              id="allPredictionsJSON"
+            >{generateResults.allPredictionsJSON}</textarea>
+            <button
+              type="button"
+              class="btn btn-primary mt-2"
+              onclick="navigator.clipboard.writeText(document.getElementById('allPredictionsJSON').value).then(() => alert('全レース統合JSONをコピーしました！'))"
+            >
+              📋 全レース統合JSONをコピー
+            </button>
+          </div>
+
+          <!-- 各レース詳細（折りたたみ） -->
+          {generateResults.map((race, index) => (
+            <details class="race-details" open={index === 0}>
+              <summary class="race-summary">{race.raceNumber}R - 本命: {race.horses.find(h => h.role === '本命')?.horseNumber}.{race.horses.find(h => h.role === '本命')?.horseName} / 対抗: {race.horses.find(h => h.role === '対抗')?.horseNumber}.{race.horses.find(h => h.role === '対抗')?.horseName}</summary>
+
+              <div class="race-card">
+                <!-- pt一覧表示 -->
+                <div class="pt-summary">
+                  <h3>📊 pt一覧（同点馬番昇順）</h3>
+                  <div class="pt-display">
+                    {race.horses.map((h, i) => (
+                      <span class="pt-item">
+                        {h.horseNumber}({h.pt}){i < race.horses.length - 1 ? ' / ' : ''}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <!-- 買い目表示 -->
+                <div class="betting-section">
+                  <h3>🎯 買い目（馬単）2段構成</h3>
+                  <div class="betting-lines-container">
+                    {Array.isArray(race.bettingLines) ? (
+                      race.bettingLines.map((line, idx) => (
+                        <div class="betting-line-item">
+                          <span class="line-number">{idx === 0 ? '本命軸' : '対抗軸'}</span>
+                          <span class="betting-line">{line}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div class="betting-line-item">
+                        <span class="betting-line">{race.bettingLines}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <!-- 役割別馬一覧 -->
+                <div class="horses-prediction">
+                  <h3>🏇 役割別馬一覧</h3>
+
+                  <!-- 本命・対抗・単穴 -->
+                  <div class="top-horses">
+                    {race.horses.filter(h => ['本命', '対抗', '単穴'].includes(h.role)).map((horse) => (
+                      <div class={`horse-item ${horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : 'tanana'}`}>
+                        <div class="horse-mark">
+                          {horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : '▲'}
+                        </div>
+                        <div class="horse-info">
+                          <div class="horse-header-line">
+                            <span class="horse-number">{horse.horseNumber}</span>
+                            <span class="horse-name">{horse.horseName}</span>
+                            <span class="role-badge">{horse.role}</span>
+                          </div>
+                          <div class="horse-score">
+                            累積スコア: <strong>{horse.pt}pt</strong>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <!-- 連下候補馬 -->
+                  {race.horses.filter(h => h.role === '連下').length > 0 && (
+                    <div class="horse-group renka">
+                      <div class="group-header">△ 連下候補馬</div>
+                      <div class="group-list">
+                        {race.horses.filter(h => h.role === '連下').map((horse, idx, arr) => (
+                          <span class="horse-compact">
+                            <strong>{horse.horseNumber}</strong> {horse.horseName} <span class="pt-value">({horse.pt}pt)</span>{idx < arr.length - 1 ? '、' : ''}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <!-- 抑え候補馬 -->
+                  {race.horses.filter(h => h.role === '抑え').length > 0 && (
+                    <div class="horse-group osae">
+                      <div class="group-header">× 抑え候補馬</div>
+                      <div class="group-list">
+                        {race.horses.filter(h => h.role === '抑え').map((horse, idx, arr) => (
+                          <span class="horse-compact">
+                            <strong>{horse.horseNumber}</strong> {horse.horseName} <span class="pt-value">({horse.pt}pt)</span>{idx < arr.length - 1 ? '、' : ''}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <!-- 個別JSON出力 -->
+                <div class="json-output">
+                  <h3>個別JSON（{race.raceNumber}R）</h3>
+                  <textarea
+                    readonly
+                    rows="15"
+                    class="json-textarea"
+                    id={`json-${race.raceNumber}`}
+                  >{race.json}</textarea>
+                  <button
+                    type="button"
+                    class="btn btn-secondary mt-2"
+                    onclick={`navigator.clipboard.writeText(document.getElementById('json-${race.raceNumber}').value).then(() => alert('${race.raceNumber}RのJSONをコピーしました！'))`}
+                  >
+                    📋 {race.raceNumber}R JSONをコピー
+                  </button>
+                </div>
+              </div>
+            </details>
+          ))}
         </div>
       )}
 
@@ -516,12 +693,35 @@ function outputJSON(data) {
       <div class="card info-card">
         <h2>使用方法</h2>
         <ol>
-          <li><strong>pt値の準備:</strong> 外部ツールでpt値を計算してください</li>
-          <li><strong>データ入力:</strong> レース情報と馬データ（馬番,馬名,pt）を入力</li>
-          <li><strong>生成実行:</strong> 「予想データ生成」ボタンをクリック</li>
-          <li><strong>JSON保存:</strong> 生成されたJSONをコピーして、予想データファイルに保存</li>
+          <li><strong>pt値の準備:</strong> 外部ツールで全12レース分のpt値を計算</li>
+          <li><strong>データ入力:</strong> 開催日・競馬場を入力後、全レースデータを===1R===区切りで入力</li>
+          <li><strong>プレビュー:</strong> 「プレビュー」ボタンで頭数・本命候補を確認（エラーレース確認）</li>
+          <li><strong>生成実行:</strong> 「全レース生成」ボタンで本番生成</li>
+          <li><strong>JSON保存:</strong> 全レース統合JSONをコピーして予想データファイルに保存</li>
           <li><strong>Git管理:</strong> 変更をコミット・プッシュして自動デプロイ</li>
         </ol>
+
+        <h3>入力フォーマット例</h3>
+        <pre class="format-example">===1R===
+1,マコスペシャル,90.5
+2,クロチャンプ,86.2
+3,ケイバスター,82.0
+4,ナンカンキング,77.3
+
+===2R===
+1,オオイプリンス,88.0
+2,カワサキホープ,84.5
+...
+
+===12R===
+...</pre>
+
+        <h3>エラーハンドリング</h3>
+        <ul>
+          <li>エラーレースは自動でスキップされ、成功分のみ出力されます</li>
+          <li>エラー詳細はページ上部に表示されます（レース番号+エラー内容）</li>
+          <li>最低4頭（本命/対抗/単穴2）必要です</li>
+        </ul>
 
         <h3>処理ロジック概要</h3>
         <ul>
@@ -553,10 +753,11 @@ function outputJSON(data) {
       text-align: center;
       color: var(--text-secondary);
       margin-bottom: var(--spacing-2xl);
+      line-height: 1.8;
     }
 
     .form-card {
-      max-width: 800px;
+      max-width: 1200px;
       margin: 0 auto var(--spacing-xl);
     }
 
@@ -586,8 +787,19 @@ function outputJSON(data) {
       resize: vertical;
     }
 
+    .button-group {
+      display: flex;
+      gap: var(--spacing-md);
+      margin-top: var(--spacing-lg);
+    }
+
+    .button-group .btn {
+      flex: 1;
+    }
+
+    /* エラーカード */
     .error-card {
-      max-width: 800px;
+      max-width: 1200px;
       margin: 0 auto var(--spacing-xl);
       border: 2px solid var(--error);
       background: rgba(239, 68, 68, 0.1);
@@ -595,26 +807,142 @@ function outputJSON(data) {
 
     .error-card h3 {
       color: var(--error);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .error-list {
+      margin-left: var(--spacing-lg);
+      color: var(--text-secondary);
+    }
+
+    .error-list li {
       margin-bottom: var(--spacing-sm);
+    }
+
+    /* プレビューカード */
+    .preview-card {
+      max-width: 1200px;
+      margin: 0 auto var(--spacing-xl);
+      border: 2px solid var(--primary-end);
+      background: rgba(96, 165, 250, 0.1);
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .preview-item {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      border-left: 4px solid var(--primary-end);
+      overflow: hidden;
+    }
+
+    .preview-header {
+      background: var(--primary-gradient);
+      color: white;
+      font-weight: 700;
+      font-size: 1.125rem;
+      padding: var(--spacing-sm) var(--spacing-md);
+      text-align: center;
+    }
+
+    .preview-body {
+      padding: var(--spacing-md);
+    }
+
+    .preview-stat {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .preview-stat strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .preview-note {
+      font-size: 0.9375rem;
+      color: var(--text-secondary);
+      text-align: center;
+      padding: var(--spacing-md);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+    }
+
+    /* 成功カード */
+    .success-card {
+      max-width: 1200px;
+      margin: 0 auto var(--spacing-xl);
+      border: 2px solid #10b981;
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .success-card h2 {
+      color: #10b981;
+    }
+
+    /* 全レース統合JSONカード */
+    .all-json-card {
+      max-width: 1200px;
+      margin: 0 auto var(--spacing-xl);
+      background: var(--bg-secondary);
+      border-left: 4px solid #8b5cf6;
+    }
+
+    /* レース詳細（折りたたみ） */
+    .race-details {
+      max-width: 1200px;
+      margin: 0 auto var(--spacing-lg);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      background: var(--bg-card);
+      overflow: hidden;
+    }
+
+    .race-summary {
+      padding: var(--spacing-md) var(--spacing-lg);
+      background: var(--bg-secondary);
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 1.125rem;
+      color: var(--text-primary);
+      list-style: none;
+      user-select: none;
+      transition: background var(--transition-base);
+    }
+
+    .race-summary:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .race-summary::marker,
+    .race-summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .race-summary::before {
+      content: '▶';
+      display: inline-block;
+      margin-right: var(--spacing-sm);
+      transition: transform var(--transition-base);
+    }
+
+    .race-details[open] .race-summary::before {
+      transform: rotate(90deg);
+    }
+
+    .race-card {
+      padding: var(--spacing-xl);
     }
 
     /* 結果セクション */
     .results-section {
       margin-top: var(--spacing-2xl);
-    }
-
-    .race-card {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: var(--spacing-xl);
-    }
-
-    .section-title {
-      font-size: 1.75rem;
-      font-weight: 700;
-      margin-bottom: var(--spacing-xl);
-      padding-bottom: var(--spacing-md);
-      border-bottom: 2px solid var(--border-color);
     }
 
     /* pt一覧 */
@@ -648,11 +976,6 @@ function outputJSON(data) {
 
     .pt-item {
       color: var(--text-secondary);
-    }
-
-    .btn-sm {
-      padding: var(--spacing-xs) var(--spacing-md);
-      font-size: 0.875rem;
     }
 
     /* 買い目セクション */
@@ -855,6 +1178,7 @@ function outputJSON(data) {
       font-size: 0.875rem;
     }
 
+    /* JSON出力 */
     .json-output {
       margin-top: var(--spacing-xl);
     }
@@ -871,6 +1195,7 @@ function outputJSON(data) {
       resize: vertical;
     }
 
+    /* 使用方法カード */
     .info-card {
       max-width: 1200px;
       margin: var(--spacing-xl) auto 0;
@@ -892,8 +1217,15 @@ function outputJSON(data) {
       margin-bottom: var(--spacing-md);
     }
 
-    .w-full {
-      width: 100%;
+    .format-example {
+      background: var(--bg-tertiary);
+      padding: var(--spacing-md);
+      border-radius: var(--radius-md);
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      border-left: 4px solid var(--primary-end);
     }
 
     .mt-2 {
@@ -905,8 +1237,12 @@ function outputJSON(data) {
         font-size: 1.5rem;
       }
 
-      .betting-display {
-        font-size: 1.125rem;
+      .button-group {
+        flex-direction: column;
+      }
+
+      .preview-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>

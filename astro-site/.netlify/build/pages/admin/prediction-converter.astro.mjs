@@ -9,34 +9,112 @@ const prerender = false;
 const $$PredictionConverter = createComponent(async ($$result, $$props, $$slots) => {
   const Astro2 = $$result.createAstro($$Astro, $$props, $$slots);
   Astro2.self = $$PredictionConverter;
-  let result = null;
-  let errorMessage = null;
+  let previewResults = null;
+  let generateResults = null;
+  let errors = [];
+  let action = null;
   if (Astro2.request.method === "POST") {
     try {
       const formData = await Astro2.request.formData();
+      action = formData.get("action");
       const raceDate = formData.get("raceDate");
       const venue = formData.get("venue");
-      const raceNumber = formData.get("raceNumber");
-      const horseData = formData.get("horseData");
-      const horses = parseInputData(horseData);
-      const rolesAssigned = assignInitialRoles(horses);
-      const rolesAdjusted = applyAdjustmentRules(rolesAssigned);
-      const bettingLines = generateBettingLines(rolesAdjusted);
-      const predictionJSON = outputJSON({
-        raceDate,
-        venue,
-        raceNumber,
-        horses: rolesAdjusted,
-        bettingLines
-      });
-      result = {
-        horses: rolesAdjusted,
-        bettingLines,
-        json: predictionJSON
-      };
+      const allRacesData = formData.get("allRacesData");
+      const racesData = parseAllRaces(allRacesData);
+      if (action === "preview") {
+        previewResults = [];
+        errors = [];
+        for (const raceData of racesData) {
+          try {
+            const horses = parseInputData(raceData.horseData);
+            previewResults.push({
+              raceNumber: raceData.raceNumber,
+              horseCount: horses.length,
+              topHorse: horses[0] || null,
+              secondHorse: horses[1] || null
+            });
+          } catch (error) {
+            errors.push({
+              raceNumber: raceData.raceNumber,
+              message: error.message
+            });
+          }
+        }
+      } else if (action === "generate") {
+        generateResults = [];
+        errors = [];
+        for (const raceData of racesData) {
+          try {
+            const horses = parseInputData(raceData.horseData);
+            const rolesAssigned = assignInitialRoles(horses);
+            const rolesAdjusted = applyAdjustmentRules(rolesAssigned);
+            const bettingLines = generateBettingLines(rolesAdjusted);
+            const predictionJSON = outputJSON({
+              raceDate,
+              venue,
+              raceNumber: raceData.raceNumber,
+              horses: rolesAdjusted,
+              bettingLines
+            });
+            generateResults.push({
+              raceNumber: raceData.raceNumber,
+              horses: rolesAdjusted,
+              bettingLines,
+              json: predictionJSON
+            });
+          } catch (error) {
+            errors.push({
+              raceNumber: raceData.raceNumber,
+              message: error.message
+            });
+          }
+        }
+        if (generateResults.length > 0) {
+          const allPredictionsJSON = outputAllRacesJSON({
+            raceDate,
+            venue,
+            races: generateResults
+          });
+          generateResults.allPredictionsJSON = allPredictionsJSON;
+        }
+      }
     } catch (error) {
-      errorMessage = error.message;
+      errors.push({
+        raceNumber: "ALL",
+        message: error.message
+      });
     }
+  }
+  function parseAllRaces(rawInput) {
+    const races = [];
+    const lines = rawInput.trim().split("\n");
+    let currentRaceNumber = null;
+    let currentRaceData = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      const raceMatch = line.match(/^===(\d+)R===/);
+      if (raceMatch) {
+        if (currentRaceNumber !== null && currentRaceData.length > 0) {
+          races.push({
+            raceNumber: currentRaceNumber,
+            horseData: currentRaceData.join("\n")
+          });
+        }
+        currentRaceNumber = parseInt(raceMatch[1], 10);
+        currentRaceData = [];
+        continue;
+      }
+      if (currentRaceNumber !== null && line) {
+        currentRaceData.push(line);
+      }
+    }
+    if (currentRaceNumber !== null && currentRaceData.length > 0) {
+      races.push({
+        raceNumber: currentRaceNumber,
+        horseData: currentRaceData.join("\n")
+      });
+    }
+    return races;
   }
   function parseInputData(rawInput) {
     const lines = rawInput.trim().split("\n");
@@ -219,20 +297,60 @@ const $$PredictionConverter = createComponent(async ($$result, $$props, $$slots)
     };
     return JSON.stringify(output, null, 2);
   }
-  return renderTemplate`<!-- <AuthCheck /> 一時的に無効化 -->${renderComponent($$result, "BaseLayout", $$BaseLayout, { "title": "\u4E88\u60F3\u7BA1\u7406\u753B\u9762", "description": "\u7279\u5FB4\u91CF\u30C7\u30FC\u30BF\u3092\u5165\u529B\u3057\u3066JSON\u4E88\u60F3\u30C7\u30FC\u30BF\u3092\u751F\u6210\u3057\u307E\u3059", "data-astro-cid-ri35buz5": true }, { "default": async ($$result2) => renderTemplate` ${maybeRenderHead()}<section class="admin-section" data-astro-cid-ri35buz5> <div class="container" data-astro-cid-ri35buz5> <h1 class="page-title" data-astro-cid-ri35buz5>予想管理画面（Prediction Converter）</h1> <p class="page-description" data-astro-cid-ri35buz5>
-レース情報と馬データ（pt値）を入力して、予想JSONを生成します。<br data-astro-cid-ri35buz5> <strong data-astro-cid-ri35buz5>※ pt値は外部で計算済みの値を入力してください（このツールではpt計算を行いません）</strong> </p> <!-- 入力フォーム --> <div class="card form-card" data-astro-cid-ri35buz5> <h2 data-astro-cid-ri35buz5>レース情報・馬データ入力</h2> <form method="POST" data-astro-cid-ri35buz5> <div class="form-group" data-astro-cid-ri35buz5> <label for="raceDate" data-astro-cid-ri35buz5>開催日</label> <input type="date" id="raceDate" name="raceDate" required class="form-input" data-astro-cid-ri35buz5> </div> <div class="form-group" data-astro-cid-ri35buz5> <label for="venue" data-astro-cid-ri35buz5>競馬場</label> <select id="venue" name="venue" required class="form-input" data-astro-cid-ri35buz5> <option value="" data-astro-cid-ri35buz5>選択してください</option> <option value="大井" data-astro-cid-ri35buz5>大井</option> <option value="川崎" data-astro-cid-ri35buz5>川崎</option> <option value="船橋" data-astro-cid-ri35buz5>船橋</option> <option value="浦和" data-astro-cid-ri35buz5>浦和</option> </select> </div> <div class="form-group" data-astro-cid-ri35buz5> <label for="raceNumber" data-astro-cid-ri35buz5>レース番号</label> <input type="number" id="raceNumber" name="raceNumber" min="1" max="12" required class="form-input" data-astro-cid-ri35buz5> </div> <div class="form-group" data-astro-cid-ri35buz5> <label for="horseData" data-astro-cid-ri35buz5>馬データ（1行1頭：馬番,馬名,pt）</label> <textarea id="horseData" name="horseData" rows="12" required class="form-textarea" placeholder="例:
+  function outputAllRacesJSON(data) {
+    const { raceDate, venue, races } = data;
+    const output = {
+      eventInfo: {
+        date: raceDate,
+        venue,
+        totalRaces: races.length
+      },
+      predictions: races.map((race) => {
+        const raceData = JSON.parse(race.json);
+        return raceData;
+      }),
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    return JSON.stringify(output, null, 2);
+  }
+  return renderTemplate`<!-- <AuthCheck /> 一時的に無効化 -->${renderComponent($$result, "BaseLayout", $$BaseLayout, { "title": "\u4E88\u60F3\u7BA1\u7406\u753B\u9762\uFF08\u516812\u30EC\u30FC\u30B9\u4E00\u62EC\u751F\u6210\uFF09", "description": "\u516812\u30EC\u30FC\u30B9\u306E\u7279\u5FB4\u91CF\u30C7\u30FC\u30BF\u3092\u4E00\u62EC\u5165\u529B\u3057\u3066JSON\u4E88\u60F3\u30C7\u30FC\u30BF\u3092\u751F\u6210\u3057\u307E\u3059", "data-astro-cid-ri35buz5": true }, { "default": async ($$result2) => renderTemplate` ${maybeRenderHead()}<section class="admin-section" data-astro-cid-ri35buz5> <div class="container" data-astro-cid-ri35buz5> <h1 class="page-title" data-astro-cid-ri35buz5>予想管理画面（全12レース一括生成）</h1> <p class="page-description" data-astro-cid-ri35buz5>
+開催日・競馬場を指定し、全12レースのデータを一括入力して予想JSONを生成します。<br data-astro-cid-ri35buz5> <strong data-astro-cid-ri35buz5>※ pt値は外部で計算済みの値を入力してください</strong><br data-astro-cid-ri35buz5> <strong data-astro-cid-ri35buz5>※ エラーレースはスキップされ、成功分のみ出力されます</strong> </p> <!-- 入力フォーム --> <div class="card form-card" data-astro-cid-ri35buz5> <h2 data-astro-cid-ri35buz5>開催情報・全レースデータ入力</h2> <form method="POST" data-astro-cid-ri35buz5> <div class="form-group" data-astro-cid-ri35buz5> <label for="raceDate" data-astro-cid-ri35buz5>開催日</label> <input type="date" id="raceDate" name="raceDate" required class="form-input" data-astro-cid-ri35buz5> </div> <div class="form-group" data-astro-cid-ri35buz5> <label for="venue" data-astro-cid-ri35buz5>競馬場</label> <select id="venue" name="venue" required class="form-input" data-astro-cid-ri35buz5> <option value="" data-astro-cid-ri35buz5>選択してください</option> <option value="大井" data-astro-cid-ri35buz5>大井</option> <option value="川崎" data-astro-cid-ri35buz5>川崎</option> <option value="船橋" data-astro-cid-ri35buz5>船橋</option> <option value="浦和" data-astro-cid-ri35buz5>浦和</option> </select> </div> <div class="form-group" data-astro-cid-ri35buz5> <label for="allRacesData" data-astro-cid-ri35buz5>全12レースデータ（===1R===区切り）</label> <textarea id="allRacesData" name="allRacesData" rows="30" required class="form-textarea" placeholder="例:
+===1R===
 1,マコスペシャル,90.5
 2,クロチャンプ,86.2
 3,ケイバスター,82.0
 4,ナンカンキング,77.3
-5,オオイプリンス,70.0" data-astro-cid-ri35buz5></textarea> </div> <button type="submit" class="btn btn-primary btn-lg w-full" data-astro-cid-ri35buz5>
-予想データ生成
-</button> </form> </div> <!-- エラー表示 --> ${errorMessage && renderTemplate`<div class="card error-card" data-astro-cid-ri35buz5> <h3 data-astro-cid-ri35buz5>エラー</h3> <p data-astro-cid-ri35buz5>${errorMessage}</p> </div>`} <!-- 結果表示 --> ${result && renderTemplate`<div class="results-section" data-astro-cid-ri35buz5> <div class="race-card card" data-astro-cid-ri35buz5> <h2 class="section-title" data-astro-cid-ri35buz5>生成結果</h2> <!-- pt一覧表示 --> <div class="pt-summary" data-astro-cid-ri35buz5> <h3 data-astro-cid-ri35buz5>📊 pt一覧（同点馬番昇順）</h3> <div class="pt-display" data-astro-cid-ri35buz5> ${result.horses.map((h, i) => renderTemplate`<span class="pt-item" data-astro-cid-ri35buz5> ${h.horseNumber}(${h.pt})${i < result.horses.length - 1 ? " / " : ""} </span>`)} </div> <button type="button" class="btn btn-secondary btn-sm mt-2"${addAttribute(`navigator.clipboard.writeText('${result.horses.map((h) => `${h.horseNumber}:${h.pt}`).join(" / ")}').then(() => alert('pt\u4E00\u89A7\u3092\u30B3\u30D4\u30FC\u3057\u307E\u3057\u305F\uFF01'))`, "onclick")} data-astro-cid-ri35buz5>
-📋 pt一覧をコピー
-</button> </div> <!-- 買い目表示 --> <div class="betting-section" data-astro-cid-ri35buz5> <h3 data-astro-cid-ri35buz5>🎯 買い目（馬単）2段構成</h3> <div class="betting-lines-container" data-astro-cid-ri35buz5> ${Array.isArray(result.bettingLines) ? result.bettingLines.map((line, index) => renderTemplate`<div class="betting-line-item" data-astro-cid-ri35buz5> <span class="line-number" data-astro-cid-ri35buz5>${index === 0 ? "\u672C\u547D\u8EF8" : "\u5BFE\u6297\u8EF8"}</span> <span class="betting-line" data-astro-cid-ri35buz5>${line}</span> </div>`) : renderTemplate`<div class="betting-line-item" data-astro-cid-ri35buz5> <span class="betting-line" data-astro-cid-ri35buz5>${result.bettingLines}</span> </div>`} </div> </div> <!-- 役割別馬一覧 --> <div class="horses-prediction" data-astro-cid-ri35buz5> <h3 data-astro-cid-ri35buz5>🏇 役割別馬一覧</h3> <!-- 本命・対抗・単穴 --> <div class="top-horses" data-astro-cid-ri35buz5> ${result.horses.filter((h) => ["\u672C\u547D", "\u5BFE\u6297", "\u5358\u7A74"].includes(h.role)).map((horse) => renderTemplate`<div${addAttribute(`horse-item ${horse.role === "\u672C\u547D" ? "honmei" : horse.role === "\u5BFE\u6297" ? "taikou" : "tanana"}`, "class")} data-astro-cid-ri35buz5> <div class="horse-mark" data-astro-cid-ri35buz5> ${horse.role === "\u672C\u547D" ? "\u25CE" : horse.role === "\u5BFE\u6297" ? "\u25CB" : "\u25B2"} </div> <div class="horse-info" data-astro-cid-ri35buz5> <div class="horse-header-line" data-astro-cid-ri35buz5> <span class="horse-number" data-astro-cid-ri35buz5>${horse.horseNumber}</span> <span class="horse-name" data-astro-cid-ri35buz5>${horse.horseName}</span> <span class="role-badge" data-astro-cid-ri35buz5>${horse.role}</span> </div> <div class="horse-score" data-astro-cid-ri35buz5>
-累積スコア: <strong data-astro-cid-ri35buz5>${horse.pt}pt</strong> </div> </div> </div>`)} </div> <!-- 連下候補馬 --> ${result.horses.filter((h) => h.role === "\u9023\u4E0B").length > 0 && renderTemplate`<div class="horse-group renka" data-astro-cid-ri35buz5> <div class="group-header" data-astro-cid-ri35buz5>△ 連下候補馬</div> <div class="group-list" data-astro-cid-ri35buz5> ${result.horses.filter((h) => h.role === "\u9023\u4E0B").map((horse, index, arr) => renderTemplate`<span class="horse-compact" data-astro-cid-ri35buz5> <strong data-astro-cid-ri35buz5>${horse.horseNumber}</strong> ${horse.horseName} <span class="pt-value" data-astro-cid-ri35buz5>(${horse.pt}pt)</span>${index < arr.length - 1 ? "\u3001" : ""} </span>`)} </div> </div>`} <!-- 抑え候補馬 --> ${result.horses.filter((h) => h.role === "\u6291\u3048").length > 0 && renderTemplate`<div class="horse-group osae" data-astro-cid-ri35buz5> <div class="group-header" data-astro-cid-ri35buz5>× 抑え候補馬</div> <div class="group-list" data-astro-cid-ri35buz5> ${result.horses.filter((h) => h.role === "\u6291\u3048").map((horse, index, arr) => renderTemplate`<span class="horse-compact" data-astro-cid-ri35buz5> <strong data-astro-cid-ri35buz5>${horse.horseNumber}</strong> ${horse.horseName} <span class="pt-value" data-astro-cid-ri35buz5>(${horse.pt}pt)</span>${index < arr.length - 1 ? "\u3001" : ""} </span>`)} </div> </div>`} </div> <!-- JSON出力 --> <div class="json-output" data-astro-cid-ri35buz5> <h3 data-astro-cid-ri35buz5>JSON出力（予想ページ用）</h3> <textarea readonly rows="20" class="json-textarea" data-astro-cid-ri35buz5>${result.json}</textarea> <button type="button" class="btn btn-secondary mt-2" onclick="navigator.clipboard.writeText(this.previousElementSibling.value).then(() => alert('JSONをコピーしました！'))" data-astro-cid-ri35buz5>
-JSONをコピー
-</button> </div> </div> </div>`} <!-- 使用方法 --> <div class="card info-card" data-astro-cid-ri35buz5> <h2 data-astro-cid-ri35buz5>使用方法</h2> <ol data-astro-cid-ri35buz5> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>pt値の準備:</strong> 外部ツールでpt値を計算してください</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>データ入力:</strong> レース情報と馬データ（馬番,馬名,pt）を入力</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>生成実行:</strong> 「予想データ生成」ボタンをクリック</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>JSON保存:</strong> 生成されたJSONをコピーして、予想データファイルに保存</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>Git管理:</strong> 変更をコミット・プッシュして自動デプロイ</li> </ol> <h3 data-astro-cid-ri35buz5>処理ロジック概要</h3> <ul data-astro-cid-ri35buz5> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>初期割当:</strong> pt降順で本命/対抗/単穴/連下/抑えを仮割当</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール①:</strong> 本命ptが89〜90pt → 本命枠のみ絶対軸固定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール②:</strong> 本命と対抗のpt差が3pt以内 → 入れ替え判定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール③:</strong> 本命ptが86pt以下 → 対抗を本命に昇格</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール④:</strong> 対抗と単穴最上位のpt差が3pt以内 → 入れ替え判定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール⑤:</strong> 単穴下位と連下最上位のpt差が2pt以内 → 入れ替え判定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>同点ルール:</strong> 全ての比較・ソートで馬番昇順を採用</li> </ul> </div> </div> </section>  ` })}`;
+
+===2R===
+1,オオイプリンス,88.0
+2,カワサキホープ,84.5
+...
+
+===12R===
+..." data-astro-cid-ri35buz5></textarea> </div> <div class="button-group" data-astro-cid-ri35buz5> <button type="submit" name="action" value="preview" class="btn btn-secondary btn-lg" data-astro-cid-ri35buz5>
+📊 プレビュー（確認のみ）
+</button> <button type="submit" name="action" value="generate" class="btn btn-primary btn-lg" data-astro-cid-ri35buz5>
+🚀 全レース生成
+</button> </div> </form> </div> <!-- エラー一覧 --> ${errors.length > 0 && renderTemplate`<div class="card error-card" data-astro-cid-ri35buz5> <h3 data-astro-cid-ri35buz5>⚠️ エラー一覧（${errors.length}件）</h3> <ul class="error-list" data-astro-cid-ri35buz5> ${errors.map((err) => renderTemplate`<li data-astro-cid-ri35buz5> <strong data-astro-cid-ri35buz5>${err.raceNumber === "ALL" ? "\u5168\u4F53\u30A8\u30E9\u30FC" : `${err.raceNumber}R`}:</strong> ${err.message} </li>`)} </ul> </div>`} <!-- プレビュー結果 --> ${previewResults && renderTemplate`<div class="card preview-card" data-astro-cid-ri35buz5> <h2 data-astro-cid-ri35buz5>📊 プレビュー結果（${previewResults.length}レース）</h2> <div class="preview-grid" data-astro-cid-ri35buz5> ${previewResults.map((race) => renderTemplate`<div class="preview-item" data-astro-cid-ri35buz5> <div class="preview-header" data-astro-cid-ri35buz5>${race.raceNumber}R</div> <div class="preview-body" data-astro-cid-ri35buz5> <div class="preview-stat" data-astro-cid-ri35buz5>頭数: <strong data-astro-cid-ri35buz5>${race.horseCount}頭</strong></div> ${race.topHorse && renderTemplate`<div class="preview-stat" data-astro-cid-ri35buz5>本命候補: <strong data-astro-cid-ri35buz5>${race.topHorse.horseNumber}.${race.topHorse.horseName} (${race.topHorse.pt}pt)</strong></div>`} ${race.secondHorse && renderTemplate`<div class="preview-stat" data-astro-cid-ri35buz5>対抗候補: <strong data-astro-cid-ri35buz5>${race.secondHorse.horseNumber}.${race.secondHorse.horseName} (${race.secondHorse.pt}pt)</strong></div>`} </div> </div>`)} </div> <p class="preview-note" data-astro-cid-ri35buz5>
+✅ 問題なければ「全レース生成」ボタンをクリックして本番生成してください
+</p> </div>`} <!-- 生成結果 --> ${generateResults && generateResults.length > 0 && renderTemplate`<div class="results-section" data-astro-cid-ri35buz5> <div class="card success-card" data-astro-cid-ri35buz5> <h2 data-astro-cid-ri35buz5>✅ 生成成功（${generateResults.length}レース）</h2> </div> <!-- 全レース統合JSON --> <div class="card all-json-card" data-astro-cid-ri35buz5> <h2 data-astro-cid-ri35buz5>📦 全レース統合JSON（${generateResults.length}レース分）</h2> <textarea readonly rows="15" class="json-textarea" id="allPredictionsJSON" data-astro-cid-ri35buz5>${generateResults.allPredictionsJSON}</textarea> <button type="button" class="btn btn-primary mt-2" onclick="navigator.clipboard.writeText(document.getElementById('allPredictionsJSON').value).then(() => alert('全レース統合JSONをコピーしました！'))" data-astro-cid-ri35buz5>
+📋 全レース統合JSONをコピー
+</button> </div> <!-- 各レース詳細（折りたたみ） --> ${generateResults.map((race, index) => renderTemplate`<details class="race-details"${addAttribute(index === 0, "open")} data-astro-cid-ri35buz5> <summary class="race-summary" data-astro-cid-ri35buz5>${race.raceNumber}R - 本命: ${race.horses.find((h) => h.role === "\u672C\u547D")?.horseNumber}.${race.horses.find((h) => h.role === "\u672C\u547D")?.horseName} / 対抗: ${race.horses.find((h) => h.role === "\u5BFE\u6297")?.horseNumber}.${race.horses.find((h) => h.role === "\u5BFE\u6297")?.horseName}</summary> <div class="race-card" data-astro-cid-ri35buz5> <!-- pt一覧表示 --> <div class="pt-summary" data-astro-cid-ri35buz5> <h3 data-astro-cid-ri35buz5>📊 pt一覧（同点馬番昇順）</h3> <div class="pt-display" data-astro-cid-ri35buz5> ${race.horses.map((h, i) => renderTemplate`<span class="pt-item" data-astro-cid-ri35buz5> ${h.horseNumber}(${h.pt})${i < race.horses.length - 1 ? " / " : ""} </span>`)} </div> </div> <!-- 買い目表示 --> <div class="betting-section" data-astro-cid-ri35buz5> <h3 data-astro-cid-ri35buz5>🎯 買い目（馬単）2段構成</h3> <div class="betting-lines-container" data-astro-cid-ri35buz5> ${Array.isArray(race.bettingLines) ? race.bettingLines.map((line, idx) => renderTemplate`<div class="betting-line-item" data-astro-cid-ri35buz5> <span class="line-number" data-astro-cid-ri35buz5>${idx === 0 ? "\u672C\u547D\u8EF8" : "\u5BFE\u6297\u8EF8"}</span> <span class="betting-line" data-astro-cid-ri35buz5>${line}</span> </div>`) : renderTemplate`<div class="betting-line-item" data-astro-cid-ri35buz5> <span class="betting-line" data-astro-cid-ri35buz5>${race.bettingLines}</span> </div>`} </div> </div> <!-- 役割別馬一覧 --> <div class="horses-prediction" data-astro-cid-ri35buz5> <h3 data-astro-cid-ri35buz5>🏇 役割別馬一覧</h3> <!-- 本命・対抗・単穴 --> <div class="top-horses" data-astro-cid-ri35buz5> ${race.horses.filter((h) => ["\u672C\u547D", "\u5BFE\u6297", "\u5358\u7A74"].includes(h.role)).map((horse) => renderTemplate`<div${addAttribute(`horse-item ${horse.role === "\u672C\u547D" ? "honmei" : horse.role === "\u5BFE\u6297" ? "taikou" : "tanana"}`, "class")} data-astro-cid-ri35buz5> <div class="horse-mark" data-astro-cid-ri35buz5> ${horse.role === "\u672C\u547D" ? "\u25CE" : horse.role === "\u5BFE\u6297" ? "\u25CB" : "\u25B2"} </div> <div class="horse-info" data-astro-cid-ri35buz5> <div class="horse-header-line" data-astro-cid-ri35buz5> <span class="horse-number" data-astro-cid-ri35buz5>${horse.horseNumber}</span> <span class="horse-name" data-astro-cid-ri35buz5>${horse.horseName}</span> <span class="role-badge" data-astro-cid-ri35buz5>${horse.role}</span> </div> <div class="horse-score" data-astro-cid-ri35buz5>
+累積スコア: <strong data-astro-cid-ri35buz5>${horse.pt}pt</strong> </div> </div> </div>`)} </div> <!-- 連下候補馬 --> ${race.horses.filter((h) => h.role === "\u9023\u4E0B").length > 0 && renderTemplate`<div class="horse-group renka" data-astro-cid-ri35buz5> <div class="group-header" data-astro-cid-ri35buz5>△ 連下候補馬</div> <div class="group-list" data-astro-cid-ri35buz5> ${race.horses.filter((h) => h.role === "\u9023\u4E0B").map((horse, idx, arr) => renderTemplate`<span class="horse-compact" data-astro-cid-ri35buz5> <strong data-astro-cid-ri35buz5>${horse.horseNumber}</strong> ${horse.horseName} <span class="pt-value" data-astro-cid-ri35buz5>(${horse.pt}pt)</span>${idx < arr.length - 1 ? "\u3001" : ""} </span>`)} </div> </div>`} <!-- 抑え候補馬 --> ${race.horses.filter((h) => h.role === "\u6291\u3048").length > 0 && renderTemplate`<div class="horse-group osae" data-astro-cid-ri35buz5> <div class="group-header" data-astro-cid-ri35buz5>× 抑え候補馬</div> <div class="group-list" data-astro-cid-ri35buz5> ${race.horses.filter((h) => h.role === "\u6291\u3048").map((horse, idx, arr) => renderTemplate`<span class="horse-compact" data-astro-cid-ri35buz5> <strong data-astro-cid-ri35buz5>${horse.horseNumber}</strong> ${horse.horseName} <span class="pt-value" data-astro-cid-ri35buz5>(${horse.pt}pt)</span>${idx < arr.length - 1 ? "\u3001" : ""} </span>`)} </div> </div>`} </div> <!-- 個別JSON出力 --> <div class="json-output" data-astro-cid-ri35buz5> <h3 data-astro-cid-ri35buz5>個別JSON（${race.raceNumber}R）</h3> <textarea readonly rows="15" class="json-textarea"${addAttribute(`json-${race.raceNumber}`, "id")} data-astro-cid-ri35buz5>${race.json}</textarea> <button type="button" class="btn btn-secondary mt-2"${addAttribute(`navigator.clipboard.writeText(document.getElementById('json-${race.raceNumber}').value).then(() => alert('${race.raceNumber}R\u306EJSON\u3092\u30B3\u30D4\u30FC\u3057\u307E\u3057\u305F\uFF01'))`, "onclick")} data-astro-cid-ri35buz5>
+📋 ${race.raceNumber}R JSONをコピー
+</button> </div> </div> </details>`)} </div>`} <!-- 使用方法 --> <div class="card info-card" data-astro-cid-ri35buz5> <h2 data-astro-cid-ri35buz5>使用方法</h2> <ol data-astro-cid-ri35buz5> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>pt値の準備:</strong> 外部ツールで全12レース分のpt値を計算</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>データ入力:</strong> 開催日・競馬場を入力後、全レースデータを===1R===区切りで入力</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>プレビュー:</strong> 「プレビュー」ボタンで頭数・本命候補を確認（エラーレース確認）</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>生成実行:</strong> 「全レース生成」ボタンで本番生成</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>JSON保存:</strong> 全レース統合JSONをコピーして予想データファイルに保存</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>Git管理:</strong> 変更をコミット・プッシュして自動デプロイ</li> </ol> <h3 data-astro-cid-ri35buz5>入力フォーマット例</h3> <pre class="format-example" data-astro-cid-ri35buz5>===1R===
+1,マコスペシャル,90.5
+2,クロチャンプ,86.2
+3,ケイバスター,82.0
+4,ナンカンキング,77.3
+
+===2R===
+1,オオイプリンス,88.0
+2,カワサキホープ,84.5
+...
+
+===12R===
+...</pre> <h3 data-astro-cid-ri35buz5>エラーハンドリング</h3> <ul data-astro-cid-ri35buz5> <li data-astro-cid-ri35buz5>エラーレースは自動でスキップされ、成功分のみ出力されます</li> <li data-astro-cid-ri35buz5>エラー詳細はページ上部に表示されます（レース番号+エラー内容）</li> <li data-astro-cid-ri35buz5>最低4頭（本命/対抗/単穴2）必要です</li> </ul> <h3 data-astro-cid-ri35buz5>処理ロジック概要</h3> <ul data-astro-cid-ri35buz5> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>初期割当:</strong> pt降順で本命/対抗/単穴/連下/抑えを仮割当</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール①:</strong> 本命ptが89〜90pt → 本命枠のみ絶対軸固定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール②:</strong> 本命と対抗のpt差が3pt以内 → 入れ替え判定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール③:</strong> 本命ptが86pt以下 → 対抗を本命に昇格</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール④:</strong> 対抗と単穴最上位のpt差が3pt以内 → 入れ替え判定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>調整ルール⑤:</strong> 単穴下位と連下最上位のpt差が2pt以内 → 入れ替え判定</li> <li data-astro-cid-ri35buz5><strong data-astro-cid-ri35buz5>同点ルール:</strong> 全ての比較・ソートで馬番昇順を採用</li> </ul> </div> </div> </section>  ` })}`;
 }, "/Users/apolon/Library/Mobile Documents/com~apple~CloudDocs/WorkSpace/keiba-intelligence/astro-site/src/pages/admin/prediction-converter.astro", void 0);
 
 const $$file = "/Users/apolon/Library/Mobile Documents/com~apple~CloudDocs/WorkSpace/keiba-intelligence/astro-site/src/pages/admin/prediction-converter.astro";
