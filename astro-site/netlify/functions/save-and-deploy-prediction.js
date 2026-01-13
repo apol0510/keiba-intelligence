@@ -64,9 +64,9 @@ export default async (req, context) => {
       );
     }
 
-    // ファイル名生成（例: 2026-01-14-oi.json）
+    // ファイル名生成（例: 2026-01-14-ooi.json）
     const venueMap = {
-      '大井': 'oi',
+      '大井': 'ooi',
       '川崎': 'kawasaki',
       '船橋': 'funabashi',
       '浦和': 'urawa'

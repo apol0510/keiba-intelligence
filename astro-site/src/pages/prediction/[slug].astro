@@ -5,7 +5,7 @@ import { join } from 'path';
 
 export const prerender = false;
 
-// URLからslugを取得（例: 2026-01-14-oi）
+// URLからslugを取得（例: 2026-01-14-ooi）
 const { slug } = Astro.params;
 
 // JSONファイルパス
@@ -48,7 +48,7 @@ const pageTitle = predictionData
           <h1>⚠️ エラー</h1>
           <p>{error}</p>
           <p class="help-text">
-            URLを確認してください。形式: /prediction/2026-01-14-oi
+            URLを確認してください。形式: /prediction/2026-01-14-ooi
           </p>
           <a href="/" class="btn btn-primary">トップページに戻る</a>
         </div>
