@@ -194,9 +194,18 @@ const pageTitle = predictionData
     .page-header {
       text-align: center;
       margin-bottom: var(--spacing-xl);
-      padding: var(--spacing-lg);
-      background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+      padding: var(--spacing-xl);
+      background: linear-gradient(135deg, #ff6b6b, #ffa500, #ff4500);
       border-radius: var(--radius-lg);
+      box-shadow: 0 8px 24px rgba(255, 107, 107, 0.3);
+      animation: gradientShift 6s ease infinite;
+      background-size: 200% 200%;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
 
     .page-title {
