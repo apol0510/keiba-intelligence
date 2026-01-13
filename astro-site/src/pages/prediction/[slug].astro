@@ -1,0 +1,461 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
+
+export const prerender = false;
+
+// URLからslugを取得（例: 2026-01-14-oi）
+const { slug } = Astro.params;
+
+// JSONファイルパス
+const jsonFilePath = join(process.cwd(), 'src', 'data', 'predictions', `${slug}.json`);
+
+// エラー状態
+let error = null;
+let predictionData = null;
+
+try {
+  // ファイル存在確認
+  if (!existsSync(jsonFilePath)) {
+    throw new Error(`予想データが見つかりません: ${slug}`);
+  }
+
+  // JSONファイル読み込み
+  const fileContent = readFileSync(jsonFilePath, 'utf-8');
+  predictionData = JSON.parse(fileContent);
+
+  // データ検証
+  if (!predictionData.eventInfo || !predictionData.predictions) {
+    throw new Error('予想データの形式が不正です');
+  }
+} catch (err) {
+  error = err.message;
+}
+
+// ページタイトル生成
+const pageTitle = predictionData
+  ? `${predictionData.eventInfo.date} ${predictionData.eventInfo.venue} 全${predictionData.eventInfo.totalRaces}R予想`
+  : '予想データ';
+---
+
+<BaseLayout title={pageTitle} description="AI予想データ">
+  <section class="prediction-section">
+    <div class="container">
+      {error ? (
+        <!-- エラー表示 -->
+        <div class="card error-card">
+          <h1>⚠️ エラー</h1>
+          <p>{error}</p>
+          <p class="help-text">
+            URLを確認してください。形式: /prediction/2026-01-14-oi
+          </p>
+          <a href="/" class="btn btn-primary">トップページに戻る</a>
+        </div>
+      ) : (
+        <!-- 予想データ表示 -->
+        <>
+          <!-- ページヘッダー -->
+          <div class="page-header">
+            <h1 class="page-title">
+              {predictionData.eventInfo.date} {predictionData.eventInfo.venue}
+            </h1>
+            <p class="page-subtitle">
+              全{predictionData.eventInfo.totalRaces}R AI予想データ
+            </p>
+            <p class="generated-at">
+              生成日時: {new Date(predictionData.generatedAt).toLocaleString('ja-JP')}
+            </p>
+          </div>
+
+          <!-- レース一覧 -->
+          <div class="races-container">
+            {predictionData.predictions.map((race, index) => {
+              // 役割別馬リスト
+              const honmei = race.horses.filter(h => h.role === '本命');
+              const taikou = race.horses.filter(h => h.role === '対抗');
+              const tanana = race.horses.filter(h => h.role === '単穴');
+              const renka = race.horses.filter(h => h.role === '連下');
+              const osae = race.horses.filter(h => h.role === '抑え');
+
+              return (
+                <div class="race-card">
+                  <!-- レース番号 -->
+                  <div class="race-header">
+                    <h2 class="race-number">{race.raceInfo.raceNumber}R</h2>
+                  </div>
+
+                  <div class="race-content">
+                    <!-- 買い目（馬単）2段構成 -->
+                    <div class="betting-section">
+                      <h3>🎯 買い目（馬単）2段構成</h3>
+                      <div class="betting-lines-container">
+                        {race.bettingLines.umatan.map((line, idx) => (
+                          <div class="betting-line-item">
+                            <span class="line-number">{idx === 0 ? '本命軸' : '対抗軸'}</span>
+                            <span class="betting-line">{line}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <!-- 役割別馬一覧 -->
+                    <div class="horses-prediction">
+                      <h3>🏇 役割別馬一覧</h3>
+
+                      <!-- 本命・対抗・単穴 -->
+                      <div class="top-horses">
+                        {[...honmei, ...taikou, ...tanana].map((horse) => (
+                          <div class={`horse-item ${horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : 'tanana'}`}>
+                            <div class="horse-mark">
+                              {horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : '▲'}
+                            </div>
+                            <div class="horse-info">
+                              <div class="horse-header-line">
+                                <span class="horse-number">{horse.horseNumber}</span>
+                                <span class="horse-name">{horse.horseName}</span>
+                                <span class="role-badge">{horse.role}</span>
+                              </div>
+                              <div class="horse-score">
+                                累積スコア: <strong>{horse.pt}pt</strong>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <!-- 連下候補馬 -->
+                      {renka.length > 0 && (
+                        <div class="horse-group renka">
+                          <div class="group-header">△ 連下候補馬</div>
+                          <div class="group-list">
+                            {renka.map((horse, idx, arr) => (
+                              <span class="horse-compact">
+                                <strong>{horse.horseNumber}</strong> {horse.horseName} <span class="pt-value">({horse.pt}pt)</span>{idx < arr.length - 1 ? '、' : ''}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <!-- 抑え候補馬 -->
+                      {osae.length > 0 && (
+                        <div class="horse-group osae">
+                          <div class="group-header">× 抑え候補馬</div>
+                          <div class="group-list">
+                            {osae.map((horse, idx, arr) => (
+                              <span class="horse-compact">
+                                <strong>{horse.horseNumber}</strong> {horse.horseName} <span class="pt-value">({horse.pt}pt)</span>{idx < arr.length - 1 ? '、' : ''}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <!-- 注意事項 -->
+          <div class="card info-card">
+            <h2>📝 ご利用上の注意</h2>
+            <ul>
+              <li>この予想はAIによる分析結果であり、的中を保証するものではありません</li>
+              <li>馬券の購入は自己責任でお願いします</li>
+              <li>累積スコア（pt）は複数の特徴量を総合評価した値です</li>
+              <li>買い目は馬単（2段構成）で提供しています</li>
+            </ul>
+          </div>
+        </>
+      )}
+    </div>
+  </section>
+
+  <style>
+    .prediction-section {
+      padding: var(--spacing-2xl) 0;
+      min-height: 100vh;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: var(--spacing-2xl);
+      padding: var(--spacing-xl);
+      background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+      border-radius: var(--radius-lg);
+    }
+
+    .page-title {
+      font-size: 2rem;
+      margin-bottom: var(--spacing-sm);
+      color: white;
+    }
+
+    .page-subtitle {
+      font-size: 1.25rem;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .generated-at {
+      font-size: 0.875rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .error-card {
+      text-align: center;
+      padding: var(--spacing-2xl);
+    }
+
+    .error-card h1 {
+      color: var(--error-color);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .help-text {
+      margin: var(--spacing-lg) 0;
+      color: var(--text-secondary);
+    }
+
+    .races-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xl);
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .race-card {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .race-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .race-header {
+      background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+      padding: var(--spacing-md) var(--spacing-lg);
+    }
+
+    .race-number {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: white;
+      margin: 0;
+    }
+
+    .race-content {
+      padding: var(--spacing-lg);
+    }
+
+    .betting-section {
+      margin-bottom: var(--spacing-xl);
+      padding: var(--spacing-lg);
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-md);
+      border-left: 4px solid #8b5cf6;
+    }
+
+    .betting-section h3 {
+      margin-bottom: var(--spacing-md);
+      font-size: 1.125rem;
+    }
+
+    .betting-lines-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+    }
+
+    .betting-line-item {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding: var(--spacing-sm);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-sm);
+    }
+
+    .line-number {
+      font-weight: 600;
+      color: var(--primary-end);
+      min-width: 60px;
+    }
+
+    .betting-line {
+      font-family: 'Courier New', monospace;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .horses-prediction h3 {
+      margin-bottom: var(--spacing-md);
+      font-size: 1.125rem;
+    }
+
+    .top-horses {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .horse-item {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md);
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-md);
+      border-left: 4px solid var(--border-color);
+    }
+
+    .horse-item.honmei {
+      border-left-color: #ef4444;
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .horse-item.taikou {
+      border-left-color: #3b82f6;
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .horse-item.tanana {
+      border-left-color: #10b981;
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .horse-mark {
+      font-size: 2rem;
+      font-weight: 700;
+      min-width: 40px;
+      text-align: center;
+    }
+
+    .horse-item.honmei .horse-mark {
+      color: #ef4444;
+    }
+
+    .horse-item.taikou .horse-mark {
+      color: #3b82f6;
+    }
+
+    .horse-item.tanana .horse-mark {
+      color: #10b981;
+    }
+
+    .horse-info {
+      flex: 1;
+    }
+
+    .horse-header-line {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-xs);
+      flex-wrap: wrap;
+    }
+
+    .horse-number {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary-end);
+      min-width: 30px;
+    }
+
+    .horse-name {
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+
+    .role-badge {
+      padding: 2px 8px;
+      background: var(--primary-end);
+      color: white;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .horse-score {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .horse-group {
+      margin-bottom: var(--spacing-md);
+      padding: var(--spacing-md);
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-md);
+    }
+
+    .horse-group.renka {
+      border-left: 4px solid #f59e0b;
+    }
+
+    .horse-group.osae {
+      border-left: 4px solid #6b7280;
+    }
+
+    .group-header {
+      font-weight: 600;
+      margin-bottom: var(--spacing-sm);
+      color: var(--text-primary);
+    }
+
+    .group-list {
+      line-height: 1.8;
+      color: var(--text-secondary);
+    }
+
+    .horse-compact {
+      display: inline;
+    }
+
+    .pt-value {
+      font-size: 0.875rem;
+      color: var(--text-tertiary);
+    }
+
+    .info-card {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .info-card h2 {
+      margin-bottom: var(--spacing-md);
+    }
+
+    .info-card ul {
+      list-style-position: inside;
+      line-height: 1.8;
+    }
+
+    .info-card li {
+      margin-bottom: var(--spacing-sm);
+    }
+
+    @media (max-width: 640px) {
+      .page-title {
+        font-size: 1.5rem;
+      }
+
+      .betting-line {
+        font-size: 0.875rem;
+      }
+
+      .horse-header-line {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</BaseLayout>
