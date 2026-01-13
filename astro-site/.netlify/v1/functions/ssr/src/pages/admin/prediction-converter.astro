@@ -425,7 +425,7 @@ function outputAllRacesJSON(data) {
       <!-- 入力フォーム -->
       <div class="card form-card">
         <h2>開催情報・全レースデータ入力</h2>
-        <form method="POST">
+        <form method="POST" id="predictionForm" autocomplete="off">
           <div class="form-group">
             <label for="raceDate">開催日</label>
             <input
@@ -434,12 +434,13 @@ function outputAllRacesJSON(data) {
               name="raceDate"
               required
               class="form-input"
+              autocomplete="off"
             />
           </div>
 
           <div class="form-group">
             <label for="venue">競馬場</label>
-            <select id="venue" name="venue" required class="form-input">
+            <select id="venue" name="venue" required class="form-input" autocomplete="off">
               <option value="">選択してください</option>
               <option value="大井">大井</option>
               <option value="川崎">川崎</option>
@@ -456,6 +457,7 @@ function outputAllRacesJSON(data) {
               rows="30"
               required
               class="form-textarea"
+              autocomplete="off"
               placeholder="例:
 ===1R===
 1,マコスペシャル,90.5
@@ -1115,4 +1117,22 @@ function outputAllRacesJSON(data) {
       }
     }
   </style>
+
+  <script>
+    // ページロード時にフォームをリセット（生成結果がない場合のみ）
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('predictionForm');
+      const hasResults = document.querySelector('.results-section');
+
+      // 生成結果が表示されていない場合のみフォームをリセット
+      if (form && !hasResults) {
+        form.reset();
+      }
+
+      // ブラウザバック時のフォーム再送信を防止
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, null, window.location.href);
+      }
+    });
+  </script>
 </BaseLayout>
