@@ -632,6 +632,20 @@ function outputAllRacesJSON(data) {
             </details>
           ))}
         </div>
+
+        <!-- POST再送信警告を即座に防止（結果表示直後に実行） -->
+        <script is:inline>
+          (function() {
+            if (window.history && window.history.replaceState) {
+              // POSTをGETに即座に置き換え
+              window.history.replaceState(
+                null,
+                '',
+                window.location.pathname
+              );
+            }
+          })();
+        </script>
       )}
 
       <!-- 使用方法 -->
@@ -1129,9 +1143,28 @@ function outputAllRacesJSON(data) {
         form.reset();
       }
 
-      // ブラウザバック時のフォーム再送信を防止
+      // POST再送信警告を完全に防止
       if (window.history && window.history.replaceState) {
-        window.history.replaceState(null, null, window.location.href);
+        // POSTをGETに置き換え（再送信警告を防止）
+        window.history.replaceState(
+          null,
+          '',
+          window.location.pathname + window.location.search
+        );
+      }
+    });
+
+    // ページ表示時の再送信警告を防止（ブラウザキャッシュからの復帰時）
+    window.addEventListener('pageshow', function(event) {
+      if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+        // ブラウザキャッシュから復帰した場合
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(
+            null,
+            '',
+            window.location.pathname + window.location.search
+          );
+        }
       }
     });
   </script>
