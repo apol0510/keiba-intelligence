@@ -522,7 +522,7 @@ function outputAllRacesJSON(data) {
 
           <!-- 各レース詳細（折りたたみ） -->
           {generateResults.map((race, index) => (
-            <details class="race-details" open={index === 0}>
+            <details class="race-details">
               <summary class="race-summary">{race.raceNumber}R - 本命: {race.horses.find(h => h.role === '本命')?.horseNumber}.{race.horses.find(h => h.role === '本命')?.horseName} / 対抗: {race.horses.find(h => h.role === '対抗')?.horseNumber}.{race.horses.find(h => h.role === '対抗')?.horseName}</summary>
 
               <div class="race-card">
