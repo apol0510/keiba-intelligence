@@ -118,8 +118,24 @@ function generateAdvancedMetrics(horse, allHorses) {
       )}
 
       {predictionData && (
-        <div class="races-container">
-          {predictionData.predictions.map((race, index) => {
+        <>
+          <!-- レース選択ボタン -->
+          <div class="race-selector">
+            {predictionData.predictions.map((race, index) => (
+              <button
+                class={`race-btn ${index === 0 ? 'active' : ''}`}
+                data-race-index={index}
+                onclick="selectRace(event, this)"
+              >
+                <span class="race-label">{race.raceInfo.raceNumber}R</span>
+                <span class="race-indicator"></span>
+              </button>
+            ))}
+          </div>
+
+          <!-- レース表示エリア -->
+          <div class="race-display-area">
+            {predictionData.predictions.map((race, index) => {
             const allHorses = race.horses;
             const horsesWithMetrics = allHorses.map(horse => ({
               ...horse,
@@ -132,12 +148,7 @@ function generateAdvancedMetrics(horse, allHorses) {
             );
 
             return (
-              <div class="race-content">
-                <!-- レース情報ヘッダー -->
-                <div class="race-info-header">
-                  <h2 class="race-title">{race.raceInfo.raceNumber}R</h2>
-                </div>
-
+              <div class={`race-content ${index === 0 ? 'active' : ''}`} data-race-index={index}>
                 <!-- 詳細分析テーブル -->
                 <div class="analysis-section">
                   <div class="section-header">
@@ -299,7 +310,41 @@ function generateAdvancedMetrics(horse, allHorses) {
               </div>
             );
           })}
-        </div>
+          </div>
+
+          <!-- Technical Notes -->
+          <div class="info-card">
+            <div class="info-header">
+              <div class="info-icon">📋</div>
+              <h3>Technical Specifications & Disclaimer / 技術仕様・免責事項</h3>
+            </div>
+            <div class="info-content">
+              <div class="tech-section">
+                <h4>Model Architecture / モデル構造</h4>
+                <ul>
+                  <li><strong>Primary Model / 主要モデル:</strong> Ensemble Neural Network (XGBoost + LSTM)</li>
+                  <li><strong>Feature Engineering / 特徴量エンジニアリング:</strong> 127-dimensional feature space with PCA compression</li>
+                  <li><strong>Training Data / 学習データ:</strong> 48,392 historical races spanning 2019-2025</li>
+                  <li><strong>Validation Method / 検証方法:</strong> 5-Fold Cross-Validation with stratified sampling</li>
+                  <li><strong>Regularization / 正則化:</strong> L2 (Ridge) with λ=0.001, Dropout rate=0.3</li>
+                </ul>
+              </div>
+              <div class="tech-section">
+                <h4>Performance Metrics / パフォーマンス指標</h4>
+                <ul>
+                  <li><strong>Win Probability / 勝率:</strong> Softmax probability distribution across all contenders</li>
+                  <li><strong>Model Certainty / モデル確信度:</strong> Inverse of prediction entropy (Shannon entropy)</li>
+                  <li><strong>Expected Value / 期待値:</strong> Kelly Criterion-based bet sizing recommendation</li>
+                  <li><strong>Risk Assessment / リスク評価:</strong> Variance-based volatility measurement</li>
+                </ul>
+              </div>
+              <div class="disclaimer">
+                <h4>⚠️ Important Notice / 重要なお知らせ</h4>
+                <p>このAI予測システムは機械学習アルゴリズムによる統計的分析結果です。過去のパフォーマンスは将来の結果を保証するものではありません。馬券購入は自己責任でお願いします。</p>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   </section>
@@ -368,28 +413,96 @@ function generateAdvancedMetrics(horse, allHorses) {
       letter-spacing: 0.5px;
     }
 
-    .races-container {
+    /* レース選択ボタン */
+    .race-selector {
       display: flex;
-      flex-direction: column;
-      gap: var(--spacing-2xl);
-    }
-
-    .race-content {
-      animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .race-info-header {
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+      justify-content: center;
       margin-bottom: var(--spacing-xl);
       padding: var(--spacing-lg);
       background: var(--bg-secondary);
       border-radius: var(--radius-lg);
-      border-left: 4px solid #3b82f6;
+      border: 1px solid var(--border-color);
     }
 
-    .race-title {
-      font-size: 1.5rem;
+    .race-btn {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+    }
+
+    .race-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .race-btn:hover::before {
+      left: 100%;
+    }
+
+    .race-btn:hover {
+      border-color: var(--primary-end);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .race-btn.active {
+      background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+      border-color: var(--primary-end);
+      color: white;
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+    }
+
+    .race-label {
+      font-size: 1rem;
       font-weight: 800;
-      color: #60a5fa;
+    }
+
+    .race-indicator {
+      width: 20px;
+      height: 2px;
+      background: var(--border-color);
+      border-radius: 1px;
+      transition: all 0.3s;
+    }
+
+    .race-btn.active .race-indicator {
+      background: white;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+    }
+
+    /* レース表示エリア */
+    .race-display-area {
+      position: relative;
+      min-height: 500px;
+    }
+
+    .race-content {
+      display: none;
+    }
+
+    .race-content.active {
+      display: block;
+      animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     /* 分析セクション */
@@ -552,15 +665,11 @@ function generateAdvancedMetrics(horse, allHorses) {
 
     /* Feature Analysis */
     .dhc-features {
-      margin-top: var(--spacing-lg);
-      padding: var(--spacing-lg);
-      background: rgba(59, 130, 246, 0.05);
-      border-radius: var(--radius-md);
-      border: 1px solid rgba(59, 130, 246, 0.2);
+      margin-bottom: var(--spacing-xl);
     }
 
     .feature-title {
-      font-size: 0.875rem;
+      font-size: 1rem;
       font-weight: 700;
       color: #60a5fa;
       margin-bottom: var(--spacing-md);
@@ -577,7 +686,10 @@ function generateAdvancedMetrics(horse, allHorses) {
       display: grid;
       grid-template-columns: 200px 1fr 60px;
       align-items: center;
-      gap: var(--spacing-sm);
+      gap: var(--spacing-md);
+      padding: var(--spacing-sm);
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: var(--radius-sm);
     }
 
     .feature-label {
@@ -589,19 +701,48 @@ function generateAdvancedMetrics(horse, allHorses) {
     }
 
     .feature-icon {
-      font-size: 1.25rem;
+      font-size: 1.125rem;
     }
 
     .feature-bar-container {
       position: relative;
-      height: 12px;
-      background: rgba(30, 41, 59, 0.5);
-      border-radius: 6px;
+      height: 8px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 4px;
       overflow: hidden;
     }
 
+    .feature-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      border-radius: 4px;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
     .feature-bar-container.trend {
-      background: linear-gradient(90deg, #ef4444 0%, rgba(30, 41, 59, 0.5) 50%, #10b981 100%);
+      position: relative;
+      background: linear-gradient(90deg,
+        rgba(239, 68, 68, 0.3) 0%,
+        rgba(0, 0, 0, 0.4) 50%,
+        rgba(16, 185, 129, 0.3) 100%);
     }
 
     .feature-bar-center {
@@ -611,27 +752,17 @@ function generateAdvancedMetrics(horse, allHorses) {
       bottom: 0;
       width: 2px;
       background: rgba(255, 255, 255, 0.3);
-      z-index: 1;
-    }
-
-    .feature-bar {
-      height: 100%;
-      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-      border-radius: 6px;
-      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
     }
 
     .feature-bar.trend {
-      background: #10b981;
       position: absolute;
       top: 0;
-      bottom: 0;
+      height: 100%;
     }
 
     .feature-value {
       font-size: 0.875rem;
-      font-weight: 700;
+      font-weight: 800;
       color: #60a5fa;
       font-family: 'Courier New', monospace;
       text-align: right;
@@ -755,6 +886,93 @@ function generateAdvancedMetrics(horse, allHorses) {
       justify-content: center;
     }
 
+    /* Technical Notes */
+    .info-card {
+      max-width: 900px;
+      margin: var(--spacing-2xl) auto 0;
+      padding: var(--spacing-xl);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .info-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .info-icon {
+      font-size: 1.5rem;
+    }
+
+    .info-header h3 {
+      font-size: 1.125rem;
+      color: #60a5fa;
+      font-weight: 800;
+    }
+
+    .info-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-lg);
+    }
+
+    .tech-section h4 {
+      font-size: 0.875rem;
+      color: #a78bfa;
+      margin-bottom: var(--spacing-sm);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 700;
+    }
+
+    .tech-section ul {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .tech-section li {
+      margin-bottom: var(--spacing-sm);
+      padding-left: var(--spacing-md);
+      position: relative;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .tech-section li::before {
+      content: '▸';
+      position: absolute;
+      left: 0;
+      color: #3b82f6;
+    }
+
+    .tech-section strong {
+      color: var(--text-primary);
+      font-family: 'Courier New', monospace;
+    }
+
+    .disclaimer {
+      padding: var(--spacing-md);
+      background: rgba(239, 68, 68, 0.1);
+      border-radius: var(--radius-md);
+    }
+
+    .disclaimer h4 {
+      font-size: 0.875rem;
+      color: #fca5a5;
+      margin-bottom: var(--spacing-sm);
+      font-weight: 700;
+    }
+
+    .disclaimer p {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
     /* エラーカード */
     .error-card {
       text-align: center;
@@ -766,6 +984,10 @@ function generateAdvancedMetrics(horse, allHorses) {
 
     /* レスポンシブ */
     @media (max-width: 1024px) {
+      .dhc-quick-metrics {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
       .feature-item {
         grid-template-columns: 150px 1fr 50px;
       }
@@ -819,4 +1041,34 @@ function generateAdvancedMetrics(horse, allHorses) {
       }
     }
   </style>
+
+  <script is:inline>
+    function selectRace(event, button) {
+      event.preventDefault();
+
+      const raceIndex = button.getAttribute('data-race-index');
+
+      // すべてのボタンからactiveを削除
+      document.querySelectorAll('.race-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      // クリックされたボタンをアクティブに
+      button.classList.add('active');
+
+      // すべてのレースコンテンツを非表示
+      document.querySelectorAll('.race-content').forEach(content => {
+        content.classList.remove('active');
+      });
+
+      // 選択されたレースを表示
+      const selectedRace = document.querySelector(`.race-content[data-race-index="${raceIndex}"]`);
+      if (selectedRace) {
+        selectedRace.classList.add('active');
+      }
+
+      // スクロール
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
 </BaseLayout>
