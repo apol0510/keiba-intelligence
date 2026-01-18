@@ -14,6 +14,7 @@
 - 💰 低価格帯プラン（¥4,980〜）
 - 🤖 完全自動化（PayPal Direct + Netlify Functions + SendGrid）
 - 🏆 買い目シミュレーター（馬単2点×100円）
+- 💬 Gemini AIチャットボット（全ページ右下ウィジェット）
 
 ### 技術スタック
 
@@ -21,9 +22,10 @@
 - **ホスティング**: Netlify Pro
 - **決済**: PayPal Direct（Webhook実装）
 - **データベース**: Airtable Pro
-- **バックエンド**: Netlify Functions (14個)
+- **バックエンド**: Netlify Functions (15個)
 - **メール**: SendGrid Essential 100
 - **可視化**: Chart.js v4.4.0
+- **AI**: Google Gemini 1.5 Flash
 
 ## ディレクトリ構造
 
@@ -73,7 +75,7 @@ npm run preview
 
 ## 📊 プロジェクト進捗
 
-**全体進捗**: 73%完了 🚀
+**全体進捗**: 75%完了 🚀
 
 ### Phase 1: 基盤構築（100%完了 ✅）
 - [x] プロジェクト初期化・ディレクトリ構造作成
@@ -83,22 +85,22 @@ npm run preview
 - [x] BaseLayout.astro作成
 - [x] トップページ作成
 
-### Phase 2: コア機能実装（80%完了 🚀）
+### Phase 2: コア機能実装（85%完了 🚀）
 - [x] 料金プランページ（/pricing）
 - [x] 無料予想ページ（/free-prediction）
 - [x] PayPal Webhook実装（ハイブリッドアプローチ・重複排除機構）
 - [x] メルマガ配信システム実装（5 Functions）
 - [x] 会員認証システム実装（マジックリンク）
+- [x] **Gemini AIチャットボット実装（全ページ右下ウィジェット）**
 - [ ] Airtableテーブルセットアップ
 - [ ] Netlify環境変数設定
 - [ ] PayPal商品登録
 
 ### Phase 3: 管理機能実装（50%完了 🚀）
 - [x] 予想管理画面（/admin/prediction-converter）
-- [x] **結果管理画面（/admin/results-manager）**
-- [x] **買い目シミュレーター（/results + Chart.js）**
-- [ ] Gemini AI統合（次のタスク）
-- [ ] LINE通知実装
+- [x] 結果管理画面（/admin/results-manager）
+- [x] 買い目シミュレーター（/results + Chart.js）
+- [ ] LINE通知実装（次のタスク）
 - [ ] 有料予想ページ作成
 - [ ] SEOページ自動生成
 - [ ] 本番デプロイ
@@ -119,5 +121,5 @@ Private Project
 **作成日**: 2026-01-09
 **最終更新**: 2026-01-18
 **作成者**: Claude Code
-**プロジェクトステータス**: Phase 3実装中（73%完了）
-**Next Priority**: Gemini AI統合 → LINE通知実装
+**プロジェクトステータス**: Phase 3実装中（75%完了）
+**Next Priority**: LINE通知実装 → 有料予想ページ作成

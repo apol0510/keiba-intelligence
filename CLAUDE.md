@@ -165,7 +165,7 @@ grep -r "pattern" ./src/
 
 ---
 
-### **Phase 2: コア機能実装（80%完了 🚀）**
+### **Phase 2: コア機能実装（85%完了 🚀）**
 
 #### **2026-01-10 実施内容**
 
@@ -561,6 +561,11 @@ AIRTABLE_BASE_ID=appxxxxxxxxxxxxxxx
 # 用途: マジックリンク、ウェルカムメール、メルマガ配信
 SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
+# Gemini AI（必須 - Priority 2で実装済み）
+# 用途: AIチャットボット（全ページ右下ウィジェット）
+# 取得方法: Google AI Studio (https://aistudio.google.com/app/apikey)
+GEMINI_API_KEY=AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
 # GitHub（Phase 3で必須 - prediction-converter.astro実装済み）
 # 用途: 管理画面からのGit自動コミット・自動デプロイ
 # 権限: repo（Contents: Read and Write）
@@ -595,7 +600,7 @@ GITHUB_BRANCH=main
 - [x] トップページ作成
 - [x] ビルド・動作確認
 
-### **Phase 2: コア機能実装（80%完了 🚀）**
+### **Phase 2: コア機能実装（85%完了 🚀）**
 - [x] Netlify連携・自動デプロイ設定
 - [x] 料金プランページ作成（/pricing）
 - [x] 無料予想ページ作成（/free-prediction）
@@ -603,6 +608,7 @@ GITHUB_BRANCH=main
 - [x] メルマガ配信システム実装
 - [x] メルマガ移行システム設計
 - [x] 会員認証システム実装（マジックリンク）
+- [x] Gemini AIチャットボット実装（全ページ右下ウィジェット）
 - [ ] Airtableテーブルセットアップ
 - [ ] Netlify環境変数設定
 - [ ] PayPal商品登録
@@ -620,10 +626,10 @@ GITHUB_BRANCH=main
 
 **📅 最終更新日**: 2026-01-18
 **🏁 Project Phase**: Phase 3管理機能実装 🚀（Phase 3: 50%完了）
-**🎯 Next Priority**: Gemini AI統合 → LINE通知実装 → 有料予想ページ作成
-**📊 進捗率**: 73%完了（Phase 1: 100%、Phase 2: 80%、Phase 3: 50%）
+**🎯 Next Priority**: LINE通知実装 → 有料予想ページ作成 → Airtableテーブルセットアップ
+**📊 進捗率**: 75%完了（Phase 1: 100%、Phase 2: 85%、Phase 3: 50%）
 **✨ 本日の成果（2026-01-18）**:
-  - 結果管理システム完全実装（Priority 1: 100%完了）✅
+  - Priority 1: 結果管理システム完全実装 ✅
     - results-manager.astro（全12R結果入力・的中判定）
     - save-results.js（GitHub自動コミット・デプロイ）
     - /results（買い目シミュレーター・Chart.js統合）
@@ -631,8 +637,15 @@ GITHUB_BRANCH=main
     - 全期間統計集計機能（的中率・回収率・払戻額）
     - パフォーマンス推移グラフ（Chart.js v4.4.0）
 
+  - Priority 2: Gemini AIチャットボット完全実装 ✅
+    - gemini-chat.js（Netlify Function、Gemini 1.5 Flash統合）
+    - AIChat.astro（全ページ右下固定ウィジェット）
+    - 最新予想・結果データ自動参照機能
+    - 会話履歴保持機能
+    - レスポンシブデザイン（モバイル対応）
+
 **🎉 累積成果**:
-  - Netlify Functions: 14個実装（PayPal Webhook, Newsletter 5個, Auth 4個, Save-and-Deploy, Save-Results）
+  - Netlify Functions: 15個実装（PayPal Webhook, Newsletter 5個, Auth 4個, Save-and-Deploy, Save-Results, Gemini-Chat）
   - 設計書: 3個作成（NEWSLETTER_SYSTEM.md, NEWSLETTER_MIGRATION.md, AUTH_SYSTEM.md）
   - 管理画面: 5ページ実装（/admin/newsletter/*, /admin/prediction-converter, /admin/results-manager）
   - 公開ページ: 6ページ実装（トップ, 無料予想, 有料予想, 料金, 的中実績, ログイン）
