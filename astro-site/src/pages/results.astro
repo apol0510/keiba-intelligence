@@ -1,0 +1,698 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { readdirSync, readFileSync, existsSync } from 'fs';
+import { join } from 'path';
+
+export const prerender = false;
+
+// 結果データを取得
+const resultsDir = join(process.cwd(), 'src', 'data', 'results');
+let allResults = [];
+let aggregatedStats = {
+  totalRaces: 0,
+  totalHits: 0,
+  totalInvest: 0,
+  totalReturn: 0,
+  hitRate: 0,
+  roi: 0,
+  eventCount: 0
+};
+
+try {
+  if (existsSync(resultsDir)) {
+    const files = readdirSync(resultsDir)
+      .filter(file => file.endsWith('.json'))
+      .sort()
+      .reverse();
+
+    files.forEach(file => {
+      const fileContent = readFileSync(join(resultsDir, file), 'utf-8');
+      const data = JSON.parse(fileContent);
+      allResults.push(data);
+
+      // 統計を集計
+      aggregatedStats.totalRaces += data.summary.totalRaces;
+      aggregatedStats.totalHits += data.summary.hitCount;
+      aggregatedStats.totalInvest += data.summary.totalInvest;
+      aggregatedStats.totalReturn += data.summary.totalReturn;
+      aggregatedStats.eventCount += 1;
+    });
+
+    // 全体の的中率・回収率を計算
+    if (aggregatedStats.totalRaces > 0) {
+      aggregatedStats.hitRate = ((aggregatedStats.totalHits / aggregatedStats.totalRaces) * 100).toFixed(1);
+    }
+    if (aggregatedStats.totalInvest > 0) {
+      aggregatedStats.roi = ((aggregatedStats.totalReturn / aggregatedStats.totalInvest) * 100).toFixed(1);
+    }
+  }
+} catch (err) {
+  console.error('Error loading results:', err);
+}
+---
+
+<BaseLayout
+  title="的中実績"
+  description={`的中率${aggregatedStats.hitRate}%、回収率${aggregatedStats.roi}%を達成。AI予想の実力をデータで証明。`}
+>
+  <section class="results-section">
+    <div class="container">
+      <!-- ページヘッダー -->
+      <div class="page-header">
+        <div class="badge">VERIFIED PERFORMANCE RECORDS</div>
+        <h1>的中実績 - Performance Records</h1>
+        <p class="subtitle">AI予想の実力をデータで証明。全レース結果を完全公開。</p>
+      </div>
+
+      <!-- 総合統計カード -->
+      <div class="stats-overview">
+        <div class="stat-card highlight">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-content">
+            <div class="stat-label">総合的中率</div>
+            <div class="stat-value">{aggregatedStats.hitRate}%</div>
+            <div class="stat-detail">{aggregatedStats.totalHits}/{aggregatedStats.totalRaces}R</div>
+          </div>
+        </div>
+
+        <div class="stat-card highlight">
+          <div class="stat-icon">💰</div>
+          <div class="stat-content">
+            <div class="stat-label">総合回収率</div>
+            <div class="stat-value" class:list={[parseFloat(aggregatedStats.roi) >= 100 ? 'positive' : 'negative']}>
+              {aggregatedStats.roi}%
+            </div>
+            <div class="stat-detail">
+              {aggregatedStats.totalReturn.toLocaleString()}円/{aggregatedStats.totalInvest.toLocaleString()}円
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div class="stat-content">
+            <div class="stat-label">開催数</div>
+            <div class="stat-value">{aggregatedStats.eventCount}</div>
+            <div class="stat-detail">全{aggregatedStats.totalRaces}レース</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">💵</div>
+          <div class="stat-content">
+            <div class="stat-label">総払戻額</div>
+            <div class="stat-value small">{aggregatedStats.totalReturn.toLocaleString()}<span class="unit">円</span></div>
+            <div class="stat-detail">投資額 {aggregatedStats.totalInvest.toLocaleString()}円</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- グラフセクション -->
+      <div class="chart-section">
+        <h2>📈 パフォーマンス推移</h2>
+        <div class="chart-container">
+          <canvas id="performanceChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 開催別結果リスト -->
+      <div class="results-list">
+        <h2>🏆 開催別結果一覧</h2>
+        {allResults.length === 0 ? (
+          <div class="no-data">
+            <p>まだ結果データがありません。</p>
+          </div>
+        ) : (
+          allResults.map((result) => (
+            <div class="result-card">
+              <div class="result-header">
+                <div class="event-info">
+                  <h3>{result.date} {result.venue}</h3>
+                  <div class="event-stats">
+                    <span class="stat-badge">
+                      🎯 {((result.summary.hitCount / result.summary.totalRaces) * 100).toFixed(1)}%
+                    </span>
+                    <span class={`stat-badge ${result.summary.roi >= 100 ? 'positive' : 'negative'}`}>
+                      💰 {result.summary.roi}%
+                    </span>
+                  </div>
+                </div>
+                <div class="summary-stats">
+                  <div class="summary-item">
+                    <span class="label">的中</span>
+                    <span class="value">{result.summary.hitCount}/{result.summary.totalRaces}R</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="label">払戻</span>
+                    <span class="value">{result.summary.totalReturn.toLocaleString()}円</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="races-grid">
+                {result.races.map((race) => (
+                  <div class={`race-item ${race.umatan.hit ? 'hit' : 'miss'}`}>
+                    <div class="race-number">{race.raceNumber}R</div>
+                    <div class="race-details">
+                      <div class="prediction-line">
+                        ◎{race.prediction.honmei.number}.{race.prediction.honmei.name}
+                        ○{race.prediction.taikou.number}.{race.prediction.taikou.name}
+                      </div>
+                      <div class="result-line">
+                        結果: {race.result.first}-{race.result.second}-{race.result.third}
+                      </div>
+                      {race.umatan.hit && (
+                        <div class="payout-line">
+                          配当: {race.umatan.payout.toLocaleString()}円 (回収率: {race.umatan.roi}%)
+                        </div>
+                      )}
+                    </div>
+                    <div class="hit-badge">
+                      {race.umatan.hit ? '✅ 的中' : '❌'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <!-- 買い目シミュレーター説明 -->
+      <div class="simulator-info">
+        <h2>💡 買い目シミュレーターについて</h2>
+        <div class="info-grid">
+          <div class="info-card">
+            <h3>投資方法</h3>
+            <p>馬単2点（本命→対抗、対抗→本命）を各100円、計200円/レース</p>
+          </div>
+          <div class="info-card">
+            <h3>的中判定</h3>
+            <p>1着・2着が本命と対抗の組み合わせで決まった場合に的中</p>
+          </div>
+          <div class="info-card">
+            <h3>回収率計算</h3>
+            <p>（払戻総額 ÷ 投資総額）× 100 で算出</p>
+          </div>
+          <div class="info-card">
+            <h3>データ信頼性</h3>
+            <p>全レース・全開催の結果を完全公開。データ改ざん一切なし</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <style>
+    .results-section {
+      min-height: 100vh;
+      padding: var(--spacing-2xl) 0;
+      background: var(--bg-primary);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 var(--spacing-lg);
+    }
+
+    /* ページヘッダー */
+    .page-header {
+      text-align: center;
+      margin-bottom: var(--spacing-2xl);
+      padding: var(--spacing-2xl);
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+      border-radius: var(--radius-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+      animation: scan 3s linear infinite;
+    }
+
+    @keyframes scan {
+      0% { left: -100%; }
+      100% { left: 200%; }
+    }
+
+    .badge {
+      display: inline-block;
+      padding: var(--spacing-xs) var(--spacing-md);
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #60a5fa;
+      letter-spacing: 1px;
+      margin-bottom: var(--spacing-md);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .page-header h1 {
+      font-size: 2.5rem;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 1.125rem;
+    }
+
+    /* 統計カード */
+    .stats-overview {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      transition: all var(--transition-normal);
+    }
+
+    .stat-card.highlight {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .stat-icon {
+      font-size: 3rem;
+      line-height: 1;
+    }
+
+    .stat-content {
+      flex: 1;
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #60a5fa;
+      line-height: 1;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .stat-value.small {
+      font-size: 1.75rem;
+    }
+
+    .stat-value .unit {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-left: 4px;
+    }
+
+    .stat-value.positive {
+      color: #10b981;
+    }
+
+    .stat-value.negative {
+      color: #ef4444;
+    }
+
+    .stat-detail {
+      font-size: 0.875rem;
+      color: var(--text-tertiary);
+    }
+
+    /* グラフセクション */
+    .chart-section {
+      background: var(--bg-secondary);
+      padding: var(--spacing-2xl);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .chart-section h2 {
+      color: #60a5fa;
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .chart-container {
+      position: relative;
+      height: 400px;
+    }
+
+    /* 結果リスト */
+    .results-list {
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .results-list h2 {
+      color: #60a5fa;
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .no-data {
+      text-align: center;
+      padding: var(--spacing-2xl);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      color: var(--text-secondary);
+    }
+
+    .result-card {
+      background: var(--bg-secondary);
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-lg);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .event-info h3 {
+      color: #60a5fa;
+      font-size: 1.5rem;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .event-stats {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+
+    .stat-badge {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      background: rgba(59, 130, 246, 0.2);
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 700;
+    }
+
+    .stat-badge.positive {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+    }
+
+    .stat-badge.negative {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .summary-stats {
+      display: flex;
+      gap: var(--spacing-lg);
+    }
+
+    .summary-item {
+      text-align: right;
+    }
+
+    .summary-item .label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .summary-item .value {
+      display: block;
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    /* レース一覧グリッド */
+    .races-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: var(--spacing-md);
+    }
+
+    .race-item {
+      background: rgba(0, 0, 0, 0.2);
+      padding: var(--spacing-md);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+
+    .race-item.hit {
+      border-color: rgba(16, 185, 129, 0.5);
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .race-item.miss {
+      border-color: rgba(239, 68, 68, 0.3);
+      background: rgba(239, 68, 68, 0.03);
+    }
+
+    .race-number {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #60a5fa;
+      min-width: 40px;
+    }
+
+    .race-details {
+      flex: 1;
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+
+    .prediction-line {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .result-line {
+      color: var(--text-secondary);
+    }
+
+    .payout-line {
+      color: #10b981;
+      font-weight: 700;
+    }
+
+    .hit-badge {
+      font-size: 0.875rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    /* シミュレーター情報 */
+    .simulator-info {
+      background: var(--bg-secondary);
+      padding: var(--spacing-2xl);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+    }
+
+    .simulator-info h2 {
+      color: #60a5fa;
+      margin-bottom: var(--spacing-xl);
+      text-align: center;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--spacing-lg);
+    }
+
+    .info-card {
+      background: rgba(0, 0, 0, 0.2);
+      padding: var(--spacing-lg);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .info-card h3 {
+      color: #60a5fa;
+      font-size: 1.125rem;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .info-card p {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+
+    /* レスポンシブ */
+    @media (max-width: 768px) {
+      .page-header h1 {
+        font-size: 1.75rem;
+      }
+
+      .stats-overview {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-container {
+        height: 300px;
+      }
+
+      .result-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+      }
+
+      .races-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <script is:inline define:vars={{ allResults }}>
+    // Chart.js読み込み後にグラフ描画
+    if (allResults.length > 0) {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      script.onload = () => {
+        const ctx = document.getElementById('performanceChart');
+
+        // データを日付順にソート（古い順）
+        const sortedResults = [...allResults].reverse();
+
+        // グラフデータ準備
+        const labels = sortedResults.map(r => `${r.date}\n${r.venue}`);
+        const hitRates = sortedResults.map(r => ((r.summary.hitCount / r.summary.totalRaces) * 100).toFixed(1));
+        const rois = sortedResults.map(r => r.summary.roi);
+
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: '的中率 (%)',
+                data: hitRates,
+                borderColor: '#60a5fa',
+                backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                borderWidth: 3,
+                tension: 0.4,
+                yAxisID: 'y',
+              },
+              {
+                label: '回収率 (%)',
+                data: rois,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderWidth: 3,
+                tension: 0.4,
+                yAxisID: 'y1',
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false,
+            },
+            plugins: {
+              legend: {
+                labels: {
+                  color: '#e5e7eb',
+                  font: { size: 14, weight: '700' }
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                titleColor: '#60a5fa',
+                bodyColor: '#e5e7eb',
+                borderColor: '#374151',
+                borderWidth: 1,
+                padding: 12,
+                titleFont: { size: 14, weight: '700' },
+                bodyFont: { size: 13 }
+              }
+            },
+            scales: {
+              x: {
+                ticks: {
+                  color: '#9ca3af',
+                  font: { size: 11 }
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.05)'
+                }
+              },
+              y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: {
+                  display: true,
+                  text: '的中率 (%)',
+                  color: '#60a5fa',
+                  font: { size: 13, weight: '700' }
+                },
+                ticks: {
+                  color: '#60a5fa',
+                  font: { size: 12 }
+                },
+                grid: {
+                  color: 'rgba(96, 165, 250, 0.1)'
+                }
+              },
+              y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: {
+                  display: true,
+                  text: '回収率 (%)',
+                  color: '#10b981',
+                  font: { size: 13, weight: '700' }
+                },
+                ticks: {
+                  color: '#10b981',
+                  font: { size: 12 }
+                },
+                grid: {
+                  drawOnChartArea: false,
+                }
+              }
+            }
+          }
+        });
+      };
+      document.head.appendChild(script);
+    }
+  </script>
+</BaseLayout>

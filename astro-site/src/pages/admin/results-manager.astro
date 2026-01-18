@@ -1,0 +1,668 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { readdirSync, readFileSync, existsSync } from 'fs';
+import { join } from 'path';
+
+export const prerender = false;
+
+// 最新の予想データを取得
+const predictionsDir = join(process.cwd(), 'src', 'data', 'predictions');
+let predictionData = null;
+let predictionFileName = null;
+let error = null;
+let saveSuccess = false;
+
+try {
+  if (existsSync(predictionsDir)) {
+    const files = readdirSync(predictionsDir)
+      .filter(file => file.endsWith('.json'))
+      .sort()
+      .reverse();
+
+    if (files.length > 0) {
+      predictionFileName = files[0];
+      const fileContent = readFileSync(join(predictionsDir, predictionFileName), 'utf-8');
+      predictionData = JSON.parse(fileContent);
+    } else {
+      throw new Error('予想データがありません');
+    }
+  } else {
+    throw new Error('予想データフォルダが見つかりません');
+  }
+} catch (err) {
+  error = err.message;
+}
+
+// POST処理（結果保存）
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const resultsJSON = formData.get('resultsJSON');
+
+    if (resultsJSON) {
+      saveSuccess = true;
+    }
+  } catch (err) {
+    error = err.message;
+  }
+}
+---
+
+<BaseLayout title="結果管理 - KEIBA Intelligence" description="レース結果入力と的中判定">
+  <section class="admin-section">
+    <div class="container">
+      <div class="page-header">
+        <h1>🏆 結果管理 - Results Manager</h1>
+        <p>レース結果を入力して、的中率・回収率を自動計算します</p>
+      </div>
+
+      {error && (
+        <div class="alert alert-error">
+          <p>❌ エラー: {error}</p>
+        </div>
+      )}
+
+      {saveSuccess && (
+        <div class="alert alert-success">
+          <p>✅ 結果を保存しました！</p>
+        </div>
+      )}
+
+      {predictionData && (
+        <div class="prediction-info">
+          <h2>📋 対象予想データ</h2>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">開催日:</span>
+              <span class="value">{predictionData.eventInfo.date}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">競馬場:</span>
+              <span class="value">{predictionData.eventInfo.venue}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">レース数:</span>
+              <span class="value">{predictionData.eventInfo.totalRaces}R</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {predictionData && (
+        <div class="results-form">
+          <h2>📝 結果入力フォーム</h2>
+          <p class="help-text">各レースの着順と馬単配当を入力してください（1点100円）</p>
+
+          <div id="racesContainer">
+            {predictionData.predictions.map((race, index) => {
+              const honmei = race.horses.find(h => h.role === '本命');
+              const taikou = race.horses.find(h => h.role === '対抗');
+
+              return (
+                <div class="race-result-card" data-race-number={race.raceInfo.raceNumber}>
+                  <div class="race-header">
+                    <h3>{race.raceInfo.raceNumber}R</h3>
+                    <div class="prediction-summary">
+                      <span class="honmei">◎ {honmei?.horseNumber}.{honmei?.horseName}</span>
+                      <span class="taikou">○ {taikou?.horseNumber}.{taikou?.horseName}</span>
+                    </div>
+                  </div>
+
+                  <div class="result-inputs">
+                    <div class="input-group">
+                      <label>1着</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="18"
+                        class="result-input first-place"
+                        data-race={race.raceInfo.raceNumber}
+                        placeholder="馬番"
+                      />
+                    </div>
+                    <div class="input-group">
+                      <label>2着</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="18"
+                        class="result-input second-place"
+                        data-race={race.raceInfo.raceNumber}
+                        placeholder="馬番"
+                      />
+                    </div>
+                    <div class="input-group">
+                      <label>3着</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="18"
+                        class="result-input third-place"
+                        data-race={race.raceInfo.raceNumber}
+                        placeholder="馬番"
+                      />
+                    </div>
+                    <div class="input-group payout-group">
+                      <label>馬単配当（円）</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="10"
+                        class="result-input umatan-payout"
+                        data-race={race.raceInfo.raceNumber}
+                        placeholder="配当金額"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="hit-status" id="hitStatus-{race.raceInfo.raceNumber}"></div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div class="summary-section">
+            <h2>📊 集計結果</h2>
+            <div id="summaryDisplay" class="summary-display">
+              <p class="placeholder-text">結果を入力すると自動で集計されます</p>
+            </div>
+          </div>
+
+          <div class="action-buttons">
+            <button
+              type="button"
+              id="calculateBtn"
+              class="btn btn-primary btn-large"
+              onclick="calculateResults()"
+            >
+              📊 的中判定・集計実行
+            </button>
+            <button
+              type="button"
+              id="saveBtn"
+              class="btn btn-success btn-large"
+              onclick="saveResults()"
+              disabled
+            >
+              💾 結果を保存してデプロイ
+            </button>
+          </div>
+
+          <div class="json-output">
+            <h3>📋 生成JSON</h3>
+            <textarea id="resultsJSON" readonly></textarea>
+          </div>
+
+          <div id="saveStatus" class="save-status"></div>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <style>
+    .admin-section {
+      min-height: 100vh;
+      padding: var(--spacing-2xl) 0;
+      background: var(--bg-primary);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 var(--spacing-lg);
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: var(--spacing-2xl);
+      padding: var(--spacing-xl);
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+      border-radius: var(--radius-lg);
+    }
+
+    .page-header h1 {
+      font-size: 2rem;
+      color: #60a5fa;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .page-header p {
+      color: var(--text-secondary);
+    }
+
+    .alert {
+      padding: var(--spacing-md);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--spacing-lg);
+      text-align: center;
+    }
+
+    .alert-error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+    }
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      color: #6ee7b7;
+    }
+
+    .prediction-info {
+      background: var(--bg-secondary);
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--spacing-xl);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .prediction-info h2 {
+      color: #60a5fa;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-md);
+    }
+
+    .info-item {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+
+    .info-item .label {
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .info-item .value {
+      color: var(--text-primary);
+      font-weight: 800;
+    }
+
+    .results-form {
+      background: var(--bg-secondary);
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+    }
+
+    .results-form h2 {
+      color: #60a5fa;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .help-text {
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    #racesContainer {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .race-result-card {
+      background: rgba(0, 0, 0, 0.2);
+      padding: var(--spacing-lg);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .race-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-md);
+      padding-bottom: var(--spacing-sm);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .race-header h3 {
+      color: #60a5fa;
+      font-size: 1.25rem;
+    }
+
+    .prediction-summary {
+      display: flex;
+      gap: var(--spacing-md);
+      font-size: 0.875rem;
+    }
+
+    .prediction-summary .honmei {
+      color: #fbbf24;
+    }
+
+    .prediction-summary .taikou {
+      color: #60a5fa;
+    }
+
+    .result-inputs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xs);
+    }
+
+    .input-group label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .result-input {
+      padding: var(--spacing-sm);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 1rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .result-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    .payout-group {
+      grid-column: span 1;
+    }
+
+    .hit-status {
+      min-height: 24px;
+      font-size: 0.875rem;
+      font-weight: 700;
+    }
+
+    .hit-status.hit {
+      color: #10b981;
+    }
+
+    .hit-status.miss {
+      color: #ef4444;
+    }
+
+    .summary-section {
+      background: rgba(59, 130, 246, 0.1);
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .summary-section h2 {
+      color: #60a5fa;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .summary-display {
+      font-size: 1rem;
+      line-height: 1.8;
+    }
+
+    .placeholder-text {
+      color: var(--text-tertiary);
+      font-style: italic;
+    }
+
+    .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-md);
+    }
+
+    .stat-item {
+      background: rgba(0, 0, 0, 0.2);
+      padding: var(--spacing-md);
+      border-radius: var(--radius-sm);
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #60a5fa;
+    }
+
+    .stat-value.positive {
+      color: #10b981;
+    }
+
+    .stat-value.negative {
+      color: #ef4444;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .btn-large {
+      flex: 1;
+      padding: var(--spacing-md) var(--spacing-xl);
+      font-size: 1.125rem;
+      font-weight: 700;
+    }
+
+    .json-output {
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .json-output h3 {
+      color: #60a5fa;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .json-output textarea {
+      width: 100%;
+      min-height: 300px;
+      padding: var(--spacing-md);
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      resize: vertical;
+    }
+
+    .save-status {
+      min-height: 40px;
+      padding: var(--spacing-md);
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .result-inputs {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .payout-group {
+        grid-column: span 2;
+      }
+
+      .action-buttons {
+        flex-direction: column;
+      }
+    }
+  </style>
+
+  <script is:inline define:vars={{ predictionData }}>
+    let calculatedResults = null;
+
+    function calculateResults() {
+      const races = predictionData.predictions;
+      const results = [];
+      let hitCount = 0;
+      let totalInvest = 0;
+      let totalReturn = 0;
+
+      races.forEach(race => {
+        const raceNum = race.raceInfo.raceNumber;
+        const first = parseInt(document.querySelector(`.first-place[data-race="${raceNum}"]`).value);
+        const second = parseInt(document.querySelector(`.second-place[data-race="${raceNum}"]`).value);
+        const third = parseInt(document.querySelector(`.third-place[data-race="${raceNum}"]`).value);
+        const payout = parseInt(document.querySelector(`.umatan-payout[data-race="${raceNum}"]`).value) || 0;
+
+        const honmei = race.horses.find(h => h.role === '本命');
+        const taikou = race.horses.find(h => h.role === '対抗');
+
+        // 的中判定（馬単：1-2 or 2-1）
+        const isHit = (first === honmei.horseNumber && second === taikou.horseNumber) ||
+                      (first === taikou.horseNumber && second === honmei.horseNumber);
+
+        const invest = 200; // 馬単2点 × 100円
+        const returns = isHit ? payout : 0;
+        const roi = invest > 0 ? (returns / invest * 100).toFixed(1) : 0;
+
+        if (isHit) hitCount++;
+        totalInvest += invest;
+        totalReturn += returns;
+
+        results.push({
+          raceNumber: raceNum,
+          prediction: {
+            honmei: { number: honmei.horseNumber, name: honmei.horseName },
+            taikou: { number: taikou.horseNumber, name: taikou.horseName }
+          },
+          result: { first, second, third },
+          umatan: {
+            hit: isHit,
+            payout: returns,
+            invest: invest,
+            roi: parseFloat(roi)
+          }
+        });
+
+        // 的中状態表示
+        const statusEl = document.getElementById(`hitStatus-${raceNum}`);
+        if (isHit) {
+          statusEl.className = 'hit-status hit';
+          statusEl.textContent = `✅ 的中！配当: ${payout.toLocaleString()}円 (回収率: ${roi}%)`;
+        } else {
+          statusEl.className = 'hit-status miss';
+          statusEl.textContent = '❌ 不的中';
+        }
+      });
+
+      const hitRate = ((hitCount / races.length) * 100).toFixed(1);
+      const totalROI = ((totalReturn / totalInvest) * 100).toFixed(1);
+
+      calculatedResults = {
+        date: predictionData.eventInfo.date,
+        venue: predictionData.eventInfo.venue,
+        races: results,
+        summary: {
+          totalRaces: races.length,
+          hitCount: hitCount,
+          hitRate: parseFloat(hitRate),
+          totalInvest: totalInvest,
+          totalReturn: totalReturn,
+          roi: parseFloat(totalROI)
+        }
+      };
+
+      // 集計表示
+      const summaryHTML = `
+        <div class="summary-stats">
+          <div class="stat-item">
+            <div class="stat-label">的中数</div>
+            <div class="stat-value">${hitCount}/${races.length}R</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">的中率</div>
+            <div class="stat-value">${hitRate}%</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">投資額</div>
+            <div class="stat-value">${totalInvest.toLocaleString()}円</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">払戻額</div>
+            <div class="stat-value ${totalReturn >= totalInvest ? 'positive' : 'negative'}">
+              ${totalReturn.toLocaleString()}円
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">回収率</div>
+            <div class="stat-value ${totalROI >= 100 ? 'positive' : 'negative'}">
+              ${totalROI}%
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('summaryDisplay').innerHTML = summaryHTML;
+      document.getElementById('resultsJSON').value = JSON.stringify(calculatedResults, null, 2);
+      document.getElementById('saveBtn').disabled = false;
+    }
+
+    async function saveResults() {
+      if (!calculatedResults) {
+        alert('先に「的中判定・集計実行」ボタンをクリックしてください');
+        return;
+      }
+
+      const btn = document.getElementById('saveBtn');
+      const statusDiv = document.getElementById('saveStatus');
+
+      btn.disabled = true;
+      btn.textContent = '💾 保存中...';
+      statusDiv.textContent = '処理中...';
+      statusDiv.style.background = 'rgba(59, 130, 246, 0.1)';
+      statusDiv.style.color = '#60a5fa';
+
+      try {
+        const fileName = `${calculatedResults.date}-${calculatedResults.venue === '大井' ? 'ooi' : calculatedResults.venue === '川崎' ? 'kawasaki' : calculatedResults.venue === '船橋' ? 'funabashi' : 'urawa'}.json`;
+
+        const response = await fetch('/.netlify/functions/save-results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            resultsJSON: JSON.stringify(calculatedResults, null, 2),
+            fileName: fileName
+          })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          statusDiv.textContent = `✅ ${result.message}`;
+          statusDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+          statusDiv.style.color = '#10b981';
+          btn.textContent = '✅ 保存完了';
+        } else {
+          throw new Error(result.error || '保存に失敗しました');
+        }
+      } catch (error) {
+        statusDiv.textContent = `❌ エラー: ${error.message}`;
+        statusDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+        statusDiv.style.color = '#ef4444';
+        btn.disabled = false;
+        btn.textContent = '💾 結果を保存してデプロイ';
+      }
+    }
+  </script>
+</BaseLayout>
