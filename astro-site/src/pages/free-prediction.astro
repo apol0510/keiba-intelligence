@@ -59,10 +59,16 @@ function generateAdvancedMetrics(horse, allHorses) {
 
   const modelCertainty = (Math.min(0.98, Math.max(0.65, normalizedPt * 0.3 + 0.65 + (seededRandom(9) - 0.5) * 0.1)) * 100).toFixed(1);
 
-  const estimatedOdds = Math.max(1.2, 100 / parseFloat(winProbability));
-  const expectedValue = ((estimatedOdds * (parseFloat(winProbability) / 100)) - 1) > 0
-    ? '+' + ((estimatedOdds * (parseFloat(winProbability) / 100)) - 1).toFixed(1) + '%'
-    : ((estimatedOdds * (parseFloat(winProbability) / 100)) - 1).toFixed(1) + '%';
+  // 市場オッズ想定（確率の逆数に基づく）
+  const fairOdds = Math.max(1.2, 100 / parseFloat(winProbability));
+  // 実際のオッズ想定（ランダム要素を追加して市場の歪みを表現）
+  const marketOdds = fairOdds * (1 + (seededRandom(10) - 0.5) * 0.4);
+  const estimatedOdds = marketOdds;
+  // 期待値 = (市場オッズ × 的中確率) - 1
+  const evValue = (marketOdds * (parseFloat(winProbability) / 100)) - 1;
+  const expectedValue = evValue > 0
+    ? '+' + (evValue * 100).toFixed(1) + '%'
+    : (evValue * 100).toFixed(1) + '%';
 
   const riskScore = 100 - parseFloat(modelCertainty);
   let riskLevel = 'Low';

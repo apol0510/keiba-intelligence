@@ -585,9 +585,42 @@ function outputAllRacesJSON(data) {
           </div>
 
           <!-- 各レース詳細（折りたたみ） -->
-          {generateResults.map((race, index) => (
+          {generateResults.map((race, index) => {
+            // 期待値計算関数（prediction/[slug].astroと同じロジック）
+            const calculateExpectedValue = (horse, allHorses) => {
+              const pt = horse.pt;
+              const maxPt = Math.max(...allHorses.map(h => h.pt));
+              const minPt = Math.min(...allHorses.map(h => h.pt));
+              const ptRange = maxPt - minPt;
+              const normalizedPt = (pt - minPt) / ptRange;
+
+              const seed = horse.horseNumber * 1000 + pt;
+              const seededRandom = (index) => {
+                const x = Math.sin(seed + index) * 10000;
+                return x - Math.floor(x);
+              };
+
+              const baseWinProb = normalizedPt * 35 + 5;
+              const winProbability = Math.min(95, Math.max(2, baseWinProb + (seededRandom(1) - 0.5) * 8));
+
+              // 市場オッズ想定（確率の逆数に基づく）
+              const fairOdds = Math.max(1.2, 100 / winProbability);
+              // 実際のオッズ想定（ランダム要素を追加して市場の歪みを表現）
+              const marketOdds = fairOdds * (1 + (seededRandom(10) - 0.5) * 0.4);
+              // 期待値 = (市場オッズ × 的中確率) - 1
+              const expectedValue = (marketOdds * (winProbability / 100)) - 1;
+
+              return (expectedValue * 100).toFixed(1);
+            };
+
+            const honmei = race.horses.find(h => h.role === '本命');
+            const taikou = race.horses.find(h => h.role === '対抗');
+            const honmeiEV = honmei ? calculateExpectedValue(honmei, race.horses) : 'N/A';
+            const taikouEV = taikou ? calculateExpectedValue(taikou, race.horses) : 'N/A';
+
+            return (
             <details class="race-details">
-              <summary class="race-summary">{race.raceNumber}R - 本命: {race.horses.find(h => h.role === '本命')?.horseNumber}.{race.horses.find(h => h.role === '本命')?.horseName} / 対抗: {race.horses.find(h => h.role === '対抗')?.horseNumber}.{race.horses.find(h => h.role === '対抗')?.horseName}</summary>
+              <summary class="race-summary">{race.raceNumber}R - 本命: {honmei?.horseNumber}.{honmei?.horseName} (EV: {honmeiEV > 0 ? '+' : ''}{honmeiEV}%) / 対抗: {taikou?.horseNumber}.{taikou?.horseName} (EV: {taikouEV > 0 ? '+' : ''}{taikouEV}%)</summary>
 
               <div class="race-card">
                 <!-- pt一覧表示 -->
@@ -694,7 +727,8 @@ function outputAllRacesJSON(data) {
                 </div>
               </div>
             </details>
-          ))}
+            );
+          })}
         </div>
 
         <!-- POST再送信警告を即座に防止（結果表示直後に実行） -->
