@@ -1,4 +1,6 @@
 ---
+import AIChat from '../components/AIChat.astro';
+
 interface Props {
   title: string;
   description?: string;
@@ -363,5 +365,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     // ページ読み込み時に実行
     updateAuthButton();
   </script>
+
+  <!-- AI Chat Widget -->
+  <AIChat />
 </body>
 </html>
