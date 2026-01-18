@@ -83,7 +83,7 @@ if (Astro.request.method === 'POST') {
 }
 
 // ========================================
-// 【関数0】全レースパーサー（===1R===区切り）
+// 【関数0】全レースパーサー（===1R===区切り or 船橋12R形式）
 // ========================================
 function parseAllRaces(rawInput: string) {
   const races = [];
@@ -94,8 +94,14 @@ function parseAllRaces(rawInput: string) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
 
-    // レース区切り記号を検出（===1R===, ===2R===, ...）
-    const raceMatch = line.match(/^===(\d+)R===/);
+    // レース区切り記号を検出
+    // パターン1: ===1R===, ===2R===, ...
+    const raceMatch1 = line.match(/^===(\d+)R===/);
+    // パターン2: 船橋12R, 大井1R, 川崎5R（会場名+数字+R）
+    const raceMatch2 = line.match(/^(?:船橋|大井|川崎|浦和)(\d+)R/);
+
+    const raceMatch = raceMatch1 || raceMatch2;
+
     if (raceMatch) {
       // 前のレースデータを保存
       if (currentRaceNumber !== null && currentRaceData.length > 0) {
