@@ -105,7 +105,9 @@ function extractResults(text) {
   const lines = text.split('\n');
 
   for (let line of lines) {
-    const match = line.match(/^(\d+)[\s\u3000]+(\d+)[\s\u3000]+(\d+)[\s\u3000]+(.+?)[\s\u3000]+[牡牝セ]\d+[\s\u3000]+[\d.]+[\s\u3000]+\d+kg[\s\u3000]+[+-±]?\d*[\s\u3000]+(.+?)[\s\u3000]+(.+?)[\s\u3000]+([\d:.]+)[\s\u3000]+(.*?)[\s\u3000]+([\d.]+)[\s\u3000]+-[\s\u3000]+(\d+)\s*$/);
+    // より柔軟な正規表現：着順、枠、馬番、馬名（最低限）をマッチ
+    // 人気は行末の数字を探す
+    const match = line.match(/^(\d+)[\s\u3000]+(\d+)[\s\u3000]+(\d+)[\s\u3000]+(.+?)[\s\u3000]+[牡牝セ]\d+[\s\u3000]+([\d.]+)[\s\u3000]+(\d+)kg[\s\u3000]+([+-±]?\d*)[\s\u3000]+(.+?)[\s\u3000]+(.+?)[\s\u3000]+([\d:.]+)[\s\u3000]+(.*?)[\s\u3000]+([\d.]+)[\s\u3000]+-[\s\u3000]+(\d+)\s*$/);
 
     if (match) {
       results.push({
@@ -113,13 +115,32 @@ function extractResults(text) {
         bracket: parseInt(match[2], 10),
         number: parseInt(match[3], 10),
         name: match[4].trim(),
-        jockey: match[5].trim(),
-        trainer: match[6].trim(),
-        time: match[7].trim(),
-        margin: match[8].trim() || '-',
-        lastFurlong: match[9].trim(),
-        popularity: parseInt(match[10], 10)
+        jockey: match[8].trim(),
+        trainer: match[9].trim(),
+        time: match[10].trim(),
+        margin: match[11].trim() || '-',
+        lastFurlong: match[12].trim(),
+        popularity: parseInt(match[13], 10)
       });
+    } else {
+      // 2番目のパターン：よりシンプルなマッチ（フィールドが少ない場合）
+      const simpleMatch = line.match(/^(\d+)[\s\u3000]+(\d+)[\s\u3000]+(\d+)[\s\u3000]+(.+?)[\s\u3000]+.+?[\s\u3000]+(.+?)[\s\u3000]+(.+?)[\s\u3000]+([\d:.]+)/);
+      if (simpleMatch) {
+        // 人気は行末から取得を試みる
+        const popularityMatch = line.match(/[\s\u3000]+(\d+)\s*$/);
+        results.push({
+          rank: parseInt(simpleMatch[1], 10),
+          bracket: parseInt(simpleMatch[2], 10),
+          number: parseInt(simpleMatch[3], 10),
+          name: simpleMatch[4].trim(),
+          jockey: simpleMatch[5].trim(),
+          trainer: simpleMatch[6].trim(),
+          time: simpleMatch[7].trim(),
+          margin: '-',
+          lastFurlong: '',
+          popularity: popularityMatch ? parseInt(popularityMatch[1], 10) : 0
+        });
+      }
     }
   }
 
@@ -130,7 +151,8 @@ function extractResults(text) {
 function extractPayouts(text) {
   const payouts = {};
 
-  const tanshoMatch = text.match(/単勝[\s\S]*?(\d+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)[\s\u3000]+(\d+)/);
+  // 単勝：番号のみ（ハイフンなし）
+  const tanshoMatch = text.match(/単勝[\s\S]*?[^\d](\d+)番?[\s\u3000]+(\d{1,3}(?:,\d{3})*)円?[\s\u3000]+(\d+)人?/);
   if (tanshoMatch) {
     payouts.tansho = {
       number: parseInt(tanshoMatch[1], 10),
@@ -139,39 +161,43 @@ function extractPayouts(text) {
     };
   }
 
-  const umatanMatch = text.match(/馬単[\s\S]*?([\d-]+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)[\s\u3000]+(\d+)/);
+  // 馬単：2頭の組み合わせ（例: 7-9）
+  const umatanMatch = text.match(/馬単[\s\S]*?[^\d](\d+)-(\d+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)円?[\s\u3000]+(\d+)人?/);
   if (umatanMatch) {
     payouts.umatan = {
-      combination: umatanMatch[1],
-      payout: parseInt(umatanMatch[2].replace(/,/g, ''), 10),
-      popularity: parseInt(umatanMatch[3], 10)
+      combination: `${umatanMatch[1]}-${umatanMatch[2]}`,
+      payout: parseInt(umatanMatch[3].replace(/,/g, ''), 10),
+      popularity: parseInt(umatanMatch[4], 10)
     };
   }
 
-  const umarenMatch = text.match(/普通馬複[\s\S]*?([\d-]+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)[\s\u3000]+(\d+)/);
+  // 普通馬複：2頭の組み合わせ（例: 7-9）
+  const umarenMatch = text.match(/普通馬複[\s\S]*?[^\d](\d+)-(\d+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)円?[\s\u3000]+(\d+)人?/);
   if (umarenMatch) {
     payouts.umaren = {
-      combination: umarenMatch[1],
-      payout: parseInt(umarenMatch[2].replace(/,/g, ''), 10),
-      popularity: parseInt(umarenMatch[3], 10)
+      combination: `${umarenMatch[1]}-${umarenMatch[2]}`,
+      payout: parseInt(umarenMatch[3].replace(/,/g, ''), 10),
+      popularity: parseInt(umarenMatch[4], 10)
     };
   }
 
-  const sanrenpukuMatch = text.match(/三連複[\s\S]*?([\d-]+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)[\s\u3000]+(\d+)/);
+  // 三連複：3頭の組み合わせ（例: 7-9-11）
+  const sanrenpukuMatch = text.match(/三連複[\s\S]*?[^\d](\d+)-(\d+)-(\d+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)円?[\s\u3000]+(\d+)人?/);
   if (sanrenpukuMatch) {
     payouts.sanrenpuku = {
-      combination: sanrenpukuMatch[1],
-      payout: parseInt(sanrenpukuMatch[2].replace(/,/g, ''), 10),
-      popularity: parseInt(sanrenpukuMatch[3], 10)
+      combination: `${sanrenpukuMatch[1]}-${sanrenpukuMatch[2]}-${sanrenpukuMatch[3]}`,
+      payout: parseInt(sanrenpukuMatch[4].replace(/,/g, ''), 10),
+      popularity: parseInt(sanrenpukuMatch[5], 10)
     };
   }
 
-  const sanrentanMatch = text.match(/三連単[\s\S]*?([\d-]+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)[\s\u3000]+(\d+)/);
+  // 三連単：3頭の組み合わせ（例: 7-9-11）
+  const sanrentanMatch = text.match(/三連単[\s\S]*?[^\d](\d+)-(\d+)-(\d+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)円?[\s\u3000]+(\d+)人?/);
   if (sanrentanMatch) {
     payouts.sanrentan = {
-      combination: sanrentanMatch[1],
-      payout: parseInt(sanrentanMatch[2].replace(/,/g, ''), 10),
-      popularity: parseInt(sanrentanMatch[3], 10)
+      combination: `${sanrentanMatch[1]}-${sanrentanMatch[2]}-${sanrentanMatch[3]}`,
+      payout: parseInt(sanrentanMatch[4].replace(/,/g, ''), 10),
+      popularity: parseInt(sanrentanMatch[5], 10)
     };
   }
 
