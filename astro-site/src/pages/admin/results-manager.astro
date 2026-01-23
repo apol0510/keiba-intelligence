@@ -105,9 +105,9 @@ function extractResults(text) {
   const lines = text.split('\n');
 
   for (let line of lines) {
-    // より柔軟な正規表現：着順、枠、馬番、馬名（最低限）をマッチ
-    // 人気は行末の数字を探す
-    const match = line.match(/^(\d+)[\s\u3000]+(\d+)[\s\u3000]+(\d+)[\s\u3000]+(.+?)[\s\u3000]+[牡牝セ]\d+[\s\u3000]+([\d.]+)[\s\u3000]+(\d+)kg[\s\u3000]+([+-±]?\d*)[\s\u3000]+(.+?)[\s\u3000]+(.+?)[\s\u3000]+([\d:.]+)[\s\u3000]+(.*?)[\s\u3000]+([\d.]+)[\s\u3000]+-[\s\u3000]+(\d+)\s*$/);
+    // フォーマット: 着 枠 馬番 馬名 性齢 負担 馬体重 増減 騎手 調教師 タイム 着差 上がり3F コーナー通過順 人気
+    // 例: 1 5 7 マキシマムパワー 牡4 55.0 500kg -1 町田直希 林正人 2:28.0 - 39.3 - 1
+    const match = line.match(/^(\d+)[\s\u3000]+(\d+)[\s\u3000]+(\d+)[\s\u3000]+(.+?)[\s\u3000]+[牡牝セ]\d+[\s\u3000]+([\d.]+)[\s\u3000]+(\d+)kg[\s\u3000]+([+-±＋－]?\d*)[\s\u3000]+(.+?)[\s\u3000]+(.+?)[\s\u3000]+([\d:.]+)[\s\u3000]+(.*?)[\s\u3000]+([\d.]+)[\s\u3000]+(.*)[\s\u3000]+(\d+)\s*$/);
 
     if (match) {
       results.push({
@@ -120,27 +120,8 @@ function extractResults(text) {
         time: match[10].trim(),
         margin: match[11].trim() || '-',
         lastFurlong: match[12].trim(),
-        popularity: parseInt(match[13], 10)
+        popularity: parseInt(match[14], 10)
       });
-    } else {
-      // 2番目のパターン：よりシンプルなマッチ（フィールドが少ない場合）
-      const simpleMatch = line.match(/^(\d+)[\s\u3000]+(\d+)[\s\u3000]+(\d+)[\s\u3000]+(.+?)[\s\u3000]+.+?[\s\u3000]+(.+?)[\s\u3000]+(.+?)[\s\u3000]+([\d:.]+)/);
-      if (simpleMatch) {
-        // 人気は行末から取得を試みる
-        const popularityMatch = line.match(/[\s\u3000]+(\d+)\s*$/);
-        results.push({
-          rank: parseInt(simpleMatch[1], 10),
-          bracket: parseInt(simpleMatch[2], 10),
-          number: parseInt(simpleMatch[3], 10),
-          name: simpleMatch[4].trim(),
-          jockey: simpleMatch[5].trim(),
-          trainer: simpleMatch[6].trim(),
-          time: simpleMatch[7].trim(),
-          margin: '-',
-          lastFurlong: '',
-          popularity: popularityMatch ? parseInt(popularityMatch[1], 10) : 0
-        });
-      }
     }
   }
 
@@ -152,6 +133,7 @@ function extractPayouts(text) {
   const payouts = {};
 
   // 単勝：番号のみ（ハイフンなし）
+  // パターン: 単勝 7番 290円 1人気
   const tanshoMatch = text.match(/単勝[\s\S]*?[^\d](\d+)番?[\s\u3000]+(\d{1,3}(?:,\d{3})*)円?[\s\u3000]+(\d+)人?/);
   if (tanshoMatch) {
     payouts.tansho = {
@@ -162,17 +144,29 @@ function extractPayouts(text) {
   }
 
   // 馬単：2頭の組み合わせ（例: 7-9）
-  const umatanMatch = text.match(/馬単[\s\S]*?[^\d](\d+)-(\d+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)円?[\s\u3000]+(\d+)人?/);
-  if (umatanMatch) {
-    payouts.umatan = {
-      combination: `${umatanMatch[1]}-${umatanMatch[2]}`,
-      payout: parseInt(umatanMatch[3].replace(/,/g, ''), 10),
-      popularity: parseInt(umatanMatch[4], 10)
-    };
+  // 「馬単」という文字列の後に続く最初の組み合わせを探す（枠連を除外）
+  // パターン: 馬単\n7-9 1,910円 XX人気
+  const umatanLines = text.split('\n');
+  let foundUmatan = false;
+  for (let i = 0; i < umatanLines.length; i++) {
+    if (umatanLines[i].includes('馬単') && !umatanLines[i].includes('枠')) {
+      // 馬単行を発見、次の行または同じ行で組み合わせを探す
+      const targetLine = umatanLines[i] + '\n' + (umatanLines[i + 1] || '');
+      const match = targetLine.match(/(?:馬単[^\d]*)?(\d+)[\s\u3000]*-[\s\u3000]*(\d+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)円?[\s\u3000]+(\d+)人?/);
+      if (match && !targetLine.includes('枠')) {
+        payouts.umatan = {
+          combination: `${match[1]}-${match[2]}`,
+          payout: parseInt(match[3].replace(/,/g, ''), 10),
+          popularity: parseInt(match[4], 10)
+        };
+        foundUmatan = true;
+        break;
+      }
+    }
   }
 
   // 普通馬複：2頭の組み合わせ（例: 7-9）
-  const umarenMatch = text.match(/普通馬複[\s\S]*?[^\d](\d+)-(\d+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)円?[\s\u3000]+(\d+)人?/);
+  const umarenMatch = text.match(/普通馬複[\s\S]*?(\d+)[\s\u3000]*-[\s\u3000]*(\d+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)円?[\s\u3000]+(\d+)人?/);
   if (umarenMatch) {
     payouts.umaren = {
       combination: `${umarenMatch[1]}-${umarenMatch[2]}`,
@@ -182,7 +176,7 @@ function extractPayouts(text) {
   }
 
   // 三連複：3頭の組み合わせ（例: 7-9-11）
-  const sanrenpukuMatch = text.match(/三連複[\s\S]*?[^\d](\d+)-(\d+)-(\d+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)円?[\s\u3000]+(\d+)人?/);
+  const sanrenpukuMatch = text.match(/三連複[\s\S]*?(\d+)[\s\u3000]*-[\s\u3000]*(\d+)[\s\u3000]*-[\s\u3000]*(\d+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)円?[\s\u3000]+(\d+)人?/);
   if (sanrenpukuMatch) {
     payouts.sanrenpuku = {
       combination: `${sanrenpukuMatch[1]}-${sanrenpukuMatch[2]}-${sanrenpukuMatch[3]}`,
@@ -192,7 +186,7 @@ function extractPayouts(text) {
   }
 
   // 三連単：3頭の組み合わせ（例: 7-9-11）
-  const sanrentanMatch = text.match(/三連単[\s\S]*?[^\d](\d+)-(\d+)-(\d+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)円?[\s\u3000]+(\d+)人?/);
+  const sanrentanMatch = text.match(/三連単[\s\S]*?(\d+)[\s\u3000]*-[\s\u3000]*(\d+)[\s\u3000]*-[\s\u3000]*(\d+)[\s\u3000]+(\d{1,3}(?:,\d{3})*)円?[\s\u3000]+(\d+)人?/);
   if (sanrentanMatch) {
     payouts.sanrentan = {
       combination: `${sanrentanMatch[1]}-${sanrentanMatch[2]}-${sanrentanMatch[3]}`,
