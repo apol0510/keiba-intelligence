@@ -345,17 +345,29 @@ function extractPayouts(text) {
                 rows="20"
                 class="json-textarea"
               >{result.json}</textarea>
-              <button
-                type="button"
-                class="btn btn-secondary mt-2"
-                onclick="navigator.clipboard.writeText(this.previousElementSibling.value).then(() => alert('JSONをコピーしました！'))"
-              >
-                📋 JSONをコピー
-              </button>
+              <div class="button-group">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  onclick="navigator.clipboard.writeText(document.querySelector('.json-textarea').value).then(() => alert('JSONをコピーしました！'))"
+                >
+                  📋 JSONをコピー
+                </button>
+                <button
+                  type="button"
+                  id="saveToGitBtn"
+                  class="btn btn-primary"
+                  onclick="saveToKeibaDataShared()"
+                >
+                  🚀 保存してGit Push
+                </button>
+              </div>
+              <div id="saveStatus" class="save-status" style="display: none;"></div>
               <p class="save-hint">
-                <strong>次のステップ:</strong><br>
-                1. このJSONを <code>/Users/apolon/Projects/keiba-data-shared/nankan/results/{result.parsedData.date.substring(0, 4)}/{result.parsedData.date.substring(5, 7)}/{result.parsedData.date}.json</code> に保存<br>
-                2. Git コミット・プッシュ → 全プロジェクトで利用可能
+                <strong>「🚀 保存してGit Push」ボタンをクリックすると:</strong><br>
+                1. 自動的に keiba-data-shared リポジトリに保存<br>
+                2. Git コミット・プッシュが自動実行<br>
+                3. 全プロジェクトで即座に利用可能になります 🎉
               </p>
             </div>
           </div>
@@ -646,5 +658,108 @@ function extractPayouts(text) {
     .mt-2 {
       margin-top: var(--spacing-md);
     }
+
+    .button-group {
+      display: flex;
+      gap: var(--spacing-md);
+      margin-top: var(--spacing-md);
+    }
+
+    .button-group .btn {
+      flex: 1;
+    }
+
+    .save-status {
+      margin-top: var(--spacing-md);
+      padding: var(--spacing-md);
+      border-radius: var(--radius-md);
+      font-weight: 600;
+    }
+
+    .save-status.success {
+      background: rgba(16, 185, 129, 0.1);
+      border-left: 4px solid var(--success);
+      color: var(--success);
+    }
+
+    .save-status.error {
+      background: rgba(239, 68, 68, 0.1);
+      border-left: 4px solid var(--error);
+      color: var(--error);
+    }
+
+    .save-status.loading {
+      background: rgba(59, 130, 246, 0.1);
+      border-left: 4px solid var(--primary-end);
+      color: var(--primary-end);
+    }
   </style>
+
+  <script>
+    async function saveToKeibaDataShared() {
+      const btn = document.getElementById('saveToGitBtn');
+      const statusDiv = document.getElementById('saveStatus');
+      const jsonTextarea = document.querySelector('.json-textarea');
+
+      if (!jsonTextarea) {
+        alert('JSONデータが見つかりません');
+        return;
+      }
+
+      const resultsJSON = jsonTextarea.value;
+
+      // ボタン無効化
+      btn.disabled = true;
+      btn.textContent = '⏳ 保存中...';
+
+      // ステータス表示
+      statusDiv.style.display = 'block';
+      statusDiv.className = 'save-status loading';
+      statusDiv.textContent = '🚀 keiba-data-shared リポジトリに保存中...';
+
+      try {
+        // Netlify Functionを呼び出し
+        const response = await fetch('/.netlify/functions/save-to-keiba-data-shared', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ resultsJSON })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          // 成功
+          statusDiv.className = 'save-status success';
+          statusDiv.innerHTML = `
+            ✅ ${data.message}<br>
+            <strong>ファイル:</strong> ${data.filePath}<br>
+            <strong>リポジトリ:</strong> <a href="${data.repoUrl}" target="_blank">${data.repoUrl}</a><br>
+            <strong>コミット:</strong> <a href="${data.commitUrl}" target="_blank">GitHubで確認</a><br>
+            <strong>Raw URL:</strong> <a href="${data.rawUrl}" target="_blank">データURL</a>
+          `;
+          btn.textContent = '✅ 保存完了';
+        } else {
+          // エラー
+          statusDiv.className = 'save-status error';
+          statusDiv.innerHTML = `
+            ❌ エラー: ${data.error || '保存に失敗しました'}<br>
+            ${data.hint ? `<strong>ヒント:</strong> ${data.hint}` : ''}
+          `;
+          btn.disabled = false;
+          btn.textContent = '🚀 保存してGit Push';
+        }
+      } catch (error) {
+        // ネットワークエラー
+        statusDiv.className = 'save-status error';
+        statusDiv.innerHTML = `
+          ❌ ネットワークエラー: ${error.message}<br>
+          <strong>対処法:</strong> インターネット接続を確認してください
+        `;
+        btn.disabled = false;
+        btn.textContent = '🚀 保存してGit Push';
+      }
+    }
+  </script>
 </BaseLayout>
