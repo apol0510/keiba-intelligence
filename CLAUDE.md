@@ -568,7 +568,7 @@ SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # 取得方法: Google AI Studio (https://aistudio.google.com/app/apikey)
 GEMINI_API_KEY=AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-# GitHub（Phase 3で必須 - prediction-converter.astro実装済み）
+# GitHub（Phase 3で必須 - prediction-converter.astro, results-manager.astro実装済み）
 # 用途: 管理画面からのGit自動コミット・自動デプロイ
 # 権限: repo（Contents: Read and Write）
 # 取得方法: GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
@@ -576,6 +576,13 @@ GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 GITHUB_REPO_OWNER=apol0510
 GITHUB_REPO_NAME=keiba-intelligence
 GITHUB_BRANCH=main
+
+# GitHub（keiba-data-shared用）- オプション
+# 用途: results-manager.astroからkeiba-data-sharedリポジトリへの自動保存
+# 権限: repo（Contents: Read and Write）
+# 注意: GITHUB_TOKENが既にkeiba-data-sharedへのアクセス権を持つ場合は不要
+# 専用トークンを使用する場合のみ設定
+GITHUB_TOKEN_KEIBA_DATA_SHARED=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 **重要な注意事項:**
@@ -636,7 +643,7 @@ GITHUB_BRANCH=main
 **✨ 本日の成果（2026-01-23）**:
   - **keiba-data-shared（競馬データ共有リポジトリ）作成** ✅
     - GitHub公開リポジトリ: https://github.com/apol0510/keiba-data-shared
-    - README.md、schema.json、パーサー実装
+    - README.md、schema.json、CLAUDE.md、パーサー実装
     - 南関・中央競馬対応の統一フォーマット
     - 全プロジェクト共有の基盤完成
     - ディレクトリ構造: nankan/predictions/, nankan/results/
@@ -649,6 +656,14 @@ GITHUB_BRANCH=main
     - 非エンジニアスタッフ向けの超シンプルUI
     - エラーハンドリング・詳細ヒント表示
     - keiba-data-shared標準フォーマット対応
+
+  - **GitHub自動Push機能実装（keiba-data-shared連携）** ✅ **NEW**
+    - Netlify Function作成（save-to-keiba-data-shared.js）
+    - 「🚀 保存してGit Push」ボタン実装
+    - ワンクリックで全プロジェクト共有完了
+    - リアルタイムステータス表示（保存中/成功/エラー）
+    - GitHub API連携（contents API使用）
+    - 完全自動化達成：南関公式コピペ → 解析 → ボタン1クリック → 全プロジェクト共有 🎉
 
   - **プロジェクト構成の整理** ✅
     - /Users/apolon/Projects/ に移動（iCloud Drive同期問題解消）
@@ -671,13 +686,14 @@ GITHUB_BRANCH=main
     - レスポンシブデザイン（モバイル対応）
 
 **🎉 累積成果**:
-  - **共有リポジトリ**: keiba-data-shared（全プロジェクト共有・南関中央対応）
-  - **Netlify Functions**: 15個実装（PayPal Webhook, Newsletter 5個, Auth 4個, Save-and-Deploy, Save-Results, Gemini-Chat）
+  - **共有リポジトリ**: keiba-data-shared（全プロジェクト共有・南関中央対応・GitHub自動Push対応）
+  - **Netlify Functions**: 16個実装（PayPal Webhook, Newsletter 5個, Auth 4個, Save-and-Deploy, Save-Results, Save-to-keiba-data-shared, Gemini-Chat）
   - **設計書**: 3個作成（NEWSLETTER_SYSTEM.md, NEWSLETTER_MIGRATION.md, AUTH_SYSTEM.md）
   - **管理画面**: 5ページ実装（/admin/newsletter/*, /admin/prediction-converter, /admin/results-manager）
   - **公開ページ**: 6ページ実装（トップ, 無料予想, 有料予想, 料金, 的中実績, ログイン）
   - **Chart.js統合**: パフォーマンス可視化完了 ✅
   - **データ共有基盤**: keiba-data-shared（競馬データ共有リポジトリ）完成 ✅
+  - **完全自動化**: 南関公式コピペ → 解析 → ボタン1クリック → 全プロジェクト共有 🎉
   - **コスト削減**: ThriveCart $690削減（買い切り費用）+ Zapier $73.50/月削減
 
 ---
