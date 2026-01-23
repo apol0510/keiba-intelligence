@@ -1,0 +1,275 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export const prerender = false;
+
+// GitHub APIで最新の結果ファイルを取得
+async function getRecentResults() {
+  const results = [];
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+
+  // 直近3ヶ月分を取得
+  for (let monthOffset = 0; monthOffset < 3; monthOffset++) {
+    let year = currentYear;
+    let month = currentMonth - monthOffset;
+
+    if (month < 1) {
+      month += 12;
+      year -= 1;
+    }
+
+    const monthStr = month.toString().padStart(2, '0');
+
+    try {
+      const url = `https://api.github.com/repos/apol0510/keiba-data-shared/contents/nankan/results/${year}/${monthStr}`;
+      const response = await fetch(url);
+
+      if (response.ok) {
+        const files = await response.json();
+        for (const file of files) {
+          if (file.name.endsWith('.json')) {
+            results.push({
+              date: file.name.replace('.json', ''),
+              downloadUrl: file.download_url,
+              year,
+              month: monthStr
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error fetching ${year}/${monthStr}:`, error);
+    }
+  }
+
+  // 日付でソート（新しい順）
+  results.sort((a, b) => b.date.localeCompare(a.date));
+
+  // 最新30件に制限
+  return results.slice(0, 30);
+}
+
+const recentResults = await getRecentResults();
+
+// 各結果の基本情報を取得
+const resultsWithInfo = await Promise.all(
+  recentResults.map(async (result) => {
+    try {
+      const response = await fetch(result.downloadUrl);
+      const data = await response.json();
+      return {
+        ...result,
+        venue: data.venue,
+        venueCode: data.venueCode,
+        raceCount: data.races?.length || 0
+      };
+    } catch (error) {
+      return {
+        ...result,
+        venue: '不明',
+        venueCode: '??',
+        raceCount: 0
+      };
+    }
+  })
+);
+---
+
+<BaseLayout
+  title="南関競馬 結果一覧"
+  description="南関競馬（大井・川崎・船橋・浦和）の最新レース結果を公開。全馬着順・全馬券種類の払戻金を完全掲載。AI予想の的中実績も確認できます。"
+>
+  <section class="results-section">
+    <div class="container">
+      <h1 class="page-title">🏇 南関競馬 結果一覧</h1>
+      <p class="page-description">
+        最新レース結果を公開中。全馬着順・全馬券種類の払戻金を完全掲載しています。
+      </p>
+
+      <div class="cta-banner">
+        <h2>📊 AI予想を無料で試す</h2>
+        <p>後半3レースの予想を無料公開中！</p>
+        <a href="/free-prediction" class="btn btn-primary btn-lg">無料予想を見る</a>
+      </div>
+
+      <div class="results-grid">
+        {resultsWithInfo.map((result) => (
+          <a href={`/results/${result.year}/${result.month}/${result.date.split('-')[2]}`} class="result-card">
+            <div class="result-header">
+              <span class="result-date">{result.date}</span>
+              <span class="result-venue">{result.venue}</span>
+            </div>
+            <div class="result-info">
+              <span class="result-races">{result.raceCount}レース</span>
+              <span class="result-link">詳細を見る →</span>
+            </div>
+          </a>
+        ))}
+      </div>
+
+      {resultsWithInfo.length === 0 && (
+        <div class="no-results">
+          <p>結果データがまだありません</p>
+        </div>
+      )}
+
+      <div class="cta-section">
+        <h2>🎯 有料予想で的中率アップ</h2>
+        <p>AI分析による高精度な買い目を提供</p>
+        <div class="cta-buttons">
+          <a href="/pricing" class="btn btn-primary btn-lg">料金プランを見る</a>
+          <a href="/prediction" class="btn btn-secondary btn-lg">有料予想を見る</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <style>
+    .results-section {
+      padding: var(--spacing-2xl) 0;
+      min-height: 100vh;
+    }
+
+    .page-title {
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .page-description {
+      text-align: center;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-2xl);
+      font-size: 1.125rem;
+    }
+
+    .cta-banner {
+      background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-lg);
+      text-align: center;
+      margin-bottom: var(--spacing-2xl);
+      color: white;
+    }
+
+    .cta-banner h2 {
+      margin-bottom: var(--spacing-sm);
+      font-size: 1.75rem;
+    }
+
+    .cta-banner p {
+      margin-bottom: var(--spacing-lg);
+      opacity: 0.9;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .result-card {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-lg);
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
+    }
+
+    .result-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--primary-end);
+      background: var(--bg-tertiary);
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-md);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .result-date {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .result-venue {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--primary-end);
+    }
+
+    .result-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .result-races {
+      color: var(--text-secondary);
+    }
+
+    .result-link {
+      color: var(--primary-end);
+      font-weight: 600;
+    }
+
+    .no-results {
+      text-align: center;
+      padding: var(--spacing-3xl);
+      color: var(--text-secondary);
+    }
+
+    .cta-section {
+      background: var(--bg-secondary);
+      padding: var(--spacing-2xl);
+      border-radius: var(--radius-lg);
+      text-align: center;
+      margin-top: var(--spacing-3xl);
+    }
+
+    .cta-section h2 {
+      margin-bottom: var(--spacing-sm);
+      font-size: 1.75rem;
+    }
+
+    .cta-section p {
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xl);
+      font-size: 1.125rem;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+      .page-title {
+        font-size: 2rem;
+      }
+
+      .results-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .cta-buttons {
+        flex-direction: column;
+      }
+
+      .cta-buttons .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</BaseLayout>
