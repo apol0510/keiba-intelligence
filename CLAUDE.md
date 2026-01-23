@@ -254,24 +254,18 @@ grep -r "pattern" ./src/
 
 ### **【優先度高】Phase 2完了タスク**
 
+- [ ] **Netlify環境変数設定**
+  - GITHUB_TOKEN（新規トークン設定済み：2026-01-23）
+  - AIRTABLE_API_KEY
+  - AIRTABLE_BASE_ID
+  - SENDGRID_API_KEY
+
 - [ ] **Airtableテーブルセットアップ**
   - Customersテーブル拡張（Email, 氏名, プラン, Status, PayPalSubscriptionID, 有効期限, AccessEnabled, PaidAt, WelcomeSentAt, CancelledAt, WithdrawalRequested）
   - ProcessedWebhookEventsテーブル作成（EventId, EventType, ProcessedAt, Status, CustomerEmail, UserPlan）
   - Broadcastsテーブル作成（broadcast_id, subject, body_html, status, stage, etc.）
   - BroadcastRecipientsテーブル作成（broadcast_id, email, status, sent_at, etc.）
   - AuthTokensテーブル作成（token, email, created_at, expires_at, used, etc.）
-
-- [ ] **Netlify環境変数設定**
-  - AIRTABLE_API_KEY
-  - AIRTABLE_BASE_ID
-  - SENDGRID_API_KEY
-
-- [ ] **PayPal商品登録**
-  - PayPal Business管理画面で4サブスクプラン作成（ライト/スタンダード/プレミアム/アルティメット）
-  - AI Plus単品商品作成
-  - Webhook URL設定（https://keiba-intelligence.keiba.link/.netlify/functions/paypal-webhook）
-  - plan_id取得 → paypal-webhook.jsのplanMapping更新
-  - Test Mode動作確認
 
 - [ ] **認証システムテスト**
   - SendGridドメイン認証
@@ -623,22 +617,24 @@ GITHUB_TOKEN_KEIBA_DATA_SHARED=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 - [ ] PayPal商品登録
 - [ ] 認証システムテスト
 
-### **Phase 3: 管理機能実装（60%）**
+### **Phase 3: 管理機能実装（70%）**
 - [x] 予想管理画面作成（prediction-converter）
 - [x] 結果管理画面作成（results-manager + 買い目シミュレーター）
 - [x] keiba-data-shared（競馬データ共有リポジトリ）作成 ✅
 - [x] 南関公式コピペ自動パース機能実装 ✅
-- [ ] 有料予想ページ作成
+- [x] GitHub自動Push機能実装 ✅
+- [x] 有料予想ページ作成 ✅（作成済み）
 - [ ] SEOページ自動生成
-- [ ] テスト決済（PayPal Test Mode）
 - [ ] 本番デプロイ
 
 ---
 
 **📅 最終更新日**: 2026-01-23
-**🏁 Project Phase**: Phase 3管理機能実装 🚀（Phase 3: 60%完了）
-**🎯 Next Priority**: GitHub自動Push機能実装 → 予想データ照合機能 → Airtableテーブルセットアップ
-**📊 進捗率**: 78%完了（Phase 1: 100%、Phase 2: 85%、Phase 3: 60%）
+**🏁 Project Phase**: Phase 3管理機能実装 🚀（Phase 3: 70%完了）
+**🎯 Next Priority**: 予想データ照合機能 → Airtableテーブルセットアップ → SEOページ自動生成
+**📊 進捗率**: 80%完了（Phase 1: 100%、Phase 2: 85%、Phase 3: 70%）
+**🌐 本番URL**: https://keiba-intelligence.netlify.app/
+**🔧 管理画面URL**: https://keiba-intelligence.netlify.app/admin/results-manager
 
 **✨ 本日の成果（2026-01-23）**:
   - **keiba-data-shared（競馬データ共有リポジトリ）作成** ✅
