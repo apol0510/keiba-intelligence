@@ -132,8 +132,8 @@ function extractResults(text) {
 function extractPayouts(text) {
   const payouts = {};
 
-  // 払戻金セクションを抽出
-  const payoutMatch = text.match(/払戻金[\s\S]*?(?=備考|$)/);
+  // 払戻金セクションを抽出（文末まで全て取得）
+  const payoutMatch = text.match(/払戻金[\s\S]*$/);
   if (!payoutMatch) return payouts;
 
   const payoutSection = payoutMatch[0];
