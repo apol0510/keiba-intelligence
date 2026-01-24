@@ -9,8 +9,9 @@ const { year, month, day } = Astro.params;
 const date = `${year}-${month}-${day}`;
 const dateFormatted = `${year}年${parseInt(month)}月${parseInt(day)}日`;
 
-// keiba-data-shared からデータ取得
+// keiba-data-sharedからデータ取得
 let resultsData = null;
+let predictionsData = null;
 let errorMessage = null;
 
 try {
@@ -25,6 +26,102 @@ try {
 } catch (error) {
   errorMessage = error.message;
 }
+
+// 予想データ取得（あれば）
+try {
+  const predUrl = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/predictions/${year}/${month}/${date}.json`;
+  const predResponse = await fetch(predUrl);
+  if (predResponse.ok) {
+    predictionsData = await predResponse.json();
+  }
+} catch (error) {
+  // 予想データがない場合はスキップ
+}
+
+// 出走頭数から購入点数を計算
+function calculatePoints(horses) {
+  if (!horses) return 10; // デフォルト
+  if (horses <= 6) return 8;
+  if (horses <= 9) return 9;
+  if (horses <= 12) return 10;
+  if (horses <= 14) return 11;
+  if (horses <= 16) return 12;
+  return 12;
+}
+
+// 的中判定関数（馬単のみ）
+function checkHit(prediction, result) {
+  if (!prediction || !result) return null;
+
+  // 馬単的中判定（配列に含まれるかチェック）
+  const umatanCombo = result.payouts?.umatan?.combination;
+  let umatanMainHit = false;
+  let umatanSubHit = false;
+
+  if (umatanCombo && prediction.bettingLines?.umatan?.main) {
+    umatanMainHit = prediction.bettingLines.umatan.main.includes(umatanCombo);
+  }
+
+  if (umatanCombo && prediction.bettingLines?.umatan?.sub && !umatanMainHit) {
+    umatanSubHit = prediction.bettingLines.umatan.sub.includes(umatanCombo);
+  }
+
+  return {
+    umatan: umatanMainHit ? 'main' : (umatanSubHit ? 'sub' : null)
+  };
+}
+
+// 全レース集計を計算
+function calculateTotalStats(races, predictions) {
+  if (!races || races.length === 0) return null;
+
+  let totalPoints = 0;
+  let hitRaces = 0;
+  let totalPayout = 0;
+
+  races.forEach(race => {
+    const points = calculatePoints(race.horses);
+    totalPoints += points;
+
+    if (predictions) {
+      const prediction = predictions.races?.find(p => p.raceNumber === race.raceNumber);
+      const hitResult = checkHit(prediction, race);
+
+      if (hitResult && hitResult.umatan) {
+        hitRaces++;
+        totalPayout += race.payouts?.umatan?.payout || 0;
+      }
+    }
+  });
+
+  const totalCost = totalPoints * 100;
+  const hitRate = races.length > 0 ? Math.round((hitRaces / races.length) * 100) : 0;
+  const recoveryRate = totalCost > 0 ? Math.round((totalPayout / totalCost) * 100) : 0;
+
+  return {
+    totalRaces: races.length,
+    totalPoints,
+    totalCost,
+    hitRaces,
+    hitRate,
+    totalPayout,
+    recoveryRate
+  };
+}
+
+// ページ用の全レース集計を計算
+const totalStats = resultsData ? calculateTotalStats(resultsData.races, predictionsData) : null;
+
+// 各レースのデータを事前に処理
+const racesWithPredictions = resultsData?.races?.map(race => {
+  const racePrediction = predictionsData?.races?.find(p => p.raceNumber === race.raceNumber);
+  const hitResult = checkHit(racePrediction, race);
+  return {
+    ...race,
+    prediction: racePrediction,
+    hitResult
+  };
+}) || [];
 
 // 競馬場コードを日本語名に変換
 const venueNames = {
@@ -57,7 +154,12 @@ const pageDescription = resultsData && resultsData.races?.[0]
         <span>{date}</span>
       </div>
 
-      <h1 class="page-title">{dateFormatted} {venueName}競馬 結果</h1>
+      <h1 class="page-title">
+        {dateFormatted} {venueName}競馬
+        {totalStats && totalStats.hitRaces > 0 && (
+          <span class="hit-count-badge">{totalStats.hitRaces}/{totalStats.totalRaces}的中</span>
+        )}
+      </h1>
 
       {errorMessage && (
         <div class="error-message">
@@ -68,6 +170,34 @@ const pageDescription = resultsData && resultsData.races?.[0]
 
       {resultsData && (
         <>
+          {/* 全レース集計バー */}
+          {totalStats && (
+            <div class="total-stats-bar">
+              <div class="stat-item">
+                <span class="stat-icon">🎯</span>
+                <span class="stat-label">的中率:</span>
+                <span class="stat-value">{totalStats.hitRate}%</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-icon">💰</span>
+                <span class="stat-label">回収率:</span>
+                <span class={`stat-value ${totalStats.recoveryRate >= 100 ? 'positive' : 'negative'}`}>
+                  {totalStats.recoveryRate}%
+                </span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-icon">📝</span>
+                <span class="stat-label">合計購入点数:</span>
+                <span class="stat-value">{totalStats.totalPoints}点</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-icon">💵</span>
+                <span class="stat-label">合計配当:</span>
+                <span class="stat-value">¥{totalStats.totalPayout.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+
           <div class="cta-banner">
             <h2>📊 明日の予想を見る</h2>
             <p>AI分析による高精度な買い目を公開中</p>
@@ -77,10 +207,21 @@ const pageDescription = resultsData && resultsData.races?.[0]
             </div>
           </div>
 
-          {resultsData.races?.map((race) => (
+          {racesWithPredictions.map((race) => (
             <div class="race-card">
               <div class="race-header">
-                <h2>第{race.raceNumber}R {race.raceName || ''}</h2>
+                <div class="race-title-row">
+                  <h2>第{race.raceNumber}R</h2>
+                  <span class="race-name">{race.raceName || ''}</span>
+                  <div class="race-result-summary">
+                    {race.hitResult && race.hitResult.umatan && (
+                      <span class="hit-badge-mini">✅ 的中</span>
+                    )}
+                    {race.hitResult && race.hitResult.umatan && race.payouts?.umatan && (
+                      <span class="payout-display">¥{race.payouts.umatan.payout.toLocaleString()}</span>
+                    )}
+                  </div>
+                </div>
                 <div class="race-info">
                   <span>{race.surface || 'ダート'}{race.distance}m</span>
                   {race.track && <span>（{race.track}）</span>}
@@ -88,6 +229,14 @@ const pageDescription = resultsData && resultsData.races?.[0]
                   {race.startTime && <span>発走{race.startTime}</span>}
                 </div>
               </div>
+
+              {/* レース解説（keiba-data-sharedから取得） */}
+              {race.commentary && (
+                <div class="race-commentary">
+                  <h3>📝 レース解説</h3>
+                  <p>{race.commentary}</p>
+                </div>
+              )}
 
               {/* 着順表示 */}
               <div class="results-section">
@@ -211,7 +360,64 @@ const pageDescription = resultsData && resultsData.races?.[0]
 
     .page-title {
       font-size: 2.5rem;
+      margin-bottom: var(--spacing-lg);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      flex-wrap: wrap;
+    }
+
+    .hit-count-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      padding: var(--spacing-xs) var(--spacing-lg);
+      border-radius: var(--radius-full);
+      font-size: 1.125rem;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .total-stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-lg);
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
+      border: 2px solid rgba(59, 130, 246, 0.3);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-xl);
       margin-bottom: var(--spacing-2xl);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .stat-icon {
+      font-size: 1.5rem;
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary-end);
+      margin-left: auto;
+    }
+
+    .stat-value.positive {
+      color: #10b981;
+    }
+
+    .stat-value.negative {
+      color: #ef4444;
     }
 
     .error-message {
@@ -266,9 +472,52 @@ const pageDescription = resultsData && resultsData.races?.[0]
       border-bottom: 2px solid var(--border-color);
     }
 
-    .race-header h2 {
-      font-size: 1.75rem;
+    .race-title-row {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
       margin-bottom: var(--spacing-sm);
+      flex-wrap: wrap;
+    }
+
+    .race-header h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #fbbf24;
+      margin: 0;
+    }
+
+    .race-name {
+      font-size: 1.125rem;
+      color: var(--text-primary);
+    }
+
+    .race-result-summary {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      margin-left: auto;
+      flex-wrap: wrap;
+    }
+
+    .hit-badge-mini {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      padding: var(--spacing-xs) var(--spacing-md);
+      border-radius: var(--radius-full);
+      font-size: 0.875rem;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    }
+
+    .payout-display {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.2));
+      color: #fbbf24;
+      padding: var(--spacing-xs) var(--spacing-md);
+      border-radius: var(--radius-md);
+      font-size: 1.125rem;
+      font-weight: 700;
+      border: 1px solid rgba(245, 158, 11, 0.3);
     }
 
     .race-info {
@@ -276,6 +525,87 @@ const pageDescription = resultsData && resultsData.races?.[0]
       gap: var(--spacing-md);
       flex-wrap: wrap;
       color: var(--text-secondary);
+    }
+
+    .hit-detection {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(59, 130, 246, 0.1));
+      border: 2px solid var(--success);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .hit-detection h3 {
+      font-size: 1.25rem;
+      margin-bottom: var(--spacing-md);
+      color: var(--success);
+    }
+
+    .hit-badges {
+      display: flex;
+      gap: var(--spacing-sm);
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: var(--spacing-xs) var(--spacing-md);
+      border-radius: var(--radius-full);
+      font-weight: 600;
+      font-size: 0.875rem;
+      transition: transform 0.2s;
+    }
+
+    .badge:hover {
+      transform: scale(1.05);
+    }
+
+    .badge.hit {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    }
+
+    .badge.hit-main {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+      animation: pulse 2s infinite;
+    }
+
+    .badge.hit-sub {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.8;
+      }
+    }
+
+    .race-commentary {
+      background: var(--bg-tertiary);
+      border-left: 4px solid var(--primary-end);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+      border-radius: var(--radius-md);
+    }
+
+    .race-commentary h3 {
+      font-size: 1.125rem;
+      margin-bottom: var(--spacing-sm);
+      color: var(--primary-end);
+    }
+
+    .race-commentary p {
+      line-height: 1.8;
+      color: var(--text-primary);
+      font-size: 1rem;
     }
 
     .results-section,
@@ -421,6 +751,43 @@ const pageDescription = resultsData && resultsData.races?.[0]
     @media (max-width: 768px) {
       .page-title {
         font-size: 1.75rem;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .hit-count-badge {
+        font-size: 1rem;
+      }
+
+      .total-stats-bar {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md);
+      }
+
+      .stat-item {
+        flex-wrap: wrap;
+      }
+
+      .stat-value {
+        margin-left: 0;
+        width: 100%;
+        text-align: right;
+      }
+
+      .race-title-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .race-header h2 {
+        font-size: 1.5rem;
+      }
+
+      .race-result-summary {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-start;
       }
 
       .table-header,

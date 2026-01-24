@@ -40,7 +40,7 @@ git remote -v
 # git: apol0510/keiba-intelligence.git
 
 # 4. 間違っている場合は即座に移動
-cd "/Users/apolon/Library/Mobile Documents/com~apple~CloudDocs/WorkSpace/keiba-intelligence/astro-site"
+cd "/Users/apolon/Projects/keiba-intelligence/astro-site"
 ```
 
 ### **厳格な制約事項**
