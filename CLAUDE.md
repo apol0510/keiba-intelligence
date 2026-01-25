@@ -46,32 +46,32 @@ cd "/Users/apolon/Projects/keiba-intelligence/astro-site"
 ### **厳格な制約事項**
 
 #### **✅ 許可される操作**
-- `/WorkSpace/keiba-intelligence/` 配下のみ
+- `/Users/apolon/Projects/keiba-intelligence/` 配下のみ
 - `astro-site/` ディレクトリ内の全ファイル
 - `CLAUDE.md`, `DESIGN.md`, `README.md`（親ディレクトリ）
 
 #### **❌ 絶対禁止の操作**
-- `/WorkSpace/nankan-analytics/` への一切のアクセス ⚠️
-- `/WorkSpace/nankan-analytics-pro/` への一切のアクセス
-- `/WorkSpace/nankan-beginner/` への一切のアクセス
-- `/WorkSpace/nankan-course/` への一切のアクセス
-- `/WorkSpace/keiba-matome-monorepo/` への一切のアクセス
-- `/WorkSpace/keiba-nyumon/` への一切のアクセス
-- `/WorkSpace/keiba-review-monorepo/` への一切のアクセス
-- 親ディレクトリ `/WorkSpace/` の直接走査・検索
+- `/Users/apolon/Projects/nankan-analytics/` への一切のアクセス ⚠️
+- `/Users/apolon/Projects/nankan-analytics-pro/` への一切のアクセス
+- `/Users/apolon/Projects/nankan-beginner/` への一切のアクセス
+- `/Users/apolon/Projects/nankan-course/` への一切のアクセス
+- `/Users/apolon/Projects/keiba-matome-monorepo/` への一切のアクセス
+- `/Users/apolon/Projects/keiba-nyumon/` への一切のアクセス
+- `/Users/apolon/Projects/keiba-review-monorepo/` への一切のアクセス
+- 親ディレクトリ `/Users/apolon/Projects/` の直接走査・検索
 
 ### **ファイル検索時の制約**
 
 ```bash
 # ❌ 絶対禁止（親ディレクトリまで検索）
-grep -r "pattern" /Users/apolon/.../WorkSpace/
+grep -r "pattern" /Users/apolon/Projects/
 
 # ❌ 絶対禁止（相対パスで親に遡る）
 cd ../
 grep -r "pattern" ../
 
 # ✅ 正しい方法（プロジェクト内のみ検索）
-grep -r "pattern" /Users/apolon/.../keiba-intelligence/astro-site/
+grep -r "pattern" /Users/apolon/Projects/keiba-intelligence/astro-site/
 grep -r "pattern" ./src/
 ```
 
@@ -310,7 +310,7 @@ grep -r "pattern" ./src/
 
 ```bash
 # 作業ディレクトリに移動
-cd "/Users/apolon/Library/Mobile Documents/com~apple~CloudDocs/WorkSpace/keiba-intelligence/astro-site"
+cd "/Users/apolon/Projects/keiba-intelligence/astro-site"
 
 # 開発サーバー起動
 npm run dev
