@@ -150,10 +150,19 @@ async function importPrediction(date, venue = 'nankan') {
 function savePrediction(date, normalizedAndAdjusted) {
   console.log(`\n💾 保存処理開始...`);
 
-  // 保存先パス構築
-  const [year, month, day] = date.split('-');
-  const dirPath = join(projectRoot, 'src', 'data', 'predictions', year, month);
-  const filePath = join(dirPath, `${date}.json`);
+  // 保存先パス構築（フラット構造：YYYY-MM-DD-venue.json）
+  const venue = normalizedAndAdjusted.venue || '大井'; // デフォルト
+  const venueMap = {
+    '大井': 'ooi',
+    '船橋': 'funabashi',
+    '川崎': 'kawasaki',
+    '浦和': 'urawa'
+  };
+  const venueSlug = normalizedAndAdjusted.venueCode?.toLowerCase() || venueMap[venue] || 'nankan';
+  const fileName = `${date}-${venueSlug}.json`;
+
+  const dirPath = join(projectRoot, 'src', 'data', 'predictions');
+  const filePath = join(dirPath, fileName);
 
   // ディレクトリ作成（存在しない場合）
   if (!existsSync(dirPath)) {
