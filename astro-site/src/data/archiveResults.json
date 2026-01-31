@@ -2,10 +2,10 @@
   {
     "date": "2026-01-30",
     "venue": "大井",
-    "totalRaces": 4,
+    "totalRaces": 5,
     "hitRaces": 3,
-    "missRaces": 1,
-    "hitRate": 75,
+    "missRaces": 2,
+    "hitRate": 60,
     "races": [
       {
         "raceNumber": 1,
@@ -108,8 +108,32 @@
         "hitLines": [
           "9-2.3.1.7.4.8"
         ]
+      },
+      {
+        "raceNumber": 5,
+        "raceName": "Ｃ２(三)(四)(五)",
+        "result": {
+          "first": {
+            "number": 5,
+            "name": "ジャスティンアロー"
+          },
+          "second": {
+            "number": 13,
+            "name": "ハクアイソレイユ"
+          },
+          "third": {
+            "number": 7,
+            "name": "リアンフォール"
+          }
+        },
+        "bettingLines": [
+          "6-5.7.4.13.1.12(抑え2.3)",
+          "7-6.5.4.13.1.12(抑え2.3)"
+        ],
+        "isHit": false,
+        "hitLines": []
       }
     ],
-    "verifiedAt": "2026-01-31T08:20:56.304Z"
+    "verifiedAt": "2026-01-31T08:21:32.433Z"
   }
 ]
