@@ -2,10 +2,10 @@
   {
     "date": "2026-01-30",
     "venue": "大井",
-    "totalRaces": 9,
+    "totalRaces": 10,
     "hitRaces": 5,
-    "missRaces": 4,
-    "hitRate": 55.6,
+    "missRaces": 5,
+    "hitRate": 50,
     "races": [
       {
         "raceNumber": 1,
@@ -231,8 +231,32 @@
         ],
         "isHit": false,
         "hitLines": []
+      },
+      {
+        "raceNumber": 10,
+        "raceName": "初凪特別 Ｃ２(二) 選抜特別",
+        "result": {
+          "first": {
+            "number": 11,
+            "name": "トクシーティグレ"
+          },
+          "second": {
+            "number": 6,
+            "name": "キャロルビアンカ"
+          },
+          "third": {
+            "number": 12,
+            "name": "フタバサクセス"
+          }
+        },
+        "bettingLines": [
+          "13-9.2.11.12.14.7(抑え8.1.3.6.10)",
+          "2-13.9.11.12.14.7(抑え8.1.3.6.10)"
+        ],
+        "isHit": false,
+        "hitLines": []
       }
     ],
-    "verifiedAt": "2026-01-31T08:23:20.490Z"
+    "verifiedAt": "2026-01-31T08:23:52.600Z"
   }
 ]
