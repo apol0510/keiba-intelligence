@@ -1,0 +1,37 @@
+[
+  {
+    "date": "2026-01-30",
+    "venue": "大井",
+    "totalRaces": 1,
+    "hitRaces": 0,
+    "missRaces": 1,
+    "hitRate": 0,
+    "races": [
+      {
+        "raceNumber": 1,
+        "raceName": "Ｃ３ 選抜牝馬",
+        "result": {
+          "first": {
+            "number": 8,
+            "name": "ブルーキャット"
+          },
+          "second": {
+            "number": 1,
+            "name": "ビューティフルベル"
+          },
+          "third": {
+            "number": 5,
+            "name": "メロパール"
+          }
+        },
+        "bettingLines": [
+          "4-1.11.2.5.7.9(抑え10.8.6)",
+          "11-4.1.2.5.7.9(抑え10.8.6)"
+        ],
+        "isHit": false,
+        "hitLines": []
+      }
+    ],
+    "verifiedAt": "2026-01-31T08:04:57.732Z"
+  }
+]
