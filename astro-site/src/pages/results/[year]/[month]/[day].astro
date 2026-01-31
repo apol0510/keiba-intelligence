@@ -95,83 +95,21 @@ const pageDescription = archiveData
                 const archiveRace = archiveData.races.find(r => r.raceNumber === race.raceNumber);
                 const isHit = archiveRace?.isHit || false;
                 const payout = archiveRace?.umatan?.payout || 0;
-                const bettingLines = archiveRace?.bettingLines || [];
 
                 return (
-                  <div class={`race-card ${isHit ? 'hit' : 'miss'}`}>
-                    <div class="race-header">
-                      <div class="race-info">
-                        <span class="race-number">第{race.raceNumber}R</span>
-                        <span class="race-name">{race.raceName}</span>
-                      </div>
-                      {isHit ? (
-                        <div class="hit-badge">✅ 的中</div>
-                      ) : (
-                        <div class="miss-badge">❌ 不的中</div>
-                      )}
-                    </div>
-
-                    <div class="race-body">
-                      {/* 着順結果 */}
-                      <div class="result-section">
-                        <div class="result-label">着順</div>
-                        <div class="result-horses">
-                          <span class="result-horse rank-1">
-                            <span class="rank">1着</span>
-                            <span class="number">{race.results[0]?.number}番</span>
-                            <span class="name">{race.results[0]?.name}</span>
-                          </span>
-                          <span class="result-horse rank-2">
-                            <span class="rank">2着</span>
-                            <span class="number">{race.results[1]?.number}番</span>
-                            <span class="name">{race.results[1]?.name}</span>
-                          </span>
-                          <span class="result-horse rank-3">
-                            <span class="rank">3着</span>
-                            <span class="number">{race.results[2]?.number}番</span>
-                            <span class="name">{race.results[2]?.name}</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* 購入情報 */}
-                      {archiveRace && (
-                        <div class="betting-section">
-                          <div class="betting-info">
-                            <span class="betting-type">馬単</span>
-                            <span class="betting-points">{bettingLines.length}軸 約10点</span>
-                          </div>
-                          {isHit && payout > 0 && (
-                            <div class="payout-info">
-                              <span class="payout-label">配当</span>
-                              <span class="payout-value">¥{(payout * 10).toLocaleString()}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* 買い目詳細 */}
-                      {archiveRace && bettingLines.length > 0 && (
-                        <div class="betting-lines">
-                          <div class="betting-lines-label">買い目</div>
-                          <div class="betting-lines-content">
-                            {bettingLines.map(line => (
-                              <div class={`betting-line ${archiveRace.hitLines?.includes(line) ? 'hit-line' : ''}`}>
-                                {line}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 馬単払戻 */}
-                      {race.payouts?.umatan && (
-                        <div class="official-payout">
-                          <span class="official-label">馬単 ({race.payouts.umatan.combination})</span>
-                          <span class="official-value">¥{race.payouts.umatan.payout?.toLocaleString()}</span>
-                        </div>
-                      )}
-                    </div>
+                  <div class={`race-line ${isHit ? 'hit' : 'miss'}`}>
+                    <span class="race-number">第{race.raceNumber}R</span>
+                    <span class="race-name">{race.raceName}</span>
+                    {isHit ? (
+                      <>
+                        <span class="hit-badge">✅ 的中</span>
+                        {payout > 0 && (
+                          <span class="payout">¥{(payout * 10).toLocaleString()}</span>
+                        )}
+                      </>
+                    ) : (
+                      <span class="miss-badge">❌ 不的中</span>
+                    )}
                   </div>
                 );
               })}
@@ -305,221 +243,58 @@ const pageDescription = archiveData
   .races-list {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-lg);
+    gap: var(--spacing-sm);
   }
 
-  /* レースカード */
-  .race-card {
+  /* レース1行表示 */
+  .race-line {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
     background: var(--bg-secondary);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
-    overflow: hidden;
     transition: all var(--transition-normal);
 
     &.hit {
-      border-color: rgba(16, 185, 129, 0.5);
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, var(--bg-secondary) 50%);
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, var(--bg-secondary) 100%);
+      border-color: rgba(16, 185, 129, 0.3);
     }
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
+      background: var(--bg-tertiary);
     }
-  }
-
-  .race-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-lg);
-    background: rgba(0, 0, 0, 0.2);
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .race-info {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
 
     .race-number {
-      font-size: 1.125rem;
       font-weight: 700;
       color: #60a5fa;
+      min-width: 50px;
     }
 
     .race-name {
-      font-size: 0.875rem;
+      flex: 1;
       color: var(--text-secondary);
-    }
-  }
-
-  .hit-badge {
-    padding: var(--spacing-xs) var(--spacing-md);
-    background: rgba(16, 185, 129, 0.2);
-    color: #10b981;
-    border-radius: var(--radius-sm);
-    font-size: 0.875rem;
-    font-weight: 700;
-  }
-
-  .miss-badge {
-    padding: var(--spacing-xs) var(--spacing-md);
-    background: rgba(100, 116, 139, 0.2);
-    color: var(--text-tertiary);
-    border-radius: var(--radius-sm);
-    font-size: 0.875rem;
-    font-weight: 600;
-  }
-
-  .race-body {
-    padding: var(--spacing-lg);
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
-  }
-
-  /* 着順結果 */
-  .result-section {
-    .result-label {
-      font-size: 0.75rem;
-      color: var(--text-tertiary);
-      margin-bottom: var(--spacing-sm);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-  }
-
-  .result-horses {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-  }
-
-  .result-horse {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    font-size: 0.875rem;
-
-    .rank {
-      color: var(--text-tertiary);
-      min-width: 35px;
+      font-size: 0.9375rem;
     }
 
-    .number {
+    .hit-badge {
+      color: #10b981;
       font-weight: 700;
-      color: #60a5fa;
-      min-width: 40px;
+      font-size: 0.9375rem;
     }
 
-    .name {
-      color: var(--text-primary);
+    .miss-badge {
+      color: var(--text-tertiary);
+      font-weight: 600;
+      font-size: 0.9375rem;
     }
 
-    &.rank-1 .rank { color: #ffd700; }
-    &.rank-2 .rank { color: #c0c0c0; }
-    &.rank-3 .rank { color: #cd7f32; }
-  }
-
-  /* 購入情報 */
-  .betting-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-md);
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: var(--radius-md);
-  }
-
-  .betting-info {
-    display: flex;
-    gap: var(--spacing-md);
-    align-items: center;
-
-    .betting-type {
-      font-weight: 700;
-      color: #60a5fa;
-      font-size: 0.875rem;
-    }
-
-    .betting-points {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-    }
-  }
-
-  .payout-info {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-
-    .payout-label {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-    }
-
-    .payout-value {
-      font-size: 1.25rem;
+    .payout {
       font-weight: 800;
       color: #10b981;
-    }
-  }
-
-  /* 買い目詳細 */
-  .betting-lines {
-    padding: var(--spacing-md);
-    background: rgba(59, 130, 246, 0.05);
-    border-radius: var(--radius-md);
-    border: 1px solid rgba(59, 130, 246, 0.2);
-
-    .betting-lines-label {
-      font-size: 0.75rem;
-      color: var(--text-tertiary);
-      margin-bottom: var(--spacing-sm);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .betting-lines-content {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--spacing-xs);
-    }
-
-    .betting-line {
-      padding: var(--spacing-xs) var(--spacing-sm);
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: var(--radius-sm);
-      font-size: 0.8125rem;
-      font-family: 'Courier New', monospace;
-      color: var(--text-secondary);
-
-      &.hit-line {
-        background: rgba(16, 185, 129, 0.2);
-        color: #10b981;
-        font-weight: 700;
-        border: 1px solid #10b981;
-      }
-    }
-  }
-
-  /* 公式払戻 */
-  .official-payout {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-sm) var(--spacing-md);
-    background: rgba(139, 92, 246, 0.1);
-    border-radius: var(--radius-sm);
-    font-size: 0.875rem;
-
-    .official-label {
-      color: var(--text-secondary);
-    }
-
-    .official-value {
-      font-weight: 700;
-      color: #a78bfa;
+      font-size: 1.125rem;
+      margin-left: var(--spacing-sm);
     }
   }
 
@@ -564,20 +339,22 @@ const pageDescription = archiveData
       font-size: 1.5rem;
     }
 
-    .race-header {
-      flex-direction: column;
-      align-items: flex-start;
+    .race-line {
+      flex-wrap: wrap;
       gap: var(--spacing-sm);
-    }
 
-    .betting-section {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: var(--spacing-sm);
-    }
+      .race-number {
+        min-width: auto;
+      }
 
-    .result-horses {
-      font-size: 0.8125rem;
+      .race-name {
+        flex: 1 1 100%;
+        order: 2;
+      }
+
+      .payout {
+        margin-left: 0;
+      }
     }
   }
 
