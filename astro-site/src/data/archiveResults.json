@@ -6,6 +6,9 @@
     "hitRaces": 6,
     "missRaces": 6,
     "hitRate": 50,
+    "betAmount": 2400,
+    "totalPayout": 8220,
+    "returnRate": 342.5,
     "races": [
       {
         "raceNumber": 1,
@@ -29,7 +32,11 @@
           "11-4.1.2.5.7.9(抑え10.8.6)"
         ],
         "isHit": false,
-        "hitLines": []
+        "hitLines": [],
+        "umatan": {
+          "combination": "8-1",
+          "payout": 26880
+        }
       },
       {
         "raceNumber": 2,
@@ -55,7 +62,11 @@
         "isHit": true,
         "hitLines": [
           "6-9.1.3.7.8.5(抑え4)"
-        ]
+        ],
+        "umatan": {
+          "combination": "6-7",
+          "payout": 2070
+        }
       },
       {
         "raceNumber": 3,
@@ -81,7 +92,11 @@
         "isHit": true,
         "hitLines": [
           "4-7.3.6.8.5.2"
-        ]
+        ],
+        "umatan": {
+          "combination": "4-5",
+          "payout": 2460
+        }
       },
       {
         "raceNumber": 4,
@@ -107,7 +122,11 @@
         "isHit": true,
         "hitLines": [
           "9-2.3.1.7.4.8"
-        ]
+        ],
+        "umatan": {
+          "combination": "9-2",
+          "payout": 310
+        }
       },
       {
         "raceNumber": 5,
@@ -131,7 +150,11 @@
           "7-6.5.4.13.1.12(抑え2.3)"
         ],
         "isHit": false,
-        "hitLines": []
+        "hitLines": [],
+        "umatan": {
+          "combination": "5-13",
+          "payout": 2870
+        }
       },
       {
         "raceNumber": 6,
@@ -154,7 +177,11 @@
           "1-5.8.7.10.9.11(抑え12.13.2.3.14)"
         ],
         "isHit": false,
-        "hitLines": []
+        "hitLines": [],
+        "umatan": {
+          "combination": "3-10",
+          "payout": 43120
+        }
       },
       {
         "raceNumber": 7,
@@ -180,7 +207,11 @@
         "isHit": true,
         "hitLines": [
           "10-5.4.6.8.1.7"
-        ]
+        ],
+        "umatan": {
+          "combination": "10-5",
+          "payout": 440
+        }
       },
       {
         "raceNumber": 8,
@@ -206,7 +237,11 @@
         "isHit": true,
         "hitLines": [
           "7-12.3.2.4.5.11(抑え1)"
-        ]
+        ],
+        "umatan": {
+          "combination": "7-12",
+          "payout": 920
+        }
       },
       {
         "raceNumber": 9,
@@ -230,7 +265,11 @@
           "1-10.5.3.4.11.2(抑え7.9.8)"
         ],
         "isHit": false,
-        "hitLines": []
+        "hitLines": [],
+        "umatan": {
+          "combination": "11-10",
+          "payout": 1930
+        }
       },
       {
         "raceNumber": 10,
@@ -254,7 +293,11 @@
           "2-13.9.11.12.14.7(抑え8.1.3.6.10)"
         ],
         "isHit": false,
-        "hitLines": []
+        "hitLines": [],
+        "umatan": {
+          "combination": "11-6",
+          "payout": 25690
+        }
       },
       {
         "raceNumber": 11,
@@ -280,7 +323,11 @@
         "isHit": true,
         "hitLines": [
           "12-4.5.7.2.8.10(抑え11.3.6)"
-        ]
+        ],
+        "umatan": {
+          "combination": "12-8",
+          "payout": 2020
+        }
       },
       {
         "raceNumber": 12,
@@ -304,9 +351,13 @@
           "2-1.10.6.13.7.12(抑え3.8.4.5)"
         ],
         "isHit": false,
-        "hitLines": []
+        "hitLines": [],
+        "umatan": {
+          "combination": "4-1",
+          "payout": 5180
+        }
       }
     ],
-    "verifiedAt": "2026-01-31T08:25:36.170Z"
+    "verifiedAt": "2026-01-31T10:03:45.537Z"
   }
 ]
