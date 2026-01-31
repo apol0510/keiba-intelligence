@@ -189,12 +189,24 @@ function convertToLegacyFormat(data, date) {
         venue: data.venue,
         raceNumber: race.raceNumber
       },
-      horses: race.horses.map(h => ({
-        horseNumber: h.number,
-        horseName: h.name,
-        pt: h.displayScore || h.rawScore || 70, // ptフィールド
-        role: h.role === '連下最上位' ? '単穴' : h.role // 連下最上位を単穴に変換
-      })),
+      horses: race.horses
+        .map(h => ({
+          horseNumber: h.number,
+          horseName: h.name,
+          pt: h.displayScore || h.rawScore || 70, // ptフィールド
+          role: h.role === '連下最上位' ? '単穴' : h.role // 連下最上位を単穴に変換
+        }))
+        .sort((a, b) => {
+          // 役割の優先順位
+          const roleOrder = { '本命': 1, '対抗': 2, '単穴': 3, '連下': 4, '補欠': 5, '抑え': 6, '無': 7 };
+          const orderA = roleOrder[a.role] || 99;
+          const orderB = roleOrder[b.role] || 99;
+
+          if (orderA !== orderB) {
+            return orderA - orderB; // 役割順
+          }
+          return b.pt - a.pt; // 同じ役割内ではpt降順
+        }),
       bettingLines: {
         umatan: umatanLines
       },
