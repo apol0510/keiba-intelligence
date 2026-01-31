@@ -141,6 +141,70 @@ async function importPrediction(date, venue = 'nankan') {
 }
 
 /**
+ * keiba-data-shared標準フォーマットを既存の予想ページフォーマットに変換
+ *
+ * @param {Object} data - 正規化・調整済みデータ
+ * @param {string} date - 日付
+ * @returns {Object} 既存フォーマット
+ */
+function convertToLegacyFormat(data, date) {
+  const predictions = data.races.map((race) => {
+    // 役割別に馬を抽出
+    const honmei = race.horses.find(h => h.role === '本命');
+    const taikou = race.horses.find(h => h.role === '対抗');
+    const main = race.horses.filter(h => h.role === '本命' || h.role === '対抗' || h.role === '単穴');
+    const renka = race.horses.filter(h => h.role === '連下' || h.role === '連下最上位');
+    const osae = race.horses.filter(h => h.role === '補欠' || h.role === '抑え');
+
+    // 買い目生成（馬単）
+    const mainNumbers = main.map(h => h.number).join('.');
+    const renkaNumbers = renka.map(h => h.number).join('.');
+    const osaeNumbers = osae.map(h => h.number).join('.');
+
+    const umatanLines = [];
+    if (honmei && mainNumbers) {
+      let line = `${honmei.number}-${mainNumbers}`;
+      if (renkaNumbers) line += `.${renkaNumbers}`;
+      if (osaeNumbers) line += `(抑え${osaeNumbers})`;
+      umatanLines.push(line);
+    }
+    if (taikou && mainNumbers) {
+      let line = `${taikou.number}-${mainNumbers}`;
+      if (renkaNumbers) line += `.${renkaNumbers}`;
+      if (osaeNumbers) line += `(抑え${osaeNumbers})`;
+      umatanLines.push(line);
+    }
+
+    return {
+      raceInfo: {
+        date: date,
+        venue: data.venue,
+        raceNumber: race.raceNumber
+      },
+      horses: race.horses.map(h => ({
+        horseNumber: h.number,
+        horseName: h.name,
+        pt: h.displayScore || h.rawScore || 70, // ptフィールド
+        role: h.role
+      })),
+      bettingLines: {
+        umatan: umatanLines
+      },
+      generatedAt: new Date().toISOString()
+    };
+  });
+
+  return {
+    eventInfo: {
+      date: date,
+      venue: data.venue,
+      totalRaces: data.totalRaces
+    },
+    predictions: predictions
+  };
+}
+
+/**
  * 予想データをkeiba-intelligence側に保存
  *
  * @param {string} date - 日付（YYYY-MM-DD）
@@ -158,7 +222,7 @@ function savePrediction(date, normalizedAndAdjusted) {
     '川崎': 'kawasaki',
     '浦和': 'urawa'
   };
-  const venueSlug = normalizedAndAdjusted.venueCode?.toLowerCase() || venueMap[venue] || 'nankan';
+  const venueSlug = venueMap[venue] || 'ooi'; // venueCodeではなくvenueMapを使用
   const fileName = `${date}-${venueSlug}.json`;
 
   const dirPath = join(projectRoot, 'src', 'data', 'predictions');
@@ -170,8 +234,11 @@ function savePrediction(date, normalizedAndAdjusted) {
     console.log(`📁 ディレクトリ作成: ${dirPath}`);
   }
 
+  // 既存フォーマットに変換
+  const convertedData = convertToLegacyFormat(normalizedAndAdjusted, date);
+
   // JSON文字列化（整形）
-  const newContent = JSON.stringify(normalizedAndAdjusted, null, 2);
+  const newContent = JSON.stringify(convertedData, null, 2);
 
   // 既存ファイルとの比較（ハッシュ比較）
   if (existsSync(filePath)) {
