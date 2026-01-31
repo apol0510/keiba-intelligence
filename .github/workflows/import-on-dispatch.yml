@@ -40,10 +40,11 @@ jobs:
           if [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
             # dates配列がある場合（新形式）
             echo "📅 Importing predictions for multiple dates"
-            echo "$DATES_JSON" | jq -r '.[]' | while read -r DATE; do
+            # サブシェル回避: while read をプロセス置換で実行
+            while IFS= read -r DATE; do
               echo "━━━ Processing: $DATE ━━━"
               npm run import:prediction -- --date "$DATE"
-            done
+            done < <(echo "$DATES_JSON" | jq -r '.[]')
           elif [ -n "$DATE_SINGLE" ] && [ "$DATE_SINGLE" != "null" ]; then
             # date単体がある場合（旧形式・後方互換）
             echo "📅 Importing prediction for single date: $DATE_SINGLE"
