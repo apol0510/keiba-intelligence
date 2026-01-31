@@ -3,10 +3,13 @@ name: Import Prediction (Dispatch)
 on:
   repository_dispatch:
     types: [prediction-updated]
+  workflow_dispatch:  # Manual testing enabled
 
 jobs:
   import-prediction:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for git push
     defaults:
       run:
         working-directory: astro-site

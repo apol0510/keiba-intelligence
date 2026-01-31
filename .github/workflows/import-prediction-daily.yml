@@ -9,6 +9,8 @@ on:
 jobs:
   import-daily-prediction:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for git push
     defaults:
       run:
         working-directory: astro-site
