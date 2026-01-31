@@ -7,6 +7,9 @@ on:
 jobs:
   import-prediction:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: astro-site
 
     steps:
       - name: Checkout
