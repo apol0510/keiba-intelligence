@@ -25,12 +25,13 @@ try {
   resultsData = await resultsResponse.json();
 
   // archiveResults.jsonから的中情報を取得
-  const archiveUrl = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/archive/archiveResults.json`;
+  const archiveUrl = `https://raw.githubusercontent.com/apol0510/keiba-intelligence/main/astro-site/src/data/archiveResults.json`;
   const archiveResponse = await fetch(archiveUrl);
 
   if (archiveResponse.ok) {
     const fullArchive = await archiveResponse.json();
-    archiveData = fullArchive?.[year]?.[month]?.[day];
+    // 配列から該当日付を検索
+    archiveData = fullArchive.find(entry => entry.date === date);
   }
 } catch (error) {
   errorMessage = error.message;
@@ -41,7 +42,7 @@ const pageTitle = resultsData
   : '結果データが見つかりません';
 
 const pageDescription = archiveData
-  ? `${resultsData.venue} ${archiveData.totalRaces}R開催、的中率${Math.round((archiveData.hitRaces / archiveData.totalRaces) * 100)}%、回収率${archiveData.recoveryRate}%`
+  ? `${resultsData.venue} ${archiveData.totalRaces}R開催、的中率${archiveData.hitRate}%、回収率${archiveData.returnRate}%`
   : '南関競馬の結果データ';
 ---
 
@@ -76,13 +77,13 @@ const pageDescription = archiveData
                   <div class="stat-card">
                     <div class="stat-label">的中率</div>
                     <div class="stat-value">
-                      {Math.round((archiveData.hitRaces / archiveData.totalRaces) * 100)}%
+                      {archiveData.hitRate}%
                     </div>
                   </div>
                   <div class="stat-card">
                     <div class="stat-label">回収率</div>
-                    <div class={`stat-value ${archiveData.recoveryRate >= 100 ? 'success' : 'warning'}`}>
-                      {archiveData.recoveryRate}%
+                    <div class={`stat-value ${archiveData.returnRate >= 100 ? 'success' : 'warning'}`}>
+                      {archiveData.returnRate}%
                     </div>
                   </div>
                   <div class="stat-card">
@@ -105,7 +106,7 @@ const pageDescription = archiveData
             <h2>レース結果</h2>
             <div class="races-grid">
               {resultsData.races.map((race, index) => {
-                const archiveRace = archiveData?.races?.find(r => r.raceNumber === `${race.raceNumber}R`);
+                const archiveRace = archiveData?.races?.find(r => r.raceNumber === race.raceNumber);
 
                 return (
                   <div class="race-card">
@@ -114,11 +115,8 @@ const pageDescription = archiveData
                       <div class="race-number">第{race.raceNumber}R</div>
                       <div class="race-name">{race.raceName || '-'}</div>
                       {archiveRace && (
-                        <div class={`hit-badge ${archiveRace.hit ? (archiveRace.hitType === 'main' ? 'hit-main' : 'hit-sub') : 'hit-miss'}`}>
-                          {archiveRace.hit
-                            ? (archiveRace.hitType === 'main' ? '🎯 本線的中' : '✅ 抑え的中')
-                            : '❌ 不的中'
-                          }
+                        <div class={`hit-badge ${archiveRace.isHit ? 'hit-main' : 'hit-miss'}`}>
+                          {archiveRace.isHit ? '🎯 的中' : '❌ 不的中'}
                         </div>
                       )}
                     </div>
@@ -172,9 +170,9 @@ const pageDescription = archiveData
                     {archiveRace && (
                       <div class="hit-info">
                         <div class="hit-info-row">
-                          <span>購入点数: {archiveRace.betPoints}点</span>
-                          {archiveRace.hit && (
-                            <span class="payout-amount">払戻: {archiveRace.payout.toLocaleString()}円</span>
+                          <span>買い目: {archiveRace.bettingLines?.join(', ')}</span>
+                          {archiveRace.isHit && archiveRace.umatan?.payout && (
+                            <span class="payout-amount">払戻: {(archiveRace.umatan.payout * 10).toLocaleString()}円</span>
                           )}
                         </div>
                       </div>
