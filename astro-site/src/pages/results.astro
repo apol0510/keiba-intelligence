@@ -1,8 +1,35 @@
 ---
-// 現在の年月を取得して月別アーカイブにリダイレクト
-const now = new Date();
-const currentYear = now.getFullYear();
-const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
 
-return Astro.redirect(`/archive/${currentYear}/${currentMonth}/`);
+// 最新の的中実績がある年月を取得してリダイレクト
+let redirectUrl = '/archive/';
+
+try {
+  const archivePath = join(process.cwd(), 'src', 'data', 'archiveResults.json');
+  if (existsSync(archivePath)) {
+    const content = readFileSync(archivePath, 'utf-8');
+    const archive = JSON.parse(content);
+
+    if (archive.length > 0) {
+      const latestDate = archive[0].date;
+      const [year, month] = latestDate.split('-');
+      redirectUrl = `/archive/${year}/${month}/`;
+    } else {
+      // データがない場合は今月にフォールバック
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+      redirectUrl = `/archive/${currentYear}/${currentMonth}/`;
+    }
+  }
+} catch (error) {
+  // エラー時は今月にフォールバック
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+  redirectUrl = `/archive/${currentYear}/${currentMonth}/`;
+}
+
+return Astro.redirect(redirectUrl);
 ---
