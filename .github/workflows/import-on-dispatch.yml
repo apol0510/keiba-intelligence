@@ -3,7 +3,12 @@ name: Import Prediction (Dispatch)
 on:
   repository_dispatch:
     types: [prediction-updated]
-  workflow_dispatch:  # Manual testing enabled
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Date to import (YYYY-MM-DD, blank = today JST)'
+        required: false
+        type: string
 
 jobs:
   import-prediction:
@@ -33,25 +38,31 @@ jobs:
       - name: Import prediction from keiba-data-shared
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MANUAL_DATE: ${{ github.event.inputs.date }}
           DATES_JSON: ${{ toJSON(github.event.client_payload.dates) }}
           DATE_SINGLE: ${{ github.event.client_payload.date }}
         run: |
-          # 【修正】dates配列をループ処理（後方互換性あり）
-          if [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
-            # dates配列がある場合（新形式）
+          # 優先順位: 手動入力 > repository_dispatch payload > 今日の日付
+          if [ -n "$MANUAL_DATE" ]; then
+            # 手動実行時の入力
+            echo "📅 Manual import for: $MANUAL_DATE"
+            npm run import:prediction -- --date "$MANUAL_DATE"
+          elif [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
+            # repository_dispatch（複数日付）
             echo "📅 Importing predictions for multiple dates"
-            # サブシェル回避: while read をプロセス置換で実行
             while IFS= read -r DATE; do
               echo "━━━ Processing: $DATE ━━━"
               npm run import:prediction -- --date "$DATE"
             done < <(echo "$DATES_JSON" | jq -r '.[]')
           elif [ -n "$DATE_SINGLE" ] && [ "$DATE_SINGLE" != "null" ]; then
-            # date単体がある場合（旧形式・後方互換）
+            # repository_dispatch（単一日付）
             echo "📅 Importing prediction for single date: $DATE_SINGLE"
             npm run import:prediction -- --date "$DATE_SINGLE"
           else
-            echo "❌ Error: neither dates nor date provided in payload"
-            exit 1
+            # デフォルト：今日の日付（JST）
+            TODAY=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+            echo "📅 Importing for today (JST): $TODAY"
+            npm run import:prediction -- --date "$TODAY"
           fi
 
       - name: Check for changes
@@ -64,25 +75,66 @@ jobs:
 
       - name: Commit and push changes
         if: steps.git-check.outputs.changed == 'true'
+        env:
+          MANUAL_DATE: ${{ github.event.inputs.date }}
+          DATES_JSON: ${{ toJSON(github.event.client_payload.dates) }}
+          DATE_SINGLE: ${{ github.event.client_payload.date }}
+          SOURCE: ${{ github.event.client_payload.source }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          DATES="${{ github.event.client_payload.dates }}"
-          SOURCE="${{ github.event.client_payload.source }}"
-          # 既に Check for changes ステップで git add 済み
-          git commit -m "Auto-import: ${DATES} prediction from ${SOURCE}"
+          # コミットメッセージ生成
+          if [ -n "$MANUAL_DATE" ]; then
+            COMMIT_MSG="Auto-import: ${MANUAL_DATE} prediction (manual)"
+          elif [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
+            DATES=$(echo "$DATES_JSON" | jq -r 'join(", ")')
+            COMMIT_MSG="Auto-import: ${DATES} prediction from ${SOURCE}"
+          elif [ -n "$DATE_SINGLE" ] && [ "$DATE_SINGLE" != "null" ]; then
+            COMMIT_MSG="Auto-import: ${DATE_SINGLE} prediction from ${SOURCE}"
+          else
+            TODAY=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+            COMMIT_MSG="Auto-import: ${TODAY} prediction (today JST)"
+          fi
+
+          git commit -m "$COMMIT_MSG"
           git push
 
       - name: Success notification
         if: steps.git-check.outputs.changed == 'true'
+        env:
+          MANUAL_DATE: ${{ github.event.inputs.date }}
+          DATES_JSON: ${{ toJSON(github.event.client_payload.dates) }}
+          DATE_SINGLE: ${{ github.event.client_payload.date }}
+          SOURCE: ${{ github.event.client_payload.source }}
         run: |
           echo "✅ Import completed and pushed"
-          echo "   Dates: ${{ github.event.client_payload.dates }}"
-          echo "   Source: ${{ github.event.client_payload.source }}"
+          if [ -n "$MANUAL_DATE" ]; then
+            echo "   Date: $MANUAL_DATE (manual)"
+          elif [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
+            echo "   Dates: $(echo "$DATES_JSON" | jq -r 'join(", ")')"
+            echo "   Source: $SOURCE"
+          elif [ -n "$DATE_SINGLE" ] && [ "$DATE_SINGLE" != "null" ]; then
+            echo "   Date: $DATE_SINGLE"
+            echo "   Source: $SOURCE"
+          else
+            echo "   Date: $(TZ=Asia/Tokyo date +%Y-%m-%d) (today JST)"
+          fi
 
       - name: No changes notification
         if: steps.git-check.outputs.changed != 'true'
+        env:
+          MANUAL_DATE: ${{ github.event.inputs.date }}
+          DATES_JSON: ${{ toJSON(github.event.client_payload.dates) }}
+          DATE_SINGLE: ${{ github.event.client_payload.date }}
         run: |
           echo "⏭️  No changes detected (already up-to-date)"
-          echo "   Dates: ${{ github.event.client_payload.dates }}"
+          if [ -n "$MANUAL_DATE" ]; then
+            echo "   Date: $MANUAL_DATE (manual)"
+          elif [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
+            echo "   Dates: $(echo "$DATES_JSON" | jq -r 'join(", ")')"
+          elif [ -n "$DATE_SINGLE" ] && [ "$DATE_SINGLE" != "null" ]; then
+            echo "   Date: $DATE_SINGLE"
+          else
+            echo "   Date: $(TZ=Asia/Tokyo date +%Y-%m-%d) (today JST)"
+          fi
