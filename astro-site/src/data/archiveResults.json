@@ -2,10 +2,10 @@
   {
     "date": "2026-01-30",
     "venue": "大井",
-    "totalRaces": 5,
+    "totalRaces": 6,
     "hitRaces": 3,
-    "missRaces": 2,
-    "hitRate": 60,
+    "missRaces": 3,
+    "hitRate": 50,
     "races": [
       {
         "raceNumber": 1,
@@ -132,8 +132,31 @@
         ],
         "isHit": false,
         "hitLines": []
+      },
+      {
+        "raceNumber": 6,
+        "raceName": "Ｃ２(三)(四)(五)",
+        "result": {
+          "first": {
+            "number": 3,
+            "name": "コスモトロイメル"
+          },
+          "second": {
+            "number": 10,
+            "name": "スペイスフォース"
+          },
+          "third": {
+            "number": 13,
+            "name": "ロイヤルカラット"
+          }
+        },
+        "bettingLines": [
+          "1-5.8.7.10.9.11(抑え12.13.2.3.14)"
+        ],
+        "isHit": false,
+        "hitLines": []
       }
     ],
-    "verifiedAt": "2026-01-31T08:21:32.433Z"
+    "verifiedAt": "2026-01-31T08:22:08.813Z"
   }
 ]
