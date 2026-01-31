@@ -1,9 +1,7 @@
 ---
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
 
-export async function getStaticPaths() {
-  return [];
-}
+export const prerender = false;
 
 const { year, month, day } = Astro.params;
 const date = `${year}-${month}-${day}`;
@@ -38,185 +36,184 @@ try {
 }
 
 const pageTitle = resultsData
-  ? `${resultsData.date} ${resultsData.venue} 結果`
+  ? `${resultsData.date} ${resultsData.venue} 的中実績`
   : '結果データが見つかりません';
 
 const pageDescription = archiveData
-  ? `${resultsData.venue} ${archiveData.totalRaces}R開催、的中率${archiveData.hitRate}%、回収率${archiveData.returnRate}%`
+  ? `${resultsData.venue} ${archiveData.totalRaces}R開催、的中率${archiveData.hitRate}%、回収率${archiveData.returnRate}%、配当${archiveData.totalPayout.toLocaleString()}円`
   : '南関競馬の結果データ';
 ---
 
 <BaseLayout title={pageTitle} description={pageDescription}>
-  <main class="results-page">
+  <main class="archive-page">
     <div class="container">
       {errorMessage ? (
-        <div class="error-message">
+        <div class="error-section">
           <h1>⚠️ エラー</h1>
           <p>{errorMessage}</p>
-          <a href="/" class="btn btn-primary">トップページへ戻る</a>
+          <a href="/results" class="btn-back">的中実績一覧へ戻る</a>
         </div>
-      ) : resultsData ? (
+      ) : resultsData && archiveData ? (
         <>
-          {/* ヘッダー */}
-          <section class="results-header">
-            <div class="header-content">
-              <h1>
-                <span class="date-badge">{resultsData.date}</span>
-                {resultsData.venue} 結果
-              </h1>
-              {archiveData && (
-                <div class="stats-grid">
-                  <div class="stat-card">
-                    <div class="stat-label">開催レース数</div>
-                    <div class="stat-value">{archiveData.totalRaces}R</div>
-                  </div>
-                  <div class="stat-card">
-                    <div class="stat-label">的中レース数</div>
-                    <div class="stat-value success">{archiveData.hitRaces}R</div>
-                  </div>
-                  <div class="stat-card">
-                    <div class="stat-label">的中率</div>
-                    <div class="stat-value">
-                      {archiveData.hitRate}%
-                    </div>
-                  </div>
-                  <div class="stat-card">
-                    <div class="stat-label">回収率</div>
-                    <div class={`stat-value ${archiveData.returnRate >= 100 ? 'success' : 'warning'}`}>
-                      {archiveData.returnRate}%
-                    </div>
-                  </div>
-                  <div class="stat-card">
-                    <div class="stat-label">総払戻金</div>
-                    <div class="stat-value">{archiveData.totalPayout.toLocaleString()}円</div>
-                  </div>
-                  {archiveData.perfectHit && (
-                    <div class="stat-card perfect-hit">
-                      <div class="stat-label">🎉 全レース的中</div>
-                      <div class="stat-value">パーフェクト</div>
-                    </div>
-                  )}
+          {/* ページヘッダー */}
+          <header class="page-header">
+            <h1>
+              <span class="date">{month}月{day}日</span>
+              <span class="venue">{resultsData.venue}競馬</span>
+            </h1>
+          </header>
+
+          {/* サマリー統計 */}
+          <section class="summary-section">
+            <div class="summary-grid">
+              <div class="summary-card">
+                <div class="summary-label">的中レース数</div>
+                <div class="summary-value">{archiveData.hitRaces}/{archiveData.totalRaces}R</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">的中率</div>
+                <div class="summary-value highlight">{archiveData.hitRate}%</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">回収率</div>
+                <div class={`summary-value ${archiveData.returnRate >= 100 ? 'profit' : 'loss'}`}>
+                  {archiveData.returnRate}%
                 </div>
-              )}
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">合計配当</div>
+                <div class="summary-value profit">¥{archiveData.totalPayout.toLocaleString()}</div>
+              </div>
             </div>
           </section>
 
           {/* レース結果一覧 */}
           <section class="races-section">
-            <h2>レース結果</h2>
-            <div class="races-grid">
-              {resultsData.races.map((race, index) => {
-                const archiveRace = archiveData?.races?.find(r => r.raceNumber === race.raceNumber);
+            <h2>📊 レース結果</h2>
+            <div class="races-list">
+              {resultsData.races.map((race) => {
+                const archiveRace = archiveData.races.find(r => r.raceNumber === race.raceNumber);
+                const isHit = archiveRace?.isHit || false;
+                const payout = archiveRace?.umatan?.payout || 0;
+                const bettingLines = archiveRace?.bettingLines || [];
 
                 return (
-                  <div class="race-card">
-                    {/* レースヘッダー */}
+                  <div class={`race-card ${isHit ? 'hit' : 'miss'}`}>
                     <div class="race-header">
-                      <div class="race-number">第{race.raceNumber}R</div>
-                      <div class="race-name">{race.raceName || '-'}</div>
-                      {archiveRace && (
-                        <div class={`hit-badge ${archiveRace.isHit ? 'hit-main' : 'hit-miss'}`}>
-                          {archiveRace.isHit ? '🎯 的中' : '❌ 不的中'}
-                        </div>
+                      <div class="race-info">
+                        <span class="race-number">第{race.raceNumber}R</span>
+                        <span class="race-name">{race.raceName}</span>
+                      </div>
+                      {isHit ? (
+                        <div class="hit-badge">✅ 的中</div>
+                      ) : (
+                        <div class="miss-badge">❌ 不的中</div>
                       )}
                     </div>
 
-                    {/* 着順結果 */}
-                    <div class="race-results">
-                      <h3>着順</h3>
-                      <div class="horses-list">
-                        {race.results?.slice(0, 3).map((horse, pos) => (
-                          <div class={`horse-item rank-${pos + 1}`}>
-                            <span class="rank">{pos + 1}着</span>
-                            <span class="horse-number">{horse.number}番</span>
-                            <span class="horse-name">{horse.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* 払戻金 */}
-                    <div class="payouts">
-                      <h3>払戻金</h3>
-                      <div class="payout-grid">
-                        {race.payouts?.tansho && (
-                          <div class="payout-item">
-                            <span class="payout-type">単勝</span>
-                            <span class="payout-value">{race.payouts.tansho.payout?.toLocaleString()}円</span>
-                          </div>
-                        )}
-                        {race.payouts?.umatan && (
-                          <div class="payout-item highlight">
-                            <span class="payout-type">馬単 ({race.payouts.umatan.combination})</span>
-                            <span class="payout-value">{race.payouts.umatan.payout?.toLocaleString()}円</span>
-                          </div>
-                        )}
-                        {race.payouts?.sanrenpuku && (
-                          <div class="payout-item">
-                            <span class="payout-type">三連複</span>
-                            <span class="payout-value">{race.payouts.sanrenpuku.payout?.toLocaleString()}円</span>
-                          </div>
-                        )}
-                        {race.payouts?.sanrentan && (
-                          <div class="payout-item">
-                            <span class="payout-type">三連単</span>
-                            <span class="payout-value">{race.payouts.sanrentan.payout?.toLocaleString()}円</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* 的中情報 */}
-                    {archiveRace && (
-                      <div class="hit-info">
-                        <div class="hit-info-row">
-                          <span>買い目: {archiveRace.bettingLines?.join(', ')}</span>
-                          {archiveRace.isHit && archiveRace.umatan?.payout && (
-                            <span class="payout-amount">払戻: {(archiveRace.umatan.payout * 10).toLocaleString()}円</span>
-                          )}
+                    <div class="race-body">
+                      {/* 着順結果 */}
+                      <div class="result-section">
+                        <div class="result-label">着順</div>
+                        <div class="result-horses">
+                          <span class="result-horse rank-1">
+                            <span class="rank">1着</span>
+                            <span class="number">{race.results[0]?.number}番</span>
+                            <span class="name">{race.results[0]?.name}</span>
+                          </span>
+                          <span class="result-horse rank-2">
+                            <span class="rank">2着</span>
+                            <span class="number">{race.results[1]?.number}番</span>
+                            <span class="name">{race.results[1]?.name}</span>
+                          </span>
+                          <span class="result-horse rank-3">
+                            <span class="rank">3着</span>
+                            <span class="number">{race.results[2]?.number}番</span>
+                            <span class="name">{race.results[2]?.name}</span>
+                          </span>
                         </div>
                       </div>
-                    )}
+
+                      {/* 購入情報 */}
+                      {archiveRace && (
+                        <div class="betting-section">
+                          <div class="betting-info">
+                            <span class="betting-type">馬単</span>
+                            <span class="betting-points">{bettingLines.length}軸 約10点</span>
+                          </div>
+                          {isHit && payout > 0 && (
+                            <div class="payout-info">
+                              <span class="payout-label">配当</span>
+                              <span class="payout-value">¥{(payout * 10).toLocaleString()}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 買い目詳細 */}
+                      {archiveRace && bettingLines.length > 0 && (
+                        <div class="betting-lines">
+                          <div class="betting-lines-label">買い目</div>
+                          <div class="betting-lines-content">
+                            {bettingLines.map(line => (
+                              <div class={`betting-line ${archiveRace.hitLines?.includes(line) ? 'hit-line' : ''}`}>
+                                {line}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 馬単払戻 */}
+                      {race.payouts?.umatan && (
+                        <div class="official-payout">
+                          <span class="official-label">馬単 ({race.payouts.umatan.combination})</span>
+                          <span class="official-value">¥{race.payouts.umatan.payout?.toLocaleString()}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
           </section>
 
-          {/* 戻るリンク */}
-          <section class="back-section">
-            <a href="/" class="btn btn-secondary">トップページへ戻る</a>
-          </section>
+          {/* フッターナビ */}
+          <footer class="page-footer">
+            <a href="/results" class="btn-back">← 的中実績一覧へ戻る</a>
+          </footer>
         </>
-      ) : null}
+      ) : (
+        <div class="loading">読み込み中...</div>
+      )}
     </div>
   </main>
 </BaseLayout>
 
 <style lang="scss">
-  .results-page {
+  .archive-page {
     min-height: 100vh;
     padding: var(--spacing-2xl) 0;
+    background: var(--bg-primary);
   }
 
   .container {
-    max-width: 1200px;
+    max-width: 1000px;
     margin: 0 auto;
     padding: 0 var(--spacing-lg);
   }
 
-  /* エラーメッセージ */
-  .error-message {
+  /* エラーセクション */
+  .error-section {
     text-align: center;
     padding: var(--spacing-2xl);
-    background: var(--bg-card);
-    border-radius: var(--radius-xl);
-    backdrop-filter: blur(10px);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
 
     h1 {
       font-size: 2rem;
-      margin-bottom: var(--spacing-lg);
-      color: var(--danger);
+      margin-bottom: var(--spacing-md);
+      color: var(--text-primary);
     }
 
     p {
@@ -225,103 +222,106 @@ const pageDescription = archiveData
     }
   }
 
-  /* ヘッダー */
-  .results-header {
+  /* ページヘッダー */
+  .page-header {
     margin-bottom: var(--spacing-2xl);
 
     h1 {
-      font-size: 2.5rem;
-      margin-bottom: var(--spacing-xl);
-      background: var(--primary-gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-
-      @media (max-width: 768px) {
-        font-size: 1.75rem;
-      }
-    }
-
-    .date-badge {
-      display: inline-block;
-      padding: var(--spacing-sm) var(--spacing-md);
-      background: var(--bg-card);
-      border-radius: var(--radius-md);
-      font-size: 1.25rem;
-      margin-right: var(--spacing-md);
+      font-size: 2rem;
       color: var(--text-primary);
+      display: flex;
+      align-items: baseline;
+      gap: var(--spacing-md);
+
+      .date {
+        font-weight: 800;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .venue {
+        font-weight: 600;
+        color: var(--text-secondary);
+      }
     }
   }
 
-  /* 統計カード */
-  .stats-grid {
+  /* サマリーセクション */
+  .summary-section {
+    margin-bottom: var(--spacing-2xl);
+  }
+
+  .summary-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: var(--spacing-lg);
-    margin-top: var(--spacing-xl);
   }
 
-  .stat-card {
-    background: var(--bg-card);
-    padding: var(--spacing-lg);
+  .summary-card {
+    background: var(--bg-secondary);
+    padding: var(--spacing-xl);
     border-radius: var(--radius-lg);
-    backdrop-filter: blur(10px);
     border: 1px solid var(--border-color);
     text-align: center;
 
-    &.perfect-hit {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%);
-      border-color: var(--success);
-    }
-
-    .stat-label {
+    .summary-label {
       font-size: 0.875rem;
       color: var(--text-secondary);
       margin-bottom: var(--spacing-sm);
+      font-weight: 500;
     }
 
-    .stat-value {
-      font-size: 1.75rem;
-      font-weight: 700;
+    .summary-value {
+      font-size: 2rem;
+      font-weight: 800;
       color: var(--text-primary);
 
-      &.success {
-        color: var(--success);
+      &.highlight {
+        color: #60a5fa;
       }
 
-      &.warning {
-        color: var(--warning);
+      &.profit {
+        color: #10b981;
+      }
+
+      &.loss {
+        color: #ef4444;
       }
     }
   }
 
   /* レースセクション */
   .races-section {
-    margin-bottom: var(--spacing-2xl);
-
     h2 {
-      font-size: 1.75rem;
-      margin-bottom: var(--spacing-xl);
+      font-size: 1.5rem;
       color: var(--text-primary);
+      margin-bottom: var(--spacing-xl);
+      font-weight: 700;
     }
   }
 
-  .races-grid {
-    display: grid;
-    gap: var(--spacing-xl);
+  .races-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
   }
 
   /* レースカード */
   .race-card {
-    background: var(--bg-card);
-    border-radius: var(--radius-xl);
-    padding: var(--spacing-xl);
-    backdrop-filter: blur(10px);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
     border: 1px solid var(--border-color);
-    transition: all var(--transition-base);
+    overflow: hidden;
+    transition: all var(--transition-normal);
+
+    &.hit {
+      border-color: rgba(16, 185, 129, 0.5);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, var(--bg-secondary) 50%);
+    }
 
     &:hover {
-      background: var(--bg-card-hover);
       transform: translateY(-2px);
       box-shadow: var(--shadow-lg);
     }
@@ -329,217 +329,261 @@ const pageDescription = archiveData
 
   .race-header {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg);
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .race-info {
+    display: flex;
     align-items: center;
     gap: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
-    padding-bottom: var(--spacing-md);
-    border-bottom: 1px solid var(--border-color);
-    flex-wrap: wrap;
 
     .race-number {
-      font-size: 1.25rem;
+      font-size: 1.125rem;
       font-weight: 700;
-      color: var(--primary-end);
+      color: #60a5fa;
     }
 
     .race-name {
-      font-size: 1.125rem;
-      color: var(--text-primary);
-      flex: 1;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
     }
   }
 
-  /* 的中バッジ */
   .hit-badge {
-    padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: var(--radius-md);
+    padding: var(--spacing-xs) var(--spacing-md);
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+
+  .miss-badge {
+    padding: var(--spacing-xs) var(--spacing-md);
+    background: rgba(100, 116, 139, 0.2);
+    color: var(--text-tertiary);
+    border-radius: var(--radius-sm);
     font-size: 0.875rem;
     font-weight: 600;
+  }
 
-    &.hit-main {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(16, 185, 129, 0.2) 100%);
-      color: var(--success);
-      border: 1px solid var(--success);
-    }
-
-    &.hit-sub {
-      background: linear-gradient(135deg, rgba(245, 158, 11, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%);
-      color: var(--warning);
-      border: 1px solid var(--warning);
-    }
-
-    &.hit-miss {
-      background: linear-gradient(135deg, rgba(100, 116, 139, 0.3) 0%, rgba(100, 116, 139, 0.2) 100%);
-      color: var(--text-tertiary);
-      border: 1px solid var(--text-tertiary);
-    }
+  .race-body {
+    padding: var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
   }
 
   /* 着順結果 */
-  .race-results {
-    margin-bottom: var(--spacing-lg);
-
-    h3 {
-      font-size: 1rem;
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-md);
+  .result-section {
+    .result-label {
+      font-size: 0.75rem;
+      color: var(--text-tertiary);
+      margin-bottom: var(--spacing-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
   }
 
-  .horses-list {
-    display: grid;
-    gap: var(--spacing-sm);
-  }
-
-  .horse-item {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-    padding: var(--spacing-md);
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--radius-md);
-
-    &.rank-1 {
-      border-left: 3px solid #ffd700;
-    }
-
-    &.rank-2 {
-      border-left: 3px solid #c0c0c0;
-    }
-
-    &.rank-3 {
-      border-left: 3px solid #cd7f32;
-    }
-
-    .rank {
-      font-weight: 600;
-      color: var(--text-secondary);
-      min-width: 40px;
-    }
-
-    .horse-number {
-      font-weight: 700;
-      color: var(--primary-end);
-      min-width: 50px;
-    }
-
-    .horse-name {
-      color: var(--text-primary);
-    }
-  }
-
-  /* 払戻金 */
-  .payouts {
-    margin-bottom: var(--spacing-lg);
-
-    h3 {
-      font-size: 1rem;
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-md);
-    }
-  }
-
-  .payout-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: var(--spacing-md);
-  }
-
-  .payout-item {
-    padding: var(--spacing-md);
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--radius-md);
+  .result-horses {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
+  }
 
-    &.highlight {
-      background: rgba(59, 130, 246, 0.15);
-      border: 1px solid var(--primary-end);
+  .result-horse {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: 0.875rem;
+
+    .rank {
+      color: var(--text-tertiary);
+      min-width: 35px;
     }
 
-    .payout-type {
+    .number {
+      font-weight: 700;
+      color: #60a5fa;
+      min-width: 40px;
+    }
+
+    .name {
+      color: var(--text-primary);
+    }
+
+    &.rank-1 .rank { color: #ffd700; }
+    &.rank-2 .rank { color: #c0c0c0; }
+    &.rank-3 .rank { color: #cd7f32; }
+  }
+
+  /* 購入情報 */
+  .betting-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-md);
+  }
+
+  .betting-info {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+
+    .betting-type {
+      font-weight: 700;
+      color: #60a5fa;
+      font-size: 0.875rem;
+    }
+
+    .betting-points {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+  }
+
+  .payout-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+
+    .payout-label {
       font-size: 0.875rem;
       color: var(--text-secondary);
     }
 
     .payout-value {
-      font-size: 1.125rem;
-      font-weight: 700;
-      color: var(--text-primary);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #10b981;
     }
   }
 
-  /* 的中情報 */
-  .hit-info {
-    padding-top: var(--spacing-md);
-    border-top: 1px solid var(--border-color);
+  /* 買い目詳細 */
+  .betting-lines {
+    padding: var(--spacing-md);
+    background: rgba(59, 130, 246, 0.05);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(59, 130, 246, 0.2);
 
-    .hit-info-row {
+    .betting-lines-label {
+      font-size: 0.75rem;
+      color: var(--text-tertiary);
+      margin-bottom: var(--spacing-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .betting-lines-content {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.875rem;
+      flex-wrap: wrap;
+      gap: var(--spacing-xs);
+    }
+
+    .betting-line {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-sm);
+      font-size: 0.8125rem;
+      font-family: 'Courier New', monospace;
       color: var(--text-secondary);
 
-      .payout-amount {
+      &.hit-line {
+        background: rgba(16, 185, 129, 0.2);
+        color: #10b981;
         font-weight: 700;
-        color: var(--success);
-        font-size: 1rem;
+        border: 1px solid #10b981;
       }
     }
   }
 
-  /* 戻るセクション */
-  .back-section {
-    text-align: center;
-    margin-top: var(--spacing-2xl);
+  /* 公式払戻 */
+  .official-payout {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: rgba(139, 92, 246, 0.1);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+
+    .official-label {
+      color: var(--text-secondary);
+    }
+
+    .official-value {
+      font-weight: 700;
+      color: #a78bfa;
+    }
   }
 
-  /* ボタン */
-  .btn {
+  /* フッター */
+  .page-footer {
+    margin-top: var(--spacing-2xl);
+    padding-top: var(--spacing-2xl);
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+  }
+
+  .btn-back {
     display: inline-block;
     padding: var(--spacing-md) var(--spacing-xl);
-    border-radius: var(--radius-md);
-    font-weight: 600;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
     text-decoration: none;
-    transition: all var(--transition-base);
-    cursor: pointer;
-    border: none;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    font-weight: 600;
+    transition: all var(--transition-normal);
 
-    &.btn-primary {
-      background: var(--primary-gradient);
-      color: white;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-lg);
-      }
-    }
-
-    &.btn-secondary {
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-      border: 1px solid var(--border-color);
-
-      &:hover {
-        background: var(--bg-tertiary);
-      }
+    &:hover {
+      background: var(--bg-tertiary);
+      transform: translateY(-2px);
     }
   }
 
+  /* レスポンシブ */
   @media (max-width: 768px) {
-    .stats-grid {
+    .page-header h1 {
+      font-size: 1.5rem;
+      flex-direction: column;
+      gap: var(--spacing-xs);
+    }
+
+    .summary-grid {
       grid-template-columns: repeat(2, 1fr);
     }
 
-    .payout-grid {
-      grid-template-columns: 1fr;
+    .summary-card .summary-value {
+      font-size: 1.5rem;
     }
 
-    .horse-item {
+    .race-header {
       flex-direction: column;
       align-items: flex-start;
+      gap: var(--spacing-sm);
     }
+
+    .betting-section {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--spacing-sm);
+    }
+
+    .result-horses {
+      font-size: 0.8125rem;
+    }
+  }
+
+  .loading {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    color: var(--text-secondary);
   }
 </style>
