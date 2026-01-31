@@ -2,10 +2,10 @@
   {
     "date": "2026-01-30",
     "venue": "大井",
-    "totalRaces": 8,
+    "totalRaces": 9,
     "hitRaces": 5,
-    "missRaces": 3,
-    "hitRate": 62.5,
+    "missRaces": 4,
+    "hitRate": 55.6,
     "races": [
       {
         "raceNumber": 1,
@@ -207,8 +207,32 @@
         "hitLines": [
           "7-12.3.2.4.5.11(抑え1)"
         ]
+      },
+      {
+        "raceNumber": 9,
+        "raceName": "Ｃ１(三)(四)(五)",
+        "result": {
+          "first": {
+            "number": 11,
+            "name": "リコーテリア"
+          },
+          "second": {
+            "number": 10,
+            "name": "レジェンドウェイ"
+          },
+          "third": {
+            "number": 3,
+            "name": "サクラジェンヌ"
+          }
+        },
+        "bettingLines": [
+          "10-1.5.3.4.11.2(抑え7.9.8)",
+          "1-10.5.3.4.11.2(抑え7.9.8)"
+        ],
+        "isHit": false,
+        "hitLines": []
       }
     ],
-    "verifiedAt": "2026-01-31T08:22:50.250Z"
+    "verifiedAt": "2026-01-31T08:23:20.490Z"
   }
 ]
