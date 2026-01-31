@@ -198,8 +198,8 @@ function saveArchive(date, venue, raceResults) {
   const totalPayout = raceResults.reduce((sum, race) => {
     if (race.isHit && race.umatan.payout) {
       // 的中した場合、払戻金を加算
-      // 実際の買い目点数で按分（100円あたりの払戻×10点）
-      return sum + (race.umatan.payout * 10);
+      // 的中するのは1点（100円）のみ、payoutは100円あたりの払戻金
+      return sum + race.umatan.payout;
     }
     return sum;
   }, 0);
