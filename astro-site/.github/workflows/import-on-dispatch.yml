@@ -1,0 +1,85 @@
+name: Import Prediction (Dispatch)
+
+on:
+  repository_dispatch:
+    types: [prediction-updated]
+
+jobs:
+  import-prediction:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Import prediction from keiba-data-shared
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 【修正】dates配列をループ処理（後方互換性あり）
+          DATES_JSON='${{ github.event.client_payload.dates }}'
+          DATE_SINGLE='${{ github.event.client_payload.date }}'
+
+          if [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
+            # dates配列がある場合（新形式）
+            echo "📅 Importing predictions for multiple dates"
+            echo "$DATES_JSON" | jq -r '.[]' | while read -r DATE; do
+              echo "━━━ Processing: $DATE ━━━"
+              npm run import:prediction -- --date "$DATE"
+            done
+          elif [ -n "$DATE_SINGLE" ] && [ "$DATE_SINGLE" != "null" ]; then
+            # date単体がある場合（旧形式・後方互換）
+            echo "📅 Importing prediction for single date: $DATE_SINGLE"
+            npm run import:prediction -- --date "$DATE_SINGLE"
+          else
+            echo "❌ Error: neither dates nor date provided in payload"
+            exit 1
+          fi
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changes
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          DATES="${{ github.event.client_payload.dates }}"
+          git add src/data/predictions/
+          git commit -m "🤖 Auto-import: ${DATES} prediction from keiba-data-shared
+
+Triggered by: ${{ github.event.client_payload.source }}
+Event type: ${{ github.event.action }}
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+          git push
+
+      - name: Success notification
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          echo "✅ Import completed and pushed"
+          echo "   Dates: ${{ github.event.client_payload.dates }}"
+          echo "   Source: ${{ github.event.client_payload.source }}"
+
+      - name: No changes notification
+        if: steps.git-check.outputs.changed != 'true'
+        run: |
+          echo "⏭️  No changes detected (already up-to-date)"
+          echo "   Dates: ${{ github.event.client_payload.dates }}"

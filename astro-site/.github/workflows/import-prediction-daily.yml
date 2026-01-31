@@ -1,0 +1,82 @@
+name: Import Prediction (Daily Check)
+
+on:
+  schedule:
+    # 毎日 23:00 JST = 14:00 UTC
+    - cron: '0 14 * * *'
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  import-daily-prediction:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Calculate JST date
+        id: date
+        run: |
+          # JSTの現在日付を計算（UTC+9）
+          JST_DATE=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+          echo "date=$JST_DATE" >> $GITHUB_OUTPUT
+          echo "📅 JST Today: $JST_DATE"
+
+      - name: Import prediction from keiba-data-shared
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE="${{ steps.date.outputs.date }}"
+          echo "🔄 Daily check: Importing prediction for $DATE"
+
+          # import:prediction は日付未指定で JST 今日になるが、明示的に指定
+          npm run import:prediction -- --date "$DATE"
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changes
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          DATE="${{ steps.date.outputs.date }}"
+          git add src/data/predictions/
+          git commit -m "🤖 Daily auto-import: ${DATE} prediction
+
+Triggered by: scheduled job (23:00 JST)
+Mode: insurance check
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+          git push
+
+      - name: Success notification
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          echo "✅ Daily import completed and pushed"
+          echo "   Date: ${{ steps.date.outputs.date }}"
+          echo "   Trigger: scheduled (23:00 JST)"
+
+      - name: No changes notification
+        if: steps.git-check.outputs.changed != 'true'
+        run: |
+          echo "⏭️  No changes detected (already up-to-date)"
+          echo "   Date: ${{ steps.date.outputs.date }}"
+          echo "   This is expected if the main trigger already ran today"

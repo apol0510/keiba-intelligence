@@ -1,0 +1,244 @@
+#!/usr/bin/env node
+
+/**
+ * importPrediction.js
+ *
+ * keiba-data-sharedから予想JSONを取得して、
+ * normalizeAndAdjustして、keiba-intelligenceに保存する
+ *
+ * 使い方:
+ *   node scripts/importPrediction.js --date 2026-01-30
+ *   node scripts/importPrediction.js  # 今日の日付を使用
+ *
+ * 環境変数:
+ *   GITHUB_TOKEN: GitHub Personal Access Token（read-only）
+ */
+
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import crypto from 'crypto';
+
+// ESモジュールで __dirname を取得
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// プロジェクトルート
+const projectRoot = join(__dirname, '..');
+
+// src/utils から正規化関数をインポート
+import { normalizeAndAdjust } from '../src/utils/normalizePrediction.js';
+
+/**
+ * JST（日本時間）の今日の日付を取得
+ *
+ * @returns {string} YYYY-MM-DD形式の日付
+ */
+function getTodayJST() {
+  const now = new Date();
+  const jstOffset = 9 * 60; // JST = UTC+9
+  const jstTime = new Date(now.getTime() + jstOffset * 60 * 1000);
+
+  const year = jstTime.getUTCFullYear();
+  const month = String(jstTime.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(jstTime.getUTCDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * keiba-data-sharedから予想JSONを取得
+ *
+ * GitHub Contents APIを使用（private対応）
+ *
+ * @param {string} date - 日付（YYYY-MM-DD）
+ * @param {string} venue - 競馬場カテゴリ（デフォルト: 'nankan'）
+ * @returns {Promise<Object>} 予想JSON
+ */
+async function fetchSharedPrediction(date, venue = 'nankan') {
+  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+
+  if (!GITHUB_TOKEN) {
+    throw new Error('環境変数 GITHUB_TOKEN が設定されていません');
+  }
+
+  // 日付をパースしてパスを構築
+  const [year, month, day] = date.split('-');
+  const path = `${venue}/predictions/${year}/${month}/${date}.json`;
+
+  const owner = 'apol0510';
+  const repo = 'keiba-data-shared';
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+
+  console.log(`📡 keiba-data-sharedから取得中: ${path}`);
+
+  const response = await fetch(apiUrl, {
+    headers: {
+      'Authorization': `token ${GITHUB_TOKEN}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'keiba-intelligence-import'
+    }
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(`予想データが見つかりません: ${path}`);
+    }
+    const errorData = await response.json();
+    throw new Error(`GitHub API Error: ${response.status} ${JSON.stringify(errorData)}`);
+  }
+
+  const data = await response.json();
+
+  // Base64デコード
+  const content = Buffer.from(data.content, 'base64').toString('utf-8');
+  const predictionJSON = JSON.parse(content);
+
+  console.log(`✅ 取得成功: ${path}`);
+
+  return predictionJSON;
+}
+
+/**
+ * 予想データを取り込み（正規化 + 調整ルール適用）
+ *
+ * @param {string} date - 日付（YYYY-MM-DD）
+ * @param {string} venue - 競馬場カテゴリ（デフォルト: 'nankan'）
+ * @returns {Promise<Object>} 調整済みNormalizedPrediction
+ */
+async function importPrediction(date, venue = 'nankan') {
+  console.log(`\n━━━ ${date} 予想データ取り込み開始 ━━━`);
+
+  // keiba-data-sharedから取得
+  const sharedJSON = await fetchSharedPrediction(date, venue);
+
+  // 正規化 + 調整ルール適用
+  console.log(`⚙️  正規化 + 調整ルール適用中...`);
+  const normalizedAndAdjusted = normalizeAndAdjust(sharedJSON);
+
+  console.log(`✅ 正規化完了`);
+  console.log(`   - 開催日: ${normalizedAndAdjusted.date}`);
+  console.log(`   - 競馬場: ${normalizedAndAdjusted.venue}`);
+  console.log(`   - レース数: ${normalizedAndAdjusted.totalRaces}`);
+
+  // 各レースの調整結果を表示
+  for (const race of normalizedAndAdjusted.races) {
+    console.log(`   - ${race.raceNumber}R: ${race.raceName}`);
+    console.log(`     hasHorseData=${race.hasHorseData}, isAbsoluteAxis=${race.isAbsoluteAxis}`);
+    if (race.hasHorseData) {
+      const honmei = race.horses.find(h => h.role === '本命');
+      const taikou = race.horses.find(h => h.role === '対抗');
+      if (honmei) {
+        console.log(`     本命: ${honmei.number} ${honmei.name} (${honmei.rawScore}点 → ${honmei.displayScore})`);
+      }
+      if (taikou) {
+        console.log(`     対抗: ${taikou.number} ${taikou.name} (${taikou.rawScore}点 → ${taikou.displayScore})`);
+      }
+    }
+  }
+
+  return normalizedAndAdjusted;
+}
+
+/**
+ * 予想データをkeiba-intelligence側に保存
+ *
+ * @param {string} date - 日付（YYYY-MM-DD）
+ * @param {Object} normalizedAndAdjusted - 調整済みNormalizedPrediction
+ * @returns {boolean} 保存したかどうか（true: 保存, false: no-op）
+ */
+function savePrediction(date, normalizedAndAdjusted) {
+  console.log(`\n💾 保存処理開始...`);
+
+  // 保存先パス構築
+  const [year, month, day] = date.split('-');
+  const dirPath = join(projectRoot, 'src', 'data', 'predictions', year, month);
+  const filePath = join(dirPath, `${date}.json`);
+
+  // ディレクトリ作成（存在しない場合）
+  if (!existsSync(dirPath)) {
+    mkdirSync(dirPath, { recursive: true });
+    console.log(`📁 ディレクトリ作成: ${dirPath}`);
+  }
+
+  // JSON文字列化（整形）
+  const newContent = JSON.stringify(normalizedAndAdjusted, null, 2);
+
+  // 既存ファイルとの比較（ハッシュ比較）
+  if (existsSync(filePath)) {
+    const existingContent = readFileSync(filePath, 'utf-8');
+
+    // ハッシュ計算
+    const existingHash = crypto.createHash('sha256').update(existingContent).digest('hex');
+    const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
+
+    if (existingHash === newHash) {
+      console.log(`⏭️  スキップ: 既存データと同一です`);
+      console.log(`   ファイル: ${filePath}`);
+      return false; // no-op
+    } else {
+      console.log(`🔄 更新: 既存データと差分があります`);
+    }
+  } else {
+    console.log(`🆕 新規作成`);
+  }
+
+  // ファイル書き込み
+  writeFileSync(filePath, newContent, 'utf-8');
+  console.log(`✅ 保存完了: ${filePath}`);
+
+  return true; // 保存した
+}
+
+/**
+ * メイン処理
+ */
+async function main() {
+  try {
+    // コマンドライン引数をパース
+    const args = process.argv.slice(2);
+    let date = null;
+
+    for (let i = 0; i < args.length; i++) {
+      if (args[i] === '--date' && i + 1 < args.length) {
+        date = args[i + 1];
+        i++;
+      }
+    }
+
+    // 日付が指定されていない場合は今日の日付を使用
+    if (!date) {
+      date = getTodayJST();
+      console.log(`📅 日付未指定のため、今日の日付を使用: ${date}`);
+    } else {
+      console.log(`📅 指定された日付: ${date}`);
+    }
+
+    // 日付フォーマット検証
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      throw new Error('日付はYYYY-MM-DD形式で指定してください');
+    }
+
+    // 取り込み実行
+    const normalizedAndAdjusted = await importPrediction(date);
+
+    // 保存
+    const saved = savePrediction(date, normalizedAndAdjusted);
+
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    if (saved) {
+      console.log('✅ 取り込み完了！');
+    } else {
+      console.log('⏭️  変更なし（既存データと同一）');
+    }
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+  } catch (error) {
+    console.error('\n❌ エラーが発生しました:', error.message);
+    console.error(error.stack);
+    process.exit(1);
+  }
+}
+
+// 実行
+main();
