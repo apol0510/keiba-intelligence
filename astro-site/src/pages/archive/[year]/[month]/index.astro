@@ -127,27 +127,23 @@ const pageDescription = monthData.length > 0
                 </div>
 
                 <div class="races-list">
-                  {dayData.races.map((race) => {
-                    const isHit = race.isHit;
+                  {dayData.races.filter(race => race.isHit).map((race) => {
                     const payout = race.umatan?.payout || 0;
 
                     return (
-                      <div class={`race-line ${isHit ? 'hit' : 'miss'}`}>
+                      <div class="race-line hit">
                         <span class="race-number">第{race.raceNumber}R</span>
                         <span class="race-name">{race.raceName}</span>
-                        {isHit ? (
-                          <>
-                            <span class="hit-badge">✅ 的中</span>
-                            {payout > 0 && (
-                              <span class="payout">¥{(payout * 10).toLocaleString()}</span>
-                            )}
-                          </>
-                        ) : (
-                          <span class="miss-badge">❌ 不的中</span>
+                        <span class="hit-badge">✅ 的中</span>
+                        {payout > 0 && (
+                          <span class="payout">¥{payout.toLocaleString()}</span>
                         )}
                       </div>
                     );
                   })}
+                  {dayData.races.filter(race => race.isHit).length === 0 && (
+                    <div class="no-hits">的中レースなし</div>
+                  )}
                 </div>
               </section>
             );
@@ -333,16 +329,12 @@ const pageDescription = monthData.length > 0
     align-items: center;
     gap: var(--spacing-md);
     padding: var(--spacing-md) var(--spacing-lg);
-    background: rgba(0, 0, 0, 0.2);
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, rgba(0, 0, 0, 0.2) 100%);
     border-radius: var(--radius-md);
     transition: all var(--transition-normal);
 
-    &.hit {
-      background: linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, rgba(0, 0, 0, 0.2) 100%);
-    }
-
     &:hover {
-      background: rgba(0, 0, 0, 0.3);
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.2) 0%, rgba(0, 0, 0, 0.3) 100%);
     }
 
     .race-number {
@@ -363,18 +355,19 @@ const pageDescription = monthData.length > 0
       font-size: 0.9375rem;
     }
 
-    .miss-badge {
-      color: var(--text-tertiary);
-      font-weight: 600;
-      font-size: 0.9375rem;
-    }
-
     .payout {
       font-weight: 800;
       color: #10b981;
       font-size: 1.125rem;
       margin-left: var(--spacing-sm);
     }
+  }
+
+  .no-hits {
+    padding: var(--spacing-lg);
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
   }
 
   /* フッター */
