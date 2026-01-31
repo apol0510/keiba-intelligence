@@ -1,12 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { readdirSync, readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 export const prerender = false;
 
-// 結果データを取得
-const resultsDir = join(process.cwd(), 'src', 'data', 'results');
+// archiveResults.jsonから結果データを取得
+const archivePath = join(process.cwd(), 'src', 'data', 'archiveResults.json');
 let allResults = [];
 let aggregatedStats = {
   totalRaces: 0,
@@ -19,22 +19,46 @@ let aggregatedStats = {
 };
 
 try {
-  if (existsSync(resultsDir)) {
-    const files = readdirSync(resultsDir)
-      .filter(file => file.endsWith('.json'))
-      .sort()
-      .reverse();
+  if (existsSync(archivePath)) {
+    const fileContent = readFileSync(archivePath, 'utf-8');
+    const archiveData = JSON.parse(fileContent);
 
-    files.forEach(file => {
-      const fileContent = readFileSync(join(resultsDir, file), 'utf-8');
-      const data = JSON.parse(fileContent);
-      allResults.push(data);
+    // archiveResults.json形式のデータを既存の表示形式に変換
+    allResults = archiveData.map(entry => ({
+      date: entry.date,
+      venue: entry.venue,
+      summary: {
+        totalRaces: entry.totalRaces,
+        hitCount: entry.hitRaces,
+        totalInvest: entry.betAmount || entry.totalRaces * 200,
+        totalReturn: entry.totalPayout || 0,
+        roi: entry.returnRate || 0
+      },
+      races: entry.races.map(race => ({
+        raceNumber: race.raceNumber,
+        raceName: race.raceName,
+        prediction: {
+          honmei: extractHorseFromBettingLine(race.bettingLines[0], true),
+          taikou: extractHorseFromBettingLine(race.bettingLines[1] || race.bettingLines[0], false)
+        },
+        result: {
+          first: race.result.first.number,
+          second: race.result.second.number,
+          third: race.result.third.number
+        },
+        umatan: {
+          hit: race.isHit,
+          payout: race.umatan?.payout || 0
+        }
+      }))
+    }));
 
-      // 統計を集計
-      aggregatedStats.totalRaces += data.summary.totalRaces;
-      aggregatedStats.totalHits += data.summary.hitCount;
-      aggregatedStats.totalInvest += data.summary.totalInvest;
-      aggregatedStats.totalReturn += data.summary.totalReturn;
+    // 統計を集計
+    allResults.forEach(result => {
+      aggregatedStats.totalRaces += result.summary.totalRaces;
+      aggregatedStats.totalHits += result.summary.hitCount;
+      aggregatedStats.totalInvest += result.summary.totalInvest;
+      aggregatedStats.totalReturn += result.summary.totalReturn;
       aggregatedStats.eventCount += 1;
     });
 
@@ -47,7 +71,25 @@ try {
     }
   }
 } catch (err) {
-  console.error('Error loading results:', err);
+  console.error('Error loading archive results:', err);
+}
+
+// 買い目から馬情報を抽出するヘルパー関数
+function extractHorseFromBettingLine(bettingLine, isFirst) {
+  if (!bettingLine) return { number: 0, name: '---' };
+
+  const match = bettingLine.match(/^(\d+)-(.+)$/);
+  if (!match) return { number: 0, name: '---' };
+
+  const axisNumber = parseInt(match[1]);
+  const aitePart = match[2].replace(/\(抑え.+\)/, '');
+  const aiteNumbers = aitePart.split('.').map(n => parseInt(n));
+
+  if (isFirst) {
+    return { number: axisNumber, name: '軸' };
+  } else {
+    return { number: aiteNumbers[0] || 0, name: '相手' };
+  }
 }
 ---
 
@@ -161,9 +203,9 @@ try {
                       <div class="result-line">
                         結果: {race.result.first}-{race.result.second}-{race.result.third}
                       </div>
-                      {race.umatan.hit && (
+                      {race.umatan.hit && race.umatan.payout > 0 && (
                         <div class="payout-line">
-                          配当: {race.umatan.payout.toLocaleString()}円 (回収率: {race.umatan.roi}%)
+                          払戻: {(race.umatan.payout * 10).toLocaleString()}円
                         </div>
                       )}
                     </div>
@@ -184,15 +226,15 @@ try {
         <div class="info-grid">
           <div class="info-card">
             <h3>投資方法</h3>
-            <p>馬単2点（本命→対抗、対抗→本命）を各100円、計200円/レース</p>
+            <p>馬単買い目約10点を各100円購入、計1,000円/レース</p>
           </div>
           <div class="info-card">
             <h3>的中判定</h3>
-            <p>1着・2着が本命と対抗の組み合わせで決まった場合に的中</p>
+            <p>馬単買い目のいずれかが的中した場合に的中と判定</p>
           </div>
           <div class="info-card">
             <h3>回収率計算</h3>
-            <p>（払戻総額 ÷ 投資総額）× 100 で算出</p>
+            <p>全レース合計で（払戻総額 ÷ 投資総額）× 100 で算出</p>
           </div>
           <div class="info-card">
             <h3>データ信頼性</h3>

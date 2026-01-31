@@ -177,12 +177,13 @@ function saveArchive(date, venue, raceResults) {
   const hitRaces = raceResults.filter(r => r.isHit).length;
   const hitRate = totalRaces > 0 ? (hitRaces / totalRaces * 100).toFixed(1) : '0.0';
 
-  // 払戻金計算（2軸分：各レース100円×2＝200円）
-  const betAmount = totalRaces * 200; // 本命軸100円+対抗軸100円
+  // 払戻金計算（買い目10点前後：各レース1000円投資）
+  const betAmount = totalRaces * 1000; // 買い目約10点×100円＝1000円/レース
   const totalPayout = raceResults.reduce((sum, race) => {
     if (race.isHit && race.umatan.payout) {
-      // 的中した場合、払戻金を加算（100円あたりの払戻なので、そのまま加算）
-      return sum + race.umatan.payout;
+      // 的中した場合、払戻金を加算
+      // 実際の買い目点数で按分（100円あたりの払戻×10点）
+      return sum + (race.umatan.payout * 10);
     }
     return sum;
   }, 0);
