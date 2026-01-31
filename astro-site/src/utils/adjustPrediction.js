@@ -67,19 +67,15 @@ export function adjustPrediction(normalized) {
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // Step 2: 本命15点以下の降格処理
+    // Step 2: 本命15点以下の場合、本命と対抗をスワップ
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     const honmei = race.horses.find(h => h.role === '本命');
+    const taikou = race.horses.find(h => h.role === '対抗');
 
-    if (honmei && honmei.rawScore <= 15) {
-      // 本命を単穴に降格
-      honmei.role = '単穴';
-
-      // 対抗を本命に昇格
-      const taikou = race.horses.find(h => h.role === '対抗');
-      if (taikou) {
-        taikou.role = '本命';
-      }
+    if (honmei && taikou && honmei.rawScore <= 15) {
+      // 本命と対抗を入れ替え（対抗枠を必ず保持）
+      honmei.role = '対抗';
+      taikou.role = '本命';
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

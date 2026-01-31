@@ -129,6 +129,9 @@ const pageDescription = monthData.length > 0
                 <div class="races-list">
                   {dayData.races.filter(race => race.isHit).map((race) => {
                     const payout = race.umatan?.payout || 0;
+                    const bettingLines = race.bettingLines || [];
+                    // 買い目表示（-を⇔に変更）
+                    const displayLines = bettingLines.map(line => line.replace(/-/g, '⇔'));
 
                     return (
                       <div class="race-line hit">
@@ -137,6 +140,9 @@ const pageDescription = monthData.length > 0
                         <span class="hit-badge">✅ 的中</span>
                         {payout > 0 && (
                           <span class="payout">¥{payout.toLocaleString()}</span>
+                        )}
+                        {displayLines.length > 0 && (
+                          <span class="betting-lines-display">{displayLines.join(' / ')}</span>
                         )}
                       </div>
                     );
@@ -360,6 +366,13 @@ const pageDescription = monthData.length > 0
       color: #10b981;
       font-size: 1.125rem;
       margin-left: var(--spacing-sm);
+    }
+
+    .betting-lines-display {
+      color: var(--text-tertiary);
+      font-size: 0.8125rem;
+      font-family: 'Courier New', monospace;
+      margin-left: var(--spacing-md);
     }
   }
 
