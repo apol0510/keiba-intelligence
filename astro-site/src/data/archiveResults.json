@@ -3,12 +3,12 @@
     "date": "2026-01-30",
     "venue": "大井",
     "totalRaces": 12,
-    "hitRaces": 6,
-    "missRaces": 6,
-    "hitRate": 50,
+    "hitRaces": 8,
+    "missRaces": 4,
+    "hitRate": 66.7,
     "betAmount": 12000,
-    "totalPayout": 82200,
-    "returnRate": 685,
+    "totalPayout": 153300,
+    "returnRate": 1277.5,
     "races": [
       {
         "raceNumber": 1,
@@ -121,6 +121,7 @@
         ],
         "isHit": true,
         "hitLines": [
+          "2-9.3.1.7.4.8",
           "9-2.3.1.7.4.8"
         ],
         "umatan": {
@@ -236,6 +237,7 @@
         ],
         "isHit": true,
         "hitLines": [
+          "12-3.7.2.4.5.11(抑え1)",
           "7-12.3.2.4.5.11(抑え1)"
         ],
         "umatan": {
@@ -264,8 +266,10 @@
           "10-1.5.3.4.11.2(抑え7.9.8)",
           "1-10.5.3.4.11.2(抑え7.9.8)"
         ],
-        "isHit": false,
-        "hitLines": [],
+        "isHit": true,
+        "hitLines": [
+          "10-1.5.3.4.11.2(抑え7.9.8)"
+        ],
         "umatan": {
           "combination": "11-10",
           "payout": 1930
@@ -350,14 +354,16 @@
           "1-10.2.6.13.7.12(抑え3.8.4.5)",
           "2-1.10.6.13.7.12(抑え3.8.4.5)"
         ],
-        "isHit": false,
-        "hitLines": [],
+        "isHit": true,
+        "hitLines": [
+          "1-10.2.6.13.7.12(抑え3.8.4.5)"
+        ],
         "umatan": {
           "combination": "4-1",
           "payout": 5180
         }
       }
     ],
-    "verifiedAt": "2026-01-31T10:26:58.720Z"
+    "verifiedAt": "2026-01-31T12:33:51.511Z"
   }
 ]
