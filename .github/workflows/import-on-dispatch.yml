@@ -65,16 +65,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           DATES="${{ github.event.client_payload.dates }}"
+          SOURCE="${{ github.event.client_payload.source }}"
           git add src/data/predictions/
-          git commit -m "Auto-import: ${DATES} prediction from keiba-data-shared
-
-Triggered by: ${{ github.event.client_payload.source }}
-Event type: ${{ github.event.action }}
-
-Generated with Claude Code
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-
+          git commit -m "Auto-import: ${DATES} prediction from ${SOURCE}"
           git push
 
       - name: Success notification

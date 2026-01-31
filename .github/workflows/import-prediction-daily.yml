@@ -61,15 +61,7 @@ jobs:
 
           DATE="${{ steps.date.outputs.date }}"
           git add src/data/predictions/
-          git commit -m "Daily auto-import: ${DATE} prediction
-
-Triggered by: scheduled job (23:00 JST)
-Mode: insurance check
-
-Generated with Claude Code
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-
+          git commit -m "Daily auto-import: ${DATE} prediction [scheduled 23:00 JST]"
           git push
 
       - name: Success notification
