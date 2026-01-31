@@ -33,11 +33,10 @@ jobs:
       - name: Import prediction from keiba-data-shared
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DATES_JSON: ${{ toJSON(github.event.client_payload.dates) }}
+          DATE_SINGLE: ${{ github.event.client_payload.date }}
         run: |
           # 【修正】dates配列をループ処理（後方互換性あり）
-          DATES_JSON='${{ github.event.client_payload.dates }}'
-          DATE_SINGLE='${{ github.event.client_payload.date }}'
-
           if [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
             # dates配列がある場合（新形式）
             echo "📅 Importing predictions for multiple dates"
