@@ -2,10 +2,10 @@
   {
     "date": "2026-01-30",
     "venue": "大井",
-    "totalRaces": 11,
+    "totalRaces": 12,
     "hitRaces": 6,
-    "missRaces": 5,
-    "hitRate": 54.5,
+    "missRaces": 6,
+    "hitRate": 50,
     "races": [
       {
         "raceNumber": 1,
@@ -281,8 +281,32 @@
         "hitLines": [
           "12-4.5.7.2.8.10(抑え11.3.6)"
         ]
+      },
+      {
+        "raceNumber": 12,
+        "raceName": "筋違見附特別 Ｃ１(三)(四)(五) 選抜特別",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "リッキーフェイス"
+          },
+          "second": {
+            "number": 1,
+            "name": "ケンヴィヴァルディ"
+          },
+          "third": {
+            "number": 8,
+            "name": "スキャロップ"
+          }
+        },
+        "bettingLines": [
+          "1-10.2.6.13.7.12(抑え3.8.4.5)",
+          "2-1.10.6.13.7.12(抑え3.8.4.5)"
+        ],
+        "isHit": false,
+        "hitLines": []
       }
     ],
-    "verifiedAt": "2026-01-31T08:24:58.411Z"
+    "verifiedAt": "2026-01-31T08:25:36.170Z"
   }
 ]
