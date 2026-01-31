@@ -3,7 +3,12 @@ name: Import Results (Dispatch)
 on:
   repository_dispatch:
     types: [results-updated]
-  workflow_dispatch:  # Manual testing enabled
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '日付 (YYYY-MM-DD)'
+        required: false
+        default: ''
 
 jobs:
   import-results:
@@ -35,6 +40,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DATES_JSON: ${{ toJSON(github.event.client_payload.dates) }}
           DATE_SINGLE: ${{ github.event.client_payload.date }}
+          MANUAL_DATE: ${{ github.event.inputs.date }}
         run: |
           # dates配列をループ処理（後方互換性あり）
           if [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
@@ -48,8 +54,12 @@ jobs:
             # date単体がある場合（旧形式・後方互換）
             echo "Importing results for single date: $DATE_SINGLE"
             npm run import:results -- --date "$DATE_SINGLE"
+          elif [ -n "$MANUAL_DATE" ] && [ "$MANUAL_DATE" != "" ]; then
+            # workflow_dispatch手動実行の場合
+            echo "Importing results for manual date: $MANUAL_DATE"
+            npm run import:results -- --date "$MANUAL_DATE"
           else
-            echo "Error: neither dates nor date provided in payload"
+            echo "Error: no date provided (needs dates, date, or manual input)"
             exit 1
           fi
 
