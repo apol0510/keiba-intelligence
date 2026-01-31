@@ -1,0 +1,87 @@
+name: Import Results (Dispatch)
+
+on:
+  repository_dispatch:
+    types: [results-updated]
+  workflow_dispatch:  # Manual testing enabled
+
+jobs:
+  import-results:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for git push
+    defaults:
+      run:
+        working-directory: astro-site
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'astro-site/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Import results from keiba-data-shared
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DATES_JSON: ${{ toJSON(github.event.client_payload.dates) }}
+          DATE_SINGLE: ${{ github.event.client_payload.date }}
+        run: |
+          # dates配列をループ処理（後方互換性あり）
+          if [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
+            # dates配列がある場合（新形式）
+            echo "Importing results for multiple dates"
+            while IFS= read -r DATE; do
+              echo "━━━ Processing: $DATE ━━━"
+              npm run import:results -- --date "$DATE"
+            done < <(echo "$DATES_JSON" | jq -r '.[]')
+          elif [ -n "$DATE_SINGLE" ] && [ "$DATE_SINGLE" != "null" ]; then
+            # date単体がある場合（旧形式・後方互換）
+            echo "Importing results for single date: $DATE_SINGLE"
+            npm run import:results -- --date "$DATE_SINGLE"
+          else
+            echo "Error: neither dates nor date provided in payload"
+            exit 1
+          fi
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          # archiveResults.jsonの変更をステージング
+          git add src/data/archiveResults.json
+          # ステージされた変更があるかチェック
+          git diff --staged --exit-code || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changes
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          DATES="${{ github.event.client_payload.dates }}"
+          SOURCE="${{ github.event.client_payload.source }}"
+          # 既に Check for changes ステップで git add 済み
+          git commit -m "Auto-verify: ${DATES} results from ${SOURCE}"
+          git push
+
+      - name: Success notification
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          echo "Results verification completed and pushed"
+          echo "   Dates: ${{ github.event.client_payload.dates }}"
+          echo "   Source: ${{ github.event.client_payload.source }}"
+
+      - name: No changes notification
+        if: steps.git-check.outputs.changed != 'true'
+        run: |
+          echo "No changes detected (already up-to-date)"
+          echo "   Dates: ${{ github.event.client_payload.dates }}"
