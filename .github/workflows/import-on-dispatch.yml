@@ -57,7 +57,10 @@ jobs:
       - name: Check for changes
         id: git-check
         run: |
-          git diff --exit-code || echo "changed=true" >> $GITHUB_OUTPUT
+          # 変更をステージング（新規ファイル + 既存ファイルの変更）
+          git add src/data/predictions/
+          # ステージされた変更があるかチェック
+          git diff --staged --exit-code || echo "changed=true" >> $GITHUB_OUTPUT
 
       - name: Commit and push changes
         if: steps.git-check.outputs.changed == 'true'
@@ -67,7 +70,7 @@ jobs:
 
           DATES="${{ github.event.client_payload.dates }}"
           SOURCE="${{ github.event.client_payload.source }}"
-          git add src/data/predictions/
+          # 既に Check for changes ステップで git add 済み
           git commit -m "Auto-import: ${DATES} prediction from ${SOURCE}"
           git push
 
