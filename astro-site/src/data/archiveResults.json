@@ -2,10 +2,10 @@
   {
     "date": "2026-01-30",
     "venue": "大井",
-    "totalRaces": 10,
-    "hitRaces": 5,
+    "totalRaces": 11,
+    "hitRaces": 6,
     "missRaces": 5,
-    "hitRate": 50,
+    "hitRate": 54.5,
     "races": [
       {
         "raceNumber": 1,
@@ -255,8 +255,34 @@
         ],
         "isHit": false,
         "hitLines": []
+      },
+      {
+        "raceNumber": 11,
+        "raceName": "狸坂賞 Ｂ３(三) 選抜特別",
+        "result": {
+          "first": {
+            "number": 12,
+            "name": "モリデンステルス"
+          },
+          "second": {
+            "number": 8,
+            "name": "チャダルクン"
+          },
+          "third": {
+            "number": 10,
+            "name": "プレストステラ"
+          }
+        },
+        "bettingLines": [
+          "12-4.5.7.2.8.10(抑え11.3.6)",
+          "5-12.4.7.2.8.10(抑え11.3.6)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "12-4.5.7.2.8.10(抑え11.3.6)"
+        ]
       }
     ],
-    "verifiedAt": "2026-01-31T08:24:23.946Z"
+    "verifiedAt": "2026-01-31T08:24:58.411Z"
   }
 ]
