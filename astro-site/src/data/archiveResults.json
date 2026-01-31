@@ -2,10 +2,10 @@
   {
     "date": "2026-01-30",
     "venue": "大井",
-    "totalRaces": 6,
-    "hitRaces": 3,
+    "totalRaces": 8,
+    "hitRaces": 5,
     "missRaces": 3,
-    "hitRate": 50,
+    "hitRate": 62.5,
     "races": [
       {
         "raceNumber": 1,
@@ -155,8 +155,60 @@
         ],
         "isHit": false,
         "hitLines": []
+      },
+      {
+        "raceNumber": 7,
+        "raceName": "Ｃ２(三)(四)(五)",
+        "result": {
+          "first": {
+            "number": 10,
+            "name": "ホワイトマジック"
+          },
+          "second": {
+            "number": 5,
+            "name": "サウンドキングダム"
+          },
+          "third": {
+            "number": 4,
+            "name": "ダイヤメ"
+          }
+        },
+        "bettingLines": [
+          "10-5.4.6.8.1.7",
+          "4-10.5.6.8.1.7"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "10-5.4.6.8.1.7"
+        ]
+      },
+      {
+        "raceNumber": 8,
+        "raceName": "Ｃ１(三)(四)(五)",
+        "result": {
+          "first": {
+            "number": 7,
+            "name": "アルミンテソーロ"
+          },
+          "second": {
+            "number": 12,
+            "name": "スリーレジェンド"
+          },
+          "third": {
+            "number": 11,
+            "name": "ユーヒナタ"
+          }
+        },
+        "bettingLines": [
+          "12-3.7.2.4.5.11(抑え1)",
+          "7-12.3.2.4.5.11(抑え1)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "7-12.3.2.4.5.11(抑え1)"
+        ]
       }
     ],
-    "verifiedAt": "2026-01-31T08:22:08.813Z"
+    "verifiedAt": "2026-01-31T08:22:50.250Z"
   }
 ]
