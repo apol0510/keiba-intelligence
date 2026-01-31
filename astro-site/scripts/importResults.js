@@ -127,6 +127,11 @@ function verifyResults(prediction, results) {
     const second = race.results[1];
     const third = race.results[2];
 
+    // 馬単払戻金を取得
+    const umatanPayout = race.payouts?.umatan?.[0] || null;
+    const payoutAmount = umatanPayout?.payout || null;
+    const payoutCombination = umatanPayout?.combination || null;
+
     raceResults.push({
       raceNumber,
       raceName: race.raceName,
@@ -137,11 +142,16 @@ function verifyResults(prediction, results) {
       },
       bettingLines,
       isHit: hits.length > 0,
-      hitLines: hits
+      hitLines: hits,
+      umatan: {
+        combination: payoutCombination,
+        payout: payoutAmount
+      }
     });
 
     if (hits.length > 0) {
-      console.log(`✅ ${raceNumber}R: 的中！ ${hits.join(', ')}`);
+      const payoutInfo = payoutAmount ? ` (払戻: ${payoutAmount.toLocaleString()}円)` : '';
+      console.log(`✅ ${raceNumber}R: 的中！ ${hits.join(', ')}${payoutInfo}`);
     } else {
       console.log(`❌ ${raceNumber}R: 不的中 (${first.number}-${second.number}-${third.number})`);
     }
@@ -167,6 +177,17 @@ function saveArchive(date, venue, raceResults) {
   const hitRaces = raceResults.filter(r => r.isHit).length;
   const hitRate = totalRaces > 0 ? (hitRaces / totalRaces * 100).toFixed(1) : '0.0';
 
+  // 払戻金計算（2軸分：各レース100円×2＝200円）
+  const betAmount = totalRaces * 200; // 本命軸100円+対抗軸100円
+  const totalPayout = raceResults.reduce((sum, race) => {
+    if (race.isHit && race.umatan.payout) {
+      // 的中した場合、払戻金を加算（100円あたりの払戻なので、そのまま加算）
+      return sum + race.umatan.payout;
+    }
+    return sum;
+  }, 0);
+  const returnRate = betAmount > 0 ? ((totalPayout / betAmount) * 100).toFixed(1) : '0.0';
+
   const newEntry = {
     date,
     venue,
@@ -174,6 +195,9 @@ function saveArchive(date, venue, raceResults) {
     hitRaces,
     missRaces: totalRaces - hitRaces,
     hitRate: parseFloat(hitRate),
+    betAmount,
+    totalPayout,
+    returnRate: parseFloat(returnRate),
     races: raceResults,
     verifiedAt: new Date().toISOString()
   };
@@ -189,6 +213,9 @@ function saveArchive(date, venue, raceResults) {
   console.log(`\n💾 アーカイブ保存完了: ${archivePath}`);
   console.log(`   日付: ${date}`);
   console.log(`   的中: ${hitRaces}/${totalRaces}R (${hitRate}%)`);
+  console.log(`   投資額: ${betAmount.toLocaleString()}円`);
+  console.log(`   払戻額: ${totalPayout.toLocaleString()}円`);
+  console.log(`   回収率: ${returnRate}%`);
 
   return newEntry;
 }
@@ -235,9 +262,14 @@ async function main() {
 
     console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`✅ 的中判定完了！`);
-    console.log(`   的中: ${archiveEntry.hitRaces}R`);
-    console.log(`   不的中: ${archiveEntry.missRaces}R`);
+    console.log(`   的中: ${archiveEntry.hitRaces}R / ${archiveEntry.totalRaces}R`);
     console.log(`   的中率: ${archiveEntry.hitRate}%`);
+    console.log(`   投資額: ${archiveEntry.betAmount.toLocaleString()}円`);
+    console.log(`   払戻額: ${archiveEntry.totalPayout.toLocaleString()}円`);
+    console.log(`   回収率: ${archiveEntry.returnRate}%`);
+    const profit = archiveEntry.totalPayout - archiveEntry.betAmount;
+    const profitSign = profit >= 0 ? '+' : '';
+    console.log(`   損益: ${profitSign}${profit.toLocaleString()}円`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
 
   } catch (error) {
