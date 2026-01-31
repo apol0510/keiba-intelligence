@@ -152,8 +152,8 @@ function convertToLegacyFormat(data, date) {
     // 役割別に馬を抽出
     const honmei = race.horses.find(h => h.role === '本命');
     const taikou = race.horses.find(h => h.role === '対抗');
-    const main = race.horses.filter(h => h.role === '本命' || h.role === '対抗' || h.role === '単穴');
-    const renka = race.horses.filter(h => h.role === '連下' || h.role === '連下最上位');
+    const main = race.horses.filter(h => h.role === '本命' || h.role === '対抗' || h.role === '単穴' || h.role === '連下最上位');
+    const renka = race.horses.filter(h => h.role === '連下');
     const osae = race.horses.filter(h => h.role === '補欠' || h.role === '抑え');
 
     // 買い目生成（馬単）
