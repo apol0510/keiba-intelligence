@@ -157,19 +157,27 @@ function convertToLegacyFormat(data, date) {
     const osae = race.horses.filter(h => h.role === '補欠' || h.role === '抑え');
 
     // 買い目生成（馬単）
-    const mainNumbers = main.map(h => h.number).join('.');
-    const renkaNumbers = renka.map(h => h.number).join('.');
-    const osaeNumbers = osae.map(h => h.number).join('.');
-
     const umatanLines = [];
-    if (honmei && mainNumbers) {
-      let line = `${honmei.number}-${mainNumbers}`;
+
+    if (honmei) {
+      // 本命軸：相手から本命を除外
+      const aite = main.filter(h => h.number !== honmei.number).map(h => h.number).join('.');
+      const renkaNumbers = renka.map(h => h.number).join('.');
+      const osaeNumbers = osae.map(h => h.number).join('.');
+
+      let line = `${honmei.number}-${aite}`;
       if (renkaNumbers) line += `.${renkaNumbers}`;
       if (osaeNumbers) line += `(抑え${osaeNumbers})`;
       umatanLines.push(line);
     }
-    if (taikou && mainNumbers) {
-      let line = `${taikou.number}-${mainNumbers}`;
+
+    if (taikou) {
+      // 対抗軸：相手から対抗を除外
+      const aite = main.filter(h => h.number !== taikou.number).map(h => h.number).join('.');
+      const renkaNumbers = renka.map(h => h.number).join('.');
+      const osaeNumbers = osae.map(h => h.number).join('.');
+
+      let line = `${taikou.number}-${aite}`;
       if (renkaNumbers) line += `.${renkaNumbers}`;
       if (osaeNumbers) line += `(抑え${osaeNumbers})`;
       umatanLines.push(line);
