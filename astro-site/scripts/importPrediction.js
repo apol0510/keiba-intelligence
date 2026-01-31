@@ -193,7 +193,7 @@ function convertToLegacyFormat(data, date) {
         horseNumber: h.number,
         horseName: h.name,
         pt: h.displayScore || h.rawScore || 70, // ptフィールド
-        role: h.role
+        role: h.role === '連下最上位' ? '単穴' : h.role // 連下最上位を単穴に変換
       })),
       bettingLines: {
         umatan: umatanLines
