@@ -87,9 +87,19 @@ function checkUmatanHit(bettingLine, result) {
   const axis = parseInt(match[1]);
   const aitePart = match[2];
 
-  // 抑えを除去
+  // 本線相手馬を抽出
   const mainPart = aitePart.replace(/\(抑え.+\)/, '');
-  const aite = mainPart.split('.').map(n => parseInt(n));
+  const mainAite = mainPart.split('.').map(n => parseInt(n)).filter(n => !isNaN(n));
+
+  // 抑え馬を抽出
+  let osaeAite = [];
+  const osaeMatch = aitePart.match(/\(抑え([0-9.]+)\)/);
+  if (osaeMatch) {
+    osaeAite = osaeMatch[1].split('.').map(n => parseInt(n)).filter(n => !isNaN(n));
+  }
+
+  // 全相手馬（本線+抑え）
+  const allAite = [...mainAite, ...osaeAite];
 
   // 1着と2着を取得
   const first = result.results[0]?.number;
@@ -97,8 +107,14 @@ function checkUmatanHit(bettingLine, result) {
 
   if (!first || !second) return false;
 
-  // 馬単判定
-  if (axis === first && aite.includes(second)) {
+  // 馬単判定（2パターン）
+  // パターン1: 軸が1着、相手が2着
+  if (axis === first && allAite.includes(second)) {
+    return true;
+  }
+
+  // パターン2: 相手が1着、軸が2着
+  if (allAite.includes(first) && axis === second) {
     return true;
   }
 
