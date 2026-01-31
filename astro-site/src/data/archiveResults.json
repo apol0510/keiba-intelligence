@@ -2,10 +2,10 @@
   {
     "date": "2026-01-30",
     "venue": "大井",
-    "totalRaces": 3,
-    "hitRaces": 2,
+    "totalRaces": 4,
+    "hitRaces": 3,
     "missRaces": 1,
-    "hitRate": 66.7,
+    "hitRate": 75,
     "races": [
       {
         "raceNumber": 1,
@@ -82,8 +82,34 @@
         "hitLines": [
           "4-7.3.6.8.5.2"
         ]
+      },
+      {
+        "raceNumber": 4,
+        "raceName": "鳶巣川賞 ３歳(一)(二)(三)",
+        "result": {
+          "first": {
+            "number": 9,
+            "name": "サヨナキドリ"
+          },
+          "second": {
+            "number": 2,
+            "name": "ミチノバレリーナ"
+          },
+          "third": {
+            "number": 1,
+            "name": "リトルデビル"
+          }
+        },
+        "bettingLines": [
+          "2-9.3.1.7.4.8",
+          "9-2.3.1.7.4.8"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "9-2.3.1.7.4.8"
+        ]
       }
     ],
-    "verifiedAt": "2026-01-31T08:18:56.848Z"
+    "verifiedAt": "2026-01-31T08:20:56.304Z"
   }
 ]
