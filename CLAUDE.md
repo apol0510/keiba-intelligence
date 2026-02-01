@@ -438,6 +438,122 @@ Co-Authored-By: Claude <noreply@anthropic.com>
   → Netlify自動ビルド
 ```
 
+### **⚠️ 予想データと結果データの同期（重要）**
+
+**keiba-data-sharedとkeiba-intelligenceの役割分担:**
+
+#### **keiba-data-sharedの役割**
+
+**目的**: 競馬データの共有リポジトリ（SEO対策・データアーカイブ）
+
+- **結果データを自由に保存できる**（予想データの有無に関わらず）
+- 過去の結果データを大量に保存してSEO対策
+- 中央競馬・南関競馬の両対応
+- 全プロジェクトで共有可能
+
+**ディレクトリ構造**:
+```
+nankan/
+  predictions/2026/01/2026-01-26.json  # 予想データ（任意）
+  results/2026/01/2026-01-26.json      # 結果データ（必須・SEO対策）
+```
+
+#### **keiba-intelligenceの役割**
+
+**目的**: AI予想サイト（予想＋的中実績の表示）
+
+- **予想データがある日付のみ的中判定を実行**
+- 予想データがない結果データは自動的にスキップ（エラーにならない）
+- 的中実績のみをarchiveResults.jsonに保存
+
+#### **自動連携フロー**
+
+```
+keiba-data-shared（結果データPush）
+  ↓
+GitHub Actions: dispatch-results-intelligence.yml 起動
+  ↓
+【チェック1】12レース揃っているか確認
+  ↓
+✅ 12レース揃っている場合のみ
+  ↓
+repository_dispatch イベント送信（results-updated）
+  ↓
+keiba-intelligence の GitHub Actions 起動
+  ↓
+importResults.js 実行
+  ↓
+【チェック2】予想データが存在するか確認
+  ├─ ✅ 予想データあり → 的中判定実行 → archiveResults.json更新
+  └─ ⏭️  予想データなし → スキップ（正常終了）
+```
+
+#### **✅ スキップされるケース（正常動作）**
+
+**importResults.jsは予想データが存在しない場合、スキップして正常終了します。**
+
+```javascript
+// importResults.js: Line 272-283（修正後）
+try {
+  prediction = loadPrediction(date);
+} catch (error) {
+  // 予想データがない場合はスキップ
+  console.log(`⏭️  予想データが見つかりません: ${date}`);
+  console.log(`   keiba-intelligenceでは的中判定をスキップします`);
+  process.exit(0); // 正常終了（エラーではない）
+}
+```
+
+**例: 1/26の結果をkeiba-data-sharedにPushした場合**
+
+```
+1. keiba-data-sharedに1/26結果をPush（予想データなし）
+   ↓
+2. keiba-intelligence の GitHub Actions 自動起動
+   ↓
+3. importResults.js 実行
+   ↓
+4. ⏭️  予想データが見つかりません: 2026-01-26
+   ↓
+5. スキップ（正常終了）
+   ↓
+6. ✅ GitHub Actions 成功（archiveResults.jsonは更新されない）
+```
+
+**つまり:**
+- ✅ keiba-data-sharedには**結果のみ**を自由に保存できる（SEO対策）
+- ✅ keiba-intelligenceは**予想がある日付のみ**的中判定を実行
+- ✅ GitHub Actionsはエラーにならず正常終了
+
+#### **📋 運用方法**
+
+**1. SEO対策用の結果データ保存（予想なし）**
+
+```bash
+# keiba-data-sharedに過去の結果を保存
+# → keiba-intelligenceには影響なし（スキップされる）
+```
+
+**2. 予想＋結果の的中判定（通常運用）**
+
+```bash
+# Step 1: 予想データをkeiba-data-sharedにPush
+# → keiba-intelligenceに自動インポート
+
+# Step 2: 結果データをkeiba-data-sharedにPush
+# → keiba-intelligenceで自動的中判定 → archiveResults.json更新
+```
+
+#### **🎯 まとめ**
+
+| 項目 | keiba-data-shared | keiba-intelligence |
+|------|-------------------|-------------------|
+| **役割** | データアーカイブ・SEO対策 | AI予想サイト・的中実績表示 |
+| **予想データ** | 任意（あってもなくてもOK） | ある日付のみ処理 |
+| **結果データ** | 必須（SEO対策で量産） | 予想がある日付のみ処理 |
+| **自動連携** | 12レース揃ったらdispatch | 予想がない場合はスキップ |
+| **エラー** | なし | なし（スキップで正常終了） |
+
 ---
 
 ## 💰 **月額コスト** 💰

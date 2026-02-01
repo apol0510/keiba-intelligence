@@ -267,8 +267,20 @@ async function main() {
 
     // 2. 予想データ読み込み
     console.log(`\n📖 予想データ読み込み中...`);
-    const prediction = loadPrediction(date);
-    console.log(`✅ 予想データ読み込み完了`);
+    let prediction;
+    try {
+      prediction = loadPrediction(date);
+      console.log(`✅ 予想データ読み込み完了`);
+    } catch (error) {
+      // 予想データがない場合はスキップ（keiba-data-sharedのSEO対策用結果データ）
+      console.log(`⏭️  予想データが見つかりません: ${date}`);
+      console.log(`   keiba-data-sharedにはSEO対策用の結果データのみ保存されています`);
+      console.log(`   keiba-intelligenceでは的中判定をスキップします\n`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log(`⏭️  処理完了: 予想データなし（スキップ）`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+      process.exit(0); // 正常終了（エラーではない）
+    }
 
     // 3. 的中判定
     console.log(`\n🎯 的中判定実行中...\n`);
