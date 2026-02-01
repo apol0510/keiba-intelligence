@@ -748,14 +748,26 @@ GITHUB_TOKEN_KEIBA_DATA_SHARED=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ---
 
-**📅 最終更新日**: 2026-01-31
+**📅 最終更新日**: 2026-02-01
 **🏁 Project Phase**: Phase 3管理機能実装 🚀（Phase 3: 85%完了）
 **🎯 Next Priority**: Airtableテーブルセットアップ → SEOページ自動生成 → 本番デプロイ
 **📊 進捗率**: 90%完了（Phase 1: 100%、Phase 2: 85%、Phase 3: 85%）
 **🌐 本番URL**: https://keiba-intelligence.netlify.app/
 **🔧 管理画面URL**: https://keiba-intelligence.netlify.app/admin/results-manager
 
-**✨ 本日の成果（2026-01-31）**:
+**✨ 本日の成果（2026-02-01）**:
+  - **importResults.js修正（予想データなしスキップ対応）** ✅
+    - 予想データがない結果でもエラーにならず正常終了
+    - keiba-data-sharedにSEO対策用の結果を自由に保存可能
+    - GitHub Actions成功（archiveResults.jsonは更新されない）
+
+  - **CLAUDE.md更新（予想・結果データ同期の詳細説明）** ✅
+    - 「予想データと結果データの同期（重要）」セクション追加
+    - keiba-data-sharedとkeiba-intelligenceの役割分担を明記
+    - 自動連携フロー・スキップケースを詳細図解
+    - 運用方法（SEO対策用・通常運用）を整理
+
+**✨ 過去の成果（2026-01-31）**:
   - **adjustPrediction.js修正（対抗枠保持ロジック）** ✅
     - 本命15点以下の場合、本命と対抗をスワップ
     - 対抗枠を必ず保持する設計に変更
