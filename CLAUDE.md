@@ -693,18 +693,26 @@ GITHUB_BRANCH=main
 # 注意: GITHUB_TOKENが既にkeiba-data-sharedへのアクセス権を持つ場合は不要
 # 専用トークンを使用する場合のみ設定
 GITHUB_TOKEN_KEIBA_DATA_SHARED=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# BlastMail（必須 - メルマガ配信）
+# 用途: 銀行振り込み申請時の自動読者登録
+# 取得方法: BlastMail管理画面 → API設定
+BLASTMAIL_USERNAME=xxxxxxxxx
+BLASTMAIL_PASSWORD=xxxxxxxxx
+BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 **重要な注意事項:**
-- ❌ **BREVOは使用不可**（ギャンブル系サービスNG）→ SendGridのみ使用
-- ✅ **SendGrid無料枠**: 100,000通/月（メルマガ15,000件 × 6回配信可能）
+- ✅ **決済**: 銀行振り込み自動化（PayPalアカウント停止対応）
+- ✅ **メルマガ**: BlastMail API連携（自動読者登録）
+- ✅ **SendGrid**: マジックリンク・確認メール送信
 - ✅ **Netlify Blobs**: Pro版で自動有効化（セッション保存用）
 
 **Airtable必須テーブル:**
 1. Customers（顧客管理）
-2. ProcessedWebhookEvents（Webhook重複排除）
-3. Broadcasts（メルマガ配信管理）
-4. BroadcastRecipients（配信履歴）
+2. ProcessedWebhookEvents（~~Webhook重複排除~~ 不要）
+3. Broadcasts（~~メルマガ配信管理~~ BlastMail使用のため不要）
+4. BroadcastRecipients（~~配信履歴~~ BlastMail使用のため不要）
 5. AuthTokens（認証トークン）
 
 ---
