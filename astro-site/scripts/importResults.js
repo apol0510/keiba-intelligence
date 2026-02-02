@@ -56,8 +56,7 @@ async function fetchSharedResults(date, venue = 'nankan') {
 /**
  * 予想データを読み込む
  */
-function loadPrediction(date) {
-  const venue = '大井'; // TODO: 動的に判定
+function loadPrediction(date, venue) {
   const venueMap = {
     '大井': 'ooi',
     '船橋': 'funabashi',
@@ -69,7 +68,7 @@ function loadPrediction(date) {
   const filePath = join(projectRoot, 'src', 'data', 'predictions', fileName);
 
   if (!existsSync(filePath)) {
-    throw new Error(`予想データが見つかりません: ${fileName}`);
+    throw new Error(`予想データが見つかりません: ${fileName} (会場: ${venue})`);
   }
 
   const content = readFileSync(filePath, 'utf-8');
@@ -269,7 +268,7 @@ async function main() {
     console.log(`\n📖 予想データ読み込み中...`);
     let prediction;
     try {
-      prediction = loadPrediction(date);
+      prediction = loadPrediction(date, results.venue);
       console.log(`✅ 予想データ読み込み完了`);
     } catch (error) {
       // 予想データがない場合はスキップ（keiba-data-sharedのSEO対策用結果データ）
