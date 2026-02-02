@@ -261,14 +261,14 @@ async function main() {
     // 1. 結果データ取得
     const results = await fetchSharedResults(date);
     console.log(`\n✅ 結果データ取得完了`);
-    console.log(`   会場: ${results.venue}`);
+    console.log(`   会場: ${results.track}`);
     console.log(`   レース数: ${results.races.length}`);
 
     // 2. 予想データ読み込み
     console.log(`\n📖 予想データ読み込み中...`);
     let prediction;
     try {
-      prediction = loadPrediction(date, results.venue);
+      prediction = loadPrediction(date, results.track);
       console.log(`✅ 予想データ読み込み完了`);
     } catch (error) {
       // 予想データがない場合はスキップ（keiba-data-sharedのSEO対策用結果データ）
@@ -286,7 +286,7 @@ async function main() {
     const raceResults = verifyResults(prediction, results);
 
     // 4. アーカイブ保存
-    const archiveEntry = saveArchive(date, results.venue, raceResults);
+    const archiveEntry = saveArchive(date, results.track, raceResults);
 
     console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`✅ 的中判定完了！`);
