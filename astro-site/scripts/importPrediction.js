@@ -82,7 +82,10 @@ async function fetchSharedPrediction(date, venue = 'nankan') {
 
   if (!response.ok) {
     if (response.status === 404) {
-      throw new Error(`予想データが見つかりません: ${path}`);
+      // 予想データがない場合は正常終了（エラーではない）
+      console.log(`⏭️  予想データが見つかりません: ${path}`);
+      console.log(`   まだ予想が作成されていない可能性があります`);
+      return null; // nullを返す
     }
     const errorData = await response.json();
     throw new Error(`GitHub API Error: ${response.status} ${JSON.stringify(errorData)}`);
@@ -111,6 +114,12 @@ async function importPrediction(date, venue = 'nankan') {
 
   // keiba-data-sharedから取得
   const sharedJSON = await fetchSharedPrediction(date, venue);
+
+  // 予想データがない場合はスキップ
+  if (!sharedJSON) {
+    console.log(`⏭️  予想データがないため、スキップします`);
+    return null;
+  }
 
   // 正規化 + 調整ルール適用
   console.log(`⚙️  正規化 + 調整ルール適用中...`);
@@ -317,6 +326,14 @@ async function main() {
 
     // 取り込み実行
     const normalizedAndAdjusted = await importPrediction(date);
+
+    // 予想データがない場合は正常終了
+    if (!normalizedAndAdjusted) {
+      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('⏭️  予想データがないため、処理を終了します');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      return; // 正常終了
+    }
 
     // 保存
     const saved = savePrediction(date, normalizedAndAdjusted);

@@ -1,0 +1,365 @@
+---
+// アクセス制御コンポーネント（KEIBA Intelligence用）
+export interface Props {
+    requiredPlan: 'free' | 'pro' | 'pro-plus';
+    showUpgrade?: boolean;
+}
+
+const { requiredPlan, showUpgrade = true } = Astro.props;
+---
+
+<div id="access-control" data-required-plan={requiredPlan}>
+    <!-- 読み込み中表示 -->
+    <div id="loading-state" class="access-loading">
+        <div class="spinner"></div>
+        <p>アクセス権限を確認中...</p>
+    </div>
+
+    <!-- コンテンツ表示エリア -->
+    <div id="content-area" class="hidden">
+        <slot />
+    </div>
+
+    <!-- アクセス拒否メッセージ -->
+    <div id="access-denied" class="access-denied hidden">
+        <div class="denied-icon">🔒</div>
+        <h2>このコンテンツをご覧いただくには会員登録が必要です</h2>
+        <p class="denied-message"></p>
+
+        {showUpgrade && (
+            <div class="upgrade-options">
+                <a href="/pricing/" class="upgrade-btn primary">料金プランを見る</a>
+                <a href="/login" class="upgrade-btn secondary">ログイン</a>
+            </div>
+        )}
+    </div>
+</div>
+
+<style>
+    .access-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 20px;
+        color: var(--color-text-secondary);
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(59, 130, 246, 0.2);
+        border-top: 3px solid var(--color-accent);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .hidden {
+        display: none !important;
+    }
+
+    .access-denied {
+        text-align: center;
+        padding: 80px 20px;
+        background: rgba(30, 41, 59, 0.8);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 16px;
+        margin: 40px auto;
+        max-width: 600px;
+    }
+
+    .denied-icon {
+        font-size: 64px;
+        margin-bottom: 24px;
+        filter: grayscale(0.5);
+        opacity: 0.8;
+    }
+
+    .access-denied h2 {
+        color: var(--color-text-primary);
+        font-size: 24px;
+        margin-bottom: 16px;
+    }
+
+    .denied-message {
+        color: var(--color-text-secondary);
+        font-size: 16px;
+        line-height: 1.6;
+        margin-bottom: 32px;
+        white-space: pre-line;
+    }
+
+    .upgrade-options {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .upgrade-btn {
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s;
+        display: inline-block;
+    }
+
+    .upgrade-btn.primary {
+        background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-alt) 100%);
+        color: white;
+    }
+
+    .upgrade-btn.primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+    }
+
+    .upgrade-btn.secondary {
+        background: transparent;
+        color: var(--color-accent);
+        border: 2px solid rgba(59, 130, 246, 0.5);
+    }
+
+    .upgrade-btn.secondary:hover {
+        background: rgba(59, 130, 246, 0.1);
+        border-color: var(--color-accent);
+    }
+</style>
+
+<script>
+    // 環境判定
+    function isDevelopmentMode() {
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const hasDevPort = window.location.port === '4321' || window.location.port === '3000';
+        return isLocalhost || hasDevPort;
+    }
+
+    // 認証状態チェック
+    function getCurrentUserPlan() {
+        console.log('🔍 認証状態チェック開始 (KEIBA Intelligence)');
+
+        // 1. セッションストレージチェック（最優先 - Netlify Blobsベース認証）
+        const sessionAuth = sessionStorage.getItem('keiba_session');
+        if (sessionAuth) {
+            try {
+                const { user, plan, expiresAt } = JSON.parse(sessionAuth);
+
+                // 有効期限チェック
+                if (expiresAt && new Date() < new Date(expiresAt)) {
+                    console.log('✅ セッション認証:', { user, plan });
+                    return { user, plan: plan || 'free' };
+                } else {
+                    console.log('⚠️ セッション有効期限切れ');
+                    sessionStorage.removeItem('keiba_session');
+                }
+            } catch (error) {
+                console.error('セッション解析エラー:', error);
+                sessionStorage.removeItem('keiba_session');
+            }
+        }
+
+        // 2. LocalStorageのuser-planチェック
+        const userPlanData = localStorage.getItem('user-plan');
+        if (userPlanData) {
+            try {
+                const userData = JSON.parse(userPlanData);
+                console.log('✅ user-plan認証:', userData);
+                return {
+                    user: { email: userData.email },
+                    plan: userData.plan || 'free'
+                };
+            } catch (error) {
+                console.error('user-plan解析エラー:', error);
+            }
+        }
+
+        // 3. LocalStorageのauth_dataチェック
+        const authData = localStorage.getItem('auth_data');
+        if (authData) {
+            try {
+                const { user, plan, expiresAt } = JSON.parse(authData);
+
+                // 有効期限チェック
+                if (expiresAt && new Date() > new Date(expiresAt)) {
+                    console.log('⚠️ auth_data有効期限切れ');
+                    localStorage.removeItem('auth_data');
+                    return { user: null, plan: null };
+                }
+
+                console.log('✅ auth_data認証:', { user, plan });
+                return { user, plan: plan || 'free' };
+            } catch (error) {
+                console.error('auth_data解析エラー:', error);
+                localStorage.removeItem('auth_data');
+            }
+        }
+
+        // 4. デフォルトは未登録
+        console.log('❌ 認証データなし - 未登録状態');
+        return { user: null, plan: null };
+    }
+
+    // プラン階層チェック
+    function canAccessContent(userPlan, requiredPlan, user) {
+        const planHierarchy = {
+            'free': 0,
+            'pro': 1,
+            'pro-plus': 2
+        };
+
+        const userLevel = planHierarchy[userPlan] || 0;
+        const requiredLevel = planHierarchy[requiredPlan] || 0;
+
+        console.log('🔍 アクセスチェック詳細:', {
+            userPlan, requiredPlan, user,
+            userLevel, requiredLevel,
+            hasUser: user !== null
+        });
+
+        // 無料プランが必要な場合 - 登録不要でアクセス可能
+        if (requiredPlan === 'free') {
+            console.log('🆓 無料コンテンツ - 全員アクセス可能');
+            return true;
+        }
+
+        // 有料プランの場合は階層チェック + 登録チェック
+        const hasValidUser = user !== null && (user.email || user.legacy || user.temp);
+        const hasAccess = userLevel >= requiredLevel && hasValidUser;
+        console.log('💎 有料アクセスチェック:', hasAccess, { userLevel, requiredLevel, hasValidUser });
+        return hasAccess;
+    }
+
+    // プラン表示名取得
+    function getPlanDisplayName(plan) {
+        const displayNames = {
+            'free': 'フリープラン',
+            'pro': 'プロプラン',
+            'pro-plus': 'プロプラスプラン'
+        };
+        return displayNames[plan] || '不明なプラン';
+    }
+
+    async function checkAccess() {
+        const accessControl = document.getElementById('access-control');
+        const loadingState = document.getElementById('loading-state');
+        const contentArea = document.getElementById('content-area');
+        const accessDenied = document.getElementById('access-denied');
+
+        const requiredPlan = accessControl.dataset.requiredPlan;
+
+        try {
+            // 認証状態の取得
+            const { user, plan } = getCurrentUserPlan();
+            console.log('🔒 認証チェック - ユーザー:', user, 'プラン:', plan, '必要プラン:', requiredPlan);
+
+            // 開発モードでの優先表示（デバッグ用）
+            if (isDevelopmentMode()) {
+                console.log('🔧 開発モード: 認証情報を優先表示');
+                setTimeout(() => {
+                    if (loadingState && !loadingState.classList.contains('hidden')) {
+                        console.log('⚠️ 開発モード: 認証タイムアウト - 強制表示実行');
+                        loadingState.style.display = 'none';
+                        loadingState.classList.add('hidden');
+                        if (contentArea) {
+                            contentArea.style.display = 'block';
+                            contentArea.classList.remove('hidden');
+                        }
+                    }
+                }, 10000);
+            }
+
+            // アクセス権限チェック
+            if (canAccessContent(plan, requiredPlan, user)) {
+                // アクセス許可
+                console.log(`✅ アクセス許可: ${getPlanDisplayName(plan)} → ${requiredPlan}コンテンツ`);
+
+                if (loadingState) {
+                    loadingState.style.display = 'none';
+                    loadingState.classList.add('hidden');
+                }
+                if (contentArea) {
+                    contentArea.style.display = 'block';
+                    contentArea.classList.remove('hidden');
+                }
+                if (accessDenied) {
+                    accessDenied.style.display = 'none';
+                    accessDenied.classList.add('hidden');
+                }
+
+                console.log('🔓 コンテンツ表示完了');
+            } else {
+                // アクセス拒否
+                console.log(`❌ アクセス拒否: ${getPlanDisplayName(plan)} → ${requiredPlan}コンテンツ`);
+                loadingState.classList.add('hidden');
+                contentArea.classList.add('hidden');
+                accessDenied.classList.remove('hidden');
+
+                // メッセージをカスタマイズ
+                const deniedMessage = accessDenied.querySelector('.denied-message');
+
+                if (!user) {
+                    deniedMessage.textContent = '詳細な予想と買い目をご覧いただくには、会員登録とプランのアップグレードが必要です。';
+                } else {
+                    const currentPlanName = getPlanDisplayName(plan);
+                    const requiredPlanName = getPlanDisplayName(requiredPlan);
+
+                    deniedMessage.textContent = `現在のプラン: ${currentPlanName}\nこのコンテンツには「${requiredPlanName}」以上のプランが必要です。`;
+                }
+            }
+        } catch (error) {
+            console.error('❌ アクセス制御エラー:', error);
+
+            // 本番環境ではエラー時はアクセス拒否（安全側に倒す）
+            if (!isDevelopmentMode()) {
+                console.log('🔒 本番モード: エラー時はアクセス拒否');
+                loadingState.classList.add('hidden');
+                accessDenied.classList.remove('hidden');
+
+                const deniedMessage = accessDenied.querySelector('.denied-message');
+                deniedMessage.textContent = 'システムエラーが発生しました。しばらく待ってから再度お試しください。';
+            } else {
+                // 開発モードでのみエラー時アクセス許可
+                console.log('🔧 開発モード: エラー時も表示継続');
+                loadingState.classList.add('hidden');
+                contentArea.classList.remove('hidden');
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('📋 DOMContentLoaded - AccessControl初期化開始');
+
+        const accessControl = document.getElementById('access-control');
+        const loadingState = document.getElementById('loading-state');
+        const contentArea = document.getElementById('content-area');
+        const accessDenied = document.getElementById('access-denied');
+
+        if (!accessControl || !loadingState || !contentArea || !accessDenied) {
+            console.error('❌ 必要なDOM要素が見つかりません:', {
+                accessControl: !!accessControl,
+                loadingState: !!loadingState,
+                contentArea: !!contentArea,
+                accessDenied: !!accessDenied
+            });
+            if (contentArea) {
+                contentArea.style.display = 'block';
+                contentArea.classList.remove('hidden');
+            }
+            return;
+        }
+
+        console.log('✅ 全DOM要素確認完了 - AccessControl実行開始');
+
+        setTimeout(() => {
+            checkAccess();
+        }, 50);
+    });
+</script>

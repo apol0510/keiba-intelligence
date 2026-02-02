@@ -10,10 +10,22 @@ const { getStore } = require('@netlify/blobs');
  * メインハンドラー
  */
 exports.handler = async (event) => {
+  // CORS設定（セキュリティ強化：特定ドメインのみ許可）
+  const allowedOrigins = [
+    'https://keiba-intelligence.netlify.app',
+    'https://keiba-intelligence.keiba.link',
+    'http://localhost:4321',
+    'http://localhost:3000'
+  ];
+
+  const origin = event.headers.origin || '';
+  const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+
   const headers = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Credentials': 'true', // Cookie送信を許可
   };
 
   if (event.httpMethod === 'OPTIONS') {

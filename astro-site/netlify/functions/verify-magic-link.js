@@ -19,10 +19,22 @@ const customersTable = base('Customers');
  * メインハンドラー
  */
 exports.handler = async (event) => {
+  // CORS設定（セキュリティ強化：特定ドメインのみ許可）
+  const allowedOrigins = [
+    'https://keiba-intelligence.netlify.app',
+    'https://keiba-intelligence.keiba.link',
+    'http://localhost:4321',
+    'http://localhost:3000'
+  ];
+
+  const origin = event.headers.origin || '';
+  const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+
   const headers = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Credentials': 'true',
   };
 
   if (event.httpMethod === 'OPTIONS') {
@@ -142,11 +154,19 @@ exports.handler = async (event) => {
     console.log('✅ Session created:', sessionId, 'for:', customer.Email);
 
     // 5. セッションIDをCookieに設定してリダイレクト
+    // プラン別リダイレクト先
+    let redirectTo = '/';
+    if (customer.Plan?.toLowerCase() === 'pro' || customer.Plan?.toLowerCase() === 'pro-plus') {
+      redirectTo = '/prediction'; // プロ会員は有料予想ページへ
+    } else if (customer.Plan?.toLowerCase() === 'free') {
+      redirectTo = '/free-prediction'; // 無料会員は無料予想ページへ
+    }
+
     return {
       statusCode: 302,
       headers: {
         'Set-Cookie': `session_id=${sessionId}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}`,
-        'Location': '/admin/newsletter',
+        'Location': redirectTo,
       },
       body: '',
     };
