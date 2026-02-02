@@ -1,0 +1,387 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
+
+export const prerender = false;
+
+// archiveResults.jsonから全データを取得
+const archivePath = join(process.cwd(), 'src', 'data', 'archiveResults.json');
+let allMonths: Array<{
+  year: string;
+  month: string;
+  displayMonth: string;
+  daysCount: number;
+  totalRaces: number;
+  totalHitRaces: number;
+  hitRate: string;
+  totalPayout: number;
+  returnRate: string;
+}> = [];
+
+try {
+  if (existsSync(archivePath)) {
+    const fileContent = readFileSync(archivePath, 'utf-8');
+    const allData = JSON.parse(fileContent);
+
+    // 年月でグループ化
+    const monthsMap = new Map<string, any[]>();
+    allData.forEach((entry: any) => {
+      const [year, month] = entry.date.split('-');
+      const key = `${year}-${month}`;
+      if (!monthsMap.has(key)) {
+        monthsMap.set(key, []);
+      }
+      monthsMap.get(key)!.push(entry);
+    });
+
+    // 統計を計算
+    monthsMap.forEach((entries, key) => {
+      const [year, month] = key.split('-');
+      let totalRaces = 0;
+      let totalHitRaces = 0;
+      let totalBetAmount = 0;
+      let totalPayout = 0;
+
+      entries.forEach((entry) => {
+        totalRaces += entry.totalRaces;
+        totalHitRaces += entry.hitRaces;
+        totalBetAmount += entry.betAmount;
+        totalPayout += entry.totalPayout;
+      });
+
+      const hitRate = totalRaces > 0 ? ((totalHitRaces / totalRaces) * 100).toFixed(1) : '0.0';
+      const returnRate = totalBetAmount > 0 ? ((totalPayout / totalBetAmount) * 100).toFixed(1) : '0.0';
+
+      allMonths.push({
+        year,
+        month,
+        displayMonth: `${year}年${month}月`,
+        daysCount: entries.length,
+        totalRaces,
+        totalHitRaces,
+        hitRate,
+        totalPayout,
+        returnRate
+      });
+    });
+
+    // 新しい順にソート
+    allMonths.sort((a, b) => {
+      const keyA = `${a.year}-${a.month}`;
+      const keyB = `${b.year}-${b.month}`;
+      return keyB.localeCompare(keyA);
+    });
+  }
+} catch (error) {
+  console.error('Error loading archive:', error);
+}
+
+const pageTitle = '的中実績アーカイブ';
+const pageDescription = `南関競馬の全的中実績アーカイブ。月別の的中記録と配当金額を完全公開。AI予想の精度を実績データで証明。`;
+---
+
+<BaseLayout title={pageTitle} description={pageDescription}>
+  <main class="archive-index-page">
+    <div class="container">
+      {/* ページヘッダー */}
+      <header class="page-header">
+        <h1>🏆 的中実績アーカイブ</h1>
+        <p class="subtitle">すべての的中記録を完全公開</p>
+        <p class="description">
+          パーフェクト的中の日も、不的中の日も、すべて正直に公開。<br>
+          透明性と信頼性を最優先にしています。
+        </p>
+      </header>
+
+      {/* CTA */}
+      <section class="cta-box">
+        <p class="cta-text">
+          🎯 これらの実績を生み出したAI予想を、あなたも利用できます
+        </p>
+        <a href="/pricing" class="btn btn-primary">プレミアム予想を見る →</a>
+      </section>
+
+      {allMonths.length === 0 ? (
+        <div class="no-data">
+          <p>まだ的中実績データがありません。</p>
+        </div>
+      ) : (
+        <section class="months-grid">
+          {allMonths.map((monthData) => (
+            <a href={`/archive/${monthData.year}/${monthData.month}/`} class="month-card">
+              <div class="month-header">
+                <h2 class="month-title">{monthData.displayMonth}</h2>
+                <div class="month-badge">{monthData.daysCount}日開催</div>
+              </div>
+
+              <div class="month-stats">
+                <div class="stat-item">
+                  <div class="stat-label">的中率</div>
+                  <div class="stat-value highlight">{monthData.hitRate}%</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-label">回収率</div>
+                  <div class={`stat-value ${parseFloat(monthData.returnRate) >= 100 ? 'profit' : 'loss'}`}>
+                    {monthData.returnRate}%
+                  </div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-label">的中レース</div>
+                  <div class="stat-value">{monthData.totalHitRaces}/{monthData.totalRaces}R</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-label">合計配当</div>
+                  <div class="stat-value profit">¥{monthData.totalPayout.toLocaleString()}</div>
+                </div>
+              </div>
+
+              <div class="view-button">
+                📊 詳細を見る →
+              </div>
+            </a>
+          ))}
+        </section>
+      )}
+
+      {/* フッターナビ */}
+      <footer class="page-footer">
+        <a href="/" class="btn-back">← トップページへ戻る</a>
+      </footer>
+    </div>
+  </main>
+</BaseLayout>
+
+<style lang="scss">
+  .archive-index-page {
+    min-height: 100vh;
+    padding: var(--spacing-2xl) 0;
+    background: var(--bg-primary);
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-lg);
+  }
+
+  /* ページヘッダー */
+  .page-header {
+    text-align: center;
+    margin-bottom: var(--spacing-2xl);
+    padding: var(--spacing-2xl);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(var(--primary-rgb), 0.3);
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .subtitle {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .description {
+      font-size: 1rem;
+      color: var(--text-tertiary);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+  }
+
+  /* CTA */
+  .cta-box {
+    background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.1), rgba(139, 92, 246, 0.1));
+    border: 1px solid rgba(var(--primary-rgb), 0.3);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-2xl);
+    text-align: center;
+    margin-bottom: var(--spacing-2xl);
+
+    .cta-text {
+      font-size: 1.1rem;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-lg);
+    }
+  }
+
+  /* データなし */
+  .no-data {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    color: var(--text-secondary);
+  }
+
+  /* 月別グリッド */
+  .months-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-2xl);
+  }
+
+  .month-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: all var(--transition-normal);
+    cursor: pointer;
+
+    &:hover {
+      transform: translateY(-4px);
+      border-color: rgba(var(--primary-rgb), 0.5);
+      box-shadow: 0 12px 30px rgba(var(--primary-rgb), 0.3);
+    }
+  }
+
+  .month-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 2px solid var(--border-color);
+
+    .month-title {
+      font-size: 1.75rem;
+      font-weight: 800;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .month-badge {
+      background: rgba(var(--primary-rgb), 0.15);
+      color: var(--primary-end);
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+  }
+
+  .month-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .stat-item {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.2);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-tertiary);
+      margin-bottom: var(--spacing-xs);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-primary);
+
+      &.highlight {
+        color: #60a5fa;
+      }
+
+      &.profit {
+        color: #10b981;
+      }
+
+      &.loss {
+        color: #ef4444;
+      }
+    }
+  }
+
+  .view-button {
+    background: rgba(var(--primary-rgb), 0.15);
+    color: var(--primary-end);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    font-size: 1rem;
+    text-align: center;
+    transition: all var(--transition-normal);
+    border: 1px solid rgba(var(--primary-rgb), 0.3);
+
+    .month-card:hover & {
+      background: rgba(var(--primary-rgb), 0.25);
+      border-color: rgba(var(--primary-rgb), 0.5);
+    }
+  }
+
+  /* フッター */
+  .page-footer {
+    margin-top: var(--spacing-2xl);
+    padding-top: var(--spacing-2xl);
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+  }
+
+  .btn-back {
+    display: inline-block;
+    padding: var(--spacing-md) var(--spacing-xl);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    font-weight: 600;
+    transition: all var(--transition-normal);
+
+    &:hover {
+      background: var(--bg-tertiary);
+      transform: translateY(-2px);
+    }
+  }
+
+  /* レスポンシブ */
+  @media (max-width: 768px) {
+    .page-header h1 {
+      font-size: 2rem;
+    }
+
+    .months-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .month-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--spacing-sm);
+
+      .month-title {
+        font-size: 1.5rem;
+      }
+    }
+
+    .stat-item .stat-value {
+      font-size: 1.25rem;
+    }
+  }
+</style>
