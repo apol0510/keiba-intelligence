@@ -10,6 +10,11 @@ on:
         required: false
         type: string
 
+# 並行実行制御：同じリポジトリのimport-predictionは1つずつ実行
+concurrency:
+  group: import-prediction-${{ github.ref }}
+  cancel-in-progress: false  # 実行中のジョブをキャンセルせず待機
+
 jobs:
   import-prediction:
     runs-on: ubuntu-latest
@@ -98,7 +103,39 @@ jobs:
           fi
 
           git commit -m "$COMMIT_MSG"
-          git push
+
+          # Retry logic: pull --rebase and push (最大5回リトライ)
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+          SUCCESS=false
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" = false ]; do
+            echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Pulling latest changes..."
+
+            # 最新状態を取得（rebase）
+            if git pull --rebase origin main; then
+              echo "✅ Successfully pulled latest changes"
+
+              # プッシュ試行
+              if git push; then
+                echo "✅ Successfully pushed changes"
+                SUCCESS=true
+              else
+                echo "⚠️  Push failed, retrying..."
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                sleep $((RETRY_COUNT * 2))  # Exponential backoff
+              fi
+            else
+              echo "⚠️  Pull --rebase failed, retrying..."
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              sleep $((RETRY_COUNT * 2))
+            fi
+          done
+
+          if [ "$SUCCESS" = false ]; then
+            echo "❌ Failed to push after $MAX_RETRIES attempts"
+            exit 1
+          fi
 
       - name: Success notification
         if: steps.git-check.outputs.changed == 'true'
