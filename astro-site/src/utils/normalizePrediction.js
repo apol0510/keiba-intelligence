@@ -109,7 +109,8 @@ export function normalizeDetailed(input) {
         role: role,
         mark: '', // adjustPrediction()で生成
         jockey: horse.kisyu || horse.jockey || '', // 騎手
-        trainer: horse.kyusya || horse.trainer || '' // 厩舎
+        trainer: horse.kyusya || horse.trainer || '', // 厩舎
+        age: horse.seirei || horse.age || '' // 馬齢（牡3、牝4など）
         // ⚠️ marks（記者印）は含めない（秘匿）
       };
     });

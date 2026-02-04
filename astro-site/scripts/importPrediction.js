@@ -229,7 +229,8 @@ function convertToLegacyFormat(data, date) {
           pt: h.displayScore || h.rawScore || 70, // ptフィールド
           role: h.role === '連下最上位' ? '単穴' : h.role, // 連下最上位を単穴に変換
           jockey: h.jockey || h.kisyu || '', // 騎手
-          trainer: h.trainer || h.kyusya || '' // 厩舎
+          trainer: h.trainer || h.kyusya || '', // 厩舎
+          age: h.age || h.seirei || '' // 馬齢
         }))
         .sort((a, b) => {
           // 役割の優先順位
