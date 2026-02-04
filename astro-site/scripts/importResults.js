@@ -15,6 +15,49 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = join(__dirname, '..');
 
+// アラートメール送信URL（Netlify Function）
+const ALERT_ENDPOINT = process.env.ALERT_ENDPOINT || 'https://keiba-intelligence.netlify.app/.netlify/functions/send-alert';
+const IS_CI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+
+/**
+ * アラートメール送信
+ */
+async function sendAlert(type, date, details = {}, metadata = {}) {
+  // CI環境でのみアラート送信（ローカル実行時はスキップ）
+  if (!IS_CI) {
+    console.log(`⏭️  ローカル実行のためアラート送信をスキップ`);
+    return;
+  }
+
+  try {
+    console.log(`📧 アラートメール送信中: ${type} (${date || 'N/A'})`);
+
+    const response = await fetch(ALERT_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type,
+        date,
+        details,
+        metadata
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`アラート送信失敗: ${response.status} ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log(`✅ アラートメール送信成功: ${result.type}`);
+  } catch (error) {
+    console.error(`⚠️  アラートメール送信エラー（処理は継続）: ${error.message}`);
+    // アラート送信失敗しても処理は継続（メイン処理に影響を与えない）
+  }
+}
+
 /**
  * keiba-data-sharedから結果データを取得
  */
@@ -329,7 +372,7 @@ async function main() {
     const raceResults = verifyResults(prediction, results);
 
     // 4. アーカイブ保存
-    const archiveEntry = saveArchive(date, results.track, raceResults);
+    const archiveEntry = saveArchive(date, venue, raceResults);
 
     console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`✅ 的中判定完了！`);
@@ -342,6 +385,22 @@ async function main() {
     const profitSign = profit >= 0 ? '+' : '';
     console.log(`   損益: ${profitSign}${profit.toLocaleString()}円`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+
+    // 5. 異常値検知・アラート送信
+    if (archiveEntry.hitRate === 0 && archiveEntry.totalRaces >= 10) {
+      console.log(`⚠️  異常値検知：的中率0%`);
+      await sendAlert('zero-hit-rate', date, {
+        hitRate: archiveEntry.hitRate,
+        hitRaces: archiveEntry.hitRaces,
+        totalRaces: archiveEntry.totalRaces,
+        betAmount: archiveEntry.betAmount,
+        totalPayout: archiveEntry.totalPayout,
+        returnRate: archiveEntry.returnRate
+      }, {
+        venue,
+        timestamp: new Date().toISOString()
+      });
+    }
 
   } catch (error) {
     console.error(`\n❌ エラーが発生しました: ${error.message}`);

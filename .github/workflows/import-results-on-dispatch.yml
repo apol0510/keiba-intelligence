@@ -175,3 +175,48 @@ jobs:
           else
             echo "   Date: $(TZ=Asia/Tokyo date +%Y-%m-%d) (today JST)"
           fi
+
+      - name: Send failure alert
+        if: failure()
+        env:
+          MANUAL_DATE: ${{ github.event.inputs.date }}
+          DATES_JSON: ${{ toJSON(github.event.client_payload.dates) }}
+          DATE_SINGLE: ${{ github.event.client_payload.date }}
+          ALERT_ENDPOINT: ${{ secrets.ALERT_ENDPOINT || 'https://keiba-intelligence.netlify.app/.netlify/functions/send-alert' }}
+        run: |
+          # 対象日付を特定
+          if [ -n "$MANUAL_DATE" ]; then
+            TARGET_DATE="$MANUAL_DATE"
+          elif [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
+            TARGET_DATE=$(echo "$DATES_JSON" | jq -r '.[0]')
+          elif [ -n "$DATE_SINGLE" ] && [ "$DATE_SINGLE" != "null" ]; then
+            TARGET_DATE="$DATE_SINGLE"
+          else
+            TARGET_DATE=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+          fi
+
+          echo "🚨 GitHub Actions失敗を検知しました"
+          echo "   対象日付: $TARGET_DATE"
+          echo "   ワークフロー: import-results-on-dispatch"
+          echo "   アラートメール送信中..."
+
+          # アラートメール送信
+          curl -X POST "$ALERT_ENDPOINT" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"type\": \"github-actions-failure\",
+              \"date\": \"$TARGET_DATE\",
+              \"details\": {
+                \"workflow\": \"import-results-on-dispatch\",
+                \"step\": \"${{ github.job }}\",
+                \"error\": \"GitHub Actions workflow failed\",
+                \"run_url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+              },
+              \"metadata\": {
+                \"repository\": \"${{ github.repository }}\",
+                \"run_id\": \"${{ github.run_id }}\",
+                \"run_number\": \"${{ github.run_number }}\",
+                \"actor\": \"${{ github.actor }}\",
+                \"event_name\": \"${{ github.event_name }}\"
+              }
+            }" || echo "⚠️  アラートメール送信失敗（処理は継続）"

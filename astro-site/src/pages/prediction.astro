@@ -232,6 +232,7 @@ function generateUmatanBets(horses) {
                   class={`race-btn ${index === 0 ? 'active' : ''}`}
                   data-race-index={index}
                   onclick="selectRace(event, this)"
+                  title={race.raceInfo.raceName || `第${race.raceInfo.raceNumber}レース`}
                 >
                   <span class="race-label">{race.raceInfo.raceNumber}R</span>
                   <span class="race-indicator"></span>
@@ -260,6 +261,13 @@ function generateUmatanBets(horses) {
 
               return (
                 <div class={`race-content ${index === 0 ? 'active' : ''}`} data-race-index={index}>
+                  <!-- レース名ヘッダー -->
+                  {race.raceInfo.raceName && (
+                    <div class="race-name-header">
+                      <h2 class="race-name-title">{race.raceInfo.raceNumber}R {race.raceInfo.raceName}</h2>
+                    </div>
+                  )}
+
                   <!-- AIモデル情報カード -->
                   <div class="ai-model-card">
                     <div class="model-header">
@@ -796,6 +804,27 @@ function generateUmatanBets(horses) {
 
     /* 残りのスタイルはfree-prediction.astroから継承（省略） */
     /* AIモデルカード、レース選択、詳細分析等は同じなので省略 */
+
+    /* レース名ヘッダー */
+    .race-name-header {
+      text-align: center;
+      margin-bottom: var(--spacing-xl);
+      padding: var(--spacing-lg);
+      background: linear-gradient(135deg,
+        rgba(139, 92, 246, 0.15) 0%,
+        rgba(59, 130, 246, 0.15) 100%);
+      border-radius: var(--radius-lg);
+      border: 2px solid rgba(139, 92, 246, 0.3);
+    }
+
+    .race-name-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #a78bfa;
+      margin: 0;
+      text-shadow: 0 0 10px rgba(167, 139, 250, 0.3);
+      letter-spacing: 0.5px;
+    }
 
     .ai-model-card {
       background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
