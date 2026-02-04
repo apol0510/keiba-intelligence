@@ -217,7 +217,7 @@ function convertToLegacyFormat(data, date) {
         date: date,
         venue: data.venue,
         raceNumber: race.raceNumber,
-        raceName: race.raceName || `第${race.raceNumber}レース` // レース名を追加（未設定時はデフォルト）
+        raceName: race.raceInfo?.raceName || race.raceName || `第${race.raceNumber}レース` // レース名を追加（未設定時はデフォルト）
       },
       horses: race.horses
         .map(h => ({
