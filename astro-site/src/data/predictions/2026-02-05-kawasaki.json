@@ -10,80 +10,107 @@
         "date": "2026-02-05",
         "venue": "川崎",
         "raceNumber": 1,
-        "raceName": "サラ３歳"
+        "raceName": "サラ３歳",
+        "startTime": "15:00",
+        "distance": "1400",
+        "horseCount": 12
       },
       "horses": [
         {
           "horseNumber": 8,
           "horseName": "カガヤクネガイ",
           "pt": 82,
-          "role": "本命"
+          "role": "本命",
+          "jockey": "町田直",
+          "trainer": "(川)平田"
         },
         {
           "horseNumber": 1,
           "horseName": "レノヴァティオ",
           "pt": 83,
-          "role": "対抗"
+          "role": "対抗",
+          "jockey": "笹川翼",
+          "trainer": "(浦)繁田"
         },
         {
           "horseNumber": 10,
           "horseName": "ジャパンハート",
           "pt": 81,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "矢野貴",
+          "trainer": "(川)佐々仁"
         },
         {
           "horseNumber": 4,
           "horseName": "ピサンザプラ",
           "pt": 80,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "佐野遥",
+          "trainer": "(川)高月賢"
         },
         {
           "horseNumber": 11,
           "horseName": "ラーマ",
           "pt": 80,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "桑村真",
+          "trainer": "(川)内田勝"
         },
         {
           "horseNumber": 2,
           "horseName": "デーレーハンサム",
           "pt": 76,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "新原周",
+          "trainer": "(川)鈴木義"
         },
         {
           "horseNumber": 9,
           "horseName": "アイノプライム",
           "pt": 72,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "鷹見陸",
+          "trainer": "(川)佐々仁"
         },
         {
           "horseNumber": 3,
           "horseName": "ヨンクン",
           "pt": 71,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "及川烈",
+          "trainer": "(浦)長谷忍"
         },
         {
           "horseNumber": 5,
           "horseName": "レインボージェンヌ",
           "pt": 71,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "櫻井光",
+          "trainer": "(川)佐藤博"
         },
         {
           "horseNumber": 12,
           "horseName": "リュウノアーチスト",
           "pt": 71,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "古岡勇",
+          "trainer": "(川)山崎尋"
         },
         {
           "horseNumber": 6,
           "horseName": "ヒデガミクィーン",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "服部茂",
+          "trainer": "(川)山田質"
         },
         {
           "horseNumber": 7,
           "horseName": "ハマウルフ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "藤江渉",
+          "trainer": "(川)岩本"
         }
       ],
       "bettingLines": {
@@ -92,75 +119,98 @@
           "1-8.10.4.11.2.9(抑え3.5.12)"
         ]
       },
-      "generatedAt": "2026-02-04T15:01:03.858Z"
+      "generatedAt": "2026-02-04T15:08:45.783Z"
     },
     {
       "raceInfo": {
         "date": "2026-02-05",
         "venue": "川崎",
         "raceNumber": 2,
-        "raceName": "ストーム賞"
+        "raceName": "ストーム賞",
+        "startTime": "15:30",
+        "distance": "900",
+        "horseCount": 10
       },
       "horses": [
         {
           "horseNumber": 5,
           "horseName": "ナナミ",
           "pt": 86,
-          "role": "本命"
+          "role": "本命",
+          "jockey": "矢野貴",
+          "trainer": "(川)高月賢"
         },
         {
           "horseNumber": 4,
           "horseName": "ノーサイドガール",
           "pt": 83,
-          "role": "対抗"
+          "role": "対抗",
+          "jockey": "張田昂",
+          "trainer": "(川)山田質"
         },
         {
           "horseNumber": 3,
           "horseName": "ムジークヘーレン",
           "pt": 79,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "野畑凌",
+          "trainer": "(川)平田"
         },
         {
           "horseNumber": 2,
           "horseName": "エルブフォール",
           "pt": 78,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "町田直",
+          "trainer": "(川)甲田"
         },
         {
           "horseNumber": 10,
           "horseName": "アウフタクト",
           "pt": 77,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "神尾香",
+          "trainer": "(川)山田質"
         },
         {
           "horseNumber": 8,
           "horseName": "カミノリメイン",
           "pt": 75,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "藤江渉",
+          "trainer": "(川)田島寿"
         },
         {
           "horseNumber": 9,
           "horseName": "カネトシライパー",
           "pt": 75,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "山林堂信",
+          "trainer": "(川)佐々仁"
         },
         {
           "horseNumber": 1,
           "horseName": "アメリカンサンデー",
           "pt": 73,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "中越琉",
+          "trainer": "(川)鈴木義"
         },
         {
           "horseNumber": 7,
           "horseName": "グロースフロイデ",
           "pt": 71,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "服部茂",
+          "trainer": "(川)山田質"
         },
         {
           "horseNumber": 6,
           "horseName": "キンパツ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "新原周",
+          "trainer": "(川)鈴木義"
         }
       ],
       "bettingLines": {
@@ -169,87 +219,114 @@
           "4-5.3.2.10.8.9(抑え1.7)"
         ]
       },
-      "generatedAt": "2026-02-04T15:01:03.858Z"
+      "generatedAt": "2026-02-04T15:08:45.784Z"
     },
     {
       "raceInfo": {
         "date": "2026-02-05",
         "venue": "川崎",
         "raceNumber": 3,
-        "raceName": "サラ４歳以上"
+        "raceName": "サラ４歳以上",
+        "startTime": "16:00",
+        "distance": "1400",
+        "horseCount": 12
       },
       "horses": [
         {
           "horseNumber": 1,
           "horseName": "キョウエイセレッソ",
           "pt": 88,
-          "role": "本命"
+          "role": "本命",
+          "jockey": "笠野雄",
+          "trainer": "(船)岩崎"
         },
         {
           "horseNumber": 12,
           "horseName": "モズミコシ",
           "pt": 87,
-          "role": "対抗"
+          "role": "対抗",
+          "jockey": "野畑凌",
+          "trainer": "(川)高月賢"
         },
         {
           "horseNumber": 7,
           "horseName": "ムンディ",
           "pt": 83,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "池谷匠",
+          "trainer": "(川)八木仁"
         },
         {
           "horseNumber": 2,
           "horseName": "パーティーキング",
           "pt": 76,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "新原周",
+          "trainer": "(川)田邊"
         },
         {
           "horseNumber": 3,
           "horseName": "ルディカツー",
           "pt": 75,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "櫻井光",
+          "trainer": "(川)高橋宏"
         },
         {
           "horseNumber": 5,
           "horseName": "ジーティーケリー",
           "pt": 73,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "伊藤裕",
+          "trainer": "(川)村田順"
         },
         {
           "horseNumber": 8,
           "horseName": "ディバインウィル",
           "pt": 73,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "福原杏",
+          "trainer": "(川)田島寿"
         },
         {
           "horseNumber": 10,
           "horseName": "セイウンヤタガラス",
           "pt": 72,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "山林堂信",
+          "trainer": "(川)田邊"
         },
         {
           "horseNumber": 4,
           "horseName": "リームシュトローア",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "岡田大",
+          "trainer": "(浦)薮口"
         },
         {
           "horseNumber": 6,
           "horseName": "クインズカヤノヒメ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "岡村裕",
+          "trainer": "(川)八木喜"
         },
         {
           "horseNumber": 9,
           "horseName": "カルストンブランド",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "秋元耕",
+          "trainer": "(浦)入口"
         },
         {
           "horseNumber": 11,
           "horseName": "イエスユイキャン",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "吉留孝",
+          "trainer": "(浦)薮口"
         }
       ],
       "bettingLines": {
@@ -258,75 +335,98 @@
           "12-1.7.2.3.5.8(抑え10)"
         ]
       },
-      "generatedAt": "2026-02-04T15:01:03.858Z"
+      "generatedAt": "2026-02-04T15:08:45.784Z"
     },
     {
       "raceInfo": {
         "date": "2026-02-05",
         "venue": "川崎",
         "raceNumber": 4,
-        "raceName": "サラ４歳以上"
+        "raceName": "サラ４歳以上",
+        "startTime": "16:30",
+        "distance": "1400",
+        "horseCount": 10
       },
       "horses": [
         {
           "horseNumber": 6,
           "horseName": "クルメミッチー",
           "pt": 82,
-          "role": "本命"
+          "role": "本命",
+          "jockey": "佐野遥",
+          "trainer": "(川)田邊"
         },
         {
           "horseNumber": 2,
           "horseName": "コトリノウタウウタ",
           "pt": 85,
-          "role": "対抗"
+          "role": "対抗",
+          "jockey": "福原杏",
+          "trainer": "(浦)水野史"
         },
         {
           "horseNumber": 8,
           "horseName": "キタノチャンス",
           "pt": 82,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "新原周",
+          "trainer": "(川)酒井忍"
         },
         {
           "horseNumber": 4,
           "horseName": "ガルヴァニック",
           "pt": 79,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "伊藤裕",
+          "trainer": "(川)村田順"
         },
         {
           "horseNumber": 7,
           "horseName": "メジャーアピール",
           "pt": 79,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "野畑凌",
+          "trainer": "(浦)宇野博"
         },
         {
           "horseNumber": 5,
           "horseName": "ローゼシュティア",
           "pt": 74,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "櫻井光",
+          "trainer": "(川)八木喜"
         },
         {
           "horseNumber": 1,
           "horseName": "リケアディンブラ",
           "pt": 73,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "西啓太",
+          "trainer": "(川)高橋宏"
         },
         {
           "horseNumber": 3,
           "horseName": "スノーウィースカイ",
           "pt": 73,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "藤江渉",
+          "trainer": "(川)平田"
         },
         {
           "horseNumber": 9,
           "horseName": "キナリ",
           "pt": 71,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "岡村裕",
+          "trainer": "(川)村田六"
         },
         {
           "horseNumber": 10,
           "horseName": "エヴィエニス",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "菅原涼",
+          "trainer": "(川)田島寿"
         }
       ],
       "bettingLines": {
@@ -335,87 +435,114 @@
           "2-6.8.4.7.5.1(抑え3.9)"
         ]
       },
-      "generatedAt": "2026-02-04T15:01:03.858Z"
+      "generatedAt": "2026-02-04T15:08:45.784Z"
     },
     {
       "raceInfo": {
         "date": "2026-02-05",
         "venue": "川崎",
         "raceNumber": 5,
-        "raceName": "渦雷賞"
+        "raceName": "渦雷賞",
+        "startTime": "17:00",
+        "distance": "900",
+        "horseCount": 12
       },
       "horses": [
         {
           "horseNumber": 9,
           "horseName": "パルクールチェコ",
           "pt": 87,
-          "role": "本命"
+          "role": "本命",
+          "jockey": "笹川翼",
+          "trainer": "(川)加藤誠"
         },
         {
           "horseNumber": 2,
           "horseName": "メイショウユウモウ",
           "pt": 80,
-          "role": "対抗"
+          "role": "対抗",
+          "jockey": "岡村裕",
+          "trainer": "(川)武井和"
         },
         {
           "horseNumber": 5,
           "horseName": "イイクニアシェル",
           "pt": 83,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "桑村真",
+          "trainer": "(川)久保秀"
         },
         {
           "horseNumber": 6,
           "horseName": "サノノラブミー",
           "pt": 80,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "福原杏",
+          "trainer": "(浦)川島豊"
         },
         {
           "horseNumber": 3,
           "horseName": "ミヤジミニー",
           "pt": 79,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "鷹見陸",
+          "trainer": "(川)田邊"
         },
         {
           "horseNumber": 11,
           "horseName": "コトノサンショ",
           "pt": 75,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "佐野遥",
+          "trainer": "(川)河津"
         },
         {
           "horseNumber": 12,
           "horseName": "エルリーブル",
           "pt": 73,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "藤江渉",
+          "trainer": "(川)平田"
         },
         {
           "horseNumber": 1,
           "horseName": "ラブアンドビーンズ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "中山遥",
+          "trainer": "(浦)水上"
         },
         {
           "horseNumber": 4,
           "horseName": "ラインフェルネ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "七夕裕",
+          "trainer": "(浦)野口孝"
         },
         {
           "horseNumber": 7,
           "horseName": "イクノガキタゾ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "菅原涼",
+          "trainer": "(川)佐々仁"
         },
         {
           "horseNumber": 8,
           "horseName": "スオーノ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "田中涼",
+          "trainer": "(川)山田質"
         },
         {
           "horseNumber": 10,
           "horseName": "エイシンダリア",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "神尾香",
+          "trainer": "(川)今井"
         }
       ],
       "bettingLines": {
@@ -424,87 +551,114 @@
           "2-9.5.6.3.11.12"
         ]
       },
-      "generatedAt": "2026-02-04T15:01:03.858Z"
+      "generatedAt": "2026-02-04T15:08:45.784Z"
     },
     {
       "raceInfo": {
         "date": "2026-02-05",
         "venue": "川崎",
         "raceNumber": 6,
-        "raceName": "サラ４歳以上"
+        "raceName": "サラ４歳以上",
+        "startTime": "17:30",
+        "distance": "1400",
+        "horseCount": 12
       },
       "horses": [
         {
           "horseNumber": 10,
           "horseName": "フジュム",
           "pt": 89,
-          "role": "本命"
+          "role": "本命",
+          "jockey": "矢野貴",
+          "trainer": "(川)高月賢"
         },
         {
           "horseNumber": 3,
           "horseName": "ゼンダントモニ",
           "pt": 79,
-          "role": "対抗"
+          "role": "対抗",
+          "jockey": "秋元耕",
+          "trainer": "(川)佐々仁"
         },
         {
           "horseNumber": 8,
           "horseName": "タヴァネスタン",
           "pt": 84,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "野畑凌",
+          "trainer": "(川)平田"
         },
         {
           "horseNumber": 7,
           "horseName": "モズノセイギ",
           "pt": 77,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "加藤雄",
+          "trainer": "(川)山崎尋"
         },
         {
           "horseNumber": 2,
           "horseName": "ウインプリームス",
           "pt": 76,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "佐野遥",
+          "trainer": "(川)吉橋"
         },
         {
           "horseNumber": 5,
           "horseName": "エールラヴィクトワ",
           "pt": 76,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "古岡勇",
+          "trainer": "(川)山崎裕"
         },
         {
           "horseNumber": 12,
           "horseName": "セレナス",
           "pt": 75,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "櫻井光",
+          "trainer": "(川)久保秀"
         },
         {
           "horseNumber": 4,
           "horseName": "ミライヘノテンシ",
           "pt": 71,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "増田充",
+          "trainer": "(川)佐々仁"
         },
         {
           "horseNumber": 1,
           "horseName": "カサミラ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "服部茂",
+          "trainer": "(川)山田質"
         },
         {
           "horseNumber": 6,
           "horseName": "ラプラタ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "岡村裕",
+          "trainer": "(川)安池"
         },
         {
           "horseNumber": 9,
           "horseName": "ベラヴィットーリア",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "桑村真",
+          "trainer": "(川)佐藤博"
         },
         {
           "horseNumber": 11,
           "horseName": "コミックガール",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "藤江渉",
+          "trainer": "(川)八木喜"
         }
       ],
       "bettingLines": {
@@ -513,87 +667,114 @@
           "3-10.8.7.2.5.12(抑え4)"
         ]
       },
-      "generatedAt": "2026-02-04T15:01:03.858Z"
+      "generatedAt": "2026-02-04T15:08:45.784Z"
     },
     {
       "raceInfo": {
         "date": "2026-02-05",
         "venue": "川崎",
         "raceNumber": 7,
-        "raceName": "サラ４歳以上"
+        "raceName": "サラ４歳以上",
+        "startTime": "18:00",
+        "distance": "1400",
+        "horseCount": 12
       },
       "horses": [
         {
           "horseNumber": 9,
           "horseName": "イクノオリンピア",
           "pt": 89,
-          "role": "本命"
+          "role": "本命",
+          "jockey": "古岡勇",
+          "trainer": "(川)佐々仁"
         },
         {
           "horseNumber": 2,
           "horseName": "マニーシーン",
           "pt": 78,
-          "role": "対抗"
+          "role": "対抗",
+          "jockey": "佐野遥",
+          "trainer": "(川)高橋宏"
         },
         {
           "horseNumber": 3,
           "horseName": "ロコモーション",
           "pt": 85,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "野畑凌",
+          "trainer": "(川)高月賢"
         },
         {
           "horseNumber": 4,
           "horseName": "サウスオブロンドン",
           "pt": 78,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "鷹見陸",
+          "trainer": "(川)佐々仁"
         },
         {
           "horseNumber": 11,
           "horseName": "タツノキセキ",
           "pt": 77,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "西啓太",
+          "trainer": "(川)秋山直"
         },
         {
           "horseNumber": 5,
           "horseName": "ファルコンエース",
           "pt": 74,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "中越琉",
+          "trainer": "(川)鈴木義"
         },
         {
           "horseNumber": 12,
           "horseName": "アイビージーニー",
           "pt": 74,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "藤本現",
+          "trainer": "(川)山崎裕"
         },
         {
           "horseNumber": 10,
           "horseName": "パリカー",
           "pt": 72,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "加藤雄",
+          "trainer": "(川)安池"
         },
         {
           "horseNumber": 6,
           "horseName": "カンナギ",
           "pt": 71,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "町田直",
+          "trainer": "(川)平田"
         },
         {
           "horseNumber": 1,
           "horseName": "ピーカンパイ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "池谷匠",
+          "trainer": "(川)甲田"
         },
         {
           "horseNumber": 7,
           "horseName": "スイレンチャン",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "中山遥",
+          "trainer": "(川)久保秀"
         },
         {
           "horseNumber": 8,
           "horseName": "ジャンボリクイーン",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "服部茂",
+          "trainer": "(川)山田質"
         }
       ],
       "bettingLines": {
@@ -602,45 +783,58 @@
           "2-9.3.4.11.5.12(抑え10.6)"
         ]
       },
-      "generatedAt": "2026-02-04T15:01:03.858Z"
+      "generatedAt": "2026-02-04T15:08:45.784Z"
     },
     {
       "raceInfo": {
         "date": "2026-02-05",
         "venue": "川崎",
         "raceNumber": 8,
-        "raceName": "多摩川オープン"
+        "raceName": "多摩川オープン",
+        "startTime": "18:30",
+        "distance": "1600",
+        "horseCount": 5
       },
       "horses": [
         {
           "horseNumber": 3,
           "horseName": "アームズレイン",
           "pt": 84,
-          "role": "本命"
+          "role": "本命",
+          "jockey": "桑村真",
+          "trainer": "(川)佐々仁"
         },
         {
           "horseNumber": 5,
           "horseName": "マテリアルガール",
           "pt": 85,
-          "role": "対抗"
+          "role": "対抗",
+          "jockey": "澤田龍",
+          "trainer": "(浦)小久保"
         },
         {
           "horseNumber": 2,
           "horseName": "シーサーペント",
           "pt": 83,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "矢野貴",
+          "trainer": "(浦)小久保"
         },
         {
           "horseNumber": 4,
           "horseName": "タイムモーメント",
           "pt": 80,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "本橋孝",
+          "trainer": "(船)川島一"
         },
         {
           "horseNumber": 1,
           "horseName": "ゴールドホイヤー",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "古岡勇",
+          "trainer": "(川)岩本"
         }
       ],
       "bettingLines": {
@@ -649,93 +843,122 @@
           "5-3.2.4"
         ]
       },
-      "generatedAt": "2026-02-04T15:01:03.858Z"
+      "generatedAt": "2026-02-04T15:08:45.784Z"
     },
     {
       "raceInfo": {
         "date": "2026-02-05",
         "venue": "川崎",
         "raceNumber": 9,
-        "raceName": "菜の花賞"
+        "raceName": "菜の花賞",
+        "startTime": "19:05",
+        "distance": "1400",
+        "horseCount": 13
       },
       "horses": [
         {
           "horseNumber": 10,
           "horseName": "マルモリアクティブ",
           "pt": 88,
-          "role": "本命"
+          "role": "本命",
+          "jockey": "野畑凌",
+          "trainer": "(川)甲田"
         },
         {
           "horseNumber": 6,
           "horseName": "エクセルボビー",
           "pt": 86,
-          "role": "対抗"
+          "role": "対抗",
+          "jockey": "矢野貴",
+          "trainer": "(川)高月賢"
         },
         {
           "horseNumber": 4,
           "horseName": "オルペラー",
           "pt": 84,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "櫻井光",
+          "trainer": "(川)佐藤博"
         },
         {
           "horseNumber": 7,
           "horseName": "タキ",
           "pt": 75,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "町田直",
+          "trainer": "(川)甲田"
         },
         {
           "horseNumber": 9,
           "horseName": "ミスフォルテ",
           "pt": 74,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "笹川翼",
+          "trainer": "(川)田邊"
         },
         {
           "horseNumber": 1,
           "horseName": "マジカルレイズ",
           "pt": 73,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "張田昂",
+          "trainer": "(川)山崎裕"
         },
         {
           "horseNumber": 8,
           "horseName": "シングアウト",
           "pt": 73,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "新原周",
+          "trainer": "(川)茂木"
         },
         {
           "horseNumber": 13,
           "horseName": "ミュークレグルス",
           "pt": 73,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "古岡勇",
+          "trainer": "(川)山崎尋"
         },
         {
           "horseNumber": 3,
           "horseName": "アマモト",
           "pt": 71,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "福原杏",
+          "trainer": "(川)山崎裕"
         },
         {
           "horseNumber": 2,
           "horseName": "スウィートドリーム",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "佐野遥",
+          "trainer": "(川)高月賢"
         },
         {
           "horseNumber": 5,
           "horseName": "ティーケーメイト",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "中越琉",
+          "trainer": "(川)八木仁"
         },
         {
           "horseNumber": 11,
           "horseName": "ピーチマカロン",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "岡村裕",
+          "trainer": "(川)久保勇"
         },
         {
           "horseNumber": 12,
           "horseName": "ブレーヴジャーニー",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "本田重",
+          "trainer": "(川)佐藤博"
         }
       ],
       "bettingLines": {
@@ -744,99 +967,130 @@
           "6-10.4.7.9.1.8(抑え13.3)"
         ]
       },
-      "generatedAt": "2026-02-04T15:01:03.858Z"
+      "generatedAt": "2026-02-04T15:08:45.784Z"
     },
     {
       "raceInfo": {
         "date": "2026-02-05",
         "venue": "川崎",
         "raceNumber": 10,
-        "raceName": "芍薬賞"
+        "raceName": "芍薬賞",
+        "startTime": "19:40",
+        "distance": "1500",
+        "horseCount": 14
       },
       "horses": [
         {
           "horseNumber": 2,
           "horseName": "ジンガー",
           "pt": 87,
-          "role": "本命"
+          "role": "本命",
+          "jockey": "矢野貴",
+          "trainer": "(川)鈴木義"
         },
         {
           "horseNumber": 13,
           "horseName": "ストロンゲスト",
           "pt": 84,
-          "role": "対抗"
+          "role": "対抗",
+          "jockey": "町田直",
+          "trainer": "(川)古澤"
         },
         {
           "horseNumber": 14,
           "horseName": "タイプフェイス",
           "pt": 81,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "野畑凌",
+          "trainer": "(浦)水野史"
         },
         {
           "horseNumber": 11,
           "horseName": "アカネセイコー",
           "pt": 78,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "福原杏",
+          "trainer": "(浦)水野史"
         },
         {
           "horseNumber": 12,
           "horseName": "ダイゴホマレリュウ",
           "pt": 77,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "藤江渉",
+          "trainer": "(川)山田質"
         },
         {
           "horseNumber": 3,
           "horseName": "オースター",
           "pt": 74,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "西啓太",
+          "trainer": "(川)山崎裕"
         },
         {
           "horseNumber": 4,
           "horseName": "ガルニエ",
           "pt": 73,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "佐野遥",
+          "trainer": "(川)秋山直"
         },
         {
           "horseNumber": 1,
           "horseName": "サンライズソング",
           "pt": 72,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "櫻井光",
+          "trainer": "(川)安池"
         },
         {
           "horseNumber": 7,
           "horseName": "ユメミ",
           "pt": 71,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "古岡勇",
+          "trainer": "(川)八木喜"
         },
         {
           "horseNumber": 10,
           "horseName": "ユウユウニコヴィア",
           "pt": 71,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "中山遥",
+          "trainer": "(浦)横山保"
         },
         {
           "horseNumber": 5,
           "horseName": "ミシェット",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "神尾香",
+          "trainer": "(川)山田正"
         },
         {
           "horseNumber": 6,
           "horseName": "グリントレッド",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "加藤雄",
+          "trainer": "(川)山崎尋"
         },
         {
           "horseNumber": 8,
           "horseName": "ネオシャングリラ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "増田充",
+          "trainer": "(川)久保勇"
         },
         {
           "horseNumber": 9,
           "horseName": "セイウンパイオニア",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "山林堂信",
+          "trainer": "(川)田邊"
         }
       ],
       "bettingLines": {
@@ -845,87 +1099,114 @@
           "13-2.14.11.12.3.4(抑え1.7.10)"
         ]
       },
-      "generatedAt": "2026-02-04T15:01:03.858Z"
+      "generatedAt": "2026-02-04T15:08:45.784Z"
     },
     {
       "raceInfo": {
         "date": "2026-02-05",
         "venue": "川崎",
         "raceNumber": 11,
-        "raceName": "湘南オリーブオイル杯"
+        "raceName": "湘南オリーブオイル杯",
+        "startTime": "20:15",
+        "distance": "1400",
+        "horseCount": 12
       },
       "horses": [
         {
           "horseNumber": 3,
           "horseName": "スターグリップ",
           "pt": 89,
-          "role": "本命"
+          "role": "本命",
+          "jockey": "笹川翼",
+          "trainer": "(川)田島寿"
         },
         {
           "horseNumber": 4,
           "horseName": "サウンドバッハ",
           "pt": 80,
-          "role": "対抗"
+          "role": "対抗",
+          "jockey": "本田重",
+          "trainer": "(川)河津"
         },
         {
           "horseNumber": 9,
           "horseName": "サザンカ",
           "pt": 81,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "町田直",
+          "trainer": "(川)長友"
         },
         {
           "horseNumber": 8,
           "horseName": "ピーエムナナ",
           "pt": 79,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "桑村真",
+          "trainer": "(川)酒井忍"
         },
         {
           "horseNumber": 1,
           "horseName": "モネ",
           "pt": 76,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "新原周",
+          "trainer": "(川)林隆"
         },
         {
           "horseNumber": 7,
           "horseName": "カイトキング",
           "pt": 74,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "秋元耕",
+          "trainer": "(浦)水野史"
         },
         {
           "horseNumber": 5,
           "horseName": "ボーイハンター",
           "pt": 73,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "西啓太",
+          "trainer": "(川)山崎尋"
         },
         {
           "horseNumber": 6,
           "horseName": "サンリコリス",
           "pt": 72,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "藤本現",
+          "trainer": "(川)山崎裕"
         },
         {
           "horseNumber": 10,
           "horseName": "デアシュトゥルム",
           "pt": 72,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "田中涼",
+          "trainer": "(川)鈴木義"
         },
         {
           "horseNumber": 12,
           "horseName": "メロスゴー",
           "pt": 72,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "及川烈",
+          "trainer": "(浦)箕輪"
         },
         {
           "horseNumber": 2,
           "horseName": "ミュステーリオン",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "櫻井光",
+          "trainer": "(浦)小久保"
         },
         {
           "horseNumber": 11,
           "horseName": "タイセイフェスタ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "鷹見陸",
+          "trainer": "(川)内田勝"
         }
       ],
       "bettingLines": {
@@ -934,93 +1215,122 @@
           "4-3.9.8.1.7.5(抑え6.10.12)"
         ]
       },
-      "generatedAt": "2026-02-04T15:01:03.858Z"
+      "generatedAt": "2026-02-04T15:08:45.784Z"
     },
     {
       "raceInfo": {
         "date": "2026-02-05",
         "venue": "川崎",
         "raceNumber": 12,
-        "raceName": "アリアンロッド賞"
+        "raceName": "アリアンロッド賞",
+        "startTime": "20:50",
+        "distance": "2000",
+        "horseCount": 13
       },
       "horses": [
         {
           "horseNumber": 11,
           "horseName": "タイセイシップ",
           "pt": 82,
-          "role": "本命"
+          "role": "本命",
+          "jockey": "矢野貴",
+          "trainer": "(川)内田勝"
         },
         {
           "horseNumber": 1,
           "horseName": "ダートレイジング",
           "pt": 82,
-          "role": "対抗"
+          "role": "対抗",
+          "jockey": "笹川翼",
+          "trainer": "(川)加藤誠"
         },
         {
           "horseNumber": 8,
           "horseName": "キングマイネオ",
           "pt": 81,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "町田直",
+          "trainer": "(川)甲田"
         },
         {
           "horseNumber": 3,
           "horseName": "レーヌバンケット",
           "pt": 79,
-          "role": "単穴"
+          "role": "単穴",
+          "jockey": "西啓太",
+          "trainer": "(浦)小久保"
         },
         {
           "horseNumber": 2,
           "horseName": "シトロンヴェール",
           "pt": 78,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "野畑凌",
+          "trainer": "(川)武井和"
         },
         {
           "horseNumber": 12,
           "horseName": "ヴィントシュティレ",
           "pt": 77,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "佐野遥",
+          "trainer": "(川)古澤"
         },
         {
           "horseNumber": 5,
           "horseName": "ビルドラポール",
           "pt": 74,
-          "role": "連下"
+          "role": "連下",
+          "jockey": "本田重",
+          "trainer": "(川)河津"
         },
         {
           "horseNumber": 9,
           "horseName": "ドレイク",
           "pt": 73,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "菅原涼",
+          "trainer": "(浦)長谷忍"
         },
         {
           "horseNumber": 7,
           "horseName": "クレーネ",
           "pt": 71,
-          "role": "補欠"
+          "role": "補欠",
+          "jockey": "服部茂",
+          "trainer": "(川)山田質"
         },
         {
           "horseNumber": 4,
           "horseName": "デーレーチョップ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "田中涼",
+          "trainer": "(川)鈴木義"
         },
         {
           "horseNumber": 6,
           "horseName": "ドルチアーリア",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "桑村真",
+          "trainer": "(川)内田勝"
         },
         {
           "horseNumber": 10,
           "horseName": "ウインブリエ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "福原杏",
+          "trainer": "(浦)平山"
         },
         {
           "horseNumber": 13,
           "horseName": "テリオスルナ",
           "pt": 70,
-          "role": "無"
+          "role": "無",
+          "jockey": "加藤雄",
+          "trainer": "(川)佐藤博"
         }
       ],
       "bettingLines": {
@@ -1029,7 +1339,7 @@
           "1-11.8.3.2.12.5(抑え9.7)"
         ]
       },
-      "generatedAt": "2026-02-04T15:01:03.858Z"
+      "generatedAt": "2026-02-04T15:08:45.784Z"
     }
   ]
 }

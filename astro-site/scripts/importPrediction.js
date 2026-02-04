@@ -217,14 +217,19 @@ function convertToLegacyFormat(data, date) {
         date: date,
         venue: data.venue,
         raceNumber: race.raceNumber,
-        raceName: race.raceInfo?.raceName || race.raceName || `第${race.raceNumber}レース` // レース名を追加（未設定時はデフォルト）
+        raceName: race.raceInfo?.raceName || race.raceName || `第${race.raceNumber}レース`,
+        startTime: race.raceInfo?.startTime || '', // 発走時刻
+        distance: race.raceInfo?.distance || '', // 距離
+        horseCount: race.horses?.length || 0 // 頭数
       },
       horses: race.horses
         .map(h => ({
           horseNumber: h.number,
           horseName: h.name,
           pt: h.displayScore || h.rawScore || 70, // ptフィールド
-          role: h.role === '連下最上位' ? '単穴' : h.role // 連下最上位を単穴に変換
+          role: h.role === '連下最上位' ? '単穴' : h.role, // 連下最上位を単穴に変換
+          jockey: h.jockey || h.kisyu || '', // 騎手
+          trainer: h.trainer || h.kyusya || '' // 厩舎
         }))
         .sort((a, b) => {
           // 役割の優先順位

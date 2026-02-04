@@ -265,6 +265,11 @@ function generateUmatanBets(horses) {
                   {race.raceInfo.raceName && (
                     <div class="race-name-header">
                       <h2 class="race-name-title">{race.raceInfo.raceNumber}R {race.raceInfo.raceName}</h2>
+                      <div class="race-details">
+                        {race.raceInfo.startTime && <span class="race-detail-item">🕐 {race.raceInfo.startTime}発走</span>}
+                        {race.raceInfo.distance && <span class="race-detail-item">📏 {race.raceInfo.distance}m</span>}
+                        {race.raceInfo.horseCount && <span class="race-detail-item">🐴 {race.raceInfo.horseCount}頭</span>}
+                      </div>
                     </div>
                   )}
 
@@ -381,6 +386,12 @@ function generateUmatanBets(horses) {
                                   <span class="dhc-role-badge">{horse.role}</span>
                                   <span class="dhc-pt">PT: {horse.pt.toFixed(1)}</span>
                                 </div>
+                                {(horse.jockey || horse.trainer) && (
+                                  <div class="dhc-jockey-trainer">
+                                    {horse.jockey && <span class="dhc-jockey">🏇 {horse.jockey}</span>}
+                                    {horse.trainer && <span class="dhc-trainer">🏠 {horse.trainer}</span>}
+                                  </div>
+                                )}
                                 <div class="dhc-quick-metrics">
                                   <div class="qm-item">
                                     <span class="qm-label">Win Prob. / 勝率</span>
@@ -821,9 +832,43 @@ function generateUmatanBets(horses) {
       font-size: 1.5rem;
       font-weight: 800;
       color: #a78bfa;
-      margin: 0;
+      margin: 0 0 var(--spacing-md) 0;
       text-shadow: 0 0 10px rgba(167, 139, 250, 0.3);
       letter-spacing: 0.5px;
+    }
+
+    .race-details {
+      display: flex;
+      justify-content: center;
+      gap: var(--spacing-lg);
+      flex-wrap: wrap;
+      margin-top: var(--spacing-md);
+    }
+
+    .race-detail-item {
+      font-size: 0.95rem;
+      color: #94a3b8;
+      font-weight: 600;
+      padding: var(--spacing-xs) var(--spacing-md);
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(139, 92, 246, 0.2);
+    }
+
+    .dhc-jockey-trainer {
+      display: flex;
+      gap: var(--spacing-md);
+      margin-top: var(--spacing-sm);
+      font-size: 0.9rem;
+      color: #94a3b8;
+      flex-wrap: wrap;
+    }
+
+    .dhc-jockey, .dhc-trainer {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(59, 130, 246, 0.2);
     }
 
     .ai-model-card {

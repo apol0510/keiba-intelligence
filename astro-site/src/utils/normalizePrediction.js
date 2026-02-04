@@ -86,6 +86,16 @@ export function normalizeDetailed(input) {
 
     const raceName = race.raceInfo?.raceName || race.raceName || '';
 
+    // レース詳細情報を保持
+    const raceInfo = {
+      raceName: raceName,
+      startTime: race.raceInfo?.startTime || '',
+      distance: race.raceInfo?.distance || '',
+      surface: race.raceInfo?.surface || '',
+      raceType: race.raceInfo?.raceType || '',
+      raceSubtitle: race.raceInfo?.raceSubtitle || ''
+    };
+
     // 馬データ変換
     const horses = (race.horses || []).map(horse => {
       const rawScore = horse.totalScore || horse.rawScore || 0;
@@ -97,7 +107,9 @@ export function normalizeDetailed(input) {
         rawScore: rawScore,
         displayScore: 0, // adjustPrediction()で計算
         role: role,
-        mark: '' // adjustPrediction()で生成
+        mark: '', // adjustPrediction()で生成
+        jockey: horse.kisyu || horse.jockey || '', // 騎手
+        trainer: horse.kyusya || horse.trainer || '' // 厩舎
         // ⚠️ marks（記者印）は含めない（秘匿）
       };
     });
@@ -108,6 +120,7 @@ export function normalizeDetailed(input) {
     return {
       raceNumber,
       raceName,
+      raceInfo, // レース詳細情報を追加
       horses,
       bettingLines,
       hasHorseData: horses.length > 0,
