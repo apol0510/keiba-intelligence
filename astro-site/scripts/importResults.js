@@ -20,19 +20,31 @@ const projectRoot = join(__dirname, '..');
  */
 async function fetchSharedResults(date, venue = 'nankan') {
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-
-  if (!GITHUB_TOKEN) {
-    throw new Error('環境変数 GITHUB_TOKEN が設定されていません');
-  }
-
   const [year, month] = date.split('-');
   const owner = 'apol0510';
   const repo = 'keiba-data-shared';
   const path = `${venue}/results/${year}/${month}/${date}.json`;
 
-  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-
   console.log(`📡 keiba-data-sharedから取得中: ${path}`);
+
+  // ローカル実行時（GITHUB_TOKENなし）: raw.githubusercontent.comを使用（公開リポジトリ）
+  if (!GITHUB_TOKEN) {
+    console.log(`   ローカル実行モード: raw.githubusercontent.comからダウンロード`);
+    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
+    const response = await fetch(rawUrl);
+
+    if (!response.ok) {
+      throw new Error(`結果データの取得に失敗: ${response.status} ${response.statusText}`);
+    }
+
+    const content = await response.text();
+    const results = JSON.parse(content);
+    console.log(`✅ 取得成功: ${path}`);
+    return results;
+  }
+
+  // GitHub Actions実行時: GitHub API経由（レート制限回避）
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
 
   const response = await fetch(apiUrl, {
     headers: {
@@ -64,15 +76,29 @@ function loadPrediction(date, venue) {
     '浦和': 'urawa'
   };
   const venueSlug = venueMap[venue] || 'ooi';
-  const fileName = `${date}-${venueSlug}.json`;
-  const filePath = join(projectRoot, 'src', 'data', 'predictions', fileName);
 
-  if (!existsSync(filePath)) {
-    throw new Error(`予想データが見つかりません: ${fileName} (会場: ${venue})`);
+  // 優先順位1: 新しい形式（keiba-data-shared自動インポート）: predictions/2026/02/2026-02-04.json
+  const [year, month] = date.split('-');
+  const newFormatPath = join(projectRoot, 'src', 'data', 'predictions', year, month, `${date}.json`);
+
+  // 優先順位2: 古い形式（手動作成）: predictions/2026-02-04-kawasaki.json
+  const oldFormatFileName = `${date}-${venueSlug}.json`;
+  const oldFormatPath = join(projectRoot, 'src', 'data', 'predictions', oldFormatFileName);
+
+  // 新しい形式から試す
+  if (existsSync(newFormatPath)) {
+    const content = readFileSync(newFormatPath, 'utf-8');
+    return JSON.parse(content);
   }
 
-  const content = readFileSync(filePath, 'utf-8');
-  return JSON.parse(content);
+  // 古い形式を試す
+  if (existsSync(oldFormatPath)) {
+    const content = readFileSync(oldFormatPath, 'utf-8');
+    return JSON.parse(content);
+  }
+
+  // どちらも見つからない場合
+  throw new Error(`予想データが見つかりません: ${newFormatPath} または ${oldFormatPath} (会場: ${venue})`);
 }
 
 /**
@@ -126,9 +152,25 @@ function checkUmatanHit(bettingLine, result) {
 function verifyResults(prediction, results) {
   const raceResults = [];
 
+  // 予想データの形式を判定（新形式 or 旧形式）
+  const predictionRaces = prediction.predictions || prediction.races || [];
+
   for (const race of results.races) {
     const raceNumber = race.raceNumber;
-    const predRace = prediction.predictions.find(p => p.raceInfo.raceNumber === raceNumber);
+
+    // raceNumberを数値に正規化（"1R" → 1, 1 → 1）
+    const normalizedRaceNumber = typeof raceNumber === 'string'
+      ? parseInt(raceNumber.replace(/[^0-9]/g, ''))
+      : raceNumber;
+
+    // 予想データを検索（raceNumberの型の違いに対応）
+    const predRace = predictionRaces.find(p => {
+      const predRaceNum = p.raceInfo.raceNumber;
+      const normalizedPredRaceNum = typeof predRaceNum === 'string'
+        ? parseInt(predRaceNum.replace(/[^0-9]/g, ''))
+        : predRaceNum;
+      return normalizedPredRaceNum === normalizedRaceNumber;
+    });
 
     if (!predRace) {
       console.log(`⚠️  ${raceNumber}Rの予想データが見つかりません`);

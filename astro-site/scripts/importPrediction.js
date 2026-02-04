@@ -58,19 +58,39 @@ function getTodayJST() {
 async function fetchSharedPrediction(date, venue = 'nankan') {
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
-  if (!GITHUB_TOKEN) {
-    throw new Error('環境変数 GITHUB_TOKEN が設定されていません');
-  }
-
   // 日付をパースしてパスを構築
   const [year, month, day] = date.split('-');
   const path = `${venue}/predictions/${year}/${month}/${date}.json`;
 
   const owner = 'apol0510';
   const repo = 'keiba-data-shared';
-  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
 
   console.log(`📡 keiba-data-sharedから取得中: ${path}`);
+
+  // ローカル実行時（GITHUB_TOKENなし）: raw.githubusercontent.comを使用（公開リポジトリ）
+  if (!GITHUB_TOKEN) {
+    console.log(`   ローカル実行モード: raw.githubusercontent.comからダウンロード`);
+    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
+    const response = await fetch(rawUrl);
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        // 予想データがない場合は正常終了（エラーではない）
+        console.log(`⏭️  予想データが見つかりません: ${path}`);
+        console.log(`   まだ予想が作成されていない可能性があります`);
+        return null; // nullを返す
+      }
+      throw new Error(`予想データの取得に失敗: ${response.status} ${response.statusText}`);
+    }
+
+    const content = await response.text();
+    const prediction = JSON.parse(content);
+    console.log(`✅ 取得成功: ${path}`);
+    return prediction;
+  }
+
+  // GitHub Actions実行時: GitHub API経由（レート制限回避）
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
 
   const response = await fetch(apiUrl, {
     headers: {
@@ -196,7 +216,8 @@ function convertToLegacyFormat(data, date) {
       raceInfo: {
         date: date,
         venue: data.venue,
-        raceNumber: race.raceNumber
+        raceNumber: race.raceNumber,
+        raceName: race.raceName || `第${race.raceNumber}レース` // レース名を追加（未設定時はデフォルト）
       },
       horses: race.horses
         .map(h => ({
