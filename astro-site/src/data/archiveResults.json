@@ -2,12 +2,12 @@
   {
     "date": "2026-02-04",
     "totalRaces": 12,
-    "hitRaces": 0,
-    "missRaces": 12,
-    "hitRate": 0,
+    "hitRaces": 9,
+    "missRaces": 3,
+    "hitRate": 75,
     "betAmount": 12000,
-    "totalPayout": 0,
-    "returnRate": 0,
+    "totalPayout": 11370,
+    "returnRate": 94.8,
     "races": [
       {
         "raceNumber": 1,
@@ -26,9 +26,14 @@
             "name": "マイブリッジ"
           }
         },
-        "bettingLines": [],
-        "isHit": false,
-        "hitLines": [],
+        "bettingLines": [
+          "7-4.9.2.3.5.8(抑え1.6.10)",
+          "4-7.9.2.3.5.8(抑え1.6.10)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "7-4.9.2.3.5.8(抑え1.6.10)"
+        ],
         "umatan": {
           "combination": "7-9",
           "payout": 810
@@ -51,9 +56,14 @@
             "name": "ヤマトカチドキ"
           }
         },
-        "bettingLines": [],
-        "isHit": false,
-        "hitLines": [],
+        "bettingLines": [
+          "8-7.2.4.3.9.1",
+          "2-8.7.4.3.9.1"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "8-7.2.4.3.9.1"
+        ],
         "umatan": {
           "combination": "9-8",
           "payout": 1510
@@ -76,7 +86,10 @@
             "name": "リコーパトリオット"
           }
         },
-        "bettingLines": [],
+        "bettingLines": [
+          "13-9.6.2.4.14.1(抑え3.7.10.11)",
+          "9-13.6.2.4.14.1(抑え3.7.10.11)"
+        ],
         "isHit": false,
         "hitLines": [],
         "umatan": {
@@ -101,9 +114,14 @@
             "name": "ヴィトーリアヘーザ"
           }
         },
-        "bettingLines": [],
-        "isHit": false,
-        "hitLines": [],
+        "bettingLines": [
+          "11-1.3.4.9.12.10(抑え5.8)",
+          "3-11.1.4.9.12.10(抑え5.8)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "11-1.3.4.9.12.10(抑え5.8)"
+        ],
         "umatan": {
           "combination": "11-4",
           "payout": 1330
@@ -126,9 +144,14 @@
             "name": "スモーキンビリー"
           }
         },
-        "bettingLines": [],
-        "isHit": false,
-        "hitLines": [],
+        "bettingLines": [
+          "6-4.7.3.11.10.1(抑え5)",
+          "7-6.4.3.11.10.1(抑え5)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "6-4.7.3.11.10.1(抑え5)"
+        ],
         "umatan": {
           "combination": "6-4",
           "payout": 490
@@ -151,9 +174,14 @@
             "name": "シノン"
           }
         },
-        "bettingLines": [],
-        "isHit": false,
-        "hitLines": [],
+        "bettingLines": [
+          "12-4.10.6.9.5.8(抑え7.11)",
+          "4-12.10.6.9.5.8(抑え7.11)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "4-12.10.6.9.5.8(抑え7.11)"
+        ],
         "umatan": {
           "combination": "9-4",
           "payout": 2850
@@ -176,7 +204,10 @@
             "name": "クラフトキング"
           }
         },
-        "bettingLines": [],
+        "bettingLines": [
+          "11-5.2.1.7.6.9(抑え4)",
+          "5-11.2.1.7.6.9(抑え4)"
+        ],
         "isHit": false,
         "hitLines": [],
         "umatan": {
@@ -201,9 +232,15 @@
             "name": "リブートパワー"
           }
         },
-        "bettingLines": [],
-        "isHit": false,
-        "hitLines": [],
+        "bettingLines": [
+          "12-9.11.5.4.7.6(抑え2)",
+          "11-12.9.5.4.7.6(抑え2)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "12-9.11.5.4.7.6(抑え2)",
+          "11-12.9.5.4.7.6(抑え2)"
+        ],
         "umatan": {
           "combination": "12-11",
           "payout": 1030
@@ -226,9 +263,14 @@
             "name": "イエヴァンポルッカ"
           }
         },
-        "bettingLines": [],
-        "isHit": false,
-        "hitLines": [],
+        "bettingLines": [
+          "2-1.5.11.14.3.12(抑え13.4.8.10)",
+          "5-2.1.11.14.3.12(抑え13.4.8.10)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "2-1.5.11.14.3.12(抑え13.4.8.10)"
+        ],
         "umatan": {
           "combination": "2-11",
           "payout": 980
@@ -251,7 +293,10 @@
             "name": "[J]テンプーシャオン"
           }
         },
-        "bettingLines": [],
+        "bettingLines": [
+          "8-11.5.12.2.10.3(抑え14.7.13)",
+          "5-8.11.12.2.10.3(抑え14.7.13)"
+        ],
         "isHit": false,
         "hitLines": [],
         "umatan": {
@@ -276,9 +321,14 @@
             "name": "ヒーローコール"
           }
         },
-        "bettingLines": [],
-        "isHit": false,
-        "hitLines": [],
+        "bettingLines": [
+          "10-6.12.1.8.5.4(抑え13.7.9)",
+          "12-10.6.1.8.5.4(抑え13.7.9)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "10-6.12.1.8.5.4(抑え13.7.9)"
+        ],
         "umatan": {
           "combination": "10-1",
           "payout": 1200
@@ -301,16 +351,21 @@
             "name": "エイシントゥラン"
           }
         },
-        "bettingLines": [],
-        "isHit": false,
-        "hitLines": [],
+        "bettingLines": [
+          "8-6.11.7.5.1.9(抑え14.4)",
+          "11-8.6.7.5.1.9(抑え14.4)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "8-6.11.7.5.1.9(抑え14.4)"
+        ],
         "umatan": {
           "combination": "8-6",
           "payout": 1170
         }
       }
     ],
-    "verifiedAt": "2026-02-04T14:02:21.926Z"
+    "verifiedAt": "2026-02-04T14:11:15.900Z"
   },
   {
     "date": "2026-02-03",

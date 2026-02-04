@@ -302,15 +302,16 @@ async function main() {
 
     // 1. 結果データ取得
     const results = await fetchSharedResults(date);
+    const venue = results.venue || results.races[0]?.venue || '大井';
     console.log(`\n✅ 結果データ取得完了`);
-    console.log(`   会場: ${results.track}`);
+    console.log(`   会場: ${venue}`);
     console.log(`   レース数: ${results.races.length}`);
 
     // 2. 予想データ読み込み
     console.log(`\n📖 予想データ読み込み中...`);
     let prediction;
     try {
-      prediction = loadPrediction(date, results.track);
+      prediction = loadPrediction(date, venue);
       console.log(`✅ 予想データ読み込み完了`);
     } catch (error) {
       // 予想データがない場合はスキップ（keiba-data-sharedのSEO対策用結果データ）
