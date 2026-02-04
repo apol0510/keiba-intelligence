@@ -346,9 +346,21 @@ async function main() {
     // 1. 結果データ取得
     const results = await fetchSharedResults(date);
     const venue = results.venue || results.races[0]?.venue || '大井';
+
+    // venue情報が取得できたか確認
+    const venueSource = results.venue ? 'results.venue' : (results.races[0]?.venue ? 'races[0].venue' : 'デフォルト');
+    const venueIsDefault = !results.venue && !results.races[0]?.venue;
+
     console.log(`\n✅ 結果データ取得完了`);
-    console.log(`   会場: ${venue}`);
+    console.log(`   会場: ${venue} (取得元: ${venueSource})`);
     console.log(`   レース数: ${results.races.length}`);
+
+    // venue情報がデフォルト値の場合、警告
+    if (venueIsDefault) {
+      console.warn(`\n⚠️  警告：venue情報が取得できませんでした（デフォルト値「${venue}」を使用）`);
+      console.warn(`   結果データ構造を確認してください`);
+      console.warn(`   予想データ読み込みに失敗する可能性があります\n`);
+    }
 
     // 2. 予想データ読み込み
     console.log(`\n📖 予想データ読み込み中...`);
@@ -357,14 +369,59 @@ async function main() {
       prediction = loadPrediction(date, venue);
       console.log(`✅ 予想データ読み込み完了`);
     } catch (error) {
-      // 予想データがない場合はスキップ（keiba-data-sharedのSEO対策用結果データ）
+      // 予想データがない場合、keiba-data-sharedに本当に存在しないか二重確認
       console.log(`⏭️  予想データが見つかりません: ${date}`);
-      console.log(`   keiba-data-sharedにはSEO対策用の結果データのみ保存されています`);
-      console.log(`   keiba-intelligenceでは的中判定をスキップします\n`);
-      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      console.log(`⏭️  処理完了: 予想データなし（スキップ）`);
-      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-      process.exit(0); // 正常終了（エラーではない）
+
+      // keiba-data-sharedに予想データが存在するか確認
+      const [year, month] = date.split('-');
+      const sharedPredictionPath = `nankan/predictions/${year}/${month}/${date}.json`;
+      const checkUrl = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/${sharedPredictionPath}`;
+
+      try {
+        console.log(`\n🔍 keiba-data-sharedの予想データ存在確認中...`);
+        const checkResponse = await fetch(checkUrl);
+
+        if (checkResponse.ok) {
+          // 予想データが存在するのに読み込めなかった → 異常
+          console.error(`\n🚨 異常検知：予想データが存在するのに読み込めませんでした！`);
+          console.error(`   keiba-data-shared: ${sharedPredictionPath} (存在)`);
+          console.error(`   keiba-intelligence: 読み込み失敗`);
+          console.error(`   venue: ${venue}`);
+          console.error(`   元のエラー: ${error.message}\n`);
+
+          // アラート送信
+          await sendAlert('import-results-failure', date, {
+            error: error.message,
+            venue: venue,
+            venueIsUndefined: venue === undefined || venue === 'undefined',
+            sharedPredictionExists: true,
+            sharedPredictionPath: sharedPredictionPath,
+            localSearchPath: error.message
+          }, {
+            timestamp: new Date().toISOString(),
+            critical: true
+          });
+
+          // エラーとして終了（修正が必要）
+          process.exit(1);
+        } else {
+          // 予想データが存在しない → 正常（SEO対策用の結果データのみ）
+          console.log(`   keiba-data-sharedにはSEO対策用の結果データのみ保存されています`);
+          console.log(`   keiba-intelligenceでは的中判定をスキップします\n`);
+          console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+          console.log(`⏭️  処理完了: 予想データなし（スキップ）`);
+          console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+          process.exit(0); // 正常終了
+        }
+      } catch (checkError) {
+        // ネットワークエラー等でチェック失敗 → 警告して正常終了
+        console.warn(`⚠️  keiba-data-sharedの予想データ存在確認に失敗（ネットワークエラー？）`);
+        console.warn(`   処理を継続します（予想データなしとして扱います）\n`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`⏭️  処理完了: 予想データなし（スキップ）`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+        process.exit(0); // 正常終了
+      }
     }
 
     // 3. 的中判定
