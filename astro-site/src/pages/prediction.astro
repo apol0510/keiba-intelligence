@@ -386,9 +386,10 @@ function generateUmatanBets(horses) {
                                   <span class="dhc-role-badge">{horse.role}</span>
                                   <span class="dhc-pt">PT: {horse.pt.toFixed(1)}</span>
                                 </div>
-                                {(horse.jockey || horse.trainer || horse.age) && (
+                                {(horse.jockey || horse.trainer || horse.age || horse.weight) && (
                                   <div class="dhc-jockey-trainer">
                                     {horse.age && <span class="dhc-age">🎂 {horse.age}</span>}
+                                    {horse.weight && <span class="dhc-weight">⚖️ {horse.weight}kg</span>}
                                     {horse.jockey && <span class="dhc-jockey">🏇 {horse.jockey}</span>}
                                     {horse.trainer && <span class="dhc-trainer">🏠 {horse.trainer}</span>}
                                   </div>
@@ -865,7 +866,7 @@ function generateUmatanBets(horses) {
       flex-wrap: wrap;
     }
 
-    .dhc-age, .dhc-jockey, .dhc-trainer {
+    .dhc-age, .dhc-weight, .dhc-jockey, .dhc-trainer {
       padding: var(--spacing-xs) var(--spacing-sm);
       background: rgba(30, 41, 59, 0.5);
       border-radius: var(--radius-sm);
