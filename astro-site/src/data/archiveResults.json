@@ -1,5 +1,377 @@
 [
   {
+    "date": "2026-02-06",
+    "venue": "川崎",
+    "totalRaces": 12,
+    "hitRaces": 9,
+    "missRaces": 3,
+    "hitRate": 75,
+    "betAmount": 12000,
+    "totalPayout": 8870,
+    "returnRate": 73.9,
+    "races": [
+      {
+        "raceNumber": 1,
+        "raceName": "川崎スプリントシリーズ",
+        "result": {
+          "first": {
+            "number": 3,
+            "name": "アークオブライフ"
+          },
+          "second": {
+            "number": 2,
+            "name": "ポンドリップ"
+          },
+          "third": {
+            "number": 11,
+            "name": "ホワイトフジ"
+          }
+        },
+        "bettingLines": [
+          "7-6.11.9.4.2.3(抑え12)",
+          "11-7.6.9.4.2.3(抑え12)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "3-2",
+          "payout": 2400
+        }
+      },
+      {
+        "raceNumber": 2,
+        "raceName": "３歳(六)",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "オンナユメラク"
+          },
+          "second": {
+            "number": 6,
+            "name": "テンノウズアイル"
+          },
+          "third": {
+            "number": 7,
+            "name": "オーバーユー"
+          }
+        },
+        "bettingLines": [
+          "4-6.7.9.3.5.8(抑え10.2)",
+          "7-4.6.9.3.5.8(抑え10.2)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "4-6.7.9.3.5.8(抑え10.2)"
+        ],
+        "umatan": {
+          "combination": "4-6",
+          "payout": 420
+        }
+      },
+      {
+        "raceNumber": 3,
+        "raceName": "３歳(五)",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "コタダブル"
+          },
+          "second": {
+            "number": 5,
+            "name": "カルダモンロール"
+          },
+          "third": {
+            "number": 6,
+            "name": "クイーンズステート"
+          }
+        },
+        "bettingLines": [
+          "4-6.5.12.7.9.2",
+          "5-4.6.12.7.9.2"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "4-6.5.12.7.9.2",
+          "5-4.6.12.7.9.2"
+        ],
+        "umatan": {
+          "combination": "4-5",
+          "payout": 260
+        }
+      },
+      {
+        "raceNumber": 4,
+        "raceName": "３歳(四)",
+        "result": {
+          "first": {
+            "number": 10,
+            "name": "スマートラスター"
+          },
+          "second": {
+            "number": 2,
+            "name": "ヨルノマドンナ"
+          },
+          "third": {
+            "number": 8,
+            "name": "イノセントブレイヴ"
+          }
+        },
+        "bettingLines": [
+          "10-4.12.6.7.11.1(抑え2.3.9)",
+          "12-10.4.6.7.11.1(抑え2.3.9)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "10-4.12.6.7.11.1(抑え2.3.9)"
+        ],
+        "umatan": {
+          "combination": "10-7",
+          "payout": 2370
+        }
+      },
+      {
+        "raceNumber": 5,
+        "raceName": "テンポラーレ賞 ３歳 未格付選定馬",
+        "result": {
+          "first": {
+            "number": 1,
+            "name": "グランドフロイデ"
+          },
+          "second": {
+            "number": 9,
+            "name": "パッツンドレス"
+          },
+          "third": {
+            "number": 8,
+            "name": "キングスケヨー"
+          }
+        },
+        "bettingLines": [
+          "1-6.8.9.11.12.3",
+          "6-1.8.9.11.12.3"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "1-6.8.9.11.12.3"
+        ],
+        "umatan": {
+          "combination": "1-11",
+          "payout": 2030
+        }
+      },
+      {
+        "raceNumber": 6,
+        "raceName": "Ｃ３(一)(二)",
+        "result": {
+          "first": {
+            "number": 8,
+            "name": "マロンルピナス"
+          },
+          "second": {
+            "number": 3,
+            "name": "ティンドラ"
+          },
+          "third": {
+            "number": 2,
+            "name": "テマリ"
+          }
+        },
+        "bettingLines": [
+          "5-1.2.8.3.6.10(抑え9)",
+          "2-5.1.8.3.6.10(抑え9)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "8-1",
+          "payout": 2640
+        }
+      },
+      {
+        "raceNumber": 7,
+        "raceName": "Ｃ３(一)(二)",
+        "result": {
+          "first": {
+            "number": 6,
+            "name": "ジーヴル"
+          },
+          "second": {
+            "number": 4,
+            "name": "マルゼンスキーツー"
+          },
+          "third": {
+            "number": 2,
+            "name": "ニットウアトラス"
+          }
+        },
+        "bettingLines": [
+          "6-8.4.5.11.7.2(抑え3)",
+          "4-6.8.5.11.7.2(抑え3)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "6-8.4.5.11.7.2(抑え3)",
+          "4-6.8.5.11.7.2(抑え3)"
+        ],
+        "umatan": {
+          "combination": "6-4",
+          "payout": 410
+        }
+      },
+      {
+        "raceNumber": 8,
+        "raceName": "Ｃ２(八)",
+        "result": {
+          "first": {
+            "number": 9,
+            "name": "ガウラサンダー"
+          },
+          "second": {
+            "number": 11,
+            "name": "コスモサンブライト"
+          },
+          "third": {
+            "number": 7,
+            "name": "アフロガル"
+          }
+        },
+        "bettingLines": [
+          "9-5.6.7.12.1.10(抑え11.3.8)",
+          "6-9.5.7.12.1.10(抑え11.3.8)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "9-5.6.7.12.1.10(抑え11.3.8)"
+        ],
+        "umatan": {
+          "combination": "9-5",
+          "payout": 350
+        }
+      },
+      {
+        "raceNumber": 9,
+        "raceName": "インディ賞 Ｃ２ 選定馬",
+        "result": {
+          "first": {
+            "number": 6,
+            "name": "アイビーガオー"
+          },
+          "second": {
+            "number": 7,
+            "name": "オブラマエストラ"
+          },
+          "third": {
+            "number": 3,
+            "name": "アヤメヅキ"
+          }
+        },
+        "bettingLines": [
+          "8-6.12.3.7.5.14(抑え1)",
+          "12-8.6.3.7.5.14(抑え1)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "6-8",
+          "payout": 470
+        }
+      },
+      {
+        "raceNumber": 10,
+        "raceName": "ベテルギウス賞 Ｂ２Ｂ３ 選定馬",
+        "result": {
+          "first": {
+            "number": 1,
+            "name": "グーヴェルナイユ"
+          },
+          "second": {
+            "number": 7,
+            "name": "トリグラフ"
+          },
+          "third": {
+            "number": 4,
+            "name": "オウケンデューク"
+          }
+        },
+        "bettingLines": [
+          "1-7.4.2.9.10.3(抑え8.11)",
+          "7-1.4.2.9.10.3(抑え8.11)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "1-7.4.2.9.10.3(抑え8.11)",
+          "7-1.4.2.9.10.3(抑え8.11)"
+        ],
+        "umatan": {
+          "combination": "1-7",
+          "payout": 580
+        }
+      },
+      {
+        "raceNumber": 11,
+        "raceName": "しずおか早春特別 Ｂ１(二)Ｂ２(一)",
+        "result": {
+          "first": {
+            "number": 2,
+            "name": "マイケルマキシマス"
+          },
+          "second": {
+            "number": 5,
+            "name": "ホッコーソムニウム"
+          },
+          "third": {
+            "number": 14,
+            "name": "ランドマックス"
+          }
+        },
+        "bettingLines": [
+          "11-2.5.10.4.7.8(抑え3.14)",
+          "2-11.5.10.4.7.8(抑え3.14)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "2-11.5.10.4.7.8(抑え3.14)"
+        ],
+        "umatan": {
+          "combination": "2-5",
+          "payout": 1160
+        }
+      },
+      {
+        "raceNumber": 12,
+        "raceName": "爆速（ばくそく）賞 Ｃ１ 選定馬",
+        "result": {
+          "first": {
+            "number": 1,
+            "name": "ムーランアルザン"
+          },
+          "second": {
+            "number": 12,
+            "name": "ラベンダージェイド"
+          },
+          "third": {
+            "number": 2,
+            "name": "ファセリア"
+          }
+        },
+        "bettingLines": [
+          "12-9.1.2.6.7.5(抑え3.4.8)",
+          "1-12.9.2.6.7.5(抑え3.4.8)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "12-9.1.2.6.7.5(抑え3.4.8)",
+          "1-12.9.2.6.7.5(抑え3.4.8)"
+        ],
+        "umatan": {
+          "combination": "1-12",
+          "payout": 1290
+        }
+      }
+    ],
+    "verifiedAt": "2026-02-07T07:09:52.324Z"
+  },
+  {
     "date": "2026-02-05",
     "venue": "川崎",
     "totalRaces": 12,
