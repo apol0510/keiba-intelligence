@@ -9,7 +9,7 @@ interface Props {
 
 const {
   title,
-  description = 'AI-Powered Intelligence Dashboard for 南関競馬。的中率78%、回収率125%を誇る競馬予想プラットフォーム。',
+  description = 'AI-Powered Intelligence Dashboard for 南関・中央競馬。的中率78%、回収率125%を誇る競馬予想プラットフォーム。南関4場とJRA全10場に対応。',
   ogImage = '/og-image.png'
 } = Astro.props;
 
@@ -69,10 +69,22 @@ const archiveUrl = '/archive/';
 
         <div class="nav-links">
           <a href="/">ホーム</a>
-          <a href="/free-prediction">無料予想</a>
-          <a href="/prediction">有料予想</a>
+          <div class="nav-dropdown">
+            <span class="nav-dropdown-trigger">予想 ▾</span>
+            <div class="nav-dropdown-menu">
+              <a href="/free-prediction">南関（無料）</a>
+              <a href="/prediction">南関（PRO）</a>
+              <a href="/prediction-jra">中央（PRO）</a>
+            </div>
+          </div>
+          <div class="nav-dropdown">
+            <span class="nav-dropdown-trigger">的中実績 ▾</span>
+            <div class="nav-dropdown-menu">
+              <a href={archiveUrl}>南関</a>
+              <a href="/archive-jra/">中央（JRA）</a>
+            </div>
+          </div>
           <a href="/pricing">料金プラン</a>
-          <a href={archiveUrl}>的中実績</a>
           <a href="/about">サイト概要</a>
           <span id="auth-nav-button">
             <a href="/login" class="btn btn-primary">ログイン</a>
@@ -190,6 +202,61 @@ const archiveUrl = '/archive/';
     }
 
     .nav-links a:hover {
+      color: var(--primary-end);
+    }
+
+    /* ドロップダウンメニュー */
+    .nav-dropdown {
+      position: relative;
+    }
+
+    .nav-dropdown-trigger {
+      color: var(--text-secondary);
+      font-weight: 500;
+      cursor: pointer;
+      transition: color var(--transition-fast);
+      user-select: none;
+    }
+
+    .nav-dropdown-trigger:hover {
+      color: var(--primary-end);
+    }
+
+    .nav-dropdown-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: var(--spacing-sm);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-sm) 0;
+      min-width: 160px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px);
+      transition: all var(--transition-fast);
+      z-index: 1000;
+    }
+
+    .nav-dropdown:hover .nav-dropdown-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .nav-dropdown-menu a {
+      display: block;
+      padding: var(--spacing-xs) var(--spacing-md);
+      color: var(--text-secondary);
+      font-weight: 500;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .nav-dropdown-menu a:hover {
+      background: rgba(59, 130, 246, 0.1);
       color: var(--primary-end);
     }
 
