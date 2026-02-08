@@ -191,23 +191,47 @@ const monthlyPlans = [
             </ul>
 
             {plan.id === 'lifetime' && (
-              <div class="lifetime-calculation">
-                <div class="calc-title">💰 長期利用でさらにお得</div>
-                <div class="calc-grid">
-                  <div class="calc-item">
-                    <div class="calc-period">3年利用</div>
-                    <div class="calc-value">¥2,444/月</div>
-                  </div>
-                  <div class="calc-item">
-                    <div class="calc-period">5年利用</div>
-                    <div class="calc-value">¥1,467/月</div>
-                  </div>
-                  <div class="calc-item">
-                    <div class="calc-period">10年利用</div>
-                    <div class="calc-value">¥733/月</div>
+              <>
+                <div class="lifetime-calculation">
+                  <div class="calc-title">💰 長期利用でさらにお得</div>
+                  <div class="calc-grid">
+                    <div class="calc-item">
+                      <div class="calc-period">3年利用</div>
+                      <div class="calc-value">¥2,444/月</div>
+                    </div>
+                    <div class="calc-item">
+                      <div class="calc-period">5年利用</div>
+                      <div class="calc-value">¥1,467/月</div>
+                    </div>
+                    <div class="calc-item">
+                      <div class="calc-period">10年利用</div>
+                      <div class="calc-value">¥733/月</div>
+                    </div>
                   </div>
                 </div>
-              </div>
+
+                <div class="lifetime-future">
+                  <div class="future-title">🚀 50年後も、追加料金なし</div>
+
+                  <ul class="future-features">
+                    <li>✅ AIは自動で動き続ける（2076年も使える）</li>
+                    <li>✅ 毎日進化し、精度が上がる</li>
+                    <li>✅ ¥88,000以外、一生払わない</li>
+                  </ul>
+
+                  <div class="future-comparison">
+                    <div class="comparison-label">月払いなら50年で</div>
+                    <div class="comparison-monthly">¥7,200,000</div>
+                    <div class="comparison-arrow">↓</div>
+                    <div class="comparison-label">買い切りなら</div>
+                    <div class="comparison-lifetime">¥88,000のみ</div>
+                  </div>
+
+                  <div class="future-tagline">
+                    未来を買う、今だけ¥88,000
+                  </div>
+                </div>
+              </>
             )}
 
             <a href={plan.ctaLink} class={`btn ${plan.id === 'lifetime' ? 'btn-lifetime' : 'btn-primary'} w-full`}>
@@ -438,6 +462,18 @@ const monthlyPlans = [
           <p>
             買い切りプラン（¥88,000）は<strong>一度の購入で永久に利用可能</strong>です。追加料金は一切発生しません。
             3年利用で月額換算¥2,444、5年なら¥1,467と、利用期間が長いほどお得になります。
+          </p>
+        </div>
+
+        <div class="faq-item card highlight-faq">
+          <h3>Q. 50年後も本当に使えるの？AIは進化する？</h3>
+          <p>
+            <strong>はい、50年後も追加料金なしで使えます。</strong>
+            AIシステムは自動で動き続け、毎日進化を重ねます。2076年のAIがどれだけ進化しているか、誰にもわかりません。
+          </p>
+          <p>
+            でも、ひとつ確実なこと。<strong>あなたが支払うのは2026年の¥88,000だけ</strong>です。
+            月払いなら50年で¥720万。買い切りなら¥88,000のみ。それが買い切りの力です。
           </p>
         </div>
 
@@ -831,6 +867,87 @@ const monthlyPlans = [
       font-family: 'Courier New', monospace;
     }
 
+    .lifetime-future {
+      background: linear-gradient(135deg,
+        rgba(16, 185, 129, 0.1) 0%,
+        rgba(59, 130, 246, 0.1) 100%);
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--spacing-lg);
+      border: 2px solid rgba(16, 185, 129, 0.5);
+    }
+
+    .future-title {
+      font-size: 1.5rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: var(--spacing-md);
+      text-align: center;
+    }
+
+    .future-features {
+      list-style: none;
+      margin-bottom: var(--spacing-lg);
+      text-align: left;
+    }
+
+    .future-features li {
+      padding: var(--spacing-sm) 0;
+      color: var(--text-primary);
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.6;
+    }
+
+    .future-comparison {
+      background: var(--bg-secondary);
+      padding: var(--spacing-lg);
+      border-radius: var(--radius-sm);
+      text-align: center;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .comparison-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .comparison-monthly {
+      font-size: 1.75rem;
+      font-weight: 900;
+      color: #ef4444;
+      font-family: 'Courier New', monospace;
+      text-decoration: line-through;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .comparison-arrow {
+      font-size: 1.5rem;
+      color: #10b981;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .comparison-lifetime {
+      font-size: 2rem;
+      font-weight: 900;
+      color: #10b981;
+      font-family: 'Courier New', monospace;
+    }
+
+    .future-tagline {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #60a5fa;
+      text-align: center;
+      padding: var(--spacing-md);
+      background: rgba(59, 130, 246, 0.1);
+      border-radius: var(--radius-sm);
+    }
+
     .plan-description {
       color: var(--text-secondary);
       margin-bottom: var(--spacing-lg);
@@ -998,6 +1115,20 @@ const monthlyPlans = [
       margin-bottom: var(--spacing-sm);
     }
 
+    .faq-item.highlight-faq {
+      border: 2px solid rgba(16, 185, 129, 0.5);
+      background: linear-gradient(135deg,
+        rgba(16, 185, 129, 0.05) 0%,
+        rgba(59, 130, 246, 0.05) 100%);
+    }
+
+    .faq-item.highlight-faq h3 {
+      background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
     /* CTA */
     .cta {
       padding: var(--spacing-2xl) 0;
@@ -1034,6 +1165,18 @@ const monthlyPlans = [
 
       .calc-grid {
         grid-template-columns: 1fr;
+      }
+
+      .future-title {
+        font-size: 1.25rem;
+      }
+
+      .comparison-monthly {
+        font-size: 1.5rem;
+      }
+
+      .comparison-lifetime {
+        font-size: 1.75rem;
       }
     }
 
