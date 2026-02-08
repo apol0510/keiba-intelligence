@@ -273,24 +273,30 @@ grep -r "pattern" ./src/
   - ログイン→管理画面アクセステスト
   - ログアウトテスト
 
-### **Phase 3: 管理機能実装（開始・部分完了）**
+### **Phase 3: 自動化システム実装（完了 ✅）**
 
-- [x] **予想管理画面作成（完了）**
-  - prediction-converter.astro（特徴量データ→JSON変換）✅
-  - 全12レース一括生成機能 ✅
-  - Git自動コミット・自動デプロイ機能 ✅
-  - GitHub API連携（save-and-deploy-prediction.js）✅
+- [x] **keiba-data-shared連携（完全自動化）**
+  - importPrediction.js（予想データ自動取り込み）✅
+  - importResults.js（結果データ自動取り込み・的中判定）✅
+  - GitHub Actions自動実行（予想・結果）✅
+  - 2段階買い目調整ロジック（8点 or 12点）✅
 
-- [x] **結果管理画面作成（完了）**
-  - results-manager.astro（結果入力→全12R集計）✅
-  - リアルタイム的中率・回収率自動計算 ✅
-  - save-results.js（Git自動コミット・デプロイ）✅
-  - /results（買い目シミュレーター・Chart.js統合）✅
+- [x] **有料予想ページ作成**
+  - /prediction（プロ会員限定・全レース馬単買い目表示）✅
+  - AccessControl.astro実装 ✅
+  - サーバーサイド認証（Netlify Blobsセッション）✅
+  - 多層防御アーキテクチャ ✅
 
-- [ ] **有料予想ページ作成**
-  - プラン別買い目表示制御
-  - AccessControl.astro実装
-  - セッション認証連携
+- [x] **結果表示ページ作成**
+  - /results（的中実績・買い目シミュレーター）✅
+  - 月別アーカイブページ（/archive/YYYY/MM）✅
+  - Chart.js統合（パフォーマンス可視化）✅
+
+- [x] **中央競馬版（JRA）実装** ⭐NEW
+  - importPredictionJra.js（予想データ自動取り込み）✅
+  - importResultsJra.js（結果データ自動取り込み・的中判定）✅
+  - /prediction-jra（中央競馬予想ページ）✅
+  - archiveResultsJra.json（中央競馬専用アーカイブ）✅
 
 - [ ] **SEOページ自動生成**
   - 日別実績ページ（/results/2026/01/10）
@@ -417,25 +423,50 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - **保存内容**: 全レース的中・外れ記録 + 的中率・回収率
 - **ファイルサイズ**: 1日3.6KB、1ヶ月108KB、10年13MB
 
-### **データフロー（予想更新時）**
+### **データフロー（予想更新時）** - 完全自動化
 
 ```
-マコさん → 管理画面（prediction-converter）
-  → 特徴量データ入力
-  → JSON変換
-  → Gitコミット（手動）
-  → Netlify自動ビルド（1-2分）
-  → サイト更新完了
+keiba-data-shared（予想データPush）
+  ↓
+GitHub Actions: dispatch-prediction-intelligence.yml 起動
+  ↓
+repository_dispatch イベント送信（prediction-updated）
+  ↓
+keiba-intelligence の GitHub Actions 起動
+  ↓
+importPrediction.js 実行
+  ↓
+src/data/predictions/YYYY/MM/YYYY-MM-DD.json 保存
+  ↓
+Git自動コミット・自動デプロイ
+  ↓
+サイト更新完了（1-2分）
 ```
 
-### **データフロー（結果更新時）**
+### **データフロー（結果更新時）** - 完全自動化
 
 ```
-マコさん → 管理画面（results-manager）
-  → 結果データ入力
-  → archiveResults.json生成
-  → Gitコミット（手動）
-  → Netlify自動ビルド
+keiba-data-shared（結果データPush）
+  ↓
+GitHub Actions: dispatch-results-intelligence.yml 起動
+  ↓
+【チェック】12レース揃っているか確認
+  ↓
+✅ 12レース揃っている場合のみ
+  ↓
+repository_dispatch イベント送信（results-updated）
+  ↓
+keiba-intelligence の GitHub Actions 起動
+  ↓
+importResults.js 実行
+  ↓
+【チェック】予想データが存在するか確認
+  ├─ ✅ 予想データあり → 的中判定実行 → archiveResults.json更新
+  └─ ⏭️  予想データなし → スキップ（正常終了）
+  ↓
+Git自動コミット・自動デプロイ
+  ↓
+サイト更新完了
 ```
 
 ### **⚠️ 予想データと結果データの同期（重要）**
@@ -454,8 +485,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 **ディレクトリ構造**:
 ```
 nankan/
-  predictions/2026/01/2026-01-26.json  # 予想データ（任意）
-  results/2026/01/2026-01-26.json      # 結果データ（必須・SEO対策）
+  predictions/2026/01/2026-01-26.json  # 南関予想データ
+  results/2026/01/2026-01-26.json      # 南関結果データ
+jra/
+  predictions/2026/02/2026-02-08.json  # 中央予想データ
+  results/2026/02/2026-02-08.json      # 中央結果データ
 ```
 
 #### **keiba-intelligenceの役割**
@@ -578,19 +612,19 @@ try {
 
 ### **nankan-analytics**
 
-**参考にする点:**
-- 管理画面の予想データ変換システム（prediction-converter.astro）
-- 結果管理システム（results-manager.astro）
+**参考にした点:**
 - マジックリンク認証システム
 - AccessControl.astroのプラン制御ロジック
 - 月別ファイル分割設計
+- Chart.jsによるパフォーマンス可視化
 
-**差別化する点:**
-- ThriveCart + PayPal決済（Stripeの代わり）
-- 低価格帯（¥2,980〜）
-- AI-Powered Dashboardデザイン
-- 全レース的中・外れ記録の完全保存
-- コース別統計ページの自動生成
+**差別化した点:**
+- ✅ **keiba-data-shared完全自動化**（管理画面不要）
+- ✅ **南関競馬 + 中央競馬の両対応**
+- ✅ **銀行振り込み自動化**（PayPalアカウント停止対応）
+- ✅ **2段階買い目調整ロジック**（8点 or 12点）
+- ✅ **AI-Powered Dashboardデザイン**
+- ✅ **全レース的中・外れ記録の完全保存**
 
 ---
 
@@ -617,6 +651,42 @@ try {
 | Airtable Predictions | 43,800件 | 250,000件 | 82.5% |
 | Netlify ビルド時間 | 5分 | 25時間/月 | 99.7% |
 | SendGrid 送信数 | 3,000通/月 | 100,000通/月 | 97% |
+
+---
+
+## 💰 **買い目点数ロジック** 💰
+
+### **2段階調整方式（2026-02-08実装）**
+
+**目的:**
+- 回収率を適切に計算し、実際の投資額により近い数値を表示
+- 基本は8点で計算（収支改善）
+- 高配当的中時（回収率300%超）は12点で再計算（過度な回収率を抑制）
+
+**ロジック:**
+
+```
+第1段階: 基本8点で仮計算
+  投資額 = レース数 × 8点 × 100円
+  回収率（仮） = (払戻額 ÷ 投資額) × 100
+
+第2段階: 回収率判定・調整
+  IF 回収率（仮） > 300% THEN
+    買い目点数 = 12点/レース
+    投資額 = レース数 × 12点 × 100円
+    回収率（最終） = (払戻額 ÷ 投資額) × 100
+  ELSE
+    回収率（最終） = 回収率（仮）
+  END IF
+```
+
+**具体例:**
+- **通常日**: 12R × 8点 = 9,600円投資
+- **高配当日**: 12R × 12点 = 14,400円投資（回収率300%超の場合）
+
+**詳細:** `BET_POINT_LOGIC.md` 参照
+
+**実装ファイル:** `scripts/importResults.js` (Line 275-305)
 
 ---
 
@@ -657,6 +727,12 @@ try {
 - セッション管理（Netlify Blobs、7日間TTL）
 - セキュリティ対策（HttpOnly/Secure/SameSite Cookie）
 - ログインページUI設計
+
+**BET_POINT_LOGIC.md参照:**
+- 買い目点数ロジック仕様書（2段階調整方式）
+- 回収率300%超の自動調整機構
+- 8点 or 12点の動的切り替え
+- 具体例・計算式・実装詳細
 
 ---
 
@@ -757,14 +833,29 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ---
 
-**📅 最終更新日**: 2026-02-05
-**🏁 Project Phase**: Phase 3管理機能実装 🚀（Phase 3: 95%完了）
-**🎯 Next Priority**: Airtableテーブルセットアップ → SEOページ自動生成 → 本番デプロイ
+**📅 最終更新日**: 2026-02-08
+**🏁 Project Phase**: Phase 3自動化システム実装 🚀（Phase 3: 95%完了）
+**🎯 Next Priority**: 中央競馬版完成 → SEOページ自動生成 → 本番デプロイ
 **📊 進捗率**: 95%完了（Phase 1: 100%、Phase 2: 100%、Phase 3: 95%）
 **🌐 本番URL**: https://keiba-intelligence.netlify.app/
-**🔧 管理画面URL**: https://keiba-intelligence.netlify.app/admin/results-manager
 
-**✨ 本日の成果（2026-02-05）**:
+**✨ 本日の成果（2026-02-08）**:
+  - **買い目点数ロジック実装（2段階調整方式）** ✅
+    - importResults.js修正（8点 or 12点の動的切り替え）
+    - 基本8点で計算 → 回収率300%超なら12点で再計算
+    - betPointsPerRace フィールド追加（archiveResults.json）
+    - BET_POINT_LOGIC.md作成（詳細仕様書）
+    - CLAUDE.md更新（買い目ロジック説明追加）
+
+  - **中央競馬版（JRA）実装開始** ✅
+    - importPredictionJra.js作成（予想データ自動取り込み）
+    - importResultsJra.js作成（結果データ自動取り込み・的中判定）
+    - archiveResultsJra.json初期化（中央競馬専用アーカイブ）
+    - /prediction-jra作成（中央競馬予想ページ）
+    - 南関版と同じ馬単・2段階買い目調整ロジック
+    - CLAUDE.md更新（管理画面記述削除・keiba-data-shared完全自動化に修正）
+
+**✨ 過去の成果（2026-02-05）**:
   - **2/4結果自動反映問題の根本解決** ✅
     - importResults.js修正（venue field抽出バグ修正）
     - results.track（存在しない）→ results.venue || races[0].venue || デフォルト
@@ -871,30 +962,18 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     - ディレクトリ構造: nankan/predictions/, nankan/results/
     - parser/parse-nankan-results.js（南関公式フォーマット自動パーサー）
 
-  - **results-manager.astro更新（南関公式コピペ自動パース対応）** ✅
-    - 南関公式サイト結果の自動解析機能
-    - コピペ→自動パース→プレビュー→JSON出力
-    - 対応競馬場: 船橋・大井・川崎・浦和
-    - 非エンジニアスタッフ向けの超シンプルUI
-    - エラーハンドリング・詳細ヒント表示
-    - keiba-data-shared標準フォーマット対応
-
-  - **GitHub自動Push機能実装（keiba-data-shared連携）** ✅ **NEW**
-    - Netlify Function作成（save-to-keiba-data-shared.js）
-    - 「🚀 保存してGit Push」ボタン実装
-    - ワンクリックで全プロジェクト共有完了
-    - リアルタイムステータス表示（保存中/成功/エラー）
-    - GitHub API連携（contents API使用）
-    - 完全自動化達成：南関公式コピペ → 解析 → ボタン1クリック → 全プロジェクト共有 🎉
+  - **keiba-data-shared完全自動化への移行** ✅
+    - 管理画面を廃止し、keiba-data-sharedからの自動取り込みに統一
+    - importPrediction.js / importResults.js による完全自動化
+    - GitHub Actions連携（予想・結果の自動インポート）
+    - 手動作業を完全排除
 
   - **プロジェクト構成の整理** ✅
     - /Users/apolon/Projects/ に移動（iCloud Drive同期問題解消）
     - Gitリポジトリ再クローン・正常化
 
 **✨ 過去の成果（2026-01-18）**:
-  - Priority 1: 結果管理システム完全実装 ✅
-    - results-manager.astro（全12R結果入力・的中判定）
-    - save-results.js（GitHub自動コミット・デプロイ）
+  - Priority 1: 結果表示システム完全実装 ✅
     - /results（買い目シミュレーター・Chart.js統合）
     - リアルタイム的中率・回収率計算機能
     - 全期間統計集計機能（的中率・回収率・払戻額）
@@ -908,18 +987,22 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     - レスポンシブデザイン（モバイル対応）
 
 **🎉 累積成果**:
-  - **共有リポジトリ**: keiba-data-shared（全プロジェクト共有・南関中央対応・GitHub自動Push対応）
-  - **Netlify Functions**: 14個実装（PayPal Webhook, Newsletter 5個, Auth 4個, Save-and-Deploy, Save-Results, Save-to-keiba-data-shared, Gemini-Chat）
-  - **設計書**: 3個作成（NEWSLETTER_SYSTEM.md, NEWSLETTER_MIGRATION.md, AUTH_SYSTEM.md）
-  - **管理画面**: 5ページ実装（/admin/newsletter/*, /admin/prediction-converter, /admin/results-manager）
-  - **公開ページ**: 7ページ実装（トップ, 無料予想, 有料予想, 料金, 月別アーカイブ, ログイン, サイト概要）
+  - **共有リポジトリ**: keiba-data-shared（全プロジェクト共有・南関中央対応）
+  - **Netlify Functions**: 10個実装（Newsletter 5個, Auth 4個, Gemini-Chat, Bank-Transfer）
+  - **設計書**: 4個作成（NEWSLETTER_SYSTEM.md, NEWSLETTER_MIGRATION.md, AUTH_SYSTEM.md, BET_POINT_LOGIC.md）
+  - **管理画面**: 3ページ実装（/admin/newsletter/*）
+  - **公開ページ**:
+    - 南関競馬: トップ, 無料予想, 有料予想, 料金, 月別アーカイブ, ログイン, サイト概要
+    - 中央競馬: /prediction-jra, /results-jra（実装中）
   - **自動化システム**:
-    - GitHub Actions自動連携（予想・結果インポート）
-    - 自動的中判定システム（importResults.js）
+    - 南関競馬: importPrediction.js, importResults.js, GitHub Actions自動連携
+    - 中央競馬: importPredictionJra.js, importResultsJra.js（実装中）
+    - 2段階買い目調整ロジック（8点 or 12点）
+    - 自動的中判定システム
     - 月別アーカイブ自動生成
   - **Chart.js統合**: パフォーマンス可視化完了 ✅
   - **データ共有基盤**: keiba-data-shared（競馬データ共有リポジトリ）完成 ✅
-  - **完全自動化**: 南関公式コピペ → 解析 → ボタン1クリック → 全プロジェクト共有 → 自動的中判定 🎉
+  - **完全自動化**: keiba-data-shared → GitHub Actions → 自動インポート → 自動的中判定 🎉
   - **コスト削減**: ThriveCart $690削減（買い切り費用）+ Zapier $73.50/月削減
 
 ---

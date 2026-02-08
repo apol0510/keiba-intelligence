@@ -1,0 +1,52 @@
+name: Import Prediction (中央競馬)
+
+on:
+  repository_dispatch:
+    types: [prediction-jra-updated]
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '日付 (YYYY-MM-DD)'
+        required: false
+        default: ''
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Import JRA prediction
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            node scripts/importPredictionJra.js --date "${{ github.event.inputs.date }}"
+          else
+            node scripts/importPredictionJra.js
+          fi
+
+      - name: Commit and push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/data/predictions/jra/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            COMMIT_DATE="${{ github.event.inputs.date }}"
+            if [ -z "$COMMIT_DATE" ]; then
+              COMMIT_DATE=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+            fi
+            git commit -m "Auto-import: ${COMMIT_DATE} JRA prediction from keiba-data-shared"
+            git push
+          fi

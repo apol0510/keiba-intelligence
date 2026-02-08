@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * 結果データ自動取り込み・的中判定スクリプト
+ * 結果データ自動取り込み・的中判定スクリプト（中央競馬版）
  *
- * keiba-data-sharedから結果データを取得し、予想と照合して的中判定を行う
+ * keiba-data-sharedから中央競馬の結果データを取得し、予想と照合して的中判定を行う
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
@@ -61,7 +61,7 @@ async function sendAlert(type, date, details = {}, metadata = {}) {
 /**
  * keiba-data-sharedから結果データを取得
  */
-async function fetchSharedResults(date, venue = 'nankan') {
+async function fetchSharedResults(date, venue = 'jra') {
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
   const [year, month] = date.split('-');
   const owner = 'apol0510';
@@ -109,39 +109,20 @@ async function fetchSharedResults(date, venue = 'nankan') {
 }
 
 /**
- * 予想データを読み込む
+ * 予想データを読み込む（JRA版）
  */
 function loadPrediction(date, venue) {
-  const venueMap = {
-    '大井': 'ooi',
-    '船橋': 'funabashi',
-    '川崎': 'kawasaki',
-    '浦和': 'urawa'
-  };
-  const venueSlug = venueMap[venue] || 'ooi';
-
-  // 優先順位1: 新しい形式（keiba-data-shared自動インポート）: predictions/2026/02/2026-02-04.json
+  // JRA版: predictions/jra/YYYY/MM/YYYY-MM-DD.json
   const [year, month] = date.split('-');
-  const newFormatPath = join(projectRoot, 'src', 'data', 'predictions', year, month, `${date}.json`);
+  const jraPath = join(projectRoot, 'src', 'data', 'predictions', 'jra', year, month, `${date}.json`);
 
-  // 優先順位2: 古い形式（手動作成）: predictions/2026-02-04-kawasaki.json
-  const oldFormatFileName = `${date}-${venueSlug}.json`;
-  const oldFormatPath = join(projectRoot, 'src', 'data', 'predictions', oldFormatFileName);
-
-  // 新しい形式から試す
-  if (existsSync(newFormatPath)) {
-    const content = readFileSync(newFormatPath, 'utf-8');
+  if (existsSync(jraPath)) {
+    const content = readFileSync(jraPath, 'utf-8');
     return JSON.parse(content);
   }
 
-  // 古い形式を試す
-  if (existsSync(oldFormatPath)) {
-    const content = readFileSync(oldFormatPath, 'utf-8');
-    return JSON.parse(content);
-  }
-
-  // どちらも見つからない場合
-  throw new Error(`予想データが見つかりません: ${newFormatPath} または ${oldFormatPath} (会場: ${venue})`);
+  // 見つからない場合
+  throw new Error(`予想データが見つかりません: ${jraPath} (会場: ${venue})`);
 }
 
 /**
@@ -261,10 +242,10 @@ function verifyResults(prediction, results) {
 }
 
 /**
- * archiveResults.jsonに保存
+ * archiveResultsJra.jsonに保存
  */
 function saveArchive(date, venue, raceResults) {
-  const archivePath = join(projectRoot, 'src', 'data', 'archiveResults.json');
+  const archivePath = join(projectRoot, 'src', 'data', 'archiveResultsJra.json');
 
   let archive = [];
   if (existsSync(archivePath)) {
@@ -362,7 +343,7 @@ async function main() {
     }
 
     console.log(`📅 指定された日付: ${date}\n`);
-    console.log(`━━━ ${date} 的中判定開始 ━━━\n`);
+    console.log(`━━━ ${date} 中央競馬 的中判定開始 ━━━\n`);
 
     // 1. 結果データ取得
     const results = await fetchSharedResults(date);

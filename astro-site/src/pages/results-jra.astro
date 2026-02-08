@@ -1,0 +1,35 @@
+---
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
+
+// 最新の中央競馬的中実績がある年月を取得してリダイレクト
+let redirectUrl = '/archive-jra/';
+
+try {
+  const archivePath = join(process.cwd(), 'src', 'data', 'archiveResultsJra.json');
+  if (existsSync(archivePath)) {
+    const content = readFileSync(archivePath, 'utf-8');
+    const archive = JSON.parse(content);
+
+    if (archive.length > 0) {
+      const latestDate = archive[0].date;
+      const [year, month] = latestDate.split('-');
+      redirectUrl = `/archive-jra/${year}/${month}/`;
+    } else {
+      // データがない場合は今月にフォールバック
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+      redirectUrl = `/archive-jra/${currentYear}/${currentMonth}/`;
+    }
+  }
+} catch (error) {
+  // エラー時は今月にフォールバック
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+  redirectUrl = `/archive-jra/${currentYear}/${currentMonth}/`;
+}
+
+return Astro.redirect(redirectUrl);
+---
