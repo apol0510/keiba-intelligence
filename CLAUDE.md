@@ -114,13 +114,17 @@ grep -r "pattern" ./src/
 
 ### **価格設定**
 
-| プラン | 月額 | 年額 | 内容 |
-|--------|------|------|------|
-| フリー | ¥0 | - | 予想閲覧のみ（買い目なし） |
-| プロ | ¥4,980 | ¥49,800 | 全レース馬単買い目 |
+| プラン | 価格 | 内容 |
+|--------|------|------|
+| フリー | ¥0 | 予想閲覧のみ（上位5頭、買い目なし） |
+| 買い切り | ¥88,000（永久） | 南関＋中央、全レース馬単買い目、永久アクセス |
+| 年払い | ¥66,000/年 | 南関＋中央、全レース馬単買い目（月額換算¥5,500） |
+| 月払い南関 | ¥12,000/月 | 南関4場のみ（割高・非推奨） |
+| 月払い中央 | ¥12,000/月 | JRA全10場のみ（割高・非推奨） |
 
-**将来追加予定:**
-- **プロプラス**: ¥10,000/月 - 馬単+三連複（プロ会員のみ購入可能）
+**おすすめプラン:**
+- **買い切りプラン（¥88,000）**: 50年利用で月額換算¥147、AIは毎日進化、追加料金なし
+- **年払いプラン（¥66,000）**: 月額換算¥5,500、年間¥78,000お得
 
 ---
 
@@ -834,9 +838,9 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ---
 
 **📅 最終更新日**: 2026-02-08
-**🏁 Project Phase**: Phase 3自動化システム実装 🚀（Phase 3: 95%完了）
-**🎯 Next Priority**: 中央競馬版完成 → SEOページ自動生成 → 本番デプロイ
-**📊 進捗率**: 95%完了（Phase 1: 100%、Phase 2: 100%、Phase 3: 95%）
+**🏁 Project Phase**: Phase 3管理機能実装 🚀（Phase 3: 98%完了）
+**🎯 Next Priority**: SEOページ自動生成 → 本番デプロイ → 1000人会員獲得
+**📊 進捗率**: 98%完了（Phase 1: 100%、Phase 2: 100%、Phase 3: 98%）
 **🌐 本番URL**: https://keiba-intelligence.netlify.app/
 
 **✨ 本日の成果（2026-02-08）**:
@@ -854,6 +858,22 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     - /prediction-jra作成（中央競馬予想ページ）
     - 南関版と同じ馬単・2段階買い目調整ロジック
     - CLAUDE.md更新（管理画面記述削除・keiba-data-shared完全自動化に修正）
+
+  - **料金プラン全面リニューアル（買い切り超強調型）** ✅
+    - 買い切りプラン: ¥88,000（永久アクセス、追加料金なし）
+    - 年払いプラン: ¥66,000/年（月額換算¥5,500）
+    - 月払いプラン: ¥12,000/月（割高・非推奨、年払いより2.2倍割高）
+    - 「365日競馬バナー」追加（平日南関＋週末中央）
+    - 「50年後も使える」売り文句（月払い720万円 vs 買い切り8万8千円）
+    - 「永久アクセス」超大きく強調（3.5rem、glowアニメーション）
+    - 「AIは毎日進化し続ける」訴求
+    - FAQ追加（50年後も本当に使えるの？）
+
+  - **中央競馬（JRA）無料予想ページ完成** ✅
+    - free-prediction-jra.astro作成（全12レース表示）
+    - Feature Importance Analysis完全実装（南関版と同一）
+    - 多会場対応（京都・小倉・東京のタブ切り替え）
+    - レース選択ボタン（1R-12R）
 
 **✨ 過去の成果（2026-02-05）**:
   - **2/4結果自動反映問題の根本解決** ✅
@@ -987,21 +1007,26 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     - レスポンシブデザイン（モバイル対応）
 
 **🎉 累積成果**:
-  - **共有リポジトリ**: keiba-data-shared（全プロジェクト共有・南関中央対応）
+  - **共有リポジトリ**: keiba-data-shared（全プロジェクト共有・南関中央対応・GitHub自動Push対応）
   - **Netlify Functions**: 10個実装（Newsletter 5個, Auth 4個, Gemini-Chat, Bank-Transfer）
   - **設計書**: 4個作成（NEWSLETTER_SYSTEM.md, NEWSLETTER_MIGRATION.md, AUTH_SYSTEM.md, BET_POINT_LOGIC.md）
   - **管理画面**: 3ページ実装（/admin/newsletter/*）
   - **公開ページ**:
     - 南関競馬: トップ, 無料予想, 有料予想, 料金, 月別アーカイブ, ログイン, サイト概要
-    - 中央競馬: /prediction-jra, /results-jra（実装中）
+    - 中央競馬: /free-prediction-jra, /prediction-jra, /archive-jra/（完成）
+  - **料金プラン**:
+    - 買い切りプラン: ¥88,000（永久アクセス、50年利用で月額換算¥147）
+    - 年払いプラン: ¥66,000/年（月額換算¥5,500）
+    - 月払いプラン: ¥12,000/月（割高・非推奨）
   - **自動化システム**:
     - 南関競馬: importPrediction.js, importResults.js, GitHub Actions自動連携
-    - 中央競馬: importPredictionJra.js, importResultsJra.js（実装中）
+    - 中央競馬: importPredictionJra.js, importResultsJra.js, GitHub Actions自動連携（完成）
     - 2段階買い目調整ロジック（8点 or 12点）
     - 自動的中判定システム
     - 月別アーカイブ自動生成
   - **Chart.js統合**: パフォーマンス可視化完了 ✅
   - **データ共有基盤**: keiba-data-shared（競馬データ共有リポジトリ）完成 ✅
+  - **決済システム**: 銀行振り込み自動化（PayPalアカウント停止対応）
   - **完全自動化**: keiba-data-shared → GitHub Actions → 自動インポート → 自動的中判定 🎉
   - **コスト削減**: ThriveCart $690削減（買い切り費用）+ Zapier $73.50/月削減
 
