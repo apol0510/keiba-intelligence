@@ -46,6 +46,8 @@ if (import.meta.env.PROD) {
 // 最新の中央競馬予想JSONファイルを取得
 const predictionsDir = join(process.cwd(), 'src', 'data', 'predictions', 'jra');
 let predictionData = null;
+let venues = [];
+let isMultiVenue = false;
 let error = null;
 
 try {
@@ -73,7 +75,26 @@ try {
 
     if (latestPath) {
       const fileContent = readFileSync(latestPath, 'utf-8');
-      predictionData = JSON.parse(fileContent);
+      const rawData = JSON.parse(fileContent);
+
+      // データ構造の判定（venues配列があるか）
+      if (rawData.venues && Array.isArray(rawData.venues)) {
+        // 複数会場フォーマット
+        isMultiVenue = true;
+        venues = rawData.venues;
+        predictionData = rawData;
+      } else if (rawData.eventInfo && rawData.predictions) {
+        // 単一会場フォーマット（従来互換）
+        isMultiVenue = false;
+        venues = [{
+          venue: rawData.eventInfo.venue,
+          eventInfo: rawData.eventInfo,
+          predictions: rawData.predictions
+        }];
+        predictionData = rawData;
+      } else {
+        throw new Error('予想データのフォーマットが不正です');
+      }
     } else {
       throw new Error('中央競馬の予想データがありません');
     }
@@ -232,32 +253,68 @@ function generateUmatanBets(horses) {
                 <span class="pro-text">PRO MEMBER EXCLUSIVE</span>
               </div>
               <h1 class="page-title">
-                {predictionData.eventInfo.date} {predictionData.eventInfo.venue}
+                {isMultiVenue ? (
+                  <>{predictionData.date} 中央競馬 - {venues.length}会場</>
+                ) : (
+                  <>{predictionData.eventInfo.date} {predictionData.eventInfo.venue}</>
+                )}
               </h1>
               <p class="page-subtitle">
-                Ensemble Neural Network Analysis / アンサンブル型ニューラルネットワーク分析 - {predictionData.eventInfo.totalRaces} Races
+                Ensemble Neural Network Analysis / アンサンブル型ニューラルネットワーク分析 - {isMultiVenue ? predictionData.totalRaces : predictionData.eventInfo.totalRaces} Races
               </p>
               <div class="scan-line"></div>
             </div>
 
-            <!-- レース選択ボタン -->
-            <div class="race-selector">
-              {predictionData.predictions.map((race, index) => (
-                <button
-                  class={`race-btn ${index === 0 ? 'active' : ''}`}
-                  data-race-index={index}
-                  onclick="selectRace(event, this)"
-                  title={race.raceInfo.raceName || `第${race.raceInfo.raceNumber}レース`}
-                >
-                  <span class="race-label">{race.raceInfo.raceNumber}R</span>
-                  <span class="race-indicator"></span>
-                </button>
-              ))}
-            </div>
+            <!-- 会場タブ（複数会場の場合のみ表示）-->
+            {isMultiVenue && venues.length > 1 && (
+              <div class="venue-selector">
+                {venues.map((venueData, venueIndex) => (
+                  <button
+                    class={`venue-btn ${venueIndex === 0 ? 'active' : ''}`}
+                    data-venue-index={venueIndex}
+                    onclick="selectVenue(event, this)"
+                  >
+                    <span class="venue-label">{venueData.venue}</span>
+                    <span class="venue-race-count">{venueData.eventInfo.totalRaces}R</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
-            <!-- レース表示エリア -->
-            <div class="race-display-area">
-              {predictionData.predictions.map((race, index) => {
+            <!-- 会場ごとの表示エリア -->
+            {venues.map((venueData, venueIndex) => {
+              const venuePredictions = venueData.predictions;
+              const venueInfo = venueData.eventInfo;
+
+              return (
+                <div class={`venue-content ${venueIndex === 0 ? 'active' : ''}`} data-venue-index={venueIndex}>
+                  <!-- 会場名（複数会場の場合のみ表示）-->
+                  {isMultiVenue && (
+                    <div class="venue-header">
+                      <h2 class="venue-title">{venueInfo.venue}</h2>
+                      <p class="venue-info">{venueInfo.date} - {venueInfo.totalRaces}レース</p>
+                    </div>
+                  )}
+
+                  <!-- レース選択ボタン -->
+                  <div class="race-selector">
+                    {venuePredictions.map((race, raceIndex) => (
+                      <button
+                        class={`race-btn ${raceIndex === 0 ? 'active' : ''}`}
+                        data-venue-index={venueIndex}
+                        data-race-index={raceIndex}
+                        onclick="selectRace(event, this)"
+                        title={race.raceInfo.raceName || `第${race.raceInfo.raceNumber}レース`}
+                      >
+                        <span class="race-label">{race.raceInfo.raceNumber}R</span>
+                        <span class="race-indicator"></span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <!-- レース表示エリア -->
+                  <div class="race-display-area">
+                    {venuePredictions.map((race, raceIndex) => {
               const allHorses = race.horses;
               const horsesWithMetrics = allHorses.map(horse => ({
                 ...horse,
@@ -275,7 +332,7 @@ function generateUmatanBets(horses) {
                 sum + parseFloat(h.metrics.modelCertainty), 0) / horsesWithMetrics.length).toFixed(1);
 
               return (
-                <div class={`race-content ${index === 0 ? 'active' : ''}`} data-race-index={index}>
+                <div class={`race-content ${raceIndex === 0 ? 'active' : ''}`} data-venue-index={venueIndex} data-race-index={raceIndex}>
                   <!-- レース名ヘッダー -->
                   {race.raceInfo.raceName && (
                     <div class="race-name-header">
@@ -513,8 +570,11 @@ function generateUmatanBets(horses) {
                   </div>
                 </div>
               );
+                    })}
+                  </div> <!-- race-display-area -->
+                </div> <!-- venue-content -->
+              );
             })}
-            </div>
 
             <!-- Technical Notes -->
             <div class="info-card">
@@ -677,6 +737,96 @@ function generateUmatanBets(horses) {
     @keyframes scanLine {
       0% { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
+    }
+
+    /* 会場タブ */
+    .venue-selector {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: center;
+      margin-bottom: var(--spacing-xl);
+      padding: var(--spacing-lg);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    .venue-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--spacing-xs);
+      padding: var(--spacing-md) var(--spacing-xl);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      min-width: 120px;
+    }
+
+    .venue-btn:hover {
+      border-color: #a78bfa;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(167, 139, 250, 0.3);
+    }
+
+    .venue-btn.active {
+      background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+      border-color: #a78bfa;
+      color: white;
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+    }
+
+    .venue-label {
+      font-size: 1.25rem;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+    }
+
+    .venue-race-count {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      font-family: 'Courier New', monospace;
+    }
+
+    .venue-content {
+      display: none;
+    }
+
+    .venue-content.active {
+      display: block;
+      animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .venue-header {
+      text-align: center;
+      margin-bottom: var(--spacing-xl);
+      padding: var(--spacing-lg);
+      background: linear-gradient(135deg,
+        rgba(139, 92, 246, 0.15) 0%,
+        rgba(167, 139, 250, 0.15) 100%);
+      border-radius: var(--radius-lg);
+      border: 2px solid rgba(139, 92, 246, 0.3);
+    }
+
+    .venue-title {
+      font-size: 2rem;
+      font-weight: 900;
+      color: #a78bfa;
+      margin: 0 0 var(--spacing-sm) 0;
+      text-shadow: 0 0 15px rgba(167, 139, 250, 0.4);
+    }
+
+    .venue-info {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin: 0;
+      font-family: 'Courier New', monospace;
     }
 
     /* 買い目セクション */
@@ -1459,22 +1609,60 @@ function generateUmatanBets(horses) {
   </style>
 
   <script is:inline>
-    function selectRace(event, button) {
+    function selectVenue(event, button) {
       event.preventDefault();
 
-      const raceIndex = button.getAttribute('data-race-index');
+      const venueIndex = button.getAttribute('data-venue-index');
 
-      document.querySelectorAll('.race-btn').forEach(btn => {
+      // 会場タブの切り替え
+      document.querySelectorAll('.venue-btn').forEach(btn => {
         btn.classList.remove('active');
       });
-
       button.classList.add('active');
 
-      document.querySelectorAll('.race-content').forEach(content => {
+      // 会場コンテンツの切り替え
+      document.querySelectorAll('.venue-content').forEach(content => {
         content.classList.remove('active');
       });
 
-      const selectedRace = document.querySelector(`.race-content[data-race-index="${raceIndex}"]`);
+      const selectedVenue = document.querySelector(`.venue-content[data-venue-index="${venueIndex}"]`);
+      if (selectedVenue) {
+        selectedVenue.classList.add('active');
+
+        // カウンターアニメーション（アクティブなレースのみ）
+        const activeRace = selectedVenue.querySelector('.race-content.active');
+        if (activeRace) {
+          activeRace.querySelectorAll('[data-counter]').forEach(el => {
+            const target = parseInt(el.getAttribute('data-counter'));
+            animateCounter(el, target);
+          });
+        }
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function selectRace(event, button) {
+      event.preventDefault();
+
+      const venueIndex = button.getAttribute('data-venue-index');
+      const raceIndex = button.getAttribute('data-race-index');
+
+      // 現在の会場内のレースボタンのみ更新
+      const currentVenue = document.querySelector(`.venue-content[data-venue-index="${venueIndex}"]`);
+      if (!currentVenue) return;
+
+      currentVenue.querySelectorAll('.race-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      button.classList.add('active');
+
+      // 現在の会場内のレースコンテンツのみ更新
+      currentVenue.querySelectorAll('.race-content').forEach(content => {
+        content.classList.remove('active');
+      });
+
+      const selectedRace = currentVenue.querySelector(`.race-content[data-venue-index="${venueIndex}"][data-race-index="${raceIndex}"]`);
       if (selectedRace) {
         selectedRace.classList.add('active');
 
