@@ -259,11 +259,12 @@ function generateAdvancedMetrics(horse, allHorses) {
                           </div>
                         </div>
 
-                        {/* 詳細分析テーブル（上位5頭のみ）*/}
+                        {/* 詳細分析テーブル（上位5頭）*/}
                         <div class="analysis-section">
                           <div class="section-header">
                             <div class="header-icon">📊</div>
-                            <h2>AI分析トップ5（無料版）</h2>
+                            <h2>Multi-Dimensional Performance Analysis / 多次元パフォーマンス分析</h2>
+                            <span class="free-tag">無料公開</span>
                           </div>
 
                           {sortedHorses.slice(0, 5).map((horse) => {
@@ -314,6 +315,81 @@ function generateAdvancedMetrics(horse, allHorses) {
                                     </div>
                                   </div>
                                 </div>
+
+                                {/* Feature Analysis（本命・対抗のみ詳細表示）*/}
+                                {(horse.role === '本命' || horse.role === '対抗') && (
+                                  <div class="dhc-features">
+                                    <div class="feature-title">Feature Importance Analysis / 特徴量重要度分析</div>
+                                    <div class="feature-grid">
+                                      <div class="feature-item">
+                                        <div class="feature-label">
+                                          <span class="feature-icon">⚡</span>
+                                          <span>Speed Index / スピード指数</span>
+                                        </div>
+                                        <div class="feature-bar-container">
+                                          <div class="feature-bar" style={`width: ${m.speedIndex}%`}></div>
+                                        </div>
+                                        <div class="feature-value">{m.speedIndex}</div>
+                                      </div>
+
+                                      <div class="feature-item">
+                                        <div class="feature-label">
+                                          <span class="feature-icon">💪</span>
+                                          <span>Stamina Rating / スタミナ評価</span>
+                                        </div>
+                                        <div class="feature-bar-container">
+                                          <div class="feature-bar" style={`width: ${m.staminaRating}%`}></div>
+                                        </div>
+                                        <div class="feature-value">{m.staminaRating}</div>
+                                      </div>
+
+                                      <div class="feature-item">
+                                        <div class="feature-label">
+                                          <span class="feature-icon">📈</span>
+                                          <span>Form Trend / 調子傾向</span>
+                                        </div>
+                                        <div class="feature-bar-container trend">
+                                          <div class="feature-bar-center"></div>
+                                          <div class="feature-bar trend" style={`width: ${Math.abs(parseFloat(m.formTrend))}%; ${parseFloat(m.formTrend) >= 0 ? 'left: 50%;' : 'right: 50%;'}`}></div>
+                                        </div>
+                                        <div class="feature-value">{m.formTrend}</div>
+                                      </div>
+
+                                      <div class="feature-item">
+                                        <div class="feature-label">
+                                          <span class="feature-icon">🏁</span>
+                                          <span>Track Compatibility / コース適性</span>
+                                        </div>
+                                        <div class="feature-bar-container">
+                                          <div class="feature-bar" style={`width: ${m.trackCompatibility}%`}></div>
+                                        </div>
+                                        <div class="feature-value">{m.trackCompatibility}</div>
+                                      </div>
+
+                                      <div class="feature-item">
+                                        <div class="feature-label">
+                                          <span class="feature-icon">📏</span>
+                                          <span>Distance Fitness / 距離適性</span>
+                                        </div>
+                                        <div class="feature-bar-container">
+                                          <div class="feature-bar" style={`width: ${m.distanceFitness}%`}></div>
+                                        </div>
+                                        <div class="feature-value">{m.distanceFitness}</div>
+                                      </div>
+
+                                      <div class="feature-item">
+                                        <div class="feature-label">
+                                          <span class="feature-icon">👤</span>
+                                          <span>Jockey Factor / 騎手要因</span>
+                                        </div>
+                                        <div class="feature-bar-container">
+                                          <div class="feature-bar" style={`width: ${m.jockeyFactor}%`}></div>
+                                        </div>
+                                        <div class="feature-value">{m.jockeyFactor}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
@@ -864,6 +940,118 @@ function generateAdvancedMetrics(horse, allHorses) {
     .qm-value.positive { color: #10b981; }
     .qm-value.negative { color: #ef4444; }
 
+    /* 特徴量分析 */
+    .dhc-features {
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .feature-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #60a5fa;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: var(--spacing-md);
+      padding-bottom: var(--spacing-sm);
+      border-bottom: 2px solid rgba(96, 165, 250, 0.3);
+    }
+
+    .feature-grid {
+      display: grid;
+      gap: var(--spacing-md);
+    }
+
+    .feature-item {
+      display: grid;
+      grid-template-columns: 200px 1fr 60px;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-sm);
+      background: rgba(30, 41, 59, 0.3);
+      border-radius: var(--radius-sm);
+    }
+
+    .feature-label {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .feature-icon {
+      font-size: 1.25rem;
+    }
+
+    .feature-bar-container {
+      position: relative;
+      height: 8px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .feature-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      border-radius: 4px;
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.2) 50%,
+        transparent 100%);
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .feature-bar-container.trend {
+      position: relative;
+      background: linear-gradient(90deg,
+        rgba(239, 68, 68, 0.3) 0%,
+        rgba(100, 100, 100, 0.3) 50%,
+        rgba(16, 185, 129, 0.3) 100%);
+    }
+
+    .feature-bar-center {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 2px;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.5);
+      transform: translateX(-50%);
+    }
+
+    .feature-bar.trend {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.8), rgba(16, 185, 129, 1));
+    }
+
+    .feature-value {
+      text-align: right;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+      color: #60a5fa;
+      font-size: 0.9rem;
+    }
+
     /* 買い目ロック */
     .locked-section {
       text-align: center;
@@ -951,6 +1139,12 @@ function generateAdvancedMetrics(horse, allHorses) {
     }
 
     /* レスポンシブ */
+    @media (max-width: 1024px) {
+      .feature-item {
+        grid-template-columns: 150px 1fr 50px;
+      }
+    }
+
     @media (max-width: 768px) {
       .page-title {
         font-size: 1.5rem;
@@ -962,6 +1156,15 @@ function generateAdvancedMetrics(horse, allHorses) {
 
       .cta-buttons {
         flex-direction: column;
+      }
+
+      .feature-item {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+      }
+
+      .feature-label {
+        justify-content: space-between;
       }
     }
   </style>
