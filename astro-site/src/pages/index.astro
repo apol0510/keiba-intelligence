@@ -6,7 +6,7 @@ export const prerender = true;
 
 <BaseLayout
   title="ホーム"
-  description="AI-Powered Intelligence Dashboard for 南関競馬。的中率78%、回収率125%を誇る競馬予想プラットフォーム。低価格で始められる競馬予想サービス。"
+  description="AI-Powered Intelligence Dashboard for 南関・中央競馬。的中率78%、回収率125%を誇る競馬予想プラットフォーム。南関4場とJRA全10場に対応。低価格で始められる競馬予想サービス。"
 >
   <!-- ヒーローセクション -->
   <section class="hero gradient-bg-animated">
@@ -14,14 +14,14 @@ export const prerender = true;
       <div class="hero-content">
         <h1 class="hero-title fade-in">
           AI-Powered Intelligence Dashboard<br>
-          for 南関競馬
+          for 南関・中央競馬
         </h1>
         <p class="hero-subtitle slide-in">
           的中率78%、回収率125%を誇る次世代競馬予想プラットフォーム
         </p>
         <div class="hero-cta">
           <a href="/pricing" class="btn btn-primary btn-lg">今すぐ始める</a>
-          <a href="/free-prediction" class="btn btn-secondary btn-lg">無料予想を見る</a>
+          <a href="/free-prediction" class="btn btn-secondary btn-lg">無料予想を見る（南関）</a>
         </div>
 
         <!-- 統計カード -->
@@ -83,9 +83,9 @@ export const prerender = true;
 
         <div class="feature-card card">
           <div class="feature-icon">🏇</div>
-          <h3>南関4場対応</h3>
+          <h3>南関・中央対応</h3>
           <p>
-            大井・川崎・船橋・浦和の南関東4競馬場に完全対応。地方競馬の特性を熟知したAIが予想を提供。
+            南関4場（大井・川崎・船橋・浦和）と中央競馬（JRA全10場）に完全対応。地方・中央の特性を熟知したAIが予想を提供。
           </p>
         </div>
 
@@ -103,6 +103,60 @@ export const prerender = true;
           <p>
             マジックリンク認証で安全にログイン。個人情報は厳重に管理され、安心してご利用いただけます。
           </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 対応競馬場セクション -->
+  <section class="venues">
+    <div class="container">
+      <h2 class="section-title text-center">対応競馬場</h2>
+      <p class="section-subtitle text-center">
+        南関東・中央競馬の両方に対応。全レースAI予想を提供
+      </p>
+
+      <div class="grid grid-2" style="max-width: 900px; margin: 0 auto;">
+        <!-- 南関競馬 -->
+        <div class="venue-card card">
+          <div class="venue-header">
+            <div class="venue-icon">🏇</div>
+            <h3 class="venue-title">南関競馬</h3>
+            <div class="venue-badge badge-primary">運用中</div>
+          </div>
+          <p class="venue-description">
+            大井・川崎・船橋・浦和の南関東4競馬場に完全対応。地方競馬の特性を熟知したAIが毎日予想を提供します。
+          </p>
+          <ul class="venue-tracks">
+            <li>🏟️ 大井競馬場（東京）</li>
+            <li>🏟️ 川崎競馬場（神奈川）</li>
+            <li>🏟️ 船橋競馬場（千葉）</li>
+            <li>🏟️ 浦和競馬場（埼玉）</li>
+          </ul>
+          <div class="venue-cta">
+            <a href="/free-prediction" class="btn btn-secondary w-full">無料予想を見る</a>
+            <a href="/prediction" class="btn btn-primary w-full">プロ予想（PRO限定）</a>
+          </div>
+        </div>
+
+        <!-- 中央競馬（JRA）-->
+        <div class="venue-card card featured">
+          <div class="venue-header">
+            <div class="venue-icon">🏆</div>
+            <h3 class="venue-title">中央競馬（JRA）</h3>
+            <div class="venue-badge badge-success">NEW!</div>
+          </div>
+          <p class="venue-description">
+            東京・中山・京都・阪神など全国10場のJRA競馬場に対応。G1レースから一般レースまで、全レースAI予想を提供します。
+          </p>
+          <ul class="venue-tracks">
+            <li>🏟️ 東京・中山（関東）</li>
+            <li>🏟️ 京都・阪神（関西）</li>
+            <li>🏟️ 中京・小倉・新潟・福島・札幌・函館</li>
+          </ul>
+          <div class="venue-cta">
+            <a href="/prediction-jra" class="btn btn-primary w-full">プロ予想（PRO限定）</a>
+          </div>
         </div>
       </div>
     </div>
@@ -131,6 +185,7 @@ export const prerender = true;
             <li>✅ 的中実績閲覧</li>
             <li>✅ データ可視化</li>
             <li>✅ 南関4場対応</li>
+            <li>✅ 中央競馬（JRA）対応 <span class="badge badge-success" style="font-size: 0.7rem;">NEW</span></li>
           </ul>
           <a href="/pricing" class="btn btn-primary w-full">プラン詳細</a>
         </div>
@@ -319,6 +374,75 @@ export const prerender = true;
 
     .w-full {
       width: 100%;
+    }
+
+    /* 対応競馬場セクション */
+    .venues {
+      padding: var(--spacing-2xl) 0;
+    }
+
+    .venue-card {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .venue-card.featured {
+      border: 2px solid #10b981;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+    }
+
+    .venue-header {
+      text-align: center;
+      margin-bottom: var(--spacing-md);
+      position: relative;
+    }
+
+    .venue-icon {
+      font-size: 3rem;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .venue-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .venue-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .venue-description {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      line-height: 1.6;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .venue-tracks {
+      list-style: none;
+      margin-bottom: var(--spacing-lg);
+      flex: 1;
+    }
+
+    .venue-tracks li {
+      padding: var(--spacing-xs) 0;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    .venue-cta {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+      margin-top: auto;
     }
 
     /* CTA */
