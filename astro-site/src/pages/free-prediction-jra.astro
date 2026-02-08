@@ -134,7 +134,7 @@ function generateAdvancedMetrics(horse, allHorses) {
 
 <BaseLayout
   title="中央競馬 無料予想 - KEIBA Intelligence"
-  description="KEIBA Intelligence 中央競馬（JRA）の無料予想。AI分析による後半3レース予想を無料公開。全レース買い目情報は有料プランで提供。"
+  description="KEIBA Intelligence 中央競馬（JRA）の無料予想。AI分析による全レース予想（上位5頭）を無料公開。全頭詳細分析と馬単買い目は有料プランで提供。"
 >
   <section class="prediction-section">
     <div class="container">
@@ -193,12 +193,12 @@ function generateAdvancedMetrics(horse, allHorses) {
               <h2>無料予想について</h2>
             </div>
             <div class="free-info-content">
-              <p><strong>無料予想では後半3レースのみを公開しています。</strong></p>
-              <p>全レースの馬単買い目情報は<a href="/pricing" class="inline-link">プロプラン（月額¥4,980）</a>でご利用いただけます。</p>
+              <p><strong>無料予想では全レースのAI予想（上位5頭）を公開しています。</strong></p>
+              <p>全頭の詳細分析と馬単買い目情報は<a href="/pricing" class="inline-link">プロプラン（月額¥4,980）</a>でご利用いただけます。</p>
               <ul class="free-info-list">
                 <li>✅ 全レースAI予想</li>
                 <li>✅ 馬単買い目提供</li>
-                <li>✅ 詳細なAI分析</li>
+                <li>✅ 全頭詳細なAI分析</li>
                 <li>✅ 的中実績閲覧</li>
               </ul>
               <a href="/pricing" class="btn btn-primary">プロプランを見る</a>
@@ -209,10 +209,6 @@ function generateAdvancedMetrics(horse, allHorses) {
           {venues.map((venueData, venueIndex) => {
             const venuePredictions = venueData.predictions;
             const venueInfo = venueData.eventInfo;
-            const totalRaces = venueInfo.totalRaces;
-
-            // 後半3レースのみ表示（無料版）
-            const freeRaces = venuePredictions.slice(Math.max(0, totalRaces - 3));
 
             return (
               <div class={`venue-content ${venueIndex === 0 ? 'active' : ''}`} data-venue-index={venueIndex}>
@@ -220,13 +216,29 @@ function generateAdvancedMetrics(horse, allHorses) {
                 {isMultiVenue && (
                   <div class="venue-header">
                     <h2 class="venue-title">{venueInfo.venue}</h2>
-                    <p class="venue-info">{venueInfo.date} - 後半{freeRaces.length}レース（無料公開）</p>
+                    <p class="venue-info">{venueInfo.date} - {venueInfo.totalRaces}レース（無料公開）</p>
                   </div>
                 )}
 
-                <!-- レース表示エリア（後半3レースのみ）-->
+                <!-- レース選択ボタン -->
+                <div class="race-selector">
+                  {venuePredictions.map((race, raceIndex) => (
+                    <button
+                      class={`race-btn ${raceIndex === 0 ? 'active' : ''}`}
+                      data-venue-index={venueIndex}
+                      data-race-index={raceIndex}
+                      onclick="selectRace(event, this)"
+                      title={race.raceInfo.raceName || `第${race.raceInfo.raceNumber}レース`}
+                    >
+                      <span class="race-label">{race.raceInfo.raceNumber}R</span>
+                      <span class="race-indicator"></span>
+                    </button>
+                  ))}
+                </div>
+
+                <!-- レース表示エリア（全レース）-->
                 <div class="race-display-area">
-                  {freeRaces.map((race, raceIndex) => {
+                  {venuePredictions.map((race, raceIndex) => {
                     const allHorses = race.horses;
                     const horsesWithMetrics = allHorses.map(horse => ({
                       ...horse,
@@ -236,7 +248,7 @@ function generateAdvancedMetrics(horse, allHorses) {
                     const sortedHorses = horsesWithMetrics.sort((a, b) => b.pt - a.pt);
 
                     return (
-                      <div class="race-content active" data-venue-index={venueIndex} data-race-index={raceIndex}>
+                      <div class={`race-content ${raceIndex === 0 ? 'active' : ''}`} data-venue-index={venueIndex} data-race-index={raceIndex}>
                         {/* レース名ヘッダー */}
                         <div class="race-name-header">
                           <h2 class="race-name-title">{race.raceInfo.raceNumber}R {race.raceInfo.raceName}</h2>
@@ -575,15 +587,80 @@ function generateAdvancedMetrics(horse, allHorses) {
       font-weight: 600;
     }
 
-    /* レース表示 */
-    .race-display-area {
+    /* レース選択ボタン */
+    .race-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+      justify-content: center;
+      margin-bottom: var(--spacing-xl);
+      padding: var(--spacing-lg);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+    }
+
+    .race-btn {
+      position: relative;
       display: flex;
       flex-direction: column;
-      gap: var(--spacing-2xl);
+      align-items: center;
+      gap: 4px;
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .race-btn:hover {
+      border-color: var(--primary-end);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .race-btn.active {
+      background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+      border-color: var(--primary-end);
+      color: white;
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+    }
+
+    .race-label {
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .race-indicator {
+      width: 20px;
+      height: 2px;
+      background: var(--border-color);
+      border-radius: 1px;
+      transition: all 0.3s;
+    }
+
+    .race-btn.active .race-indicator {
+      background: white;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+    }
+
+    /* レース表示 */
+    .race-display-area {
+      position: relative;
+      min-height: 500px;
     }
 
     .race-content {
+      display: none;
+    }
+
+    .race-content.active {
       display: block;
+      animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .race-name-header {
@@ -909,6 +986,34 @@ function generateAdvancedMetrics(horse, allHorses) {
       const selectedVenue = document.querySelector(`.venue-content[data-venue-index="${venueIndex}"]`);
       if (selectedVenue) {
         selectedVenue.classList.add('active');
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function selectRace(event, button) {
+      event.preventDefault();
+
+      const venueIndex = button.getAttribute('data-venue-index');
+      const raceIndex = button.getAttribute('data-race-index');
+
+      // 現在の会場内のレースボタンのみ更新
+      const currentVenue = document.querySelector(`.venue-content[data-venue-index="${venueIndex}"]`);
+      if (!currentVenue) return;
+
+      currentVenue.querySelectorAll('.race-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      button.classList.add('active');
+
+      // 現在の会場内のレースコンテンツのみ更新
+      currentVenue.querySelectorAll('.race-content').forEach(content => {
+        content.classList.remove('active');
+      });
+
+      const selectedRace = currentVenue.querySelector(`.race-content[data-venue-index="${venueIndex}"][data-race-index="${raceIndex}"]`);
+      if (selectedRace) {
+        selectedRace.classList.add('active');
       }
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
