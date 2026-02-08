@@ -132,7 +132,11 @@ const monthlyPlans = [
         </div>
 
         <div class="banner-highlight">
-          <strong>買い切りプラン¥88,000なら、永久にこの環境が手に入る</strong>
+          <div class="lifetime-access-huge">永久アクセス</div>
+          <div class="banner-highlight-text">
+            買い切りプラン <span class="highlight-price">¥88,000</span> なら、<br>
+            この環境が永久に手に入る
+          </div>
         </div>
       </div>
     </div>
@@ -593,11 +597,40 @@ const monthlyPlans = [
       background: linear-gradient(135deg,
         rgba(139, 92, 246, 0.2) 0%,
         rgba(167, 139, 250, 0.2) 100%);
-      padding: var(--spacing-lg);
+      padding: var(--spacing-xl);
       border-radius: var(--radius-md);
       border: 2px solid rgba(139, 92, 246, 0.5);
-      font-size: 1.125rem;
+      text-align: center;
+    }
+
+    .lifetime-access-huge {
+      font-size: 3.5rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: var(--spacing-md);
+      letter-spacing: 2px;
+      text-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
+      animation: glow 2s ease-in-out infinite;
+    }
+
+    @keyframes glow {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.3); }
+    }
+
+    .banner-highlight-text {
+      font-size: 1.25rem;
       color: #a78bfa;
+      font-weight: 700;
+    }
+
+    .highlight-price {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: #c4b5fd;
     }
 
     /* プランセクション */
@@ -831,7 +864,18 @@ const monthlyPlans = [
 
     .plan-features li.highlight {
       color: #a78bfa;
-      font-weight: 700;
+      font-weight: 900;
+      font-size: 1.125rem;
+      background: rgba(167, 139, 250, 0.1);
+      padding: var(--spacing-md);
+      border-radius: var(--radius-sm);
+      border: 2px solid rgba(167, 139, 250, 0.5);
+      animation: pulse-slow 3s infinite;
+    }
+
+    @keyframes pulse-slow {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.02); opacity: 0.95; }
     }
 
     /* ボタン */
@@ -1004,6 +1048,18 @@ const monthlyPlans = [
 
       .banner-title {
         font-size: 1.75rem;
+      }
+
+      .lifetime-access-huge {
+        font-size: 2.5rem;
+      }
+
+      .banner-highlight-text {
+        font-size: 1rem;
+      }
+
+      .highlight-price {
+        font-size: 1.25rem;
       }
 
       .grid-2 {
