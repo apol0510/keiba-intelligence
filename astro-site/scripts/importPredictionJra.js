@@ -71,7 +71,9 @@ async function fetchSharedPrediction(date, venue = 'jra') {
   if (!GITHUB_TOKEN) {
     console.log(`   ローカル実行モード: raw.githubusercontent.comからダウンロード`);
     const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
+    console.log(`   📍 URL: ${rawUrl}`);
     const response = await fetch(rawUrl);
+    console.log(`   📡 Response status: ${response.status} ${response.statusText}`);
 
     if (!response.ok) {
       if (response.status === 404) {
@@ -141,7 +143,43 @@ async function importPrediction(date, venue = 'jra') {
     return null;
   }
 
-  // 正規化 + 調整ルール適用
+  // 複数会場対応：venues配列がある場合
+  if (sharedJSON.venues && Array.isArray(sharedJSON.venues)) {
+    console.log(`⚙️  複数会場データを正規化中...`);
+    const normalizedVenues = [];
+
+    for (const venueData of sharedJSON.venues) {
+      // 各会場のデータを正規化
+      const singleVenueData = {
+        date: sharedJSON.date,
+        venue: venueData.venue,
+        totalRaces: venueData.totalRaces,
+        races: venueData.races
+      };
+
+      const normalized = normalizeAndAdjust(singleVenueData);
+      normalizedVenues.push(normalized);
+
+      console.log(`   ✅ ${normalized.venue}: ${normalized.totalRaces}レース`);
+    }
+
+    // 複数会場統合データ
+    const result = {
+      date: sharedJSON.date,
+      totalVenues: normalizedVenues.length,
+      totalRaces: normalizedVenues.reduce((sum, v) => sum + v.totalRaces, 0),
+      venues: normalizedVenues
+    };
+
+    console.log(`✅ 正規化完了`);
+    console.log(`   - 開催日: ${result.date}`);
+    console.log(`   - 会場数: ${result.totalVenues}`);
+    console.log(`   - 総レース数: ${result.totalRaces}`);
+
+    return result;
+  }
+
+  // 単一会場の場合（従来フォーマット）
   console.log(`⚙️  正規化 + 調整ルール適用中...`);
   const normalizedAndAdjusted = normalizeAndAdjust(sharedJSON);
 
@@ -149,22 +187,6 @@ async function importPrediction(date, venue = 'jra') {
   console.log(`   - 開催日: ${normalizedAndAdjusted.date}`);
   console.log(`   - 競馬場: ${normalizedAndAdjusted.venue}`);
   console.log(`   - レース数: ${normalizedAndAdjusted.totalRaces}`);
-
-  // 各レースの調整結果を表示
-  for (const race of normalizedAndAdjusted.races) {
-    console.log(`   - ${race.raceNumber}R: ${race.raceName}`);
-    console.log(`     hasHorseData=${race.hasHorseData}, isAbsoluteAxis=${race.isAbsoluteAxis}`);
-    if (race.hasHorseData) {
-      const honmei = race.horses.find(h => h.role === '本命');
-      const taikou = race.horses.find(h => h.role === '対抗');
-      if (honmei) {
-        console.log(`     本命: ${honmei.number} ${honmei.name} (${honmei.rawScore}点 → ${honmei.displayScore})`);
-      }
-      if (taikou) {
-        console.log(`     対抗: ${taikou.number} ${taikou.name} (${taikou.rawScore}点 → ${taikou.displayScore})`);
-      }
-    }
-  }
 
   return normalizedAndAdjusted;
 }
@@ -282,8 +304,30 @@ function savePrediction(date, normalizedAndAdjusted) {
     console.log(`📁 ディレクトリ作成: ${dirPath}`);
   }
 
-  // 既存フォーマットに変換
-  const convertedData = convertToLegacyFormat(normalizedAndAdjusted, date);
+  // 複数会場対応
+  let convertedData;
+  if (normalizedAndAdjusted.venues && Array.isArray(normalizedAndAdjusted.venues)) {
+    // 複数会場の場合：各会場を個別に変換
+    console.log(`⚙️  複数会場フォーマット変換中...`);
+    const venuesConverted = normalizedAndAdjusted.venues.map(venueData => {
+      const converted = convertToLegacyFormat(venueData, date);
+      return {
+        venue: venueData.venue,
+        ...converted
+      };
+    });
+
+    convertedData = {
+      date: date,
+      totalVenues: normalizedAndAdjusted.totalVenues,
+      totalRaces: normalizedAndAdjusted.totalRaces,
+      venues: venuesConverted
+    };
+    console.log(`   ✅ ${venuesConverted.length}会場の変換完了`);
+  } else {
+    // 単一会場の場合（従来フォーマット）
+    convertedData = convertToLegacyFormat(normalizedAndAdjusted, date);
+  }
 
   // JSON文字列化（整形）
   const newContent = JSON.stringify(convertedData, null, 2);
