@@ -5,6 +5,27 @@ export const prerender = true;
 
 const recommendedPlans = [
   {
+    id: 'lifetime',
+    name: '買い切りプラン',
+    price: 88000,
+    period: '',
+    description: '南関4場＋中央競馬（JRA全10場）永久アクセス',
+    features: [
+      { text: '南関4場全レース予想', included: true },
+      { text: 'JRA全10場全レース予想', included: true },
+      { text: '馬単買い目提供', included: true },
+      { text: '的中実績閲覧', included: true },
+      { text: 'データ可視化', included: true },
+      { text: 'Feature Importance Analysis', included: true },
+      { text: '永久アクセス権', included: true, highlight: true },
+    ],
+    cta: '買い切りプランを始める',
+    ctaLink: '/login',
+    highlighted: true,
+    badge: '一番お得',
+    lifetimeNote: '3年利用で月額換算2,444円（年払いの半額以下）',
+  },
+  {
     id: 'yearly',
     name: '年払いプラン',
     price: 66000,
@@ -26,27 +47,6 @@ const recommendedPlans = [
     monthlyEquivalent: 5500,
     dailyPrice: 181,
     savings: 78000, // 144,000 - 66,000
-  },
-  {
-    id: 'lifetime',
-    name: '買い切りプラン',
-    price: 88000,
-    period: '',
-    description: '南関4場＋中央競馬（JRA全10場）永久アクセス',
-    features: [
-      { text: '南関4場全レース予想', included: true },
-      { text: 'JRA全10場全レース予想', included: true },
-      { text: '馬単買い目提供', included: true },
-      { text: '的中実績閲覧', included: true },
-      { text: 'データ可視化', included: true },
-      { text: 'Feature Importance Analysis', included: true },
-      { text: '永久アクセス権', included: true, highlight: true },
-    ],
-    cta: '買い切りプランを始める',
-    ctaLink: '/login',
-    highlighted: true,
-    badge: '永久アクセス',
-    lifetimeNote: '3年利用で月額換算2,444円',
   },
 ];
 
@@ -94,14 +94,14 @@ const monthlyPlans = [
 
 <BaseLayout
   title="料金プラン"
-  description="KEIBA Intelligenceの料金プラン。年払い¥66,000（月額換算¥5,500）または買い切り¥88,000。南関4場＋中央競馬（JRA全10場）全レース対応。"
+  description="KEIBA Intelligenceの料金プラン。買い切り¥88,000（永久アクセス、3年利用で月額換算¥2,444）または年払い¥66,000。南関4場＋中央競馬（JRA全10場）全レース対応。"
 >
   <!-- ヘッダーセクション -->
   <section class="pricing-header gradient-bg">
     <div class="container text-center">
       <h1 class="fade-in">料金プラン</h1>
       <p class="section-subtitle slide-in">
-        年払い¥66,000または買い切り¥88,000。<br>
+        買い切り¥88,000（永久アクセス）または年払い¥66,000。<br>
         南関4場＋中央競馬（JRA全10場）全レース対応。
       </p>
     </div>
@@ -226,18 +226,18 @@ const monthlyPlans = [
           </thead>
           <tbody>
             <tr class="highlight-row">
-              <td><strong>年払い（南関＋中央）</strong></td>
-              <td><strong>¥66,000/年</strong></td>
-              <td><strong>¥5,500/月</strong></td>
-              <td><strong>¥181/日</strong></td>
-              <td><span class="badge badge-success">年間¥78,000お得</span></td>
-            </tr>
-            <tr class="highlight-row">
               <td><strong>買い切り（南関＋中央）</strong></td>
               <td><strong>¥88,000（永久）</strong></td>
               <td><strong>¥2,444/月</strong><br><small>（3年利用時）</small></td>
               <td><strong>¥81/日</strong><br><small>（3年利用時）</small></td>
               <td><span class="badge badge-success">3年で¥256,000お得</span></td>
+            </tr>
+            <tr class="highlight-row">
+              <td><strong>年払い（南関＋中央）</strong></td>
+              <td><strong>¥66,000/年</strong></td>
+              <td><strong>¥5,500/月</strong></td>
+              <td><strong>¥181/日</strong></td>
+              <td><span class="badge badge-success">年間¥78,000お得</span></td>
             </tr>
             <tr class="warning-row">
               <td>月払い（南関のみ）</td>
@@ -258,17 +258,18 @@ const monthlyPlans = [
       </div>
 
       <div class="comparison-note">
+        <p>💎 <strong>買い切りプランなら：</strong></p>
+        <ul>
+          <li>3年利用で月額換算¥2,444（年払いの半額以下）</li>
+          <li>5年利用なら月額換算¥1,467（月払いの1/8）</li>
+          <li>永久アクセス権で将来の値上げリスクなし</li>
+          <li>長期利用すればするほどお得</li>
+        </ul>
         <p>💡 <strong>年払いプランなら：</strong></p>
         <ul>
           <li>月額換算¥5,500で南関＋中央の両方が利用可能</li>
           <li>1日あたりわずか¥181（缶コーヒー1本分以下）</li>
           <li>月払いの半額以下でお得</li>
-        </ul>
-        <p>💎 <strong>買い切りプランなら：</strong></p>
-        <ul>
-          <li>3年利用で月額換算¥2,444（年払いの半額以下）</li>
-          <li>永久アクセス権で将来の値上げリスクなし</li>
-          <li>長期利用ならさらにお得</li>
         </ul>
       </div>
     </div>
@@ -284,8 +285,8 @@ const monthlyPlans = [
           <thead>
             <tr>
               <th>機能</th>
-              <th class="highlighted">年払い</th>
               <th class="highlighted">買い切り</th>
+              <th class="highlighted">年払い</th>
               <th>月払い南関</th>
               <th>月払い中央</th>
             </tr>
@@ -335,15 +336,15 @@ const monthlyPlans = [
             </tr>
             <tr>
               <td>永久アクセス</td>
-              <td>❌</td>
               <td>✅</td>
+              <td>❌</td>
               <td>❌</td>
               <td>❌</td>
             </tr>
             <tr class="highlight-row">
               <td><strong>月額換算</strong></td>
-              <td><strong>¥5,500</strong></td>
               <td><strong>¥2,444</strong><br><small>(3年利用時)</small></td>
+              <td><strong>¥5,500</strong></td>
               <td>¥12,000</td>
               <td>¥12,000</td>
             </tr>
@@ -362,10 +363,10 @@ const monthlyPlans = [
         <div class="faq-item card">
           <h3>Q. おすすめのプランはどれですか？</h3>
           <p>
-            <strong>年払いプラン（¥66,000）</strong>を最もおすすめします。南関4場＋中央競馬（JRA全10場）の両方が利用でき、月額換算¥5,500（1日¥181）と非常にお得です。
+            <strong>買い切りプラン（¥88,000）</strong>を最もおすすめします。3年利用で月額換算¥2,444（年払いの半額以下）、5年なら¥1,467と、長期利用で圧倒的にお得になります。
           </p>
           <p>
-            長期利用を予定されている方は<strong>買い切りプラン（¥88,000）</strong>もおすすめです。3年利用で月額換算¥2,444となり、年払いの半額以下になります。
+            1年程度の利用を予定されている方は<strong>年払いプラン（¥66,000）</strong>もおすすめです。月額換算¥5,500（1日¥181）で月払いより54%お得です。
           </p>
         </div>
 
@@ -416,10 +417,10 @@ const monthlyPlans = [
   <section class="cta gradient-bg">
     <div class="container text-center">
       <h2>今すぐ始めて、勝ち馬を見つけよう</h2>
-      <p class="mb-3">年払い¥66,000（月額換算¥5,500）または買い切り¥88,000</p>
+      <p class="mb-3">買い切り¥88,000（永久アクセス）または年払い¥66,000</p>
       <div class="cta-buttons">
-        <a href="/login" class="btn btn-primary btn-lg">年払いプランを始める</a>
-        <a href="/login" class="btn btn-secondary btn-lg">買い切りプランを始める</a>
+        <a href="/login" class="btn btn-primary btn-lg">買い切りプランを始める</a>
+        <a href="/login" class="btn btn-secondary btn-lg">年払いプランを始める</a>
       </div>
     </div>
   </section>
