@@ -3,75 +3,120 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 export const prerender = true;
 
-const plans = [
+const recommendedPlans = [
   {
-    id: 'free',
-    name: 'フリー',
-    price: 0,
-    yearlyPrice: 0,
-    period: '無料',
-    description: '予想閲覧のみ（買い目なし）',
+    id: 'yearly',
+    name: '年払いプラン',
+    price: 66000,
+    originalPrice: 144000, // 月払い12,000円×12ヶ月
+    period: '/年',
+    description: '南関4場＋中央競馬（JRA全10場）',
     features: [
-      { text: '当日の予想閲覧', included: true },
-      { text: '過去の的中実績確認', included: true },
-      { text: '買い目情報', included: false },
-      { text: 'データ可視化', included: false },
-      { text: '穴馬情報', included: false },
-    ],
-    cta: '無料で始める',
-    ctaLink: '/free-prediction',
-    highlighted: false,
-  },
-  {
-    id: 'pro',
-    name: 'プロ',
-    price: 4980,
-    yearlyPrice: 49800,
-    period: '/月',
-    description: '全レース馬単買い目',
-    features: [
-      { text: '全レース予想', included: true },
+      { text: '南関4場全レース予想', included: true },
+      { text: 'JRA全10場全レース予想', included: true },
       { text: '馬単買い目提供', included: true },
       { text: '的中実績閲覧', included: true },
       { text: 'データ可視化', included: true },
-      { text: '南関4場対応', included: true },
+      { text: 'Feature Importance Analysis', included: true },
     ],
-    cta: 'プロプランを始める',
-    ctaLink: '#paypal-pro',
+    cta: '年払いプランを始める',
+    ctaLink: '/login',
     highlighted: true,
     badge: 'おすすめ',
-    dailyPrice: 166,
+    monthlyEquivalent: 5500,
+    dailyPrice: 181,
+    savings: 78000, // 144,000 - 66,000
+  },
+  {
+    id: 'lifetime',
+    name: '買い切りプラン',
+    price: 88000,
+    period: '',
+    description: '南関4場＋中央競馬（JRA全10場）永久アクセス',
+    features: [
+      { text: '南関4場全レース予想', included: true },
+      { text: 'JRA全10場全レース予想', included: true },
+      { text: '馬単買い目提供', included: true },
+      { text: '的中実績閲覧', included: true },
+      { text: 'データ可視化', included: true },
+      { text: 'Feature Importance Analysis', included: true },
+      { text: '永久アクセス権', included: true, highlight: true },
+    ],
+    cta: '買い切りプランを始める',
+    ctaLink: '/login',
+    highlighted: true,
+    badge: '永久アクセス',
+    lifetimeNote: '3年利用で月額換算2,444円',
+  },
+];
+
+const monthlyPlans = [
+  {
+    id: 'monthly-nankan',
+    name: '南関のみ（月払い）',
+    price: 12000,
+    period: '/月',
+    description: '南関4場のみ',
+    features: [
+      { text: '南関4場全レース予想', included: true },
+      { text: '馬単買い目提供', included: true },
+      { text: '的中実績閲覧', included: true },
+      { text: 'データ可視化', included: true },
+      { text: 'JRA予想', included: false },
+    ],
+    cta: '月払いで始める',
+    ctaLink: '/login',
+    highlighted: false,
+    warning: '年払いより2.2倍割高',
+    dailyPrice: 400,
+  },
+  {
+    id: 'monthly-jra',
+    name: '中央のみ（月払い）',
+    price: 12000,
+    period: '/月',
+    description: 'JRA全10場のみ',
+    features: [
+      { text: 'JRA全10場全レース予想', included: true },
+      { text: '馬単買い目提供', included: true },
+      { text: '的中実績閲覧', included: true },
+      { text: 'データ可視化', included: true },
+      { text: '南関予想', included: false },
+    ],
+    cta: '月払いで始める',
+    ctaLink: '/login',
+    highlighted: false,
+    warning: '年払いより2.2倍割高',
+    dailyPrice: 400,
   },
 ];
 ---
 
 <BaseLayout
   title="料金プラン"
-  description="KEIBA Intelligenceの料金プラン。月額¥2,980から始められる低価格設定。フリープランから最上位アルティメットプランまで、あなたのニーズに合わせて選べます。"
+  description="KEIBA Intelligenceの料金プラン。年払い¥66,000（月額換算¥5,500）または買い切り¥88,000。南関4場＋中央競馬（JRA全10場）全レース対応。"
 >
   <!-- ヘッダーセクション -->
   <section class="pricing-header gradient-bg">
     <div class="container text-center">
       <h1 class="fade-in">料金プラン</h1>
       <p class="section-subtitle slide-in">
-        低価格で始められる、明確な料金体系。<br>
-        1日あたり¥99（缶コーヒー1本分）から本格的な競馬予想が利用可能。
+        年払い¥66,000または買い切り¥88,000。<br>
+        南関4場＋中央競馬（JRA全10場）全レース対応。
       </p>
     </div>
   </section>
 
-  <!-- メインプラン -->
+  <!-- おすすめプラン（年払い・買い切り） -->
   <section class="pricing-plans">
     <div class="container">
-      <h2 class="section-title text-center">メインプラン</h2>
+      <h2 class="section-title text-center">おすすめプラン</h2>
+      <p class="text-center mb-3" style="color: var(--text-secondary);">
+        南関4場＋中央競馬（JRA全10場）セット
+      </p>
 
-      <div class="pricing-toggle text-center mb-4">
-        <button class="toggle-btn active" data-billing="monthly">月額払い</button>
-        <button class="toggle-btn" data-billing="yearly">年額払い<span class="badge badge-success ml-1">2ヶ月無料</span></button>
-      </div>
-
-      <div class="grid grid-5">
-        {plans.map((plan) => (
+      <div class="grid grid-2" style="max-width: 900px; margin: 0 auto;">
+        {recommendedPlans.map((plan) => (
           <div class={`pricing-card card ${plan.highlighted ? 'featured' : ''}`}>
             {plan.badge && (
               <div class="badge badge-success">{plan.badge}</div>
@@ -80,24 +125,31 @@ const plans = [
             <div class="plan-header">
               <div class="plan-name">{plan.name}</div>
               <div class="plan-price">
-                <span class="price monthly-price">¥{plan.price.toLocaleString()}</span>
-                <span class="price yearly-price" style="display: none;">¥{plan.yearlyPrice.toLocaleString()}</span>
+                <span class="price">¥{plan.price.toLocaleString()}</span>
                 <span class="period">{plan.period}</span>
               </div>
-              {plan.dailyPrice && (
-                <div class="daily-price monthly-price">1日あたり¥{plan.dailyPrice}</div>
-              )}
-              {plan.yearlyPrice > 0 && (
-                <div class="yearly-savings yearly-price" style="display: none;">
-                  年間¥{((plan.price * 12) - plan.yearlyPrice).toLocaleString()}お得
+              {plan.monthlyEquivalent && (
+                <div class="monthly-equivalent">
+                  月額換算 ¥{plan.monthlyEquivalent.toLocaleString()}/月
                 </div>
+              )}
+              {plan.dailyPrice && (
+                <div class="daily-price">1日あたり¥{plan.dailyPrice}</div>
+              )}
+              {plan.savings && (
+                <div class="savings-badge">
+                  年間¥{plan.savings.toLocaleString()}お得
+                </div>
+              )}
+              {plan.lifetimeNote && (
+                <div class="lifetime-note">{plan.lifetimeNote}</div>
               )}
               <div class="plan-description">{plan.description}</div>
             </div>
 
             <ul class="plan-features">
               {plan.features.map((feature) => (
-                <li class={feature.included ? 'included' : 'excluded'}>
+                <li class={`${feature.included ? 'included' : 'excluded'} ${feature.highlight ? 'highlight' : ''}`}>
                   {feature.included ? '✅' : '❌'} {feature.text}
                 </li>
               ))}
@@ -112,7 +164,117 @@ const plans = [
     </div>
   </section>
 
-  <!-- プラン比較表 -->
+  <!-- 月払いプラン（割高・非推奨） -->
+  <section class="monthly-plans">
+    <div class="container">
+      <h2 class="section-title text-center">月払いプラン（割高・非推奨）</h2>
+      <p class="text-center mb-3" style="color: #ef4444; font-weight: 700;">
+        ⚠️ 年払いより2.2倍割高です。年払いプランを強くおすすめします。
+      </p>
+
+      <div class="grid grid-2" style="max-width: 900px; margin: 0 auto;">
+        {monthlyPlans.map((plan) => (
+          <div class="pricing-card card monthly-warning">
+            {plan.warning && (
+              <div class="badge badge-warning">{plan.warning}</div>
+            )}
+
+            <div class="plan-header">
+              <div class="plan-name">{plan.name}</div>
+              <div class="plan-price">
+                <span class="price">¥{plan.price.toLocaleString()}</span>
+                <span class="period">{plan.period}</span>
+              </div>
+              {plan.dailyPrice && (
+                <div class="daily-price warning-text">1日あたり¥{plan.dailyPrice}</div>
+              )}
+              <div class="plan-description">{plan.description}</div>
+            </div>
+
+            <ul class="plan-features">
+              {plan.features.map((feature) => (
+                <li class={feature.included ? 'included' : 'excluded'}>
+                  {feature.included ? '✅' : '❌'} {feature.text}
+                </li>
+              ))}
+            </ul>
+
+            <a href={plan.ctaLink} class="btn btn-secondary w-full">
+              {plan.cta}
+            </a>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 価格比較表 -->
+  <section class="price-comparison">
+    <div class="container">
+      <h2 class="section-title text-center">価格比較</h2>
+
+      <div class="comparison-table-wrapper">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>プラン</th>
+              <th>価格</th>
+              <th>月額換算</th>
+              <th>1日あたり</th>
+              <th>お得度</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="highlight-row">
+              <td><strong>年払い（南関＋中央）</strong></td>
+              <td><strong>¥66,000/年</strong></td>
+              <td><strong>¥5,500/月</strong></td>
+              <td><strong>¥181/日</strong></td>
+              <td><span class="badge badge-success">年間¥78,000お得</span></td>
+            </tr>
+            <tr class="highlight-row">
+              <td><strong>買い切り（南関＋中央）</strong></td>
+              <td><strong>¥88,000（永久）</strong></td>
+              <td><strong>¥2,444/月</strong><br><small>（3年利用時）</small></td>
+              <td><strong>¥81/日</strong><br><small>（3年利用時）</small></td>
+              <td><span class="badge badge-success">3年で¥256,000お得</span></td>
+            </tr>
+            <tr class="warning-row">
+              <td>月払い（南関のみ）</td>
+              <td>¥12,000/月</td>
+              <td>¥12,000/月</td>
+              <td>¥400/日</td>
+              <td><span class="badge badge-warning">年払いより2.2倍割高</span></td>
+            </tr>
+            <tr class="warning-row">
+              <td>月払い（中央のみ）</td>
+              <td>¥12,000/月</td>
+              <td>¥12,000/月</td>
+              <td>¥400/日</td>
+              <td><span class="badge badge-warning">年払いより2.2倍割高</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="comparison-note">
+        <p>💡 <strong>年払いプランなら：</strong></p>
+        <ul>
+          <li>月額換算¥5,500で南関＋中央の両方が利用可能</li>
+          <li>1日あたりわずか¥181（缶コーヒー1本分以下）</li>
+          <li>月払いの半額以下でお得</li>
+        </ul>
+        <p>💎 <strong>買い切りプランなら：</strong></p>
+        <ul>
+          <li>3年利用で月額換算¥2,444（年払いの半額以下）</li>
+          <li>永久アクセス権で将来の値上げリスクなし</li>
+          <li>長期利用ならさらにお得</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- プラン機能比較表 -->
   <section class="plan-comparison">
     <div class="container">
       <h2 class="section-title text-center">プラン機能比較表</h2>
@@ -122,50 +284,68 @@ const plans = [
           <thead>
             <tr>
               <th>機能</th>
-              <th>フリー</th>
-              <th class="highlighted">プロ</th>
+              <th class="highlighted">年払い</th>
+              <th class="highlighted">買い切り</th>
+              <th>月払い南関</th>
+              <th>月払い中央</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>予想閲覧</td>
+              <td>南関4場全レース予想</td>
+              <td>✅</td>
+              <td>✅</td>
+              <td>✅</td>
+              <td>❌</td>
+            </tr>
+            <tr>
+              <td>JRA全10場全レース予想</td>
+              <td>✅</td>
+              <td>✅</td>
+              <td>❌</td>
+              <td>✅</td>
+            </tr>
+            <tr>
+              <td>馬単買い目提供</td>
+              <td>✅</td>
+              <td>✅</td>
               <td>✅</td>
               <td>✅</td>
             </tr>
             <tr>
-              <td>対象レース</td>
-              <td>-</td>
-              <td>全レース</td>
-            </tr>
-            <tr>
-              <td>馬単買い目</td>
-              <td>❌</td>
+              <td>的中実績閲覧</td>
               <td>✅</td>
-            </tr>
-            <tr>
-              <td>三連複買い目</td>
-              <td>❌</td>
-              <td>❌</td>
-            </tr>
-            <tr>
-              <td>穴馬情報</td>
-              <td>❌</td>
-              <td>❌</td>
+              <td>✅</td>
+              <td>✅</td>
+              <td>✅</td>
             </tr>
             <tr>
               <td>データ可視化</td>
-              <td>❌</td>
+              <td>✅</td>
+              <td>✅</td>
+              <td>✅</td>
               <td>✅</td>
             </tr>
             <tr>
-              <td>南関4場対応</td>
-              <td>❌</td>
+              <td>Feature Importance Analysis</td>
+              <td>✅</td>
+              <td>✅</td>
+              <td>✅</td>
               <td>✅</td>
             </tr>
             <tr>
-              <td>サポート</td>
-              <td>-</td>
-              <td>標準</td>
+              <td>永久アクセス</td>
+              <td>❌</td>
+              <td>✅</td>
+              <td>❌</td>
+              <td>❌</td>
+            </tr>
+            <tr class="highlight-row">
+              <td><strong>月額換算</strong></td>
+              <td><strong>¥5,500</strong></td>
+              <td><strong>¥2,444</strong><br><small>(3年利用時)</small></td>
+              <td>¥12,000</td>
+              <td>¥12,000</td>
             </tr>
           </tbody>
         </table>
@@ -174,50 +354,58 @@ const plans = [
   </section>
 
   <!-- FAQ -->
-  <section class="pricing-faq">
+  <section class="faq">
     <div class="container">
       <h2 class="section-title text-center">よくある質問</h2>
 
       <div class="faq-grid">
         <div class="faq-item card">
-          <h3>🤔 プランの変更は可能ですか？</h3>
+          <h3>Q. おすすめのプランはどれですか？</h3>
           <p>
-            はい、いつでも可能です。アップグレード・ダウングレードともに可能で、日割り計算で調整されます。
+            <strong>年払いプラン（¥66,000）</strong>を最もおすすめします。南関4場＋中央競馬（JRA全10場）の両方が利用でき、月額換算¥5,500（1日¥181）と非常にお得です。
+          </p>
+          <p>
+            長期利用を予定されている方は<strong>買い切りプラン（¥88,000）</strong>もおすすめです。3年利用で月額換算¥2,444となり、年払いの半額以下になります。
           </p>
         </div>
 
         <div class="faq-item card">
-          <h3>💳 支払い方法は？</h3>
+          <h3>Q. 月払いと年払いの差は？</h3>
           <p>
-            PayPal決済に対応しています。クレジットカード（Visa, Mastercard, JCB, Amex）またはPayPal残高からお支払いいただけます。
+            月払いは<strong>¥12,000/月（年間¥144,000）</strong>、年払いは<strong>¥66,000/年</strong>です。
+            年払いなら<strong>年間¥78,000（54%）お得</strong>になります。
           </p>
         </div>
 
         <div class="faq-item card">
-          <h3>🔄 解約はいつでもできますか？</h3>
+          <h3>Q. 買い切りプランの「永久アクセス」とは？</h3>
           <p>
-            はい、いつでも可能です。解約後も契約期間満了まではサービスをご利用いただけます。
+            買い切りプラン（¥88,000）は<strong>一度の購入で永久に利用可能</strong>です。追加料金は一切発生しません。
+            3年利用で月額換算¥2,444、5年なら¥1,467と、利用期間が長いほどお得になります。
           </p>
         </div>
 
         <div class="faq-item card">
-          <h3>📊 的中率・回収率は？</h3>
+          <h3>Q. 南関のみ・中央のみのプランはありますか？</h3>
           <p>
-            過去360レースの実績で、的中率78.1%、回収率125.3%を記録しています。詳細は<a href="/results">的中実績ページ</a>をご確認ください。
+            月払い（¥12,000/月）でのみ南関のみ・中央のみのプランをご用意していますが、<strong>年払いプランの方が圧倒的にお得</strong>です。
+            南関＋中央セットの年払い（¥66,000）なら、月払いの半額以下で両方利用できます。
           </p>
         </div>
 
         <div class="faq-item card">
-          <h3>🏇 対象競馬場は？</h3>
+          <h3>Q. 支払い方法は？</h3>
           <p>
-            南関東4競馬場（大井・川崎・船橋・浦和）に対応しています。将来的にJRA対応も予定しています。
+            現在、<strong>銀行振り込みのみ</strong>対応しています。お申し込み後、振込先情報をメールでお送りします。
+            入金確認後、即座にアクセス権を付与いたします。
           </p>
         </div>
 
         <div class="faq-item card">
-          <h3>📱 スマホでも使えますか？</h3>
+          <h3>Q. 途中解約・返金はできますか？</h3>
           <p>
-            はい、完全レスポンシブ対応です。スマホ・タブレット・PCのいずれでも快適にご利用いただけます。
+            年払いプラン・買い切りプランともに、<strong>購入後の返金は原則として承っておりません</strong>。
+            無料予想ページで予想の精度を事前にご確認の上、お申し込みください。
           </p>
         </div>
       </div>
@@ -228,10 +416,10 @@ const plans = [
   <section class="cta gradient-bg">
     <div class="container text-center">
       <h2>今すぐ始めて、勝ち馬を見つけよう</h2>
-      <p class="mb-3">まずは無料プランで予想をチェック。納得したら有料プランで買い目をゲット。</p>
+      <p class="mb-3">年払い¥66,000（月額換算¥5,500）または買い切り¥88,000</p>
       <div class="cta-buttons">
-        <a href="/free-prediction" class="btn btn-secondary btn-lg">無料で始める</a>
-        <a href="#thrivecart-standard" class="btn btn-primary btn-lg">スタンダードプランを始める</a>
+        <a href="/login" class="btn btn-primary btn-lg">年払いプランを始める</a>
+        <a href="/login" class="btn btn-secondary btn-lg">買い切りプランを始める</a>
       </div>
     </div>
   </section>
@@ -240,71 +428,74 @@ const plans = [
     /* ヘッダー */
     .pricing-header {
       padding: var(--spacing-2xl) 0;
-      min-height: 300px;
-      display: flex;
-      align-items: center;
+      text-align: center;
     }
 
-    /* プラン切り替えトグル */
-    .pricing-toggle {
-      display: flex;
-      justify-content: center;
-      gap: var(--spacing-md);
-      margin-bottom: var(--spacing-xl);
+    .pricing-header h1 {
+      font-size: 3rem;
+      margin-bottom: var(--spacing-lg);
+      font-weight: 800;
+      background: linear-gradient(135deg, #e0f2fe 0%, #60a5fa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
-    .toggle-btn {
-      padding: var(--spacing-sm) var(--spacing-lg);
-      border: 2px solid var(--border-color);
-      background: var(--bg-secondary);
+    .section-subtitle {
+      font-size: 1.25rem;
       color: var(--text-secondary);
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      font-weight: 600;
-      transition: all var(--transition-base);
+      line-height: 1.6;
     }
 
-    .toggle-btn.active {
-      background: var(--primary-gradient);
-      color: white;
-      border-color: var(--primary-end);
-    }
-
-    .toggle-btn:hover {
-      transform: translateY(-2px);
-    }
-
-    .ml-1 {
-      margin-left: var(--spacing-xs);
-    }
-
-    /* プランカード（5カラムグリッド） */
-    .pricing-plans {
+    /* プランセクション */
+    .pricing-plans, .monthly-plans, .price-comparison, .plan-comparison, .faq {
       padding: var(--spacing-2xl) 0;
     }
 
-    .grid-5 {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: var(--spacing-lg);
+    .monthly-plans {
+      background: var(--bg-secondary);
     }
 
-    .pricing-card {
+    .section-title {
+      font-size: 2.5rem;
+      margin-bottom: var(--spacing-xl);
       text-align: center;
+    }
+
+    /* プランカード */
+    .pricing-card {
       position: relative;
-      display: flex;
-      flex-direction: column;
+      text-align: center;
+      padding: var(--spacing-xl);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .pricing-card:hover {
+      transform: translateY(-5px);
     }
 
     .pricing-card.featured {
       border: 2px solid var(--primary-end);
-      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
+    }
+
+    .pricing-card.monthly-warning {
+      border: 2px solid rgba(239, 68, 68, 0.3);
+      opacity: 0.85;
     }
 
     .pricing-card .badge {
       position: absolute;
       top: var(--spacing-md);
       right: var(--spacing-md);
+      font-size: 0.75rem;
+      padding: 6px 12px;
+    }
+
+    .badge-warning {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #ef4444;
     }
 
     .plan-header {
@@ -312,9 +503,10 @@ const plans = [
     }
 
     .plan-name {
-      font-size: 1.5rem;
+      font-size: 1.75rem;
       font-weight: 700;
       margin-bottom: var(--spacing-md);
+      color: var(--text-primary);
     }
 
     .plan-price {
@@ -322,7 +514,7 @@ const plans = [
     }
 
     .price {
-      font-size: 2.5rem;
+      font-size: 3rem;
       font-weight: 700;
       background: var(--primary-gradient);
       -webkit-background-clip: text;
@@ -331,90 +523,104 @@ const plans = [
     }
 
     .period {
-      font-size: 1rem;
+      font-size: 1.125rem;
       color: var(--text-secondary);
+      margin-left: var(--spacing-xs);
+    }
+
+    .monthly-equivalent {
+      font-size: 1rem;
+      color: #10b981;
+      font-weight: 700;
+      margin-bottom: var(--spacing-xs);
     }
 
     .daily-price {
       font-size: 0.875rem;
-      color: var(--text-tertiary);
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .daily-price.warning-text {
+      color: #ef4444;
+      font-weight: 700;
+    }
+
+    .savings-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #10b981;
       margin-bottom: var(--spacing-sm);
     }
 
-    .yearly-savings {
+    .lifetime-note {
       font-size: 0.875rem;
-      color: var(--success);
-      font-weight: 600;
+      color: #a78bfa;
+      font-weight: 700;
       margin-bottom: var(--spacing-sm);
     }
 
     .plan-description {
       color: var(--text-secondary);
-      margin-bottom: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+      font-size: 0.9rem;
     }
 
+    /* プラン機能リスト */
     .plan-features {
       list-style: none;
       text-align: left;
       margin-bottom: var(--spacing-lg);
-      flex-grow: 1;
     }
 
     .plan-features li {
       padding: var(--spacing-sm) 0;
       color: var(--text-secondary);
-      font-size: 0.875rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .plan-features li:last-child {
+      border-bottom: none;
     }
 
     .plan-features li.included {
       color: var(--text-primary);
     }
 
-    /* AI Plusプラン */
-    .ai-plus-plan {
-      padding: var(--spacing-2xl) 0;
-      background: var(--bg-secondary);
+    .plan-features li.excluded {
+      opacity: 0.5;
     }
 
-    .ai-plus-card {
-      max-width: 800px;
-      margin: 0 auto;
-      text-align: center;
+    .plan-features li.highlight {
+      color: #a78bfa;
+      font-weight: 700;
     }
 
-    .ai-plus-content {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: var(--spacing-xl);
-      margin-bottom: var(--spacing-lg);
-      text-align: left;
+    /* ボタン */
+    .w-full {
+      width: 100%;
     }
 
-    .ai-plus-note {
-      display: flex;
-      align-items: center;
-      color: var(--warning);
-      font-size: 0.875rem;
-      font-weight: 600;
-      padding: var(--spacing-md);
-      background: rgba(245, 158, 11, 0.1);
-      border-radius: var(--radius-md);
-      border: 1px solid var(--warning);
+    .btn-lg {
+      padding: var(--spacing-md) var(--spacing-xl);
+      font-size: 1.125rem;
     }
 
-    /* プラン比較表 */
-    .plan-comparison {
-      padding: var(--spacing-2xl) 0;
-    }
-
+    /* 価格比較表 */
     .comparison-table-wrapper {
       overflow-x: auto;
+      margin-bottom: var(--spacing-xl);
     }
 
     .comparison-table {
       width: 100%;
       border-collapse: collapse;
-      background: var(--bg-card);
+      background: var(--bg-tertiary);
       border-radius: var(--radius-lg);
       overflow: hidden;
     }
@@ -433,21 +639,54 @@ const plans = [
     }
 
     .comparison-table th.highlighted {
-      background: var(--primary-gradient);
-      color: white;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
+      color: #60a5fa;
     }
 
-    .comparison-table td:first-child {
-      text-align: left;
-      font-weight: 600;
+    .comparison-table tbody tr:hover {
+      background: rgba(59, 130, 246, 0.05);
+    }
+
+    .comparison-table .highlight-row {
+      background: rgba(16, 185, 129, 0.1);
+      font-weight: 700;
+    }
+
+    .comparison-table .warning-row {
+      background: rgba(239, 68, 68, 0.05);
+      opacity: 0.7;
+    }
+
+    .comparison-note {
+      background: var(--bg-secondary);
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-lg);
+      border: 2px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .comparison-note p {
+      color: var(--text-primary);
+      font-size: 1rem;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .comparison-note ul {
+      list-style: none;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .comparison-note li {
+      padding: var(--spacing-xs) 0;
+      color: var(--text-secondary);
+    }
+
+    .comparison-note li:before {
+      content: '→';
+      margin-right: var(--spacing-xs);
+      color: #10b981;
     }
 
     /* FAQ */
-    .pricing-faq {
-      padding: var(--spacing-2xl) 0;
-      background: var(--bg-secondary);
-    }
-
     .faq-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -456,13 +695,14 @@ const plans = [
 
     .faq-item h3 {
       font-size: 1.125rem;
-      margin-bottom: var(--spacing-sm);
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-md);
     }
 
     .faq-item p {
       color: var(--text-secondary);
-      font-size: 0.875rem;
-      margin: 0;
+      line-height: 1.6;
+      margin-bottom: var(--spacing-sm);
     }
 
     /* CTA */
@@ -471,79 +711,56 @@ const plans = [
       margin-top: var(--spacing-2xl);
     }
 
+    .cta h2 {
+      font-size: 2rem;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .cta p {
+      font-size: 1.125rem;
+      color: var(--text-secondary);
+    }
+
     .cta-buttons {
       display: flex;
       gap: var(--spacing-md);
       justify-content: center;
+      flex-wrap: wrap;
     }
 
     /* レスポンシブ */
-    @media (max-width: 1280px) {
-      .grid-5 {
-        grid-template-columns: repeat(3, 1fr);
-      }
-    }
-
     @media (max-width: 1024px) {
-      .grid-5 {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .ai-plus-content {
-        grid-template-columns: 1fr;
-      }
-
       .faq-grid {
         grid-template-columns: 1fr;
       }
     }
 
-    @media (max-width: 640px) {
-      .grid-5 {
-        grid-template-columns: 1fr;
-      }
-
-      .pricing-card.featured {
-        transform: scale(1);
-      }
-
-      .price {
+    @media (max-width: 768px) {
+      .pricing-header h1 {
         font-size: 2rem;
+      }
+
+      .section-title {
+        font-size: 1.75rem;
+      }
+
+      .grid-2 {
+        grid-template-columns: 1fr;
       }
 
       .cta-buttons {
         flex-direction: column;
       }
 
-      .pricing-toggle {
-        flex-direction: column;
+      .comparison-table {
+        font-size: 0.875rem;
+      }
+
+      .comparison-table th,
+      .comparison-table td {
+        padding: var(--spacing-sm);
       }
     }
   </style>
-
-  <script>
-    // プラン切り替え（月額/年額）
-    const toggleButtons = document.querySelectorAll('.toggle-btn');
-    const monthlyPrices = document.querySelectorAll('.monthly-price');
-    const yearlyPrices = document.querySelectorAll('.yearly-price');
-
-    toggleButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        const billing = button.dataset.billing;
-
-        // ボタン状態更新
-        toggleButtons.forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-
-        // 価格表示切り替え
-        if (billing === 'monthly') {
-          monthlyPrices.forEach(el => el.style.display = '');
-          yearlyPrices.forEach(el => el.style.display = 'none');
-        } else {
-          monthlyPrices.forEach(el => el.style.display = 'none');
-          yearlyPrices.forEach(el => el.style.display = '');
-        }
-      });
-    });
-  </script>
 </BaseLayout>
