@@ -25,11 +25,11 @@ try {
     const fileContent = readFileSync(archivePath, 'utf-8');
     const allData = JSON.parse(fileContent);
 
-    // 該当月のデータを抽出
+    // 該当月のデータを抽出（新しい順にソート）
     monthData = allData.filter(entry => {
       const [entryYear, entryMonth] = entry.date.split('-');
       return entryYear === year && entryMonth === month;
-    });
+    }).sort((a, b) => b.date.localeCompare(a.date)); // 降順ソート（新しい日付が上）
 
     // 月間統計を計算
     monthData.forEach(entry => {
