@@ -465,7 +465,25 @@ async function main() {
     console.log(`   損益: ${profitSign}${profit.toLocaleString()}円`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
 
-    // 5. 異常値検知・アラート送信
+    // 5. 成功通知送信（CI環境のみ）
+    if (process.env.CI === 'true') {
+      console.log(`📧 成功通知を送信中...`);
+      await sendAlert('results-imported-success', date, {
+        hitRate: archiveEntry.hitRate,
+        hitRaces: archiveEntry.hitRaces,
+        totalRaces: archiveEntry.totalRaces,
+        betAmount: archiveEntry.betAmount,
+        totalPayout: archiveEntry.totalPayout,
+        returnRate: archiveEntry.returnRate,
+        profit: profit
+      }, {
+        venue,
+        timestamp: new Date().toISOString()
+      });
+      console.log(`✅ 成功通知を送信しました`);
+    }
+
+    // 6. 異常値検知・アラート送信
     if (archiveEntry.hitRate === 0 && archiveEntry.totalRaces >= 10) {
       console.log(`⚠️  異常値検知：的中率0%`);
       await sendAlert('zero-hit-rate', date, {

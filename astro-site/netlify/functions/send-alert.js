@@ -190,6 +190,52 @@ function generateAlertEmail(type, date, details, metadata) {
         `
       };
 
+    case 'results-imported-success':
+      const profit = details?.profit || 0;
+      const profitSign = profit >= 0 ? '+' : '';
+      const profitColor = profit >= 0 ? '#4caf50' : '#f44336';
+
+      return {
+        subject: `✅ [keiba-intelligence] ${date} 的中実績自動追加完了`,
+        html: `
+          <h2 style="color: #4caf50;">✅ 的中実績自動追加完了</h2>
+          <p><strong>日時:</strong> ${timestamp}</p>
+          <p><strong>対象日付:</strong> ${date}</p>
+          <p><strong>会場:</strong> ${metadata?.venue || '不明'}</p>
+          <hr>
+          <h3 style="color: #2196f3;">📊 実績サマリー</h3>
+          <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+            <tr style="background: #f5f5f5;">
+              <td style="padding: 10px; border: 1px solid #ddd;"><strong>的中率</strong></td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${details?.hitRate}% (${details?.hitRaces}/${details?.totalRaces}R)</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd;"><strong>投資額</strong></td>
+              <td style="padding: 10px; border: 1px solid #ddd;">¥${details?.betAmount?.toLocaleString()}</td>
+            </tr>
+            <tr style="background: #f5f5f5;">
+              <td style="padding: 10px; border: 1px solid #ddd;"><strong>払戻額</strong></td>
+              <td style="padding: 10px; border: 1px solid #ddd;">¥${details?.totalPayout?.toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd;"><strong>回収率</strong></td>
+              <td style="padding: 10px; border: 1px solid #ddd; color: ${profitColor}; font-weight: bold;">${details?.returnRate}%</td>
+            </tr>
+            <tr style="background: #f5f5f5;">
+              <td style="padding: 10px; border: 1px solid #ddd;"><strong>損益</strong></td>
+              <td style="padding: 10px; border: 1px solid #ddd; color: ${profitColor}; font-weight: bold;">${profitSign}¥${Math.abs(profit).toLocaleString()}</td>
+            </tr>
+          </table>
+          <hr>
+          <p><strong>確認:</strong></p>
+          <ul>
+            <li><a href="https://keiba-intelligence.netlify.app/results">的中実績ページを確認</a></li>
+            <li><a href="https://github.com/apol0510/keiba-intelligence/blob/main/astro-site/src/data/archiveResults.json">archiveResults.jsonを確認</a></li>
+          </ul>
+          <p style="color: #666; font-size: 12px; margin-top: 20px;">このメールは自動送信されています。</p>
+        `
+      };
+
     default:
       return {
         subject: `🔔 [keiba-intelligence] アラート通知 (${date || 'N/A'})`,

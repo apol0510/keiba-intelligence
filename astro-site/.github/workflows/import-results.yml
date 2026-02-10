@@ -38,12 +38,14 @@ jobs:
           fi
 
       - name: Commit and push
+        id: commit
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add src/data/archiveResults.json
           if git diff --cached --quiet; then
             echo "No changes to commit"
+            echo "committed=false" >> $GITHUB_OUTPUT
           else
             COMMIT_DATE="${{ github.event.inputs.date }}"
             if [ -z "$COMMIT_DATE" ]; then
@@ -51,4 +53,37 @@ jobs:
             fi
             git commit -m "Auto-verify: ${COMMIT_DATE} results from keiba-data-shared"
             git push
+            echo "committed=true" >> $GITHUB_OUTPUT
+            echo "date=${COMMIT_DATE}" >> $GITHUB_OUTPUT
           fi
+
+      - name: Trigger Netlify Deploy
+        if: steps.commit.outputs.committed == 'true'
+        run: |
+          curl -X POST -d '{}' ${{ secrets.NETLIFY_BUILD_HOOK_URL }}
+          echo "✅ Netlify deploy triggered"
+
+      - name: Send success notification
+        if: steps.commit.outputs.committed == 'true' && success()
+        run: |
+          curl -X POST https://keiba-intelligence.netlify.app/.netlify/functions/send-alert \
+            -H "Content-Type: application/json" \
+            -d '{
+              "type": "results_imported",
+              "date": "${{ steps.commit.outputs.date }}",
+              "status": "success",
+              "message": "✅ ${{ steps.commit.outputs.date }}の結果を自動インポートしました"
+            }' || true
+
+      - name: Send failure notification
+        if: failure()
+        run: |
+          curl -X POST https://keiba-intelligence.netlify.app/.netlify/functions/send-alert \
+            -H "Content-Type: application/json" \
+            -d '{
+              "type": "results_import_failed",
+              "workflow": "${{ github.workflow }}",
+              "run_id": "${{ github.run_id }}",
+              "status": "failure",
+              "message": "❌ 結果の自動インポートに失敗しました"
+            }' || true
