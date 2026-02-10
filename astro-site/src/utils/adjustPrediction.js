@@ -56,6 +56,75 @@ export function adjustPrediction(normalized) {
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Step 0: 印1を基準に本命・対抗・単穴を決定（独自予想）
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    // Step 0-1: 印1が有効な馬を検出
+    const honmeiMark1 = race.horses.find(h => h.mark1 === '◎');
+    const taikouMark1 = race.horses.find(h => h.mark1 === '○');
+    const tananaMark1 = race.horses.find(h => h.mark1 === '▲');
+
+    // Step 0-2: 本命・対抗・単穴をリセット（印1が無効な馬を降格）
+    for (const horse of race.horses) {
+      // 現在本命・対抗・単穴になっている馬
+      if (horse.role === '本命' || horse.role === '対抗' || horse.role === '単穴') {
+        // 印1が有効（◎○▲）かチェック
+        const isValidMark = horse.mark1 === '◎' || horse.mark1 === '○' || horse.mark1 === '▲';
+
+        // 印1が無効な場合は降格
+        if (isValidMark === false) {
+          if (horse.rawScore >= 7) {
+            horse.role = '連下最上位';
+          } else if (horse.rawScore >= 3) {
+            horse.role = '連下';
+          } else {
+            horse.role = '補欠';
+          }
+        }
+      }
+    }
+
+    // Step 0-3: 印1がある馬を本命・対抗・単穴に設定（強制上書き）
+    if (honmeiMark1) {
+      honmeiMark1.role = '本命';
+    }
+    if (taikouMark1) {
+      taikouMark1.role = '対抗';
+    }
+    if (tananaMark1) {
+      tananaMark1.role = '単穴';
+    }
+
+    // Step 0-4: 念のため重複チェック（万が一印1が重複している場合）
+    const honmeiList = race.horses.filter(h => h.role === '本命');
+    const taikouList = race.horses.filter(h => h.role === '対抗');
+    const tananaList = race.horses.filter(h => h.role === '単穴');
+
+    if (honmeiList.length > 1) {
+      for (const horse of honmeiList) {
+        if (horse.mark1 !== '◎') {
+          horse.role = horse.rawScore >= 7 ? '連下最上位' : (horse.rawScore >= 3 ? '連下' : '補欠');
+        }
+      }
+    }
+
+    if (taikouList.length > 1) {
+      for (const horse of taikouList) {
+        if (horse.mark1 !== '○') {
+          horse.role = horse.rawScore >= 7 ? '連下最上位' : (horse.rawScore >= 3 ? '連下' : '補欠');
+        }
+      }
+    }
+
+    if (tananaList.length > 1) {
+      for (const horse of tananaList) {
+        if (horse.mark1 !== '▲') {
+          horse.role = horse.rawScore >= 7 ? '連下最上位' : (horse.rawScore >= 3 ? '連下' : '補欠');
+        }
+      }
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Step 1: displayScore計算
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     for (const horse of race.horses) {
@@ -69,56 +138,12 @@ export function adjustPrediction(normalized) {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Step 2: 本命15点以下の場合、本命と対抗をスワップ
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const honmei = race.horses.find(h => h.role === '本命');
-    const taikou = race.horses.find(h => h.role === '対抗');
-
-    if (honmei && taikou && honmei.rawScore <= 15) {
-      // 本命と対抗を入れ替え（対抗枠を必ず保持）
-      honmei.role = '対抗';
-      taikou.role = '本命';
-    }
+    // ⚠️ 印1で決定した役割を維持するため、無効化
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Step 3: 差4点以上の役割入れ替え
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // Step 2で役割が変更されている可能性があるため再取得
-    const currentHonmei = race.horses.find(h => h.role === '本命');
-    const currentTaikou = race.horses.find(h => h.role === '対抗');
-
-    if (currentHonmei && currentTaikou &&
-        (currentHonmei.rawScore - currentTaikou.rawScore >= 4)) {
-
-      // 役割入れ替え対象の馬を取得
-      const tanana = race.horses.find(h => h.role === '単穴');
-      const renkaTop = race.horses.find(h => h.role === '連下最上位');
-
-      // 入れ替えルール：
-      // 対抗 → 連下最上位
-      // 単穴 → 対抗
-      // 連下最上位 → 単穴
-      // 本命はそのまま
-
-      // 一時的に役割を保存（重複を避けるため）
-      const tempRoles = new Map();
-
-      // 対抗 → 連下最上位
-      tempRoles.set(currentTaikou, '連下最上位');
-
-      // 単穴 → 対抗（単穴が存在する場合）
-      if (tanana) {
-        tempRoles.set(tanana, '対抗');
-      }
-
-      // 連下最上位 → 単穴（連下最上位が存在する場合）
-      if (renkaTop) {
-        tempRoles.set(renkaTop, '単穴');
-      }
-
-      // 一括で役割を更新
-      tempRoles.forEach((newRole, horse) => {
-        horse.role = newRole;
-      });
-    }
+    // ⚠️ 印1で決定した役割を維持するため、無効化
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Step 4: 連下3頭制限（連下最上位は保持）

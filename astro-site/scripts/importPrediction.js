@@ -227,15 +227,15 @@ function convertToLegacyFormat(data, date) {
           horseNumber: h.number,
           horseName: h.name,
           pt: h.displayScore || h.rawScore || 70, // ptフィールド
-          role: h.role === '連下最上位' ? '単穴' : h.role, // 連下最上位を単穴に変換
+          role: h.role, // 印1システムではroleをそのまま保持
           jockey: h.jockey || h.kisyu || '', // 騎手
           trainer: h.trainer || h.kyusya || '', // 厩舎
           age: h.age || h.seirei || '', // 馬齢
           weight: h.weight || h.kinryo || '' // 斤量
         }))
         .sort((a, b) => {
-          // 役割の優先順位
-          const roleOrder = { '本命': 1, '対抗': 2, '単穴': 3, '連下': 4, '補欠': 5, '抑え': 6, '無': 7 };
+          // 役割の優先順位（印1システム）
+          const roleOrder = { '本命': 1, '対抗': 2, '単穴': 3, '連下最上位': 4, '連下': 5, '補欠': 6, '抑え': 7, '無': 8 };
           const orderA = roleOrder[a.role] || 99;
           const orderB = roleOrder[b.role] || 99;
 

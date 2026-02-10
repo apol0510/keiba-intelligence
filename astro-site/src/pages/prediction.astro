@@ -134,59 +134,57 @@ function generateAdvancedMetrics(horse, allHorses) {
   };
 }
 
-// 馬単買い目を生成する関数
+// 馬単買い目を生成する関数（横並び馬番号形式）
 function generateUmatanBets(horses) {
   // pt値でソート（降順）
   const sortedHorses = [...horses].sort((a, b) => b.pt - a.pt);
 
-  // 本命（1着軸）・対抗・単穴を特定
+  // 本命・対抗・単穴を特定
   const honmei = sortedHorses.find(h => h.role === '本命');
   const taikou = sortedHorses.find(h => h.role === '対抗');
-  const tanana = sortedHorses.find(h => h.role === '単穴');
+  const tananaList = sortedHorses.filter(h => h.role === '単穴');
 
-  if (!honmei) return [];
+  if (!honmei || !taikou) return null;
 
-  // 買い目生成（本命軸の馬単）
-  const bets = [];
+  // 連下候補（連下最上位・連下・補欠のみ）
+  const renkaList = sortedHorses.filter(h =>
+    h.role === '連下最上位' || h.role === '連下' || h.role === '補欠'
+  );
 
-  // 本命→対抗
-  if (taikou) {
-    bets.push({
-      first: honmei.horseNumber,
-      second: taikou.horseNumber,
-      horseName: `${honmei.horseName} → ${taikou.horseName}`,
-      confidence: 'High',
-      reasoning: 'AI本命からの最有力パターン'
-    });
-  }
+  // 相手馬リスト作成
+  const buildOpponents = (axis) => {
+    const opponents = [];
 
-  // 本命→単穴
-  if (tanana) {
-    bets.push({
-      first: honmei.horseNumber,
-      second: tanana.horseNumber,
-      horseName: `${honmei.horseName} → ${tanana.horseName}`,
-      confidence: 'Medium',
-      reasoning: 'AI本命からの穴狙いパターン'
-    });
-  }
+    // 軸が本命の場合：対抗→単穴→連下
+    // 軸が対抗の場合：本命→単穴→連下
+    if (axis === 'honmei') {
+      opponents.push(taikou.horseNumber);
+      tananaList.forEach(h => opponents.push(h.horseNumber));
+      renkaList.forEach(h => opponents.push(h.horseNumber));
+    } else {
+      opponents.push(honmei.horseNumber);
+      tananaList.forEach(h => opponents.push(h.horseNumber));
+      renkaList.forEach(h => opponents.push(h.horseNumber));
+    }
 
-  // 本命→その他上位馬（連下候補）
-  const renkaKouho = sortedHorses.filter(h =>
-    h.role !== '本命' && h.role !== '対抗' && h.role !== '単穴' && h.pt >= 70
-  ).slice(0, 2); // 上位2頭まで
+    return opponents;
+  };
 
-  renkaKouho.forEach(horse => {
-    bets.push({
-      first: honmei.horseNumber,
-      second: horse.horseNumber,
-      horseName: `${honmei.horseName} → ${horse.horseName}`,
-      confidence: 'Low',
-      reasoning: 'AIスコア上位からの保険パターン'
-    });
-  });
+  const honmeiOpponents = buildOpponents('honmei');
+  const taikouOpponents = buildOpponents('taikou');
 
-  return bets.slice(0, 5); // 最大5点
+  return {
+    honmei: {
+      axis: honmei.horseNumber,
+      axisName: honmei.horseName,
+      opponents: honmeiOpponents
+    },
+    taikou: {
+      axis: taikou.horseNumber,
+      axisName: taikou.horseName,
+      opponents: taikouOpponents
+    }
+  };
 }
 ---
 
@@ -250,10 +248,18 @@ function generateUmatanBets(horses) {
                 metrics: generateAdvancedMetrics(horse, allHorses)
               }));
 
-              // 全馬表示（プロ会員特典）
-              const sortedHorses = horsesWithMetrics.sort((a, b) => b.pt - a.pt);
+              // 印の順番でソート（本命→対抗→単穴→連下最上位→連下→補欠→無印）
+              const roleOrder = { '本命': 1, '対抗': 2, '単穴': 3, '連下最上位': 4, '連下': 5, '補欠': 6, '無': 7 };
+              const sortedHorses = horsesWithMetrics.sort((a, b) => {
+                const orderA = roleOrder[a.role] || 99;
+                const orderB = roleOrder[b.role] || 99;
+                if (orderA !== orderB) {
+                  return orderA - orderB; // 印順優先
+                }
+                return b.pt - a.pt; // 同じ印内ではpt降順
+              });
 
-              // 買い目生成
+              // 買い目生成（横並び形式）
               const umatanBets = generateUmatanBets(allHorses);
 
               // モデル統計
@@ -329,38 +335,83 @@ function generateUmatanBets(horses) {
                   </div>
 
                   <!-- 買い目セクション（プロ会員限定）-->
-                  <div class="betting-section pro-exclusive">
-                    <div class="section-header">
-                      <div class="header-icon">💰</div>
-                      <h2>AI Recommended Betting Strategy / AI推奨馬単買い目</h2>
-                      <span class="pro-tag">PRO限定</span>
-                    </div>
+                  {umatanBets && (
+                    <div class="betting-section pro-exclusive">
+                      <div class="section-header">
+                        <div class="header-icon">💰</div>
+                        <h2>AI Recommended Betting Strategy / AI推奨馬単買い目</h2>
+                        <span class="pro-tag">PRO限定</span>
+                      </div>
 
-                    <div class="betting-grid">
-                      {umatanBets.map((bet, betIndex) => (
-                        <div class={`bet-card confidence-${bet.confidence.toLowerCase()}`}>
-                          <div class="bet-header">
-                            <span class="bet-number">#{betIndex + 1}</span>
-                            <span class={`bet-confidence ${bet.confidence.toLowerCase()}`}>{bet.confidence}</span>
+                      <div class="betting-formula">
+                        <!-- 本命軸 -->
+                        <div class="formula-row honmei-axis">
+                          <div class="formula-header">
+                            <span class="axis-mark">◎</span>
+                            <span class="axis-text">本命</span>
+                            <span class="axis-horse-name">{umatanBets.honmei.axisName}</span>
                           </div>
-                          <div class="bet-main">
-                            <div class="bet-horses">
-                              <span class="bet-first">{bet.first}</span>
-                              <span class="bet-arrow">→</span>
-                              <span class="bet-second">{bet.second}</span>
-                            </div>
-                            <div class="bet-names">{bet.horseName}</div>
+                          <div class="formula-content">
+                            <span class="axis-number">{umatanBets.honmei.axis}</span>
+                            <span class="formula-arrow">⇔</span>
+                            <span class="opponents-list">
+                              {umatanBets.honmei.opponents.slice(0, 5).map((num, idx) => (
+                                <>
+                                  <span class="opponent-number">{num}</span>
+                                  {idx < Math.min(4, umatanBets.honmei.opponents.length - 1) && <span class="opponent-separator">.</span>}
+                                </>
+                              ))}
+                              {umatanBets.honmei.opponents.length > 5 && (
+                                <>
+                                  <span class="opponent-paren">(</span>
+                                  {umatanBets.honmei.opponents.slice(5).map((num, idx) => (
+                                    <>
+                                      <span class="opponent-number optional">{num}</span>
+                                      {idx < umatanBets.honmei.opponents.slice(5).length - 1 && <span class="opponent-separator">.</span>}
+                                    </>
+                                  ))}
+                                  <span class="opponent-paren">)</span>
+                                </>
+                              )}
+                            </span>
                           </div>
-                          <div class="bet-reasoning">{bet.reasoning}</div>
                         </div>
-                      ))}
-                    </div>
 
-                    <div class="betting-note">
-                      <p><strong>💡 推奨購入法:</strong> AI信頼度（Confidence）に応じて購入金額を調整することで、期待値を最大化します。</p>
-                      <p><strong>High:</strong> 基準額の2倍 | <strong>Medium:</strong> 基準額 | <strong>Low:</strong> 基準額の0.5倍</p>
+                        <!-- 対抗軸 -->
+                        <div class="formula-row taikou-axis">
+                          <div class="formula-header">
+                            <span class="axis-mark">○</span>
+                            <span class="axis-text">対抗</span>
+                            <span class="axis-horse-name">{umatanBets.taikou.axisName}</span>
+                          </div>
+                          <div class="formula-content">
+                            <span class="axis-number">{umatanBets.taikou.axis}</span>
+                            <span class="formula-arrow">⇔</span>
+                            <span class="opponents-list">
+                              {umatanBets.taikou.opponents.slice(0, 5).map((num, idx) => (
+                                <>
+                                  <span class="opponent-number">{num}</span>
+                                  {idx < Math.min(4, umatanBets.taikou.opponents.length - 1) && <span class="opponent-separator">.</span>}
+                                </>
+                              ))}
+                              {umatanBets.taikou.opponents.length > 5 && (
+                                <>
+                                  <span class="opponent-paren">(</span>
+                                  {umatanBets.taikou.opponents.slice(5).map((num, idx) => (
+                                    <>
+                                      <span class="opponent-number optional">{num}</span>
+                                      {idx < umatanBets.taikou.opponents.slice(5).length - 1 && <span class="opponent-separator">.</span>}
+                                    </>
+                                  ))}
+                                  <span class="opponent-paren">)</span>
+                                </>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <!-- 詳細分析テーブル（全馬表示）-->
                   <div class="analysis-section">
@@ -371,8 +422,8 @@ function generateUmatanBets(horses) {
                     </div>
 
                     {sortedHorses.map((horse) => {
-                      const roleClass = horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : horse.role === '単穴' ? 'tanana' : 'other';
-                      const roleMark = horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : horse.role === '単穴' ? '▲' : '△';
+                      const roleClass = horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : horse.role === '単穴' ? 'tanana' : horse.role === '連下最上位' ? 'renka-top' : horse.role === '連下' ? 'renka' : horse.role === '補欠' ? 'hoketsu' : 'other';
+                      const roleMark = horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : horse.role === '単穴' ? '▲' : horse.role === '連下最上位' ? '△' : horse.role === '連下' ? '△' : horse.role === '補欠' ? '☆' : '';
                       const m = horse.metrics;
 
                       return (
@@ -665,7 +716,7 @@ function generateUmatanBets(horses) {
       100% { transform: translateX(100%); }
     }
 
-    /* 買い目セクション */
+    /* 買い目セクション（横並び形式） */
     .betting-section {
       background: linear-gradient(135deg,
         rgba(251, 191, 36, 0.1) 0%,
@@ -676,99 +727,75 @@ function generateUmatanBets(horses) {
       border: 2px solid rgba(251, 191, 36, 0.3);
     }
 
-    .pro-tag {
-      padding: 4px 12px;
-      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-      border-radius: 12px;
-      font-size: 0.7rem;
-      font-weight: 800;
-      color: #1f2937;
-      letter-spacing: 1px;
-    }
-
-    .betting-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: var(--spacing-md);
+    .betting-formula {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-lg);
       margin-bottom: var(--spacing-lg);
     }
 
-    .bet-card {
+    .formula-row {
       background: var(--bg-tertiary);
       padding: var(--spacing-lg);
       border-radius: var(--radius-md);
       border: 2px solid var(--border-color);
-      transition: all 0.3s;
-    }
-
-    .bet-card.confidence-high {
-      border-color: #10b981;
-      box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
-    }
-
-    .bet-card.confidence-medium {
-      border-color: #f59e0b;
-      box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
-    }
-
-    .bet-card.confidence-low {
-      border-color: #6b7280;
-    }
-
-    .bet-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-    }
-
-    .bet-header {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: var(--spacing-md);
+      flex-direction: column;
+      gap: var(--spacing-sm);
     }
 
-    .bet-number {
+    .formula-row.honmei-axis {
+      border-color: #3b82f6;
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+    }
+
+    .formula-row.taikou-axis {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+    }
+
+    .formula-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .axis-mark {
+      font-size: 1.5rem;
+      font-weight: 900;
+    }
+
+    .honmei-axis .axis-mark {
+      color: #3b82f6;
+    }
+
+    .taikou-axis .axis-mark {
+      color: #8b5cf6;
+    }
+
+    .axis-text {
       font-size: 0.875rem;
       font-weight: 700;
       color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
-    .bet-confidence {
-      padding: 2px 8px;
-      border-radius: 8px;
-      font-size: 0.7rem;
+    .axis-horse-name {
+      font-size: 0.95rem;
       font-weight: 700;
-      letter-spacing: 0.5px;
+      color: var(--text-primary);
+      margin-left: var(--spacing-xs);
     }
 
-    .bet-confidence.high {
-      background: rgba(16, 185, 129, 0.2);
-      color: #10b981;
-    }
-
-    .bet-confidence.medium {
-      background: rgba(245, 158, 11, 0.2);
-      color: #f59e0b;
-    }
-
-    .bet-confidence.low {
-      background: rgba(107, 114, 128, 0.2);
-      color: #9ca3af;
-    }
-
-    .bet-main {
-      margin-bottom: var(--spacing-md);
-    }
-
-    .bet-horses {
+    .formula-content {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: var(--spacing-md);
-      margin-bottom: var(--spacing-sm);
+      gap: var(--spacing-sm);
+      flex-wrap: wrap;
     }
 
-    .bet-first, .bet-second {
+    .axis-number {
       font-size: 2rem;
       font-weight: 900;
       color: #60a5fa;
@@ -777,25 +804,64 @@ function generateUmatanBets(horses) {
       background: rgba(96, 165, 250, 0.15);
       border: 2px solid rgba(96, 165, 250, 0.4);
       border-radius: var(--radius-sm);
+      min-width: 60px;
+      text-align: center;
     }
 
-    .bet-arrow {
+    .formula-arrow {
       font-size: 1.5rem;
-      color: var(--text-secondary);
+      color: #fbbf24;
+      font-weight: 900;
+      margin: 0 var(--spacing-xs);
     }
 
-    .bet-names {
-      text-align: center;
-      font-size: 0.875rem;
+    .opponents-list {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .opponent-number {
+      font-size: 1.25rem;
+      font-weight: 800;
       color: var(--text-primary);
-      font-weight: 600;
+      font-family: 'Courier New', monospace;
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      min-width: 35px;
+      text-align: center;
     }
 
-    .bet-reasoning {
-      font-size: 0.75rem;
+    .opponent-number.optional {
+      opacity: 0.7;
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .opponent-separator {
+      font-size: 1.25rem;
       color: var(--text-tertiary);
-      text-align: center;
-      font-style: italic;
+      margin: 0 2px;
+    }
+
+    .opponent-paren {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin: 0 4px;
+    }
+
+    .pro-tag {
+      padding: 4px 12px;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: #1f2937;
+      letter-spacing: 1px;
     }
 
     .betting-note {
@@ -1123,6 +1189,10 @@ function generateUmatanBets(horses) {
       border-color: #f59e0b;
     }
 
+    .detailed-horse-card.hoketsu {
+      border-color: #6b7280;
+    }
+
     .dhc-header {
       margin-bottom: var(--spacing-md);
     }
@@ -1156,6 +1226,10 @@ function generateUmatanBets(horses) {
 
     .detailed-horse-card.tanana .dhc-mark-mobile {
       color: #f59e0b;
+    }
+
+    .detailed-horse-card.hoketsu .dhc-mark-mobile {
+      color: #6b7280;
     }
 
     .dhc-number {
@@ -1425,8 +1499,28 @@ function generateUmatanBets(horses) {
         font-size: 1.5rem;
       }
 
-      .betting-grid {
-        grid-template-columns: 1fr;
+      .formula-header {
+        flex-wrap: wrap;
+      }
+
+      .axis-horse-name {
+        font-size: 0.85rem;
+      }
+
+      .axis-number {
+        font-size: 1.5rem;
+        padding: 6px 12px;
+        min-width: 50px;
+      }
+
+      .opponent-number {
+        font-size: 1rem;
+        padding: 3px 8px;
+        min-width: 30px;
+      }
+
+      .formula-arrow {
+        font-size: 1.25rem;
       }
 
       .dhc-quick-metrics {

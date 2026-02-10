@@ -101,6 +101,9 @@ export function normalizeDetailed(input) {
       const rawScore = horse.totalScore || horse.rawScore || 0;
       const role = horse.assignment || horse.role || '無';
 
+      // 印1を取得（独自予想用）
+      const mark1 = horse.marks?.['印1'] || '';
+
       return {
         number: horse.number,
         name: horse.name,
@@ -108,11 +111,12 @@ export function normalizeDetailed(input) {
         displayScore: 0, // adjustPrediction()で計算
         role: role,
         mark: '', // adjustPrediction()で生成
+        mark1: mark1, // 印1を保持（独自予想用）
         jockey: horse.kisyu || horse.jockey || '', // 騎手
         trainer: horse.kyusya || horse.trainer || '', // 厩舎
         age: horse.seirei || horse.age || '', // 馬齢（牡3、牝4など）
         weight: horse.kinryo || horse.weight || '' // 斤量
-        // ⚠️ marks（記者印）は含めない（秘匿）
+        // ⚠️ marks（全記者印）は秘匿
       };
     });
 
