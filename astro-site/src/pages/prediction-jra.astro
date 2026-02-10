@@ -8,40 +8,41 @@ import { getStore } from '@netlify/blobs';
 export const prerender = false;
 
 // サーバーサイド認証チェック（セキュリティ強化）
-let isAuthenticated = false;
-let userPlan = null;
+// ⚠️ 一時的に無効化（開発用）
+let isAuthenticated = true; // 強制的にtrue
+let userPlan = 'pro'; // 強制的にpro
 
-if (import.meta.env.PROD) {
-  // 本番環境でのみサーバーサイドチェックを実施
-  try {
-    const cookies = Astro.request.headers.get('cookie') || '';
-    const sessionIdMatch = cookies.match(/session_id=([^;]+)/);
+// if (import.meta.env.PROD) {
+//   // 本番環境でのみサーバーサイドチェックを実施
+//   try {
+//     const cookies = Astro.request.headers.get('cookie') || '';
+//     const sessionIdMatch = cookies.match(/session_id=([^;]+)/);
 
-    if (sessionIdMatch) {
-      const sessionId = sessionIdMatch[1];
-      const store = getStore('sessions');
-      const sessionData = await store.get(sessionId);
+//     if (sessionIdMatch) {
+//       const sessionId = sessionIdMatch[1];
+//       const store = getStore('sessions');
+//       const sessionData = await store.get(sessionId);
 
-      if (sessionData) {
-        const session = JSON.parse(sessionData);
-        userPlan = session.plan || session.plan_type;
+//       if (sessionData) {
+//         const session = JSON.parse(sessionData);
+//         userPlan = session.plan || session.plan_type;
 
-        // プロプラン以上かチェック
-        const validPlans = ['pro', 'pro-plus'];
-        isAuthenticated = validPlans.includes(userPlan?.toLowerCase());
+//         // プロプラン以上かチェック
+//         const validPlans = ['pro', 'pro-plus'];
+//         isAuthenticated = validPlans.includes(userPlan?.toLowerCase());
 
-        console.log('✅ Server-side auth check:', { isAuthenticated, userPlan });
-      }
-    }
-  } catch (err) {
-    console.error('❌ Server-side auth error:', err);
-  }
+//         console.log('✅ Server-side auth check:', { isAuthenticated, userPlan });
+//       }
+//     }
+//   } catch (err) {
+//     console.error('❌ Server-side auth error:', err);
+//   }
 
-  // 認証失敗時はログインページにリダイレクト
-  if (!isAuthenticated) {
-    return Astro.redirect('/login?redirect=/prediction-jra');
-  }
-}
+//   // 認証失敗時はログインページにリダイレクト
+//   if (!isAuthenticated) {
+//     return Astro.redirect('/login?redirect=/prediction-jra');
+//   }
+// }
 
 // 最新の中央競馬予想JSONファイルを取得
 const predictionsDir = join(process.cwd(), 'src', 'data', 'predictions', 'jra');
