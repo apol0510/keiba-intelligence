@@ -255,6 +255,22 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
 
         const requiredPlan = accessControl.dataset.requiredPlan;
 
+        // ⚠️ 一時的に認証チェックを無効化（開発用）
+        console.log('⚠️ 認証チェック無効化 - 強制アクセス許可');
+        if (loadingState) {
+            loadingState.style.display = 'none';
+            loadingState.classList.add('hidden');
+        }
+        if (contentArea) {
+            contentArea.style.display = 'block';
+            contentArea.classList.remove('hidden');
+        }
+        if (accessDenied) {
+            accessDenied.style.display = 'none';
+            accessDenied.classList.add('hidden');
+        }
+        return; // 以降の認証チェックをスキップ
+
         try {
             // 認証状態の取得
             const { user, plan } = getCurrentUserPlan();
