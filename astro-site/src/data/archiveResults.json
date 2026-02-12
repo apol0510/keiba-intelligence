@@ -3,13 +3,13 @@
     "date": "2026-02-11",
     "venue": "船橋",
     "totalRaces": 12,
-    "hitRaces": 10,
-    "missRaces": 2,
-    "hitRate": 83.3,
-    "betAmount": 14400,
-    "betPointsPerRace": 12,
-    "totalPayout": 36130,
-    "returnRate": 250.9,
+    "hitRaces": 8,
+    "missRaces": 4,
+    "hitRate": 66.7,
+    "betAmount": 9600,
+    "betPointsPerRace": 8,
+    "totalPayout": 19820,
+    "returnRate": 206.5,
     "races": [
       {
         "raceNumber": 1,
@@ -229,22 +229,20 @@
             "name": "モルジブフレイバー"
           },
           "second": {
-            "number": 3,
-            "name": "グリーンダイヤル"
+            "number": 6,
+            "name": "プラズマ"
           },
           "third": {
-            "number": 5,
-            "name": "ザロック"
+            "number": 3,
+            "name": "グリーンダイヤル"
           }
         },
         "bettingLines": [
           "3-8.4.9.6.10.2(抑え1.5.11)",
           "8-3.4.9.6.10.2(抑え1.5.11)"
         ],
-        "isHit": true,
-        "hitLines": [
-          "3-8.4.9.6.10.2(抑え1.5.11)"
-        ],
+        "isHit": false,
+        "hitLines": [],
         "umatan": {
           "combination": "10-6",
           "payout": 8670
@@ -319,22 +317,20 @@
             "name": "[J]テンカジョウ"
           },
           "second": {
-            "number": 12,
-            "name": "[J]アピーリングルック"
+            "number": 13,
+            "name": "マーブルマウンテン"
           },
           "third": {
-            "number": 6,
-            "name": "ホーリーグレイル"
+            "number": 4,
+            "name": "[J]メモリアカフェ"
           }
         },
         "bettingLines": [
           "12-5.4.6.8.1.13(抑え3)",
           "4-5.12.6.8.1.13(抑え3)"
         ],
-        "isHit": true,
-        "hitLines": [
-          "12-5.4.6.8.1.13(抑え3)"
-        ],
+        "isHit": false,
+        "hitLines": [],
         "umatan": {
           "combination": "5-13",
           "payout": 7640
@@ -369,7 +365,7 @@
         }
       }
     ],
-    "verifiedAt": "2026-02-12T01:55:22.384Z"
+    "verifiedAt": "2026-02-12T04:22:45.387Z"
   },
   {
     "date": "2026-02-10",
