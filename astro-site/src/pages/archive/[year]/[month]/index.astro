@@ -120,6 +120,9 @@ const pageDescription = monthData.length > 0
                     <span class={`stat ${dayData.returnRate >= 100 ? 'profit' : 'loss'}`}>
                       回収率 {dayData.returnRate}%
                     </span>
+                    {dayData.betPointsPerRace && (
+                      <span class="stat">購入点数 {dayData.totalRaces * dayData.betPointsPerRace}点</span>
+                    )}
                     {dayData.totalPayout > 0 && (
                       <span class="stat profit">配当 ¥{dayData.totalPayout.toLocaleString()}</span>
                     )}
