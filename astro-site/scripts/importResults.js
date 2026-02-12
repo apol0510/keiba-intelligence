@@ -234,7 +234,7 @@ function verifyResults(prediction, results) {
 
     raceResults.push({
       raceNumber,
-      raceName: race.raceName,
+      raceName: predRace.raceInfo?.raceName || race.raceName || '',
       result: {
         first: { number: first.number, name: first.name },
         second: { number: second.number, name: second.name },
