@@ -301,6 +301,11 @@ grep -r "pattern" ./src/
   - importResultsJra.js（結果データ自動取り込み・的中判定）✅
   - /prediction-jra（中央競馬予想ページ）✅
   - archiveResultsJra.json（中央競馬専用アーカイブ）✅
+  - **会場別→統合ファイル自動生成** ✅
+    - merge-jra-predictions.yml（GitHub Actions）
+    - 会場別ファイル（-TKY.json等）→統合ファイル（YYYY-MM-DD.json）
+    - PAT（WORKFLOW_PAT）使用で他ワークフローをトリガー
+    - dispatch-prediction-jra-intelligence.yml対応（統合形式・venues配列）
 
 - [ ] **SEOページ自動生成**
   - 日別実績ページ（/results/2026/01/10）
@@ -429,6 +434,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ### **データフロー（予想更新時）** - 完全自動化
 
+#### **南関競馬（統合ファイル直接Push）**
+
 ```
 keiba-data-shared（予想データPush）
   ↓
@@ -445,6 +452,42 @@ src/data/predictions/YYYY/MM/YYYY-MM-DD.json 保存
 Git自動コミット・自動デプロイ
   ↓
 サイト更新完了（1-2分）
+```
+
+#### **中央競馬（会場別ファイル→統合ファイル自動生成）**
+
+```
+keiba-data-shared（会場別ファイルPush: -TKY.json等）
+  ↓
+GitHub Actions: merge-jra-predictions.yml 起動
+  ↓
+【チェック】会場別ファイル（-TKY.json等）検出
+  ↓
+✅ 会場別ファイルがある場合
+  ↓
+merge-jra-predictions.js 実行（統合ファイル生成）
+  ↓
+統合ファイル（YYYY-MM-DD.json）作成
+  ↓
+PAT（WORKFLOW_PAT）使用でPush
+  ↓
+GitHub Actions: dispatch-prediction-jra-intelligence.yml 起動
+  ↓
+【チェック】統合形式（venues配列）のレース数確認
+  ↓
+✅ totalRaces ≥ 12の場合
+  ↓
+repository_dispatch イベント送信（prediction-jra-updated）
+  ↓
+keiba-intelligence の GitHub Actions 起動
+  ↓
+importPredictionJra.js 実行
+  ↓
+src/data/predictions/jra/YYYY/MM/YYYY-MM-DD.json 保存
+  ↓
+Git自動コミット・自動デプロイ
+  ↓
+サイト更新完了（2-3分）
 ```
 
 ### **データフロー（結果更新時）** - 完全自動化
@@ -843,7 +886,25 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 **📊 進捗率**: 98%完了（Phase 1: 100%、Phase 2: 100%、Phase 3: 98%）
 **🌐 本番URL**: https://keiba-intelligence.netlify.app/
 
-**✨ 本日の成果（2026-02-08）**:
+**✨ 本日の成果（2026-02-13）**:
+  - **中央競馬（JRA）会場別→統合ファイル完全自動化** ✅
+    - 問題: 2/14予想が更新されない（会場別ファイル形式に変更）
+    - merge-jra-predictions.yml作成（GitHub Actions）
+      - 会場別ファイル（-TKY.json等）検出時に自動統合
+      - merge-jra-predictions.js実行
+      - 統合ファイル（YYYY-MM-DD.json）自動生成・Push
+    - PAT（WORKFLOW_PAT）導入
+      - GitHub ActionsからのPushで他ワークフローをトリガー可能に
+      - GITHUB_TOKENの制限（ワークフロー連鎖不可）を回避
+    - dispatch-prediction-jra-intelligence.yml修正
+      - 統合形式（venues配列）対応
+      - 会場別ファイルは自動スキップ
+      - totalRacesフィールドでレース数判定
+    - 完全自動化達成
+      - 会場別Push → 統合生成 → keiba-intelligenceへdispatch → 自動インポート → デプロイ
+    - GITHUB_PAT_SETUP.md作成（PAT設定手順書）
+
+**✨ 過去の成果（2026-02-08）**:
   - **買い目点数ロジック実装（2段階調整方式）** ✅
     - importResults.js修正（8点 or 12点の動的切り替え）
     - 基本8点で計算 → 回収率300%超なら12点で再計算
@@ -1021,6 +1082,7 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   - **自動化システム**:
     - 南関競馬: importPrediction.js, importResults.js, GitHub Actions自動連携
     - 中央競馬: importPredictionJra.js, importResultsJra.js, GitHub Actions自動連携（完成）
+    - **会場別→統合ファイル自動生成**: merge-jra-predictions.yml, PAT（WORKFLOW_PAT）
     - 2段階買い目調整ロジック（8点 or 12点）
     - 自動的中判定システム
     - 月別アーカイブ自動生成
