@@ -39,11 +39,15 @@ function getRoleMark(role) {
  * 正規化された予想データに調整ルールを適用
  *
  * @param {Object} normalized - 正規化済み予想データ
+ * @param {Object} options - オプション { skipMark1Override: boolean }
  * @returns {Object} 調整済み予想データ
  */
-export function adjustPrediction(normalized) {
+export function adjustPrediction(normalized, options = {}) {
   // ディープコピー（元データを変更しない）
   const adjusted = JSON.parse(JSON.stringify(normalized));
+
+  // JRAデータの場合は印1による上書きをスキップ
+  const skipMark1Override = options.skipMark1Override || false;
 
   // 各レースに対して調整処理を実行
   for (const race of adjusted.races) {
@@ -57,12 +61,14 @@ export function adjustPrediction(normalized) {
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Step 0: 印1を基準に本命・対抗・単穴を決定（独自予想）
+    // ⚠️ JRAデータの場合はスキップ（assignmentフィールドを保持）
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    // Step 0-1: 印1が有効な馬を検出
-    const honmeiMark1 = race.horses.find(h => h.mark1 === '◎');
-    const taikouMark1 = race.horses.find(h => h.mark1 === '○');
-    const tananaMark1 = race.horses.find(h => h.mark1 === '▲');
+    if (!skipMark1Override) {
+      // Step 0-1: 印1が有効な馬を検出
+      const honmeiMark1 = race.horses.find(h => h.mark1 === '◎');
+      const taikouMark1 = race.horses.find(h => h.mark1 === '○');
+      const tananaMark1 = race.horses.find(h => h.mark1 === '▲');
 
     // Step 0-2: 本命・対抗・単穴をリセット（印1が無効な馬を降格）
     for (const horse of race.horses) {
@@ -123,6 +129,8 @@ export function adjustPrediction(normalized) {
         }
       }
     }
+
+    } // End of skipMark1Override check
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Step 1: displayScore計算

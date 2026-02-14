@@ -157,7 +157,7 @@ async function importPrediction(date, venue = 'jra') {
         races: venueData.races
       };
 
-      const normalized = normalizeAndAdjust(singleVenueData);
+      const normalized = normalizeAndAdjust(singleVenueData, { skipMark1Override: true });
       normalizedVenues.push(normalized);
 
       console.log(`   ✅ ${normalized.venue}: ${normalized.totalRaces}レース`);
@@ -181,7 +181,7 @@ async function importPrediction(date, venue = 'jra') {
 
   // 単一会場の場合（従来フォーマット）
   console.log(`⚙️  正規化 + 調整ルール適用中...`);
-  const normalizedAndAdjusted = normalizeAndAdjust(sharedJSON);
+  const normalizedAndAdjusted = normalizeAndAdjust(sharedJSON, { skipMark1Override: true });
 
   console.log(`✅ 正規化完了`);
   console.log(`   - 開催日: ${normalizedAndAdjusted.date}`);
@@ -249,7 +249,7 @@ function convertToLegacyFormat(data, date) {
           horseNumber: h.number,
           horseName: h.name,
           pt: h.displayScore || h.rawScore || 70, // ptフィールド
-          role: h.role === '連下最上位' ? '単穴' : h.role, // 連下最上位を単穴に変換
+          role: h.role, // roleをそのまま保持（JRAのassignmentをそのまま使用）
           jockey: h.jockey || h.kisyu || '', // 騎手
           trainer: h.trainer || h.kyusya || '', // 厩舎
           age: h.age || h.seirei || '', // 馬齢
