@@ -1074,13 +1074,37 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ---
 
-**📅 最終更新日**: 2026-02-08
+**📅 最終更新日**: 2026-02-15
 **🏁 Project Phase**: Phase 3管理機能実装 🚀（Phase 3: 98%完了）
 **🎯 Next Priority**: SEOページ自動生成 → 本番デプロイ → 1000人会員獲得
 **📊 進捗率**: 98%完了（Phase 1: 100%、Phase 2: 100%、Phase 3: 98%）
 **🌐 本番URL**: https://keiba-intelligence.netlify.app/
 
-**✨ 本日の成果（2026-02-14）**:
+**✨ 本日の成果（2026-02-15）**:
+  - **自動化システム完全復旧（南関・JRA分離ロジック実装）** ✅
+    - **問題発見**: ここ数日、自動化がうまくいかない（adjustPrediction.jsの印1ロジックが削除されていた）
+    - **根本原因特定**:
+      - CLAUDE.md: 「南関は印1（◎○▲）で本命・対抗・単穴を決定」
+      - 実際のコード: 印1ロジックが完全削除され、「JRAと同じassignmentそのまま保持」になっていた
+      - 誤った統一: 「JRAも印1ロジック適用」というコミットで南関・JRA両方が壊れた
+    - **修正内容**（南関・JRA分離アプローチ）:
+      - **adjustPrediction.js**: 2つの関数に分離
+        - `adjustPredictionNankan()`: 南関用（印1◎○▲ロジック適用）
+        - `adjustPredictionJRA()`: JRA用（assignmentそのまま保持）
+      - **normalizePrediction.js**: 2つの関数に分離
+        - `normalizeAndAdjustNankan()`: 南関用
+        - `normalizeAndAdjustJRA()`: JRA用
+      - **importPrediction.js**: `normalizeAndAdjustNankan()` を呼び出し
+      - **importPredictionJra.js**: `normalizeAndAdjustJRA()` を呼び出し
+      - **印1ロジックの重複排除**: 元のassignment（本命・対抗・単穴）を印1で上書き時に自動降格
+        - 元のassignment対抗が印1○以外 → 連下に降格
+        - 元のassignment単穴が印1▲以外 → 連下に降格
+    - **テスト結果**:
+      - 南関（2/13船橋）: ✅ 印1○の8番が対抗、元のassignment対抗7番は連下に降格
+      - JRA（2/15京都・小倉・東京）: ✅ assignmentがそのまま保持、印1は無視
+    - **互換性**: 旧関数名（`adjustPrediction()`, `normalizeAndAdjust()`）は南関用として動作（deprecatedマーク付き）
+
+**✨ 過去の成果（2026-02-14）**:
   - **中央競馬予想ページUI崩れ完全修正 + 再発防止策実装** ✅
     - **問題発見**: 小倉11R「◎○が下部表示」「単穴が複数頭」「買い目デザイン消失」
     - **根本原因特定**（2つ）:

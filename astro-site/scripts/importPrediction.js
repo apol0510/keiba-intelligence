@@ -26,8 +26,8 @@ const __dirname = dirname(__filename);
 // プロジェクトルート
 const projectRoot = join(__dirname, '..');
 
-// src/utils から正規化関数をインポート
-import { normalizeAndAdjust } from '../src/utils/normalizePrediction.js';
+// src/utils から正規化関数をインポート（南関競馬用）
+import { normalizeAndAdjustNankan } from '../src/utils/normalizePrediction.js';
 
 // データ検証関数をインポート
 import { validateNankanPrediction } from './utils/validatePrediction.js';
@@ -144,9 +144,9 @@ async function importPrediction(date, venue = 'nankan') {
     return null;
   }
 
-  // 正規化 + 調整ルール適用
-  console.log(`⚙️  正規化 + 調整ルール適用中...`);
-  const normalizedAndAdjusted = normalizeAndAdjust(sharedJSON);
+  // 正規化 + 調整ルール適用（南関競馬用）
+  console.log(`⚙️  正規化 + 調整ルール適用中（南関競馬）...`);
+  const normalizedAndAdjusted = normalizeAndAdjustNankan(sharedJSON);
 
   console.log(`✅ 正規化完了`);
   console.log(`   - 開催日: ${normalizedAndAdjusted.date}`);

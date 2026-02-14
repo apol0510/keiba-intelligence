@@ -26,8 +26,8 @@ const __dirname = dirname(__filename);
 // プロジェクトルート
 const projectRoot = join(__dirname, '..');
 
-// src/utils から正規化関数をインポート
-import { normalizeAndAdjust } from '../src/utils/normalizePrediction.js';
+// src/utils から正規化関数をインポート（中央競馬JRA用）
+import { normalizeAndAdjustJRA } from '../src/utils/normalizePrediction.js';
 
 // データ検証関数をインポート
 import { validateJRAPrediction } from './utils/validatePrediction.js';
@@ -148,7 +148,7 @@ async function importPrediction(date, venue = 'jra') {
 
   // 複数会場対応：venues配列がある場合
   if (sharedJSON.venues && Array.isArray(sharedJSON.venues)) {
-    console.log(`⚙️  複数会場データを正規化中...`);
+    console.log(`⚙️  複数会場データを正規化中（中央競馬JRA）...`);
     const normalizedVenues = [];
 
     for (const venueData of sharedJSON.venues) {
@@ -160,7 +160,7 @@ async function importPrediction(date, venue = 'jra') {
         races: venueData.races
       };
 
-      const normalized = normalizeAndAdjust(singleVenueData);
+      const normalized = normalizeAndAdjustJRA(singleVenueData);
       normalizedVenues.push(normalized);
 
       console.log(`   ✅ ${normalized.venue}: ${normalized.totalRaces}レース`);
@@ -183,8 +183,8 @@ async function importPrediction(date, venue = 'jra') {
   }
 
   // 単一会場の場合（従来フォーマット）
-  console.log(`⚙️  正規化 + 調整ルール適用中...`);
-  const normalizedAndAdjusted = normalizeAndAdjust(sharedJSON);
+  console.log(`⚙️  正規化 + 調整ルール適用中（中央競馬JRA）...`);
+  const normalizedAndAdjusted = normalizeAndAdjustJRA(sharedJSON);
 
   console.log(`✅ 正規化完了`);
   console.log(`   - 開催日: ${normalizedAndAdjusted.date}`);
