@@ -250,7 +250,8 @@ if (taikouMark1 && tananaMark1) {
 
 **重要**:
 - ✅ **南関競馬**: 印1で役割を決定（独自予想）
-- ❌ **中央競馬**: `skipMark1Override: true` で無効化（assignment保持）
+- ✅ **中央競馬**: 印1で役割を決定（南関と同じロジック）
+  - `skipMark1Override: false` で印1◎○▲ロジック適用
 
 ### Step 1: displayScore計算
 
@@ -394,12 +395,7 @@ function simpleAdjustForJRA(normalized) {
 export function normalizeAndAdjust(input, options = {}) {
   const normalized = normalizePrediction(input);
 
-  // JRA用の簡易調整（skipMark1Override: true）
-  if (options.skipMark1Override) {
-    return simpleAdjustForJRA(normalized);
-  }
-
-  // 南関用の完全調整
+  // 南関・JRA共通の調整ルール適用
   if (normalized.races.length > 0 && normalized.races[0].hasHorseData) {
     return adjustPrediction(normalized, options);
   }
