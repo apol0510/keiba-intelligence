@@ -98,7 +98,7 @@ export function normalizeDetailed(input) {
 
     // 馬データ変換
     const horses = (race.horses || []).map(horse => {
-      const rawScore = horse.totalScore || horse.rawScore || 0;
+      const rawScore = horse.PT || horse.totalScore || horse.rawScore || 0;
       const role = horse.assignment || horse.role || '無';
 
       // 印1を取得（独自予想用）
