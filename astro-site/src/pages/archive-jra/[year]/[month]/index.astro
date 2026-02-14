@@ -99,7 +99,7 @@ const pageDescription = monthData.length > 0
               </div>
             </div>
             <div class="summary-detail">
-              <span>的中レース数: {monthStats.totalHitRaces}/{monthStats.totalRaces}R</span>
+              <span>的中レース数: {monthStats.totalHitRaces}/{monthStats.totalRaces}レース</span>
             </div>
           </section>
 
@@ -112,10 +112,10 @@ const pageDescription = monthData.length > 0
                 <div class="day-header">
                   <h2>
                     <span class="day-date">{month}月{day}日</span>
-                    <span class="day-venue">{dayData.venue}競馬</span>
+                    <span class="day-venue">{dayData.venue}</span>
                   </h2>
                   <div class="day-stats">
-                    <span class="stat">的中 {dayData.hitRaces}/{dayData.totalRaces}R</span>
+                    <span class="stat">的中 {dayData.hitRaces}/{dayData.totalRaces}レース</span>
                     <span class="stat">的中率 {dayData.hitRate}%</span>
                     <span class={`stat ${dayData.returnRate >= 100 ? 'profit' : 'loss'}`}>
                       回収率 {dayData.returnRate}%
@@ -132,7 +132,7 @@ const pageDescription = monthData.length > 0
 
                     return (
                       <div class="race-line hit">
-                        <span class="race-number">第{race.raceNumber}R</span>
+                        <span class="race-number">{race.venue}{race.raceNumber}レース</span>
                         <span class="race-name">{race.raceName}</span>
                         <span class="hit-badge">✅ 的中</span>
                         {payout > 0 && (
