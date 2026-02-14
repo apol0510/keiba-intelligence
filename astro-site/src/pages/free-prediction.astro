@@ -130,6 +130,27 @@ function generateAdvancedMetrics(horse, allHorses) {
             <div class="scan-line"></div>
           </div>
 
+          <!-- 無料予想について -->
+          <div class="free-info-card">
+            <div class="free-info-header">
+              <div class="info-icon">ℹ️</div>
+              <h2>無料予想について</h2>
+            </div>
+            <div class="free-info-content">
+              <p><strong>無料予想では全レースのAI予想（上位5頭 + Feature Importance Analysis）を公開しています。</strong></p>
+              <p>全頭の詳細分析と馬単買い目情報は有料プラン（<a href="/pricing" class="inline-link">買い切り¥88,000</a>または<a href="/pricing" class="inline-link">年払い¥66,000</a>）でご利用いただけます。</p>
+              <ul class="free-info-list">
+                <li>✅ 南関4場＋JRA全10場 全レース予想</li>
+                <li>✅ 馬単買い目提供（本線8点 + 抑え4点）</li>
+                <li>✅ 全頭詳細なAI分析</li>
+                <li>✅ 的中実績閲覧（過去全データ）</li>
+                <li>✅ Feature Importance Analysis</li>
+                <li>✅ 永久アクセス（買い切りプランのみ）</li>
+              </ul>
+              <a href="/pricing" class="btn btn-primary">料金プランを見る</a>
+            </div>
+          </div>
+
           <!-- レース選択ボタン -->
           <div class="race-selector">
             {predictionData.predictions.map((race, index) => (
@@ -448,6 +469,54 @@ function generateAdvancedMetrics(horse, allHorses) {
         radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
         radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
         var(--bg-primary);
+    }
+
+    /* 無料予想説明カード */
+    .free-info-card {
+      background: var(--bg-secondary);
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--spacing-xl);
+      border: 2px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .free-info-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .info-icon {
+      font-size: 1.5rem;
+    }
+
+    .free-info-header h2 {
+      font-size: 1.25rem;
+      color: #10b981;
+      font-weight: 800;
+    }
+
+    .free-info-content p {
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-sm);
+      line-height: 1.6;
+    }
+
+    .free-info-list {
+      list-style: none;
+      margin: var(--spacing-md) 0;
+    }
+
+    .free-info-list li {
+      padding: var(--spacing-xs) 0;
+      color: var(--text-secondary);
+    }
+
+    .inline-link {
+      color: var(--primary-end);
+      text-decoration: underline;
+      font-weight: 600;
     }
 
     /* ページヘッダー */
