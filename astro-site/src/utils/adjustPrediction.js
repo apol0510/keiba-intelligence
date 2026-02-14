@@ -11,8 +11,7 @@
  * 2. 本命15点以下の降格処理（本命→単穴、対抗→本命）
  * 3. 差4点以上の役割入れ替え（対抗→連下最上位、単穴→対抗、連下最上位→単穴）
  * 4. 連下3頭制限（連下最上位1頭維持 + 連下最大3頭、残りは補欠）
- * 5. 絶対軸判定（19/20点 or 差4点以上）
- * 6. 表示用印の割り当て
+ * 5. 表示用印の割り当て
  *
  * ⚠️ 重要: marks（記者印）など入力材料は変更しない
  *          roleのみ調整対象
@@ -40,17 +39,14 @@ function getRoleMark(role) {
 
 /**
  * 正規化された予想データに調整ルールを適用
+ * 南関・中央競馬共通のロジック
  *
  * @param {Object} normalized - 正規化済み予想データ
- * @param {Object} options - オプション { skipMark1Override: boolean }
  * @returns {Object} 調整済み予想データ
  */
-export function adjustPrediction(normalized, options = {}) {
+export function adjustPrediction(normalized) {
   // ディープコピー（元データを変更しない）
   const adjusted = JSON.parse(JSON.stringify(normalized));
-
-  // JRAデータの場合は印1による上書きをスキップ
-  const skipMark1Override = options.skipMark1Override || false;
 
   // 各レースに対して調整処理を実行
   for (const race of adjusted.races) {
@@ -58,102 +54,14 @@ export function adjustPrediction(normalized, options = {}) {
     // 馬データがない場合はスキップ
     if (!race.horses || race.horses.length === 0) {
       race.hasHorseData = false;
-      race.isAbsoluteAxis = null;
       continue;
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // Step 0: 印1を基準に本命・対抗・単穴を決定（独自予想）
-    // - 印1◎ → 本命
-    // - 印1○と印1▲ → rawScoreを比較して高い方を対抗、低い方を単穴
-    // ⚠️ JRAデータの場合はスキップ（assignmentフィールドを保持）
+    // Step 0: 元データのassignmentをそのまま使用
+    // （印1による上書きは行わない）
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-    if (!skipMark1Override) {
-      // Step 0-1: 印1が有効な馬を検出
-      const honmeiMark1 = race.horses.find(h => h.mark1 === '◎');
-      const taikouMark1 = race.horses.find(h => h.mark1 === '○');
-      const tananaMark1 = race.horses.find(h => h.mark1 === '▲');
-
-    // Step 0-2: 本命・対抗・単穴をリセット（印1が無効な馬を降格）
-    for (const horse of race.horses) {
-      // 現在本命・対抗・単穴になっている馬
-      if (horse.role === '本命' || horse.role === '対抗' || horse.role === '単穴') {
-        // 印1が有効（◎○▲）かチェック
-        const isValidMark = horse.mark1 === '◎' || horse.mark1 === '○' || horse.mark1 === '▲';
-
-        // 印1が無効な場合は降格
-        if (isValidMark === false) {
-          if (horse.rawScore >= 7) {
-            horse.role = '連下最上位';
-          } else if (horse.rawScore >= 3) {
-            horse.role = '連下';
-          } else {
-            horse.role = '補欠';
-          }
-        }
-      }
-    }
-
-    // Step 0-3: 印1がある馬を本命・対抗・単穴に設定（強制上書き）
-    // - 印1◎ → 本命（固定）
-    // - 印1○と印1▲ → rawScoreを比較して高い方を対抗、低い方を単穴
-
-    // 本命（◎）は固定
-    if (honmeiMark1) {
-      honmeiMark1.role = '本命';
-    }
-
-    // 対抗（○）と単穴（▲）はrawScoreで比較して入れ替え
-    if (taikouMark1 && tananaMark1) {
-      // 両方存在する場合、rawScoreを比較
-      if (taikouMark1.rawScore >= tananaMark1.rawScore) {
-        // ○の方が高い or 同点 → そのまま
-        taikouMark1.role = '対抗';
-        tananaMark1.role = '単穴';
-      } else {
-        // ▲の方が高い → 入れ替え
-        taikouMark1.role = '単穴';
-        tananaMark1.role = '対抗';
-      }
-    } else if (taikouMark1) {
-      // ○のみ存在
-      taikouMark1.role = '対抗';
-    } else if (tananaMark1) {
-      // ▲のみ存在
-      tananaMark1.role = '単穴';
-    }
-
-    // Step 0-4: 念のため重複チェック（万が一印1が重複している場合）
-    const honmeiList = race.horses.filter(h => h.role === '本命');
-    const taikouList = race.horses.filter(h => h.role === '対抗');
-    const tananaList = race.horses.filter(h => h.role === '単穴');
-
-    if (honmeiList.length > 1) {
-      for (const horse of honmeiList) {
-        if (horse.mark1 !== '◎') {
-          horse.role = horse.rawScore >= 7 ? '連下最上位' : (horse.rawScore >= 3 ? '連下' : '補欠');
-        }
-      }
-    }
-
-    if (taikouList.length > 1) {
-      for (const horse of taikouList) {
-        if (horse.mark1 !== '○') {
-          horse.role = horse.rawScore >= 7 ? '連下最上位' : (horse.rawScore >= 3 ? '連下' : '補欠');
-        }
-      }
-    }
-
-    if (tananaList.length > 1) {
-      for (const horse of tananaList) {
-        if (horse.mark1 !== '▲') {
-          horse.role = horse.rawScore >= 7 ? '連下最上位' : (horse.rawScore >= 3 ? '連下' : '補欠');
-        }
-      }
-    }
-
-    } // End of skipMark1Override check
+    // 何もしない（roleは既にnormalizeで設定済み）
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Step 1: displayScore計算
@@ -167,14 +75,44 @@ export function adjustPrediction(normalized, options = {}) {
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // Step 2: 本命15点以下の場合、本命と対抗をスワップ
+    // Step 2: 本命15点以下の場合、3頭ローテーション
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // ⚠️ 印1で決定した役割を維持するため、無効化
+    const honmeiAfterMark1 = race.horses.find(h => h.role === '本命');
+    const taikouAfterMark1 = race.horses.find(h => h.role === '対抗');
+    const tananaAfterMark1 = race.horses.find(h => h.role === '単穴');
+
+    if (honmeiAfterMark1 && honmeiAfterMark1.rawScore <= 15) {
+      if (taikouAfterMark1 && tananaAfterMark1) {
+        // 3頭ローテーション: 本命→単穴、対抗→本命、単穴→対抗
+        honmeiAfterMark1.role = '単穴';
+        taikouAfterMark1.role = '本命';
+        tananaAfterMark1.role = '対抗';
+      } else if (taikouAfterMark1) {
+        // 単穴がいない場合: 本命→単穴、対抗→本命
+        honmeiAfterMark1.role = '単穴';
+        taikouAfterMark1.role = '本命';
+      }
+    }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Step 3: 差4点以上の役割入れ替え
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // ⚠️ 印1で決定した役割を維持するため、無効化
+    // Step 2後の最新状態を取得
+    const honmeiAfterSwap = race.horses.find(h => h.role === '本命');
+    const taikouAfterSwap = race.horses.find(h => h.role === '対抗');
+    const tananaAfterSwap = race.horses.find(h => h.role === '単穴');
+    const renkaTopAfterSwap = race.horses.find(h => h.role === '連下最上位');
+
+    // 対抗と単穴が存在し、差が4点以上の場合
+    if (taikouAfterSwap && tananaAfterSwap &&
+        (taikouAfterSwap.rawScore - tananaAfterSwap.rawScore >= 4)) {
+      // 対抗→連下最上位、単穴→対抗、連下最上位→単穴
+      taikouAfterSwap.role = '連下最上位';
+      tananaAfterSwap.role = '対抗';
+      if (renkaTopAfterSwap) {
+        renkaTopAfterSwap.role = '単穴';
+      }
+    }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Step 4: 連下3頭制限（連下最上位は保持）
@@ -201,31 +139,7 @@ export function adjustPrediction(normalized, options = {}) {
     // 結果: 連下最上位(1頭) + 連下(最大3頭) + 補欠(残り)
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // Step 5: 絶対軸判定
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-    // 全調整処理後の本命を再取得
-    const finalHonmei = race.horses.find(h => h.role === '本命');
-    const finalTaikou = race.horses.find(h => h.role === '対抗');
-
-    if (finalHonmei) {
-      // 条件1: 本命が19点または20点
-      if (finalHonmei.rawScore === 19 || finalHonmei.rawScore === 20) {
-        race.isAbsoluteAxis = true;
-      }
-      // 条件2: 本命と対抗の差が4点以上
-      else if (finalTaikou && (finalHonmei.rawScore - finalTaikou.rawScore >= 4)) {
-        race.isAbsoluteAxis = true;
-      }
-      else {
-        race.isAbsoluteAxis = false;
-      }
-    } else {
-      race.isAbsoluteAxis = false;
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // Step 6: 表示用印の割り当て
+    // Step 5: 表示用印の割り当て
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     for (const horse of race.horses) {
       horse.mark = getRoleMark(horse.role);
@@ -253,7 +167,6 @@ export function getAdjustmentSummary(race) {
   const mu = race.horses.filter(h => h.role === '無');
 
   return {
-    isAbsoluteAxis: race.isAbsoluteAxis,
     honmei: honmei ? `${honmei.number} ${honmei.name} (${honmei.rawScore}点)` : 'なし',
     taikou: taikou ? `${taikou.number} ${taikou.name} (${taikou.rawScore}点)` : 'なし',
     tananaCount: tanana.length,

@@ -129,8 +129,7 @@ export function normalizeDetailed(input) {
       raceInfo, // レース詳細情報を追加
       horses,
       bettingLines,
-      hasHorseData: horses.length > 0,
-      isAbsoluteAxis: null // adjustPrediction()で計算
+      hasHorseData: horses.length > 0
     };
   });
 
@@ -161,8 +160,7 @@ export function normalizeSimple(input) {
       raceName: race.raceName || '',
       horses: [], // 馬データなし
       bettingLines: race.bettingLines || null,
-      hasHorseData: false,
-      isAbsoluteAxis: null // 判定不可
+      hasHorseData: false
     };
   });
 
@@ -192,64 +190,15 @@ export function normalizePrediction(input) {
 }
 
 /**
- * JRA用の簡易調整（roleをそのまま保持、displayScoreとmarkのみ生成）
- *
- * @param {Object} normalized - 正規化済み予想データ
- * @returns {Object} 簡易調整済み予想データ
- */
-function simpleAdjustForJRA(normalized) {
-  const adjusted = JSON.parse(JSON.stringify(normalized));
-
-  function getRoleMark(role) {
-    const markMap = {
-      '本命': '◎',
-      '対抗': '○',
-      '単穴': '▲',
-      '連下最上位': '△',
-      '連下': '△',
-      '補欠': '×',
-      '無': '-'
-    };
-    return markMap[role] || '-';
-  }
-
-  for (const race of adjusted.races) {
-    if (!race.horses || race.horses.length === 0) {
-      race.hasHorseData = false;
-      race.isAbsoluteAxis = null;
-      continue;
-    }
-
-    // displayScore計算とmark生成のみ
-    for (const horse of race.horses) {
-      // displayScore計算
-      if (horse.rawScore > 0) {
-        horse.displayScore = horse.rawScore + 70;
-      } else {
-        horse.displayScore = 0;
-      }
-
-      // mark生成（roleから）
-      horse.mark = getRoleMark(horse.role);
-    }
-
-    race.hasHorseData = true;
-    race.isAbsoluteAxis = null; // JRAでは絶対軸判定なし
-  }
-
-  return adjusted;
-}
-
-/**
  * 正規化 + 調整ルール適用
  *
  * hasHorseData=true の場合のみ adjustPrediction() を適用
+ * 南関・中央競馬共通のロジックを使用
  *
  * @param {Object} input - 詳細 or シンプルフォーマットJSON
- * @param {Object} options - adjustPrediction()に渡すオプション { skipMark1Override: boolean }
  * @returns {Object} Adjusted NormalizedPrediction
  */
-export function normalizeAndAdjust(input, options = {}) {
+export function normalizeAndAdjust(input) {
   const normalized = normalizePrediction(input);
 
   // hasHorseData=true のレースのみ調整ルール適用
@@ -259,11 +208,6 @@ export function normalizeAndAdjust(input, options = {}) {
     return normalized;
   }
 
-  // JRA用の簡易調整（roleを変更せず、displayScoreとmarkのみ生成）
-  if (options.skipMark1Override === true) {
-    return simpleAdjustForJRA(normalized);
-  }
-
-  // 南関用の通常調整（印1による上書きあり）
-  return adjustPrediction(normalized, options);
+  // 南関・中央競馬共通の調整ルール適用
+  return adjustPrediction(normalized);
 }

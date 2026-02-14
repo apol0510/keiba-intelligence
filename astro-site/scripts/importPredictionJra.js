@@ -160,7 +160,7 @@ async function importPrediction(date, venue = 'jra') {
         races: venueData.races
       };
 
-      const normalized = normalizeAndAdjust(singleVenueData, { skipMark1Override: false });
+      const normalized = normalizeAndAdjust(singleVenueData);
       normalizedVenues.push(normalized);
 
       console.log(`   ✅ ${normalized.venue}: ${normalized.totalRaces}レース`);
@@ -184,7 +184,7 @@ async function importPrediction(date, venue = 'jra') {
 
   // 単一会場の場合（従来フォーマット）
   console.log(`⚙️  正規化 + 調整ルール適用中...`);
-  const normalizedAndAdjusted = normalizeAndAdjust(sharedJSON, { skipMark1Override: false });
+  const normalizedAndAdjusted = normalizeAndAdjust(sharedJSON);
 
   console.log(`✅ 正規化完了`);
   console.log(`   - 開催日: ${normalizedAndAdjusted.date}`);
