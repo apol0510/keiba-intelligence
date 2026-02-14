@@ -486,9 +486,17 @@ function generateUmatanBets(horses) {
                     </div>
 
                     {sortedHorses.map((horse) => {
-                      const roleClass = horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : horse.role === '単穴' ? 'tanana' : 'other';
-                      const roleMark = horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : horse.role === '単穴' ? '▲' : '△';
-                      const m = horse.metrics;
+                      const roleClass = horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : horse.role === '単穴' ? 'tanana' : horse.role === '連下最上位' ? 'renka-top' : horse.role === '連下' ? 'renka' : horse.role === '補欠' ? 'hoketsu' : 'other';
+                      const roleMark = horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : horse.role === '単穴' ? '▲' : horse.role === '連下最上位' ? '△' : horse.role === '連下' ? '△' : horse.role === '補欠' ? '☆' : '';
+
+                      // metricsフィールドがない場合のフォールバック
+                      const m = horse.metrics || {
+                        winProbability: Math.round(horse.pt * 0.8),
+                        modelCertainty: Math.round(horse.pt * 0.9),
+                        riskLevel: horse.role === '本命' || horse.role === '対抗' ? 'Low' : horse.role === '単穴' ? 'Medium' : 'High',
+                        expectedValue: (horse.pt / 10).toFixed(2),
+                        volatility: horse.role === '本命' ? '低' : horse.role === '対抗' ? '中' : '高'
+                      };
 
                       return (
                         <div class={`detailed-horse-card ${roleClass}`}>
@@ -894,89 +902,75 @@ function generateUmatanBets(horses) {
       letter-spacing: 1px;
     }
 
-    .betting-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: var(--spacing-md);
+    .betting-formula {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-lg);
       margin-bottom: var(--spacing-lg);
     }
 
-    .bet-card {
+    .formula-row {
       background: var(--bg-tertiary);
       padding: var(--spacing-lg);
       border-radius: var(--radius-md);
       border: 2px solid var(--border-color);
-      transition: all 0.3s;
-    }
-
-    .bet-card.confidence-high {
-      border-color: #10b981;
-      box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
-    }
-
-    .bet-card.confidence-medium {
-      border-color: #f59e0b;
-      box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
-    }
-
-    .bet-card.confidence-low {
-      border-color: #6b7280;
-    }
-
-    .bet-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-    }
-
-    .bet-header {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: var(--spacing-md);
+      flex-direction: column;
+      gap: var(--spacing-sm);
     }
 
-    .bet-number {
+    .formula-row.honmei-axis {
+      border-color: #3b82f6;
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+    }
+
+    .formula-row.taikou-axis {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+    }
+
+    .formula-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .axis-mark {
+      font-size: 1.5rem;
+      font-weight: 900;
+    }
+
+    .honmei-axis .axis-mark {
+      color: #3b82f6;
+    }
+
+    .taikou-axis .axis-mark {
+      color: #8b5cf6;
+    }
+
+    .axis-text {
       font-size: 0.875rem;
       font-weight: 700;
       color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
-    .bet-confidence {
-      padding: 2px 8px;
-      border-radius: 8px;
-      font-size: 0.7rem;
+    .axis-horse-name {
+      font-size: 0.95rem;
       font-weight: 700;
-      letter-spacing: 0.5px;
+      color: var(--text-primary);
+      margin-left: var(--spacing-xs);
     }
 
-    .bet-confidence.high {
-      background: rgba(16, 185, 129, 0.2);
-      color: #10b981;
-    }
-
-    .bet-confidence.medium {
-      background: rgba(245, 158, 11, 0.2);
-      color: #f59e0b;
-    }
-
-    .bet-confidence.low {
-      background: rgba(107, 114, 128, 0.2);
-      color: #9ca3af;
-    }
-
-    .bet-main {
-      margin-bottom: var(--spacing-md);
-    }
-
-    .bet-horses {
+    .formula-content {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: var(--spacing-md);
-      margin-bottom: var(--spacing-sm);
+      gap: var(--spacing-sm);
+      flex-wrap: wrap;
     }
 
-    .bet-first, .bet-second {
+    .axis-number {
       font-size: 2rem;
       font-weight: 900;
       color: #60a5fa;
@@ -985,25 +979,54 @@ function generateUmatanBets(horses) {
       background: rgba(96, 165, 250, 0.15);
       border: 2px solid rgba(96, 165, 250, 0.4);
       border-radius: var(--radius-sm);
+      min-width: 60px;
+      text-align: center;
     }
 
-    .bet-arrow {
+    .formula-arrow {
       font-size: 1.5rem;
-      color: var(--text-secondary);
+      color: #fbbf24;
+      font-weight: 900;
+      margin: 0 var(--spacing-xs);
     }
 
-    .bet-names {
-      text-align: center;
-      font-size: 0.875rem;
+    .opponents-list {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .opponent-number {
+      font-size: 1.25rem;
+      font-weight: 800;
       color: var(--text-primary);
-      font-weight: 600;
+      font-family: 'Courier New', monospace;
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      min-width: 35px;
+      text-align: center;
     }
 
-    .bet-reasoning {
-      font-size: 0.75rem;
+    .opponent-number.optional {
+      opacity: 0.7;
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .opponent-separator {
+      font-size: 1.25rem;
       color: var(--text-tertiary);
-      text-align: center;
-      font-style: italic;
+      margin: 0 2px;
+    }
+
+    .opponent-paren {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin: 0 4px;
     }
 
     .betting-note {
