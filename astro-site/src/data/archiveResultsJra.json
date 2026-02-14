@@ -1,7 +1,12 @@
 [
   {
     "date": "2026-02-14",
-    "venue": "JRA統合",
+    "venue": "京都・小倉・東京",
+    "venues": [
+      "京都",
+      "小倉",
+      "東京"
+    ],
     "totalRaces": 36,
     "hitRaces": 25,
     "missRaces": 11,
@@ -14,6 +19,7 @@
       {
         "raceNumber": 1,
         "raceName": "3歳未勝利",
+        "venue": "京都",
         "result": {
           "first": {
             "number": 10,
@@ -45,6 +51,7 @@
       {
         "raceNumber": 2,
         "raceName": "3歳未勝利",
+        "venue": "京都",
         "result": {
           "first": {
             "number": 15,
@@ -77,6 +84,7 @@
       {
         "raceNumber": 3,
         "raceName": "3歳未勝利",
+        "venue": "京都",
         "result": {
           "first": {
             "number": 6,
@@ -109,6 +117,7 @@
       {
         "raceNumber": 4,
         "raceName": "3歳未勝利",
+        "venue": "京都",
         "result": {
           "first": {
             "number": 10,
@@ -140,6 +149,7 @@
       {
         "raceNumber": 5,
         "raceName": "3歳",
+        "venue": "京都",
         "result": {
           "first": {
             "number": 11,
@@ -171,6 +181,7 @@
       {
         "raceNumber": 6,
         "raceName": "3歳未勝利",
+        "venue": "京都",
         "result": {
           "first": {
             "number": 9,
@@ -202,6 +213,7 @@
       {
         "raceNumber": 7,
         "raceName": "4歳以上1勝クラス",
+        "venue": "京都",
         "result": {
           "first": {
             "number": 14,
@@ -231,6 +243,7 @@
       {
         "raceNumber": 8,
         "raceName": "4歳以上2勝クラス",
+        "venue": "京都",
         "result": {
           "first": {
             "number": 1,
@@ -262,6 +275,7 @@
       {
         "raceNumber": 9,
         "raceName": "1勝クラス",
+        "venue": "京都",
         "result": {
           "first": {
             "number": 1,
@@ -293,6 +307,7 @@
       {
         "raceNumber": 10,
         "raceName": "飛鳥ステークス",
+        "venue": "京都",
         "result": {
           "first": {
             "number": 2,
@@ -324,6 +339,7 @@
       {
         "raceNumber": 11,
         "raceName": "洛陽ステークスリステッド",
+        "venue": "京都",
         "result": {
           "first": {
             "number": 11,
@@ -355,6 +371,7 @@
       {
         "raceNumber": 12,
         "raceName": "4歳以上1勝クラス",
+        "venue": "京都",
         "result": {
           "first": {
             "number": 8,
@@ -386,6 +403,7 @@
       {
         "raceNumber": 1,
         "raceName": "3歳未勝利",
+        "venue": "小倉",
         "result": {
           "first": {
             "number": 16,
@@ -417,6 +435,7 @@
       {
         "raceNumber": 2,
         "raceName": "3歳未勝利",
+        "venue": "小倉",
         "result": {
           "first": {
             "number": 1,
@@ -448,6 +467,7 @@
       {
         "raceNumber": 3,
         "raceName": "3歳未勝利",
+        "venue": "小倉",
         "result": {
           "first": {
             "number": 12,
@@ -477,6 +497,7 @@
       {
         "raceNumber": 4,
         "raceName": "障害4歳以上未勝利",
+        "venue": "小倉",
         "result": {
           "first": {
             "number": 8,
@@ -508,6 +529,7 @@
       {
         "raceNumber": 5,
         "raceName": "3歳未勝利",
+        "venue": "小倉",
         "result": {
           "first": {
             "number": 6,
@@ -537,6 +559,7 @@
       {
         "raceNumber": 6,
         "raceName": "4歳以上1勝クラス",
+        "venue": "小倉",
         "result": {
           "first": {
             "number": 11,
@@ -566,6 +589,7 @@
       {
         "raceNumber": 7,
         "raceName": "4歳以上1勝クラス",
+        "venue": "小倉",
         "result": {
           "first": {
             "number": 16,
@@ -598,6 +622,7 @@
       {
         "raceNumber": 8,
         "raceName": "第28回小倉ジャンプステークスJ･GⅢ",
+        "venue": "小倉",
         "result": {
           "first": {
             "number": 10,
@@ -629,6 +654,7 @@
       {
         "raceNumber": 9,
         "raceName": "1勝クラス",
+        "venue": "小倉",
         "result": {
           "first": {
             "number": 2,
@@ -661,6 +687,7 @@
       {
         "raceNumber": 10,
         "raceName": "伊万里特別",
+        "venue": "小倉",
         "result": {
           "first": {
             "number": 2,
@@ -690,6 +717,7 @@
       {
         "raceNumber": 11,
         "raceName": "下関ステークス",
+        "venue": "小倉",
         "result": {
           "first": {
             "number": 16,
@@ -722,6 +750,7 @@
       {
         "raceNumber": 12,
         "raceName": "4歳以上1勝クラス",
+        "venue": "小倉",
         "result": {
           "first": {
             "number": 12,
@@ -751,6 +780,7 @@
       {
         "raceNumber": 1,
         "raceName": "3歳未勝利",
+        "venue": "東京",
         "result": {
           "first": {
             "number": 14,
@@ -782,6 +812,7 @@
       {
         "raceNumber": 2,
         "raceName": "4歳以上1勝クラス",
+        "venue": "東京",
         "result": {
           "first": {
             "number": 5,
@@ -813,6 +844,7 @@
       {
         "raceNumber": 3,
         "raceName": "3歳未勝利",
+        "venue": "東京",
         "result": {
           "first": {
             "number": 16,
@@ -844,6 +876,7 @@
       {
         "raceNumber": 4,
         "raceName": "3歳",
+        "venue": "東京",
         "result": {
           "first": {
             "number": 11,
@@ -873,6 +906,7 @@
       {
         "raceNumber": 5,
         "raceName": "3歳未勝利",
+        "venue": "東京",
         "result": {
           "first": {
             "number": 6,
@@ -904,6 +938,7 @@
       {
         "raceNumber": 6,
         "raceName": "3歳未勝利",
+        "venue": "東京",
         "result": {
           "first": {
             "number": 8,
@@ -935,6 +970,7 @@
       {
         "raceNumber": 7,
         "raceName": "3歳1勝クラス",
+        "venue": "東京",
         "result": {
           "first": {
             "number": 10,
@@ -964,6 +1000,7 @@
       {
         "raceNumber": 8,
         "raceName": "4歳以上2勝クラス",
+        "venue": "東京",
         "result": {
           "first": {
             "number": 2,
@@ -993,6 +1030,7 @@
       {
         "raceNumber": 9,
         "raceName": "箱根特別",
+        "venue": "東京",
         "result": {
           "first": {
             "number": 7,
@@ -1024,6 +1062,7 @@
       {
         "raceNumber": 10,
         "raceName": "銀蹄ステークス",
+        "venue": "東京",
         "result": {
           "first": {
             "number": 12,
@@ -1053,6 +1092,7 @@
       {
         "raceNumber": 11,
         "raceName": "第61回デイリー杯クイーンカップGⅢ",
+        "venue": "東京",
         "result": {
           "first": {
             "number": 1,
@@ -1084,6 +1124,7 @@
       {
         "raceNumber": 12,
         "raceName": "4歳以上1勝クラス",
+        "venue": "東京",
         "result": {
           "first": {
             "number": 16,
@@ -1111,6 +1152,6 @@
         }
       }
     ],
-    "verifiedAt": "2026-02-14T11:38:16.713Z"
+    "verifiedAt": "2026-02-14T11:48:19.957Z"
   }
 ]

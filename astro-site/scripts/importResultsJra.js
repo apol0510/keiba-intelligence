@@ -286,6 +286,7 @@ function verifyResults(prediction, results) {
     raceResults.push({
       raceNumber,
       raceName: race.raceName,
+      venue: raceVenue, // 会場情報を追加
       result: {
         first: { number: first.number, name: first.name },
         second: { number: second.number, name: second.name },
@@ -360,9 +361,14 @@ function saveArchive(date, venue, raceResults) {
   // 最終的な回収率（小数点1桁）
   const finalReturnRate = returnRate.toFixed(1);
 
+  // 会場リストを取得（重複排除・ソート）
+  const venues = [...new Set(raceResults.map(r => r.venue))].sort();
+  const venueDisplay = venues.join('・');
+
   const newEntry = {
     date,
-    venue,
+    venue: venueDisplay, // "京都・小倉・東京" のように表示
+    venues: venues, // 配列として保存
     totalRaces,
     hitRaces,
     missRaces: totalRaces - hitRaces,
@@ -385,6 +391,7 @@ function saveArchive(date, venue, raceResults) {
   writeFileSync(archivePath, JSON.stringify(archive, null, 2), 'utf-8');
   console.log(`\n💾 アーカイブ保存完了: ${archivePath}`);
   console.log(`   日付: ${date}`);
+  console.log(`   会場: ${venueDisplay}`);
   console.log(`   的中: ${hitRaces}/${totalRaces}R (${hitRate}%)`);
   console.log(`   買い目: ${betPointsPerRace}点/レース`);
   console.log(`   投資額: ${betAmount.toLocaleString()}円`);
@@ -504,11 +511,32 @@ async function main() {
     // 4. アーカイブ保存
     const archiveEntry = saveArchive(date, venue, raceResults);
 
+    // 会場別統計を計算
+    const venueStats = new Map();
+    raceResults.forEach(race => {
+      const v = race.venue;
+      if (!venueStats.has(v)) {
+        venueStats.set(v, { total: 0, hit: 0, payout: 0 });
+      }
+      const stat = venueStats.get(v);
+      stat.total++;
+      if (race.isHit) {
+        stat.hit++;
+        stat.payout += race.umatan.payout || 0;
+      }
+    });
+
     console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`✅ 的中判定完了！`);
+    console.log(`   会場: ${archiveEntry.venue}`);
     console.log(`   的中: ${archiveEntry.hitRaces}R / ${archiveEntry.totalRaces}R`);
     console.log(`   的中率: ${archiveEntry.hitRate}%`);
-    console.log(`   買い目: ${archiveEntry.betPointsPerRace}点/レース`);
+    console.log(`\n   【会場別実績】`);
+    venueStats.forEach((stat, venueName) => {
+      const hitRate = stat.total > 0 ? ((stat.hit / stat.total) * 100).toFixed(1) : '0.0';
+      console.log(`   - ${venueName}: ${stat.hit}/${stat.total}R (${hitRate}%) 払戻: ${stat.payout.toLocaleString()}円`);
+    });
+    console.log(`\n   買い目: ${archiveEntry.betPointsPerRace}点/レース`);
     console.log(`   投資額: ${archiveEntry.betAmount.toLocaleString()}円`);
     console.log(`   払戻額: ${archiveEntry.totalPayout.toLocaleString()}円`);
     console.log(`   回収率: ${archiveEntry.returnRate}%`);
