@@ -176,8 +176,19 @@ function checkUmatanHit(bettingLine, result) {
 function verifyResults(prediction, results) {
   const raceResults = [];
 
-  // 予想データの形式を判定（新形式 or 旧形式）
-  const predictionRaces = prediction.predictions || prediction.races || [];
+  // 予想データの形式を判定（新形式 venues[] or 旧形式 predictions/races[]）
+  let predictionRaces = [];
+  if (prediction.venues && Array.isArray(prediction.venues)) {
+    // 新形式: venues[].predictions[] を全て展開
+    for (const venueData of prediction.venues) {
+      if (venueData.predictions && Array.isArray(venueData.predictions)) {
+        predictionRaces = predictionRaces.concat(venueData.predictions);
+      }
+    }
+  } else {
+    // 旧形式: predictions or races
+    predictionRaces = prediction.predictions || prediction.races || [];
+  }
 
   for (const race of results.races) {
     const raceNumber = race.raceNumber;
