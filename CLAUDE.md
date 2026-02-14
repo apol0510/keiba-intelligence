@@ -692,9 +692,19 @@ const honmeiMark1 = race.horses.find(h => h.mark1 === '◎');
 const taikouMark1 = race.horses.find(h => h.mark1 === '○');
 const tananaMark1 = race.horses.find(h => h.mark1 === '▲');
 
-if (honmeiMark1) honmeiMark1.role = '本命'; // 強制上書き
-if (taikouMark1) taikouMark1.role = '対抗';
-if (tananaMark1) tananaMark1.role = '単穴';
+// 本命（◎）はそのまま
+if (honmeiMark1) honmeiMark1.role = '本命';
+
+// 対抗（○）と単穴（▲）はrawScoreで比較
+if (taikouMark1 && tananaMark1) {
+  if (taikouMark1.rawScore >= tananaMark1.rawScore) {
+    taikouMark1.role = '対抗'; // ○の方が高い→そのまま
+    tananaMark1.role = '単穴';
+  } else {
+    taikouMark1.role = '単穴'; // ▲の方が高い→入れ替え
+    tananaMark1.role = '対抗';
+  }
+}
 ```
 
 #### **中央競馬（JRA）**
@@ -719,6 +729,8 @@ const adjusted = normalizeAndAdjust(normalized, { skipMark1Override: true });
 
 ```
 Step 0: 印1を基準に本命・対抗・単穴を決定
+  - 印1◎ → 本命
+  - 印1○と印1▲ → rawScoreを比較して高い方を対抗、低い方を単穴
   ↓
 Step 1: displayScore計算（rawScore + 70）
   ↓

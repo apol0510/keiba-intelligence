@@ -4,6 +4,9 @@
  * 正規化された予想データに対して調整ルールを適用
  *
  * 調整内容:
+ * 0. 印1を基準に本命・対抗・単穴を決定（独自予想）
+ *    - 印1◎ → 本命
+ *    - 印1○と印1▲ → rawScoreを比較して高い方を対抗、低い方を単穴
  * 1. displayScore計算（rawScore + 70、0点は0のまま）
  * 2. 本命15点以下の降格処理（本命→単穴、対抗→本命）
  * 3. 差4点以上の役割入れ替え（対抗→連下最上位、単穴→対抗、連下最上位→単穴）
@@ -61,6 +64,8 @@ export function adjustPrediction(normalized, options = {}) {
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Step 0: 印1を基準に本命・対抗・単穴を決定（独自予想）
+    // - 印1◎ → 本命
+    // - 印1○と印1▲ → rawScoreを比較して高い方を対抗、低い方を単穴
     // ⚠️ JRAデータの場合はスキップ（assignmentフィールドを保持）
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -91,13 +96,29 @@ export function adjustPrediction(normalized, options = {}) {
     }
 
     // Step 0-3: 印1がある馬を本命・対抗・単穴に設定（強制上書き）
+
+    // 本命（◎）はそのまま
     if (honmeiMark1) {
       honmeiMark1.role = '本命';
     }
-    if (taikouMark1) {
+
+    // 対抗（○）と単穴（▲）はrawScoreで比較して入れ替え
+    if (taikouMark1 && tananaMark1) {
+      // 両方存在する場合、rawScoreを比較
+      if (taikouMark1.rawScore >= tananaMark1.rawScore) {
+        // ○の方が高い or 同点 → そのまま
+        taikouMark1.role = '対抗';
+        tananaMark1.role = '単穴';
+      } else {
+        // ▲の方が高い → 入れ替え
+        taikouMark1.role = '単穴';
+        tananaMark1.role = '対抗';
+      }
+    } else if (taikouMark1) {
+      // ○のみ存在
       taikouMark1.role = '対抗';
-    }
-    if (tananaMark1) {
+    } else if (tananaMark1) {
+      // ▲のみ存在
       tananaMark1.role = '単穴';
     }
 

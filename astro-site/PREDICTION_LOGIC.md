@@ -201,16 +201,51 @@ Step 6: 表示用印の割り当て（◎○▲△×-）
 
 **目的**: 記者印1（◎○▲）を優先し、本命・対抗・単穴を強制的に決定
 
+**ロジック**:
+1. 印1◎ → 本命（そのまま）
+2. 印1○と印1▲ → rawScoreを比較
+   - rawScoreが高い方 → 対抗
+   - rawScoreが低い方 → 単穴
+
 ```javascript
 // 印1が有効な馬を検出
 const honmeiMark1 = race.horses.find(h => h.mark1 === '◎');
 const taikouMark1 = race.horses.find(h => h.mark1 === '○');
 const tananaMark1 = race.horses.find(h => h.mark1 === '▲');
 
-// 印1がある馬を本命・対抗・単穴に設定（強制上書き）
-if (honmeiMark1) honmeiMark1.role = '本命';
-if (taikouMark1) taikouMark1.role = '対抗';
-if (tananaMark1) tananaMark1.role = '単穴';
+// 本命（◎）はそのまま
+if (honmeiMark1) {
+  honmeiMark1.role = '本命';
+}
+
+// 対抗（○）と単穴（▲）はrawScoreで比較して入れ替え
+if (taikouMark1 && tananaMark1) {
+  if (taikouMark1.rawScore >= tananaMark1.rawScore) {
+    // ○の方が高い or 同点 → そのまま
+    taikouMark1.role = '対抗';
+    tananaMark1.role = '単穴';
+  } else {
+    // ▲の方が高い → 入れ替え
+    taikouMark1.role = '単穴';
+    tananaMark1.role = '対抗';
+  }
+} else if (taikouMark1) {
+  taikouMark1.role = '対抗';
+} else if (tananaMark1) {
+  tananaMark1.role = '単穴';
+}
+```
+
+**具体例**:
+```
+印1○の馬: rawScore 12点
+印1▲の馬: rawScore 15点
+
+→ ▲の方が高い → 入れ替え
+
+結果:
+対抗: 印1▲の馬（15点）
+単穴: 印1○の馬（12点）
 ```
 
 **重要**:
