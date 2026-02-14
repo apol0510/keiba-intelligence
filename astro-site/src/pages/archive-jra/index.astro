@@ -109,7 +109,7 @@ const pageDescription = `中央競馬（JRA）の全的中実績アーカイブ�
       ) : (
         <section class="months-grid">
           {allMonths.map((monthData) => (
-            <a href={`/archive/${monthData.year}/${monthData.month}/`} class="month-card">
+            <a href={`/archive-jra/${monthData.year}/${monthData.month}/`} class="month-card">
               <div class="month-header">
                 <h2 class="month-title">{monthData.displayMonth}</h2>
                 <div class="month-badge">{monthData.daysCount}日開催</div>
