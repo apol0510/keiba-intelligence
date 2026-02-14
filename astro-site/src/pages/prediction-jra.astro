@@ -170,59 +170,57 @@ function generateAdvancedMetrics(horse, allHorses) {
   };
 }
 
-// 馬単買い目を生成する関数
+// 馬単買い目を生成する関数（横並び馬番号形式）
 function generateUmatanBets(horses) {
   // pt値でソート（降順）
   const sortedHorses = [...horses].sort((a, b) => b.pt - a.pt);
 
-  // 本命（1着軸）・対抗・単穴を特定
+  // 本命・対抗・単穴を特定
   const honmei = sortedHorses.find(h => h.role === '本命');
   const taikou = sortedHorses.find(h => h.role === '対抗');
-  const tanana = sortedHorses.find(h => h.role === '単穴');
+  const tananaList = sortedHorses.filter(h => h.role === '単穴');
 
-  if (!honmei) return [];
+  if (!honmei || !taikou) return null;
 
-  // 買い目生成（本命軸の馬単）
-  const bets = [];
+  // 連下候補（連下最上位・連下・補欠のみ）
+  const renkaList = sortedHorses.filter(h =>
+    h.role === '連下最上位' || h.role === '連下' || h.role === '補欠'
+  );
 
-  // 本命→対抗
-  if (taikou) {
-    bets.push({
-      first: honmei.horseNumber,
-      second: taikou.horseNumber,
-      horseName: `${honmei.horseName} → ${taikou.horseName}`,
-      confidence: 'High',
-      reasoning: 'AI本命からの最有力パターン'
-    });
-  }
+  // 相手馬リスト作成
+  const buildOpponents = (axis) => {
+    const opponents = [];
 
-  // 本命→単穴
-  if (tanana) {
-    bets.push({
-      first: honmei.horseNumber,
-      second: tanana.horseNumber,
-      horseName: `${honmei.horseName} → ${tanana.horseName}`,
-      confidence: 'Medium',
-      reasoning: 'AI本命からの穴狙いパターン'
-    });
-  }
+    // 軸が本命の場合：対抗→単穴→連下
+    // 軸が対抗の場合：本命→単穴→連下
+    if (axis === 'honmei') {
+      opponents.push(taikou.horseNumber);
+      tananaList.forEach(h => opponents.push(h.horseNumber));
+      renkaList.forEach(h => opponents.push(h.horseNumber));
+    } else {
+      opponents.push(honmei.horseNumber);
+      tananaList.forEach(h => opponents.push(h.horseNumber));
+      renkaList.forEach(h => opponents.push(h.horseNumber));
+    }
 
-  // 本命→その他上位馬（連下候補）
-  const renkaKouho = sortedHorses.filter(h =>
-    h.role !== '本命' && h.role !== '対抗' && h.role !== '単穴' && h.pt >= 70
-  ).slice(0, 2); // 上位2頭まで
+    return opponents;
+  };
 
-  renkaKouho.forEach(horse => {
-    bets.push({
-      first: honmei.horseNumber,
-      second: horse.horseNumber,
-      horseName: `${honmei.horseName} → ${horse.horseName}`,
-      confidence: 'Low',
-      reasoning: 'AIスコア上位からの保険パターン'
-    });
-  });
+  const honmeiOpponents = buildOpponents('honmei');
+  const taikouOpponents = buildOpponents('taikou');
 
-  return bets.slice(0, 5); // 最大5点
+  return {
+    honmei: {
+      axis: honmei.horseNumber,
+      axisName: honmei.horseName,
+      opponents: honmeiOpponents
+    },
+    taikou: {
+      axis: taikou.horseNumber,
+      axisName: taikou.horseName,
+      opponents: taikouOpponents
+    }
+  };
 }
 ---
 
@@ -401,38 +399,83 @@ function generateUmatanBets(horses) {
                   </div>
 
                   <!-- 買い目セクション（プロ会員限定）-->
-                  <div class="betting-section pro-exclusive">
-                    <div class="section-header">
-                      <div class="header-icon">💰</div>
-                      <h2>AI Recommended Betting Strategy / AI推奨馬単買い目</h2>
-                      <span class="pro-tag">PRO限定</span>
-                    </div>
+                  {umatanBets && (
+                    <div class="betting-section pro-exclusive">
+                      <div class="section-header">
+                        <div class="header-icon">💰</div>
+                        <h2>AI Recommended Betting Strategy / AI推奨馬単買い目</h2>
+                        <span class="pro-tag">PRO限定</span>
+                      </div>
 
-                    <div class="betting-grid">
-                      {umatanBets.map((bet, betIndex) => (
-                        <div class={`bet-card confidence-${bet.confidence.toLowerCase()}`}>
-                          <div class="bet-header">
-                            <span class="bet-number">#{betIndex + 1}</span>
-                            <span class={`bet-confidence ${bet.confidence.toLowerCase()}`}>{bet.confidence}</span>
+                      <div class="betting-formula">
+                        <!-- 本命軸 -->
+                        <div class="formula-row honmei-axis">
+                          <div class="formula-header">
+                            <span class="axis-mark">◎</span>
+                            <span class="axis-text">本命</span>
+                            <span class="axis-horse-name">{umatanBets.honmei.axisName}</span>
                           </div>
-                          <div class="bet-main">
-                            <div class="bet-horses">
-                              <span class="bet-first">{bet.first}</span>
-                              <span class="bet-arrow">→</span>
-                              <span class="bet-second">{bet.second}</span>
-                            </div>
-                            <div class="bet-names">{bet.horseName}</div>
+                          <div class="formula-content">
+                            <span class="axis-number">{umatanBets.honmei.axis}</span>
+                            <span class="formula-arrow">⇔</span>
+                            <span class="opponents-list">
+                              {umatanBets.honmei.opponents.slice(0, 5).map((num, idx) => (
+                                <>
+                                  <span class="opponent-number">{num}</span>
+                                  {idx < Math.min(4, umatanBets.honmei.opponents.length - 1) && <span class="opponent-separator">.</span>}
+                                </>
+                              ))}
+                              {umatanBets.honmei.opponents.length > 5 && (
+                                <>
+                                  <span class="opponent-paren">(</span>
+                                  {umatanBets.honmei.opponents.slice(5).map((num, idx) => (
+                                    <>
+                                      <span class="opponent-number optional">{num}</span>
+                                      {idx < umatanBets.honmei.opponents.slice(5).length - 1 && <span class="opponent-separator">.</span>}
+                                    </>
+                                  ))}
+                                  <span class="opponent-paren">)</span>
+                                </>
+                              )}
+                            </span>
                           </div>
-                          <div class="bet-reasoning">{bet.reasoning}</div>
                         </div>
-                      ))}
-                    </div>
 
-                    <div class="betting-note">
-                      <p><strong>💡 推奨購入法:</strong> AI信頼度（Confidence）に応じて購入金額を調整することで、期待値を最大化します。</p>
-                      <p><strong>High:</strong> 基準額の2倍 | <strong>Medium:</strong> 基準額 | <strong>Low:</strong> 基準額の0.5倍</p>
+                        <!-- 対抗軸 -->
+                        <div class="formula-row taikou-axis">
+                          <div class="formula-header">
+                            <span class="axis-mark">○</span>
+                            <span class="axis-text">対抗</span>
+                            <span class="axis-horse-name">{umatanBets.taikou.axisName}</span>
+                          </div>
+                          <div class="formula-content">
+                            <span class="axis-number">{umatanBets.taikou.axis}</span>
+                            <span class="formula-arrow">⇔</span>
+                            <span class="opponents-list">
+                              {umatanBets.taikou.opponents.slice(0, 5).map((num, idx) => (
+                                <>
+                                  <span class="opponent-number">{num}</span>
+                                  {idx < Math.min(4, umatanBets.taikou.opponents.length - 1) && <span class="opponent-separator">.</span>}
+                                </>
+                              ))}
+                              {umatanBets.taikou.opponents.length > 5 && (
+                                <>
+                                  <span class="opponent-paren">(</span>
+                                  {umatanBets.taikou.opponents.slice(5).map((num, idx) => (
+                                    <>
+                                      <span class="opponent-number optional">{num}</span>
+                                      {idx < umatanBets.taikou.opponents.slice(5).length - 1 && <span class="opponent-separator">.</span>}
+                                    </>
+                                  ))}
+                                  <span class="opponent-paren">)</span>
+                                </>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <!-- 詳細分析テーブル（全馬表示）-->
                   <div class="analysis-section">
