@@ -1,0 +1,587 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
+
+export const prerender = false;
+
+const { year } = Astro.params;
+
+// archiveResults.jsonから該当年のデータを取得
+const archivePath = join(process.cwd(), 'src', 'data', 'archiveResults.json');
+let yearData = [];
+let yearStats = {
+  totalDays: 0,
+  totalRaces: 0,
+  totalHitRaces: 0,
+  totalBetAmount: 0,
+  totalPayout: 0,
+  hitRate: 0,
+  returnRate: 0,
+  bestMonth: null,
+  worstMonth: null,
+};
+let monthlyStats = {};
+
+try {
+  if (existsSync(archivePath)) {
+    const fileContent = readFileSync(archivePath, 'utf-8');
+    const allData = JSON.parse(fileContent);
+
+    // 該当年のデータを抽出
+    yearData = allData.filter(entry => {
+      const [entryYear] = entry.date.split('-');
+      return entryYear === year;
+    }).sort((a, b) => b.date.localeCompare(a.date)); // 降順ソート
+
+    // 年間統計を計算
+    yearData.forEach(entry => {
+      yearStats.totalDays++;
+      yearStats.totalRaces += entry.totalRaces;
+      yearStats.totalHitRaces += entry.hitRaces;
+      yearStats.totalBetAmount += entry.betAmount;
+      yearStats.totalPayout += entry.totalPayout;
+
+      // 月別統計
+      const [, month] = entry.date.split('-');
+      if (!monthlyStats[month]) {
+        monthlyStats[month] = {
+          month,
+          totalDays: 0,
+          totalRaces: 0,
+          totalHitRaces: 0,
+          totalBetAmount: 0,
+          totalPayout: 0,
+          hitRate: 0,
+          returnRate: 0,
+        };
+      }
+
+      monthlyStats[month].totalDays++;
+      monthlyStats[month].totalRaces += entry.totalRaces;
+      monthlyStats[month].totalHitRaces += entry.hitRaces;
+      monthlyStats[month].totalBetAmount += entry.betAmount;
+      monthlyStats[month].totalPayout += entry.totalPayout;
+    });
+
+    // 月別統計の的中率・回収率計算
+    Object.values(monthlyStats).forEach(month => {
+      if (month.totalRaces > 0) {
+        month.hitRate = ((month.totalHitRaces / month.totalRaces) * 100).toFixed(1);
+      }
+      if (month.totalBetAmount > 0) {
+        month.returnRate = ((month.totalPayout / month.totalBetAmount) * 100).toFixed(1);
+      }
+
+      // 最高・最低回収率の月
+      if (!yearStats.bestMonth || parseFloat(month.returnRate) > parseFloat(yearStats.bestMonth.returnRate)) {
+        yearStats.bestMonth = month;
+      }
+      if (!yearStats.worstMonth || parseFloat(month.returnRate) < parseFloat(yearStats.worstMonth.returnRate)) {
+        yearStats.worstMonth = month;
+      }
+    });
+
+    // 年間統計の的中率・回収率計算
+    if (yearStats.totalRaces > 0) {
+      yearStats.hitRate = ((yearStats.totalHitRaces / yearStats.totalRaces) * 100).toFixed(1);
+    }
+    if (yearStats.totalBetAmount > 0) {
+      yearStats.returnRate = ((yearStats.totalPayout / yearStats.totalBetAmount) * 100).toFixed(1);
+    }
+  }
+} catch (error) {
+  console.error('Error loading archive:', error);
+}
+
+const pageTitle = yearData.length > 0
+  ? `${year}年 的中実績アーカイブ`
+  : '的中実績が見つかりません';
+
+const pageDescription = yearData.length > 0
+  ? `${year}年の的中実績。開催日数${yearStats.totalDays}日、年間的中率${yearStats.hitRate}%、年間回収率${yearStats.returnRate}%、年間合計配当¥${yearStats.totalPayout.toLocaleString()}`
+  : '南関競馬の的中実績アーカイブ';
+---
+
+<BaseLayout title={pageTitle} description={pageDescription}>
+  <main class="year-archive-page">
+    <div class="container">
+      {yearData.length === 0 ? (
+        <div class="no-data">
+          <h1>⚠️ データが見つかりません</h1>
+          <p>{year}年の的中実績はまだありません。</p>
+          <a href="/results" class="btn-back">的中実績一覧へ戻る</a>
+        </div>
+      ) : (
+        <>
+          {/* ページヘッダー */}
+          <header class="page-header">
+            <div class="breadcrumb">
+              <a href="/results">的中実績</a>
+              <span>/</span>
+              <span>{year}年</span>
+            </div>
+            <h1>{year}年 的中実績アーカイブ</h1>
+          </header>
+
+          {/* 年間サマリー統計 */}
+          <section class="summary-section">
+            <h2>年間サマリー</h2>
+            <div class="summary-grid">
+              <div class="summary-card">
+                <div class="summary-label">開催日数</div>
+                <div class="summary-value">{yearStats.totalDays}日</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">年間的中率</div>
+                <div class="summary-value highlight">{yearStats.hitRate}%</div>
+                <div class="summary-detail">{yearStats.totalHitRaces}/{yearStats.totalRaces}R</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">年間回収率</div>
+                <div class={`summary-value ${parseFloat(yearStats.returnRate) >= 100 ? 'profit' : 'loss'}`}>
+                  {yearStats.returnRate}%
+                </div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">年間合計配当</div>
+                <div class="summary-value profit">¥{yearStats.totalPayout.toLocaleString()}</div>
+              </div>
+            </div>
+          </section>
+
+          {/* ハイライト */}
+          {yearStats.bestMonth && yearStats.worstMonth && (
+            <section class="highlights-section">
+              <h2>ハイライト</h2>
+              <div class="highlights-grid">
+                <div class="highlight-card best">
+                  <div class="highlight-icon">🏆</div>
+                  <div class="highlight-label">最高回収率の月</div>
+                  <div class="highlight-value">{yearStats.bestMonth.returnRate}%</div>
+                  <div class="highlight-date">
+                    <a href={`/archive/${year}/${yearStats.bestMonth.month}`}>
+                      {year}年{yearStats.bestMonth.month}月
+                    </a>
+                  </div>
+                </div>
+                <div class="highlight-card worst">
+                  <div class="highlight-icon">📉</div>
+                  <div class="highlight-label">最低回収率の月</div>
+                  <div class="highlight-value">{yearStats.worstMonth.returnRate}%</div>
+                  <div class="highlight-date">
+                    <a href={`/archive/${year}/${yearStats.worstMonth.month}`}>
+                      {year}年{yearStats.worstMonth.month}月
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* 月別統計 */}
+          <section class="monthly-section">
+            <h2>月別統計</h2>
+            <div class="monthly-grid">
+              {Object.values(monthlyStats).sort((a, b) => b.month.localeCompare(a.month)).map((month) => (
+                <a
+                  href={`/archive/${year}/${month.month}`}
+                  class="month-card"
+                >
+                  <div class="month-header">
+                    <span class="month-label">{month.month}月</span>
+                    <span class="month-days">{month.totalDays}日</span>
+                  </div>
+                  <div class="month-stats">
+                    <div class="stat-row">
+                      <span class="stat-label">的中率</span>
+                      <span class="stat-value highlight">{month.hitRate}%</span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-label">回収率</span>
+                      <span class={`stat-value ${parseFloat(month.returnRate) >= 100 ? 'profit' : 'loss'}`}>
+                        {month.returnRate}%
+                      </span>
+                    </div>
+                    <div class="stat-row">
+                      <span class="stat-label">配当</span>
+                      <span class="stat-value profit">¥{month.totalPayout.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div class="month-detail">
+                    {month.totalHitRaces}/{month.totalRaces}R的中
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+
+          {/* フッターナビ */}
+          <footer class="page-footer">
+            <a href="/results" class="btn-back">← 的中実績一覧へ戻る</a>
+          </footer>
+        </>
+      )}
+    </div>
+  </main>
+</BaseLayout>
+
+<style lang="scss">
+  .year-archive-page {
+    min-height: 100vh;
+    padding: var(--spacing-2xl) 0;
+    background: var(--bg-primary);
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-lg);
+  }
+
+  /* データなし */
+  .no-data {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: var(--spacing-md);
+      color: var(--text-primary);
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xl);
+    }
+  }
+
+  /* ページヘッダー */
+  .page-header {
+    margin-bottom: var(--spacing-2xl);
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-md);
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+
+      a {
+        color: #60a5fa;
+        text-decoration: none;
+        transition: color var(--transition-fast);
+
+        &:hover {
+          color: #93c5fd;
+        }
+      }
+
+      span {
+        color: var(--text-tertiary);
+      }
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+  }
+
+  /* サマリーセクション */
+  .summary-section {
+    margin-bottom: var(--spacing-2xl);
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-lg);
+      color: var(--text-primary);
+    }
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+  }
+
+  .summary-card {
+    text-align: center;
+    padding: var(--spacing-xl);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    transition: all var(--transition-normal);
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .summary-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-sm);
+      font-weight: 500;
+    }
+
+    .summary-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-xs);
+
+      &.highlight {
+        color: #60a5fa;
+      }
+
+      &.profit {
+        color: #10b981;
+      }
+
+      &.loss {
+        color: #ef4444;
+      }
+    }
+
+    .summary-detail {
+      font-size: 0.875rem;
+      color: var(--text-tertiary);
+    }
+  }
+
+  /* ハイライトセクション */
+  .highlights-section {
+    margin-bottom: var(--spacing-2xl);
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-lg);
+      color: var(--text-primary);
+    }
+  }
+
+  .highlights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+  }
+
+  .highlight-card {
+    text-align: center;
+    padding: var(--spacing-xl);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 2px solid var(--border-color);
+    transition: all var(--transition-normal);
+
+    &.best {
+      border-color: rgba(251, 191, 36, 0.5);
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, var(--bg-secondary) 50%);
+    }
+
+    &.worst {
+      border-color: rgba(239, 68, 68, 0.3);
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, var(--bg-secondary) 50%);
+    }
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .highlight-icon {
+      font-size: 3rem;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .highlight-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-sm);
+      font-weight: 500;
+    }
+
+    .highlight-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .highlight-date {
+      font-size: 0.875rem;
+
+      a {
+        color: #60a5fa;
+        text-decoration: none;
+        transition: color var(--transition-fast);
+
+        &:hover {
+          color: #93c5fd;
+        }
+      }
+    }
+  }
+
+  /* 月別セクション */
+  .monthly-section {
+    margin-bottom: var(--spacing-2xl);
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-lg);
+      color: var(--text-primary);
+    }
+  }
+
+  .monthly-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--spacing-lg);
+  }
+
+  .month-card {
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-lg);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    text-decoration: none;
+    transition: all var(--transition-normal);
+
+    &:hover {
+      background: var(--bg-tertiary);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      border-color: rgba(96, 165, 250, 0.4);
+    }
+
+    .month-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: var(--spacing-md);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+
+      .month-label {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #60a5fa;
+      }
+
+      .month-days {
+        font-size: 0.875rem;
+        color: var(--text-tertiary);
+      }
+    }
+
+    .month-stats {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-md);
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .stat-label {
+          font-size: 0.875rem;
+          color: var(--text-secondary);
+        }
+
+        .stat-value {
+          font-size: 1.125rem;
+          font-weight: 700;
+          color: var(--text-primary);
+
+          &.highlight {
+            color: #60a5fa;
+          }
+
+          &.profit {
+            color: #10b981;
+          }
+
+          &.loss {
+            color: #ef4444;
+          }
+        }
+      }
+    }
+
+    .month-detail {
+      font-size: 0.875rem;
+      color: var(--text-tertiary);
+      text-align: center;
+      padding-top: var(--spacing-sm);
+      border-top: 1px solid var(--border-color);
+    }
+  }
+
+  /* フッター */
+  .page-footer {
+    margin-top: var(--spacing-2xl);
+    padding-top: var(--spacing-2xl);
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+  }
+
+  .btn-back {
+    display: inline-block;
+    padding: var(--spacing-md) var(--spacing-xl);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    font-weight: 600;
+    transition: all var(--transition-normal);
+
+    &:hover {
+      background: var(--bg-tertiary);
+      transform: translateY(-2px);
+    }
+  }
+
+  /* レスポンシブ */
+  @media (max-width: 768px) {
+    .page-header h1 {
+      font-size: 1.5rem;
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .summary-card {
+      padding: var(--spacing-lg);
+
+      .summary-value {
+        font-size: 1.5rem;
+      }
+    }
+
+    .highlights-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .monthly-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

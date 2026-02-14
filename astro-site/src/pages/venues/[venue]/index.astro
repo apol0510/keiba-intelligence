@@ -1,0 +1,607 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
+
+export const prerender = false;
+
+const { venue } = Astro.params;
+
+// 会場名マッピング（URLパラメータ → 日本語表記）
+const venueMap = {
+  'funabashi': '船橋',
+  'kawasaki': '川崎',
+  'ooi': '大井',
+  'urawa': '浦和',
+};
+
+const venueName = venueMap[venue] || venue;
+
+// archiveResults.jsonから該当会場のデータを取得
+const archivePath = join(process.cwd(), 'src', 'data', 'archiveResults.json');
+let venueData = [];
+let venueStats = {
+  totalDays: 0,
+  totalRaces: 0,
+  totalHitRaces: 0,
+  totalBetAmount: 0,
+  totalPayout: 0,
+  hitRate: 0,
+  returnRate: 0,
+  bestDay: null,
+  worstDay: null,
+  highestPayout: null,
+};
+
+try {
+  if (existsSync(archivePath)) {
+    const fileContent = readFileSync(archivePath, 'utf-8');
+    const allData = JSON.parse(fileContent);
+
+    // 該当会場のデータを抽出（新しい順にソート）
+    venueData = allData.filter(entry => entry.venue === venueName)
+      .sort((a, b) => b.date.localeCompare(a.date)); // 降順ソート
+
+    // 会場統計を計算
+    venueData.forEach(entry => {
+      venueStats.totalDays++;
+      venueStats.totalRaces += entry.totalRaces;
+      venueStats.totalHitRaces += entry.hitRaces;
+      venueStats.totalBetAmount += entry.betAmount;
+      venueStats.totalPayout += entry.totalPayout;
+
+      // 最高回収率の日
+      if (!venueStats.bestDay || entry.returnRate > venueStats.bestDay.returnRate) {
+        venueStats.bestDay = entry;
+      }
+
+      // 最低回収率の日
+      if (!venueStats.worstDay || entry.returnRate < venueStats.worstDay.returnRate) {
+        venueStats.worstDay = entry;
+      }
+
+      // 最高配当の日
+      if (!venueStats.highestPayout || entry.totalPayout > venueStats.highestPayout.totalPayout) {
+        venueStats.highestPayout = entry;
+      }
+    });
+
+    if (venueStats.totalRaces > 0) {
+      venueStats.hitRate = ((venueStats.totalHitRaces / venueStats.totalRaces) * 100).toFixed(1);
+    }
+    if (venueStats.totalBetAmount > 0) {
+      venueStats.returnRate = ((venueStats.totalPayout / venueStats.totalBetAmount) * 100).toFixed(1);
+    }
+  }
+} catch (error) {
+  console.error('Error loading archive:', error);
+}
+
+const pageTitle = venueData.length > 0
+  ? `${venueName}競馬 的中実績・統計データ`
+  : `${venueName}競馬 的中実績`;
+
+const pageDescription = venueData.length > 0
+  ? `${venueName}競馬の的中実績。開催日数${venueStats.totalDays}日、通算的中率${venueStats.hitRate}%、通算回収率${venueStats.returnRate}%、通算合計配当¥${venueStats.totalPayout.toLocaleString()}`
+  : `${venueName}競馬の的中実績・統計データ`;
+---
+
+<BaseLayout title={pageTitle} description={pageDescription}>
+  <main class="venue-page">
+    <div class="container">
+      {venueData.length === 0 ? (
+        <div class="no-data">
+          <h1>⚠️ データが見つかりません</h1>
+          <p>{venueName}競馬の的中実績はまだありません。</p>
+          <a href="/results" class="btn-back">的中実績一覧へ戻る</a>
+        </div>
+      ) : (
+        <>
+          {/* ページヘッダー */}
+          <header class="page-header">
+            <div class="breadcrumb">
+              <a href="/results">的中実績</a>
+              <span>/</span>
+              <span>{venueName}競馬</span>
+            </div>
+            <h1>{venueName}競馬 的中実績</h1>
+            <div class="meta">
+              <span class="venue-badge">{venueName}</span>
+              <span class="days-badge">{venueStats.totalDays}日開催</span>
+            </div>
+          </header>
+
+          {/* 通算統計 */}
+          <section class="summary-section">
+            <h2>通算統計</h2>
+            <div class="summary-grid">
+              <div class="summary-card">
+                <div class="summary-label">開催日数</div>
+                <div class="summary-value">{venueStats.totalDays}日</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">通算的中率</div>
+                <div class="summary-value highlight">{venueStats.hitRate}%</div>
+                <div class="summary-detail">{venueStats.totalHitRaces}/{venueStats.totalRaces}R</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">通算回収率</div>
+                <div class={`summary-value ${parseFloat(venueStats.returnRate) >= 100 ? 'profit' : 'loss'}`}>
+                  {venueStats.returnRate}%
+                </div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">通算合計配当</div>
+                <div class="summary-value profit">¥{venueStats.totalPayout.toLocaleString()}</div>
+              </div>
+            </div>
+          </section>
+
+          {/* ハイライト記録 */}
+          {venueStats.bestDay && (
+            <section class="highlights-section">
+              <h2>ハイライト記録</h2>
+              <div class="highlights-grid">
+                {venueStats.bestDay && (
+                  <div class="highlight-card best">
+                    <div class="highlight-icon">🏆</div>
+                    <div class="highlight-label">最高回収率</div>
+                    <div class="highlight-value">{venueStats.bestDay.returnRate}%</div>
+                    <div class="highlight-date">
+                      <a href={`/results/${venueStats.bestDay.date.split('-')[0]}/${venueStats.bestDay.date.split('-')[1]}/${venueStats.bestDay.date.split('-')[2]}`}>
+                        {venueStats.bestDay.date}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {venueStats.highestPayout && (
+                  <div class="highlight-card payout">
+                    <div class="highlight-icon">💰</div>
+                    <div class="highlight-label">最高配当</div>
+                    <div class="highlight-value">¥{venueStats.highestPayout.totalPayout.toLocaleString()}</div>
+                    <div class="highlight-date">
+                      <a href={`/results/${venueStats.highestPayout.date.split('-')[0]}/${venueStats.highestPayout.date.split('-')[1]}/${venueStats.highestPayout.date.split('-')[2]}`}>
+                        {venueStats.highestPayout.date}
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* 開催履歴 */}
+          <section class="history-section">
+            <h2>開催履歴</h2>
+            <div class="history-list">
+              {venueData.map((dayData) => {
+                const [year, month, day] = dayData.date.split('-');
+
+                return (
+                  <a
+                    href={`/results/${year}/${month}/${day}`}
+                    class="history-card"
+                  >
+                    <div class="history-date">
+                      <span class="date-day">{month}/{day}</span>
+                      <span class="date-year">{year}</span>
+                    </div>
+                    <div class="history-stats">
+                      <div class="stat-item">
+                        <span class="stat-label">的中率</span>
+                        <span class="stat-value highlight">{dayData.hitRate}%</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">回収率</span>
+                        <span class={`stat-value ${dayData.returnRate >= 100 ? 'profit' : 'loss'}`}>
+                          {dayData.returnRate}%
+                        </span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">配当</span>
+                        <span class="stat-value profit">¥{dayData.totalPayout.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div class="history-detail">
+                      <span>{dayData.hitRaces}/{dayData.totalRaces}R的中</span>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* フッターナビ */}
+          <footer class="page-footer">
+            <a href="/results" class="btn-back">← 的中実績一覧へ戻る</a>
+          </footer>
+        </>
+      )}
+    </div>
+  </main>
+</BaseLayout>
+
+<style lang="scss">
+  .venue-page {
+    min-height: 100vh;
+    padding: var(--spacing-2xl) 0;
+    background: var(--bg-primary);
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-lg);
+  }
+
+  /* データなし */
+  .no-data {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: var(--spacing-md);
+      color: var(--text-primary);
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xl);
+    }
+  }
+
+  /* ページヘッダー */
+  .page-header {
+    margin-bottom: var(--spacing-2xl);
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-md);
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+
+      a {
+        color: #60a5fa;
+        text-decoration: none;
+        transition: color var(--transition-fast);
+
+        &:hover {
+          color: #93c5fd;
+        }
+      }
+
+      span:not(.venue-badge):not(.days-badge) {
+        color: var(--text-tertiary);
+      }
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: var(--spacing-md);
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .meta {
+      display: flex;
+      gap: var(--spacing-md);
+      flex-wrap: wrap;
+
+      .venue-badge,
+      .days-badge {
+        padding: var(--spacing-xs) var(--spacing-md);
+        background: rgba(96, 165, 250, 0.15);
+        border: 1px solid rgba(96, 165, 250, 0.3);
+        border-radius: var(--radius-sm);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #60a5fa;
+      }
+    }
+  }
+
+  /* 通算統計セクション */
+  .summary-section {
+    margin-bottom: var(--spacing-2xl);
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-lg);
+      color: var(--text-primary);
+    }
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+  }
+
+  .summary-card {
+    text-align: center;
+    padding: var(--spacing-xl);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    transition: all var(--transition-normal);
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .summary-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-sm);
+      font-weight: 500;
+    }
+
+    .summary-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-xs);
+
+      &.highlight {
+        color: #60a5fa;
+      }
+
+      &.profit {
+        color: #10b981;
+      }
+
+      &.loss {
+        color: #ef4444;
+      }
+    }
+
+    .summary-detail {
+      font-size: 0.875rem;
+      color: var(--text-tertiary);
+    }
+  }
+
+  /* ハイライト記録セクション */
+  .highlights-section {
+    margin-bottom: var(--spacing-2xl);
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-lg);
+      color: var(--text-primary);
+    }
+  }
+
+  .highlights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+  }
+
+  .highlight-card {
+    text-align: center;
+    padding: var(--spacing-xl);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 2px solid var(--border-color);
+    transition: all var(--transition-normal);
+
+    &.best {
+      border-color: rgba(251, 191, 36, 0.5);
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, var(--bg-secondary) 50%);
+    }
+
+    &.payout {
+      border-color: rgba(16, 185, 129, 0.5);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, var(--bg-secondary) 50%);
+    }
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .highlight-icon {
+      font-size: 3rem;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .highlight-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-sm);
+      font-weight: 500;
+    }
+
+    .highlight-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .highlight-date {
+      font-size: 0.875rem;
+
+      a {
+        color: #60a5fa;
+        text-decoration: none;
+        transition: color var(--transition-fast);
+
+        &:hover {
+          color: #93c5fd;
+        }
+      }
+    }
+  }
+
+  /* 開催履歴セクション */
+  .history-section {
+    margin-bottom: var(--spacing-2xl);
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-lg);
+      color: var(--text-primary);
+    }
+  }
+
+  .history-list {
+    display: grid;
+    gap: var(--spacing-md);
+  }
+
+  .history-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: var(--spacing-lg);
+    align-items: center;
+    padding: var(--spacing-lg);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    text-decoration: none;
+    transition: all var(--transition-normal);
+
+    &:hover {
+      background: var(--bg-tertiary);
+      transform: translateX(8px);
+      border-color: rgba(96, 165, 250, 0.4);
+    }
+
+    .history-date {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--spacing-md);
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: var(--radius-md);
+      min-width: 80px;
+
+      .date-day {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #60a5fa;
+      }
+
+      .date-year {
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+      }
+    }
+
+    .history-stats {
+      display: flex;
+      gap: var(--spacing-xl);
+
+      .stat-item {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-xs);
+
+        .stat-label {
+          font-size: 0.75rem;
+          color: var(--text-tertiary);
+        }
+
+        .stat-value {
+          font-size: 1.125rem;
+          font-weight: 700;
+          color: var(--text-primary);
+
+          &.highlight {
+            color: #60a5fa;
+          }
+
+          &.profit {
+            color: #10b981;
+          }
+
+          &.loss {
+            color: #ef4444;
+          }
+        }
+      }
+    }
+
+    .history-detail {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      text-align: right;
+    }
+  }
+
+  /* フッター */
+  .page-footer {
+    margin-top: var(--spacing-2xl);
+    padding-top: var(--spacing-2xl);
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+  }
+
+  .btn-back {
+    display: inline-block;
+    padding: var(--spacing-md) var(--spacing-xl);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    font-weight: 600;
+    transition: all var(--transition-normal);
+
+    &:hover {
+      background: var(--bg-tertiary);
+      transform: translateY(-2px);
+    }
+  }
+
+  /* レスポンシブ */
+  @media (max-width: 768px) {
+    .page-header h1 {
+      font-size: 1.5rem;
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .summary-card {
+      padding: var(--spacing-lg);
+
+      .summary-value {
+        font-size: 1.5rem;
+      }
+    }
+
+    .highlights-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .history-card {
+      grid-template-columns: 1fr;
+      gap: var(--spacing-md);
+
+      .history-stats {
+        flex-wrap: wrap;
+        gap: var(--spacing-md);
+      }
+
+      .history-detail {
+        text-align: left;
+      }
+    }
+  }
+</style>
