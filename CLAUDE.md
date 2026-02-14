@@ -50,39 +50,36 @@ cd "/Users/apolon/Projects/keiba-intelligence/astro-site"
 - `astro-site/` ディレクトリ内の全ファイル
 - `CLAUDE.md`, `DESIGN.md`, `README.md`（親ディレクトリ）
 
-#### **❌ 絶対禁止の操作**
-- `/Users/apolon/Projects/nankan-analytics/` への一切のアクセス ⚠️
-- `/Users/apolon/Projects/nankan-analytics-pro/` への一切のアクセス
-- `/Users/apolon/Projects/nankan-beginner/` への一切のアクセス
-- `/Users/apolon/Projects/nankan-course/` への一切のアクセス
-- `/Users/apolon/Projects/keiba-matome-monorepo/` への一切のアクセス
-- `/Users/apolon/Projects/keiba-nyumon/` への一切のアクセス
-- `/Users/apolon/Projects/keiba-review-monorepo/` への一切のアクセス
-- 親ディレクトリ `/Users/apolon/Projects/` の直接走査・検索
+#### **⚠️ 注意事項**
+- 他の競馬プロジェクト（nankan-analytics等）への**アクセスは可能**
+- マコさんの**明示的な指示があれば実行も可能**
+- 基本的には `keiba-intelligence` プロジェクト内での作業を推奨
+- 親ディレクトリ `/Users/apolon/Projects/` の直接走査・検索は慎重に実施
 
-### **ファイル検索時の制約**
+### **ファイル検索時の推奨方法**
 
 ```bash
-# ❌ 絶対禁止（親ディレクトリまで検索）
-grep -r "pattern" /Users/apolon/Projects/
-
-# ❌ 絶対禁止（相対パスで親に遡る）
-cd ../
-grep -r "pattern" ../
-
-# ✅ 正しい方法（プロジェクト内のみ検索）
+# ✅ 推奨（プロジェクト内のみ検索）
 grep -r "pattern" /Users/apolon/Projects/keiba-intelligence/astro-site/
 grep -r "pattern" ./src/
+
+# ⚠️ 慎重に実施（親ディレクトリまで検索）
+# マコさんの明示的な指示があれば実行可能
+grep -r "pattern" /Users/apolon/Projects/
+
+# ⚠️ 慎重に実施（相対パスで親に遡る）
+# マコさんの明示的な指示があれば実行可能
+cd ../
+grep -r "pattern" ../
 ```
 
-### **間違ったプロジェクトを参照した場合**
+### **他プロジェクトを参照する場合**
 
-**即座に以下を実行：**
+**マコさんの明示的な指示があれば実行可能：**
 
-1. **停止**: 現在の操作を中断
-2. **報告**: 「⚠️ 警告：間違ったプロジェクト（[プロジェクト名]）を参照しました」
-3. **修正**: 正しいディレクトリに移動
-4. **再確認**: `pwd` と `git remote -v` で検証
+1. **確認**: 指示内容を確認
+2. **実行**: 指示通りに実行
+3. **報告**: 実行内容と結果を報告
 
 ---
 
