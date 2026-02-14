@@ -126,6 +126,33 @@ function loadPrediction(date, venue) {
 }
 
 /**
+ * 買い目の点数を計算
+ */
+function calculateBettingPoints(bettingLine) {
+  // 買い目解析: "9-16.13.2.3.8.11(抑え12.4.5.6.14.15.10)"
+  const match = bettingLine.match(/^(\d+)-(.+)$/);
+  if (!match) return 0;
+
+  const aitePart = match[2];
+
+  // 本線相手馬を抽出
+  const mainPart = aitePart.replace(/\(抑え.+\)/, '');
+  const mainAite = mainPart.split('.').filter(n => n.match(/^\d+$/));
+  const mainPoints = mainAite.length;
+
+  // 抑え馬を抽出
+  let osaePoints = 0;
+  const osaeMatch = aitePart.match(/\(抑え([0-9.]+)\)/);
+  if (osaeMatch) {
+    const osaeAite = osaeMatch[1].split('.').filter(n => n.match(/^\d+$/));
+    osaePoints = osaeAite.length;
+  }
+
+  // 合計点数（本線 + 抑え）
+  return mainPoints + osaePoints;
+}
+
+/**
  * 馬単の的中判定
  */
 function checkUmatanHit(bettingLine, result) {
@@ -215,6 +242,9 @@ function verifyResults(prediction, results) {
     const bettingLines = predRace.bettingLines?.umatan || [];
     const hits = bettingLines.filter(line => checkUmatanHit(line, race));
 
+    // 買い目点数を計算（全ラインの合計）
+    const totalPoints = bettingLines.reduce((sum, line) => sum + calculateBettingPoints(line), 0);
+
     const first = race.results[0];
     const second = race.results[1];
     const third = race.results[2];
@@ -233,6 +263,7 @@ function verifyResults(prediction, results) {
         third: { number: third.number, name: third.name }
       },
       bettingLines,
+      bettingPoints: totalPoints,
       isHit: hits.length > 0,
       hitLines: hits,
       umatan: {
