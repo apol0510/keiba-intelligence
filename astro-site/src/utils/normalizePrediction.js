@@ -13,7 +13,7 @@
  * 3. normalizeAndAdjust(input) - 正規化 + 調整ルール適用
  */
 
-import { adjustPredictionNankan, adjustPredictionJRA } from './adjustPrediction.js';
+import { adjustPrediction } from './adjustPrediction.js';
 
 /**
  * 競馬場名から競馬場コードに変換
@@ -190,59 +190,25 @@ export function normalizePrediction(input) {
 }
 
 /**
- * 正規化 + 調整ルール適用（南関競馬用）
+ * 正規化 + 調整ルール適用
+ * 南関競馬・中央競馬（JRA）共通のロジック
  *
- * hasHorseData=true の場合のみ adjustPredictionNankan() を適用
- * 印1（◎○▲）を基準に本命・対抗・単穴を決定
- *
- * @param {Object} input - 詳細 or シンプルフォーマットJSON
- * @returns {Object} Adjusted NormalizedPrediction
- */
-export function normalizeAndAdjustNankan(input) {
-  const normalized = normalizePrediction(input);
-
-  // hasHorseData=true のレースのみ調整ルール適用
-  const hasAnyHorseData = normalized.races.some(race => race.hasHorseData);
-
-  if (!hasAnyHorseData) {
-    return normalized;
-  }
-
-  // 南関競馬用の調整ルール適用
-  return adjustPredictionNankan(normalized);
-}
-
-/**
- * 正規化 + 調整ルール適用（中央競馬JRA用）
- *
- * hasHorseData=true の場合のみ adjustPredictionJRA() を適用
- * assignmentをそのまま保持（印1による上書きなし）
- *
- * @param {Object} input - 詳細 or シンプルフォーマットJSON
- * @returns {Object} Adjusted NormalizedPrediction
- */
-export function normalizeAndAdjustJRA(input) {
-  const normalized = normalizePrediction(input);
-
-  // hasHorseData=true のレースのみ調整ルール適用
-  const hasAnyHorseData = normalized.races.some(race => race.hasHorseData);
-
-  if (!hasAnyHorseData) {
-    return normalized;
-  }
-
-  // 中央競馬用の調整ルール適用
-  return adjustPredictionJRA(normalized);
-}
-
-/**
- * 互換性のための旧関数名（南関用として動作）
- * @deprecated 新規コードでは normalizeAndAdjustNankan() または normalizeAndAdjustJRA() を使用してください
+ * hasHorseData=true の場合のみ adjustPrediction() を適用
+ * assignmentをそのまま保持（元データでassignmentと印1は既に一致）
  *
  * @param {Object} input - 詳細 or シンプルフォーマットJSON
  * @returns {Object} Adjusted NormalizedPrediction
  */
 export function normalizeAndAdjust(input) {
-  // デフォルトは南関用ロジック
-  return normalizeAndAdjustNankan(input);
+  const normalized = normalizePrediction(input);
+
+  // hasHorseData=true のレースのみ調整ルール適用
+  const hasAnyHorseData = normalized.races.some(race => race.hasHorseData);
+
+  if (!hasAnyHorseData) {
+    return normalized;
+  }
+
+  // 南関・JRA共通の調整ルール適用
+  return adjustPrediction(normalized);
 }

@@ -674,93 +674,47 @@ try {
 
 ## 🤖 **予想ロジック** 🤖
 
-### **重要な違い：南関 vs 中央**
+### **南関競馬・中央競馬（JRA）共通処理**
 
 **詳細は `PREDICTION_LOGIC.md` を参照してください。**
 
-#### **南関競馬（独自予想）**
+#### **統一ロジック**
 
-- **調整方式**: `adjustPrediction()` 完全適用
-- **印1の扱い**: 印1（◎○▲）で本命・対抗・単穴を**強制決定**
-- **role変更**: あり（印1優先、連下3頭制限）
-- **絶対軸判定**: あり（19/20点 or 差4点以上）
-- **買い目**: 1ライン or 2ライン（絶対軸判定による）
-
-```javascript
-// 南関のStep 0: 印1を基準に本命・対抗・単穴を決定
-const honmeiMark1 = race.horses.find(h => h.mark1 === '◎');
-const taikouMark1 = race.horses.find(h => h.mark1 === '○');
-const tananaMark1 = race.horses.find(h => h.mark1 === '▲');
-
-// 本命（◎）はそのまま
-if (honmeiMark1) honmeiMark1.role = '本命';
-
-// 対抗（○）と単穴（▲）はrawScoreで比較
-if (taikouMark1 && tananaMark1) {
-  if (taikouMark1.rawScore >= tananaMark1.rawScore) {
-    taikouMark1.role = '対抗'; // ○の方が高い→そのまま
-    tananaMark1.role = '単穴';
-  } else {
-    taikouMark1.role = '単穴'; // ▲の方が高い→入れ替え
-    tananaMark1.role = '対抗';
-  }
-}
-```
-
-#### **中央競馬（JRA）**
-
-- **調整方式**: `simpleAdjustForJRA()` 簡易適用
-- **印1の扱い**: 無視（assignmentをそのまま保持）
-- **role変更**: なし（assignmentを一切変更しない）
-- **絶対軸判定**: なし（常に null）
+- **調整方式**: `adjustPrediction()` 統一適用
+- **assignment使用**: 元データのassignmentをそのまま保持
+- **印1の扱い**: 無視（元データでassignmentと印1は既に一致）
+- **role変更**: あり（本命15点以下の降格処理、連下3頭制限）
 - **買い目**: 2ライン固定（本命-相手、対抗-相手）
 
-```javascript
-// ❌ 間違い（中央競馬で印1を使う）
-const adjusted = adjustPrediction(normalized);
-// → assignmentが消えて、印1で上書きされる（バグ！）
-
-// ✅ 正解（中央競馬でassignmentを保持）
-const adjusted = normalizeAndAdjust(normalized, { skipMark1Override: true });
-// → simpleAdjustForJRA()が呼ばれ、assignmentを保持
-```
-
-#### **調整ルールの流れ（南関のみ）**
+#### **調整ルールの流れ**
 
 ```
-Step 0: 印1を基準に本命・対抗・単穴を決定
-  - 印1◎ → 本命
-  - 印1○と印1▲ → rawScoreを比較して高い方を対抗、低い方を単穴
+Step 0: assignmentをそのまま使用
+  - 元データでassignmentと印1は既に一致している
   ↓
 Step 1: displayScore計算（rawScore + 70）
   ↓
-Step 2: 本命15点以下の降格処理（無効化）
+Step 2: 本命15点以下の降格処理（本命→単穴、対抗→本命）
   ↓
-Step 3: 差4点以上の役割入れ替え（無効化）
+Step 3: 差4点以上の役割入れ替え（対抗→連下最上位、単穴→対抗、連下最上位→単穴）
   ↓
 Step 4: 連下3頭制限（連下最上位1頭 + 連下最大3頭）
   ↓
-Step 5: 絶対軸判定（19/20点 or 差4点以上）
-  ↓
-Step 6: 表示用印の割り当て（◎○▲△×-）
+Step 5: 表示用印の割り当て（◎○▲△×-）
 ```
 
-#### **絶対軸判定（南関のみ）**
-
-**条件**:
-1. 本命が19点または20点
-2. 本命と対抗の差が4点以上
-
-**効果**:
-- **絶対軸 = true**: 1ライン（本命軸固定）
-- **絶対軸 = false**: 2ライン（本命-相手、対抗-相手）
+#### **元データ検証**
 
 ```javascript
-if (finalHonmei.rawScore === 19 || finalHonmei.rawScore === 20) {
-  race.isAbsoluteAxis = true; // 19/20点なら絶対軸
-} else if (finalTaikou && (finalHonmei.rawScore - finalTaikou.rawScore >= 4)) {
-  race.isAbsoluteAxis = true; // 差4点以上なら絶対軸
-}
+// 南関競馬（船橋3R）
+元データ: 10番=本命（印1◎）、7番=対抗（印1 svg）、8番=単穴（印1○）
+↓
+処理後: 10番=本命、7番=対抗、8番=単穴 ✅ assignmentがそのまま保持
+
+// 中央競馬（京都11R）
+元データ: 6番=本命（印1◎）、2番=対抗（印1○）、8番=単穴（印1▲）
+↓
+処理後: 6番=本命、2番=対抗、8番=単穴 ✅ assignmentがそのまま保持
 ```
 
 ---
@@ -1081,28 +1035,27 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 **🌐 本番URL**: https://keiba-intelligence.netlify.app/
 
 **✨ 本日の成果（2026-02-15）**:
-  - **自動化システム完全復旧（南関・JRA分離ロジック実装）** ✅
-    - **問題発見**: ここ数日、自動化がうまくいかない（adjustPrediction.jsの印1ロジックが削除されていた）
-    - **根本原因特定**:
-      - CLAUDE.md: 「南関は印1（◎○▲）で本命・対抗・単穴を決定」
-      - 実際のコード: 印1ロジックが完全削除され、「JRAと同じassignmentそのまま保持」になっていた
-      - 誤った統一: 「JRAも印1ロジック適用」というコミットで南関・JRA両方が壊れた
-    - **修正内容**（南関・JRA分離アプローチ）:
-      - **adjustPrediction.js**: 2つの関数に分離
-        - `adjustPredictionNankan()`: 南関用（印1◎○▲ロジック適用）
-        - `adjustPredictionJRA()`: JRA用（assignmentそのまま保持）
-      - **normalizePrediction.js**: 2つの関数に分離
-        - `normalizeAndAdjustNankan()`: 南関用
-        - `normalizeAndAdjustJRA()`: JRA用
-      - **importPrediction.js**: `normalizeAndAdjustNankan()` を呼び出し
-      - **importPredictionJra.js**: `normalizeAndAdjustJRA()` を呼び出し
-      - **印1ロジックの重複排除**: 元のassignment（本命・対抗・単穴）を印1で上書き時に自動降格
-        - 元のassignment対抗が印1○以外 → 連下に降格
-        - 元のassignment単穴が印1▲以外 → 連下に降格
+  - **統一処理への完全移行（シンプル化）** ✅
+    - **問題発見**: 南関とJRAで処理を分離する理由がない
+    - **検証結果**:
+      - 元データで `assignment` と `印1` が既に完全一致
+      - 南関もJRAも同じデータ構造（assignment, 印1, PT）
+      - 分離処理は複雑でメンテナンスコストが高い
+    - **修正内容**（統一・シンプル化）:
+      - **adjustPrediction.js**: 印1ロジック完全削除、1つの関数に統一
+        - `adjustPrediction()`: 南関・JRA共通（assignmentそのまま保持）
+      - **normalizePrediction.js**: 分離関数削除、1つの関数に統一
+        - `normalizeAndAdjust()`: 南関・JRA共通
+      - **importPrediction.js**: `normalizeAndAdjust()` を呼び出し
+      - **importPredictionJra.js**: `normalizeAndAdjust()` を呼び出し
     - **テスト結果**:
-      - 南関（2/13船橋）: ✅ 印1○の8番が対抗、元のassignment対抗7番は連下に降格
-      - JRA（2/15京都・小倉・東京）: ✅ assignmentがそのまま保持、印1は無視
-    - **互換性**: 旧関数名（`adjustPrediction()`, `normalizeAndAdjust()`）は南関用として動作（deprecatedマーク付き）
+      - 南関（2/13船橋3R）: ✅ assignment保持（10番=本命、7番=対抗、8番=単穴）
+      - JRA（2/15京都11R）: ✅ assignment保持（6番=本命、2番=対抗、8番=単穴）
+    - **メリット**:
+      - ✅ シンプル（1つのロジックのみ）
+      - ✅ 元データが既に正しい（assignment = 印1）
+      - ✅ メンテナンスが容易
+      - ✅ バグが入りにくい
 
 **✨ 過去の成果（2026-02-14）**:
   - **中央競馬予想ページUI崩れ完全修正 + 再発防止策実装** ✅
