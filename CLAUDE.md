@@ -672,6 +672,87 @@ try {
 
 ---
 
+## 🤖 **予想ロジック** 🤖
+
+### **重要な違い：南関 vs 中央**
+
+**詳細は `PREDICTION_LOGIC.md` を参照してください。**
+
+#### **南関競馬（独自予想）**
+
+- **調整方式**: `adjustPrediction()` 完全適用
+- **印1の扱い**: 印1（◎○▲）で本命・対抗・単穴を**強制決定**
+- **role変更**: あり（印1優先、連下3頭制限）
+- **絶対軸判定**: あり（19/20点 or 差4点以上）
+- **買い目**: 1ライン or 2ライン（絶対軸判定による）
+
+```javascript
+// 南関のStep 0: 印1を基準に本命・対抗・単穴を決定
+const honmeiMark1 = race.horses.find(h => h.mark1 === '◎');
+const taikouMark1 = race.horses.find(h => h.mark1 === '○');
+const tananaMark1 = race.horses.find(h => h.mark1 === '▲');
+
+if (honmeiMark1) honmeiMark1.role = '本命'; // 強制上書き
+if (taikouMark1) taikouMark1.role = '対抗';
+if (tananaMark1) tananaMark1.role = '単穴';
+```
+
+#### **中央競馬（JRA）**
+
+- **調整方式**: `simpleAdjustForJRA()` 簡易適用
+- **印1の扱い**: 無視（assignmentをそのまま保持）
+- **role変更**: なし（assignmentを一切変更しない）
+- **絶対軸判定**: なし（常に null）
+- **買い目**: 2ライン固定（本命-相手、対抗-相手）
+
+```javascript
+// ❌ 間違い（中央競馬で印1を使う）
+const adjusted = adjustPrediction(normalized);
+// → assignmentが消えて、印1で上書きされる（バグ！）
+
+// ✅ 正解（中央競馬でassignmentを保持）
+const adjusted = normalizeAndAdjust(normalized, { skipMark1Override: true });
+// → simpleAdjustForJRA()が呼ばれ、assignmentを保持
+```
+
+#### **調整ルールの流れ（南関のみ）**
+
+```
+Step 0: 印1を基準に本命・対抗・単穴を決定
+  ↓
+Step 1: displayScore計算（rawScore + 70）
+  ↓
+Step 2: 本命15点以下の降格処理（無効化）
+  ↓
+Step 3: 差4点以上の役割入れ替え（無効化）
+  ↓
+Step 4: 連下3頭制限（連下最上位1頭 + 連下最大3頭）
+  ↓
+Step 5: 絶対軸判定（19/20点 or 差4点以上）
+  ↓
+Step 6: 表示用印の割り当て（◎○▲△×-）
+```
+
+#### **絶対軸判定（南関のみ）**
+
+**条件**:
+1. 本命が19点または20点
+2. 本命と対抗の差が4点以上
+
+**効果**:
+- **絶対軸 = true**: 1ライン（本命軸固定）
+- **絶対軸 = false**: 2ライン（本命-相手、対抗-相手）
+
+```javascript
+if (finalHonmei.rawScore === 19 || finalHonmei.rawScore === 20) {
+  race.isAbsoluteAxis = true; // 19/20点なら絶対軸
+} else if (finalTaikou && (finalHonmei.rawScore - finalTaikou.rawScore >= 4)) {
+  race.isAbsoluteAxis = true; // 差4点以上なら絶対軸
+}
+```
+
+---
+
 ## 🔍 **結果判定ロジック** 🔍
 
 ### **重要な違い：南関 vs 中央**
