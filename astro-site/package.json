@@ -9,7 +9,10 @@
     "preview": "astro preview",
     "astro": "astro",
     "import:prediction": "node scripts/importPrediction.js",
-    "import:results": "node scripts/importResults.js"
+    "import:prediction:jra": "node scripts/importPredictionJra.js",
+    "import:results": "node scripts/importResults.js",
+    "import:results:jra": "node scripts/importResultsJra.js",
+    "test:validation": "node scripts/utils/validatePrediction.test.js"
   },
   "dependencies": {
     "@astrojs/netlify": "^6.5.8",
