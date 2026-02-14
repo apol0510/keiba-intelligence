@@ -29,6 +29,9 @@ const projectRoot = join(__dirname, '..');
 // src/utils から正規化関数をインポート
 import { normalizeAndAdjust } from '../src/utils/normalizePrediction.js';
 
+// データ検証関数をインポート
+import { validateJRAPrediction } from './utils/validatePrediction.js';
+
 /**
  * JST（日本時間）の今日の日付を取得
  *
@@ -327,6 +330,17 @@ function savePrediction(date, normalizedAndAdjusted) {
   } else {
     // 単一会場の場合（従来フォーマット）
     convertedData = convertToLegacyFormat(normalizedAndAdjusted, date);
+  }
+
+  // 【再発防止】データ検証を実行
+  console.log(`🔍 データ検証中...`);
+  try {
+    validateJRAPrediction(convertedData);
+    console.log(`   ✅ データ検証成功（本命・対抗・単穴の整合性確認済み）`);
+  } catch (err) {
+    console.error(`\n❌ データ検証失敗:\n${err.message}`);
+    console.error(`\n⚠️  保存を中止します（データ品質保護）`);
+    throw err; // エラーを投げて処理を中断
   }
 
   // JSON文字列化（整形）

@@ -886,7 +886,39 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 **📊 進捗率**: 98%完了（Phase 1: 100%、Phase 2: 100%、Phase 3: 98%）
 **🌐 本番URL**: https://keiba-intelligence.netlify.app/
 
-**✨ 本日の成果（2026-02-13）**:
+**✨ 本日の成果（2026-02-14）**:
+  - **中央競馬予想ページUI崩れ完全修正 + 再発防止策実装** ✅
+    - **問題発見**: 小倉11R「◎○が下部表示」「単穴が複数頭」「買い目デザイン消失」
+    - **根本原因特定**（2つ）:
+      1. adjustPrediction.jsが記者印（marks.印1）でroleを上書き
+         → JRAのassignment（本命・対抗・単穴）が消えた
+      2. importPredictionJra.jsで「連下最上位→単穴」に強制変換
+         → 15番トーラスシャインが誤って単穴になった
+    - **修正内容**:
+      - JRA用簡易調整関数追加（simpleAdjustForJRA）
+        - roleを一切変更せず保持
+        - displayScore計算とmark生成のみ
+        - 南関用の複雑な調整ロジックを完全スキップ
+      - adjustPrediction.js修正（skipMark1Overrideオプション追加）
+      - importPredictionJra.js修正（強制変換削除）
+      - metricsフィールドがない場合のフォールバック処理追加
+      - 買い目表示CSS修正（.betting-grid → .betting-formula）
+    - **再発防止策**（新規実装）:
+      - validatePrediction.js作成（自動データ検証）
+        - 本命1頭、対抗1頭、単穴0〜1頭、連下最上位0〜1頭チェック
+        - 役割名の許可リストチェック
+        - PT値の整合性チェック（警告のみ）
+      - importPredictionJra.jsに自動検証組み込み
+        - 不正データが保存される前にエラーで中断
+        - データ品質保護
+      - validatePrediction.test.js作成（自動テスト）
+        - 6テストケース（全テスト成功）
+        - 再発防止テスト（単穴2頭、連下最上位2頭など）
+      - DATA_VALIDATION.md作成（ドキュメント）
+    - **修正結果**:
+      - 小倉11R: 本命2番✅、対抗16番✅、単穴11番（1頭のみ）✅、連下最上位15番✅
+
+**✨ 過去の成果（2026-02-13）**:
   - **中央競馬（JRA）会場別→統合ファイル完全自動化** ✅
     - 問題: 2/14予想が更新されない（会場別ファイル形式に変更）
     - merge-jra-predictions.yml作成（GitHub Actions）
