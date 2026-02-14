@@ -219,23 +219,52 @@ function verifyResults(prediction, results) {
 
   for (const race of results.races) {
     const raceNumber = race.raceNumber;
+    const raceVenue = race.venue; // 会場情報を取得
 
     // raceNumberを数値に正規化（"1R" → 1, 1 → 1）
     const normalizedRaceNumber = typeof raceNumber === 'string'
       ? parseInt(raceNumber.replace(/[^0-9]/g, ''))
       : raceNumber;
 
-    // 予想データを検索（raceNumberの型の違いに対応）
+    // 会場名を正規化（略称対応）
+    const normalizeVenue = (v) => {
+      if (!v) return '';
+      const venueMap = {
+        '京都': 'KYO', 'KYO': 'KYO',
+        '小倉': 'KOK', 'KOK': 'KOK',
+        '東京': 'TOK', 'TOK': 'TOK',
+        '中山': 'NAK', 'NAK': 'NAK',
+        '阪神': 'HAN', 'HAN': 'HAN',
+        '新潟': 'NII', 'NII': 'NII',
+        '札幌': 'SAP', 'SAP': 'SAP',
+        '函館': 'HAK', 'HAK': 'HAK',
+        '福島': 'FUK', 'FUK': 'FUK',
+        '中京': 'CHU', 'CHU': 'CHU'
+      };
+      return venueMap[v] || v;
+    };
+
+    const normalizedRaceVenue = normalizeVenue(raceVenue);
+
+    // 予想データを検索（raceNumberとvenueの両方で一致）
     const predRace = predictionRaces.find(p => {
       const predRaceNum = p.raceInfo.raceNumber;
       const normalizedPredRaceNum = typeof predRaceNum === 'string'
         ? parseInt(predRaceNum.replace(/[^0-9]/g, ''))
         : predRaceNum;
-      return normalizedPredRaceNum === normalizedRaceNumber;
+
+      // raceNumberが一致しない場合はスキップ
+      if (normalizedPredRaceNum !== normalizedRaceNumber) return false;
+
+      // venueも一致するか確認
+      const predVenue = p.raceInfo.venue || p.venue;
+      const normalizedPredVenue = normalizeVenue(predVenue);
+
+      return normalizedPredVenue === normalizedRaceVenue;
     });
 
     if (!predRace) {
-      console.log(`⚠️  ${raceNumber}Rの予想データが見つかりません`);
+      console.log(`⚠️  ${raceVenue} ${raceNumber}Rの予想データが見つかりません`);
       continue;
     }
 
@@ -274,9 +303,9 @@ function verifyResults(prediction, results) {
 
     if (hits.length > 0) {
       const payoutInfo = payoutAmount ? ` (払戻: ${payoutAmount.toLocaleString()}円)` : '';
-      console.log(`✅ ${raceNumber}R: 的中！ ${hits.join(', ')}${payoutInfo}`);
+      console.log(`✅ ${raceVenue} ${raceNumber}R: 的中！ ${hits.join(', ')}${payoutInfo}`);
     } else {
-      console.log(`❌ ${raceNumber}R: 不的中 (${first.number}-${second.number}-${third.number})`);
+      console.log(`❌ ${raceVenue} ${raceNumber}R: 不的中 (${first.number}-${second.number}-${third.number})`);
     }
   }
 
