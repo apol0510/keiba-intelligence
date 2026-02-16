@@ -413,6 +413,8 @@ async function main() {
     let date;
     if (dateIndex !== -1 && args[dateIndex + 1]) {
       date = args[dateIndex + 1];
+      // 会場コード（-TOK, -KYO等）を自動除去
+      date = date.replace(/-[A-Z]{3}$/, '');
     } else {
       // デフォルト: JST今日
       const now = new Date();
