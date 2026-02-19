@@ -361,6 +361,16 @@ async function main() {
       console.log(`📅 指定された日付: ${date}`);
     }
 
+    // 会場コード付き日付を自動除去（例: 2026-02-20-OOI → 2026-02-20）
+    const dateMatch = date.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) {
+      const cleanDate = dateMatch[1];
+      if (cleanDate !== date) {
+        console.log(`📅 会場コードを除去: ${date} → ${cleanDate}`);
+        date = cleanDate;
+      }
+    }
+
     // 日付フォーマット検証
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw new Error('日付はYYYY-MM-DD形式で指定してください');
