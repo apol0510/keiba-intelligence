@@ -1028,13 +1028,32 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ---
 
-**📅 最終更新日**: 2026-02-15
-**🏁 Project Phase**: Phase 3管理機能実装 🚀（Phase 3: 98%完了）
+**📅 最終更新日**: 2026-02-20
+**🏁 Project Phase**: Phase 3管理機能実装 🚀（Phase 3: 99%完了）
 **🎯 Next Priority**: SEOページ自動生成 → 本番デプロイ → 1000人会員獲得
-**📊 進捗率**: 98%完了（Phase 1: 100%、Phase 2: 100%、Phase 3: 98%）
+**📊 進捗率**: 99%完了（Phase 1: 100%、Phase 2: 100%、Phase 3: 99%）
 **🌐 本番URL**: https://keiba-intelligence.netlify.app/
 
-**✨ 本日の成果（2026-02-15）**:
+**✨ 本日の成果（2026-02-20）**:
+  - **馬券順序バグ修正（役割順ソート実装）** ✅
+    - 問題: PT値順ソートで連下最上位が本命より上に表示
+    - 修正: sortHorsesByRole()共通関数作成
+    - 影響: free-prediction-jra.astro, prediction-jra.astro
+    - ドキュメント: HORSE_SORT_FIX.md作成
+
+  - **最新ファイル表示修正（日付パース実装）** ✅
+    - 問題: 辞書順ソートで誤った順序の可能性
+    - 修正: 日付パース + タイムスタンプ比較
+    - 影響: 全予想ページ（4ファイル）
+    - ドキュメント: LATEST_FILE_FIX.md作成
+
+  - **再発防止策の実装** ✅
+    - 共通関数化（sortHorsesByRole.js）
+    - 日付パース統一（全予想ページ）
+    - 開発時チェックリスト作成
+    - ドキュメント2件作成
+
+**✨ 過去の成果（2026-02-15）**:
   - **統一処理への完全移行（シンプル化）** ✅
     - **問題発見**: 南関とJRAで処理を分離する理由がない
     - **検証結果**:
