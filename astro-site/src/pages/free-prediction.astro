@@ -12,13 +12,21 @@ let error = null;
 
 try {
   if (existsSync(predictionsDir)) {
+    // ファイル名から日付を抽出して日付順にソート
     const files = readdirSync(predictionsDir)
-      .filter(file => file.endsWith('.json'))
-      .sort()
-      .reverse(); // 新しい順
+      .filter(file => file.endsWith('.json') && /^\d{4}-\d{2}-\d{2}\.json$/.test(file))
+      .map(file => {
+        const dateMatch = file.match(/^(\d{4}-\d{2}-\d{2})\.json$/);
+        return {
+          file,
+          date: dateMatch ? dateMatch[1] : '',
+          timestamp: dateMatch ? new Date(dateMatch[1]).getTime() : 0
+        };
+      })
+      .sort((a, b) => b.timestamp - a.timestamp); // 日付降順（最新が先頭）
 
     if (files.length > 0) {
-      const latestFile = files[0];
+      const latestFile = files[0].file;
       const fileContent = readFileSync(join(predictionsDir, latestFile), 'utf-8');
       predictionData = JSON.parse(fileContent);
     } else {

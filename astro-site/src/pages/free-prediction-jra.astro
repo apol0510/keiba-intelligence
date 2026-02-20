@@ -16,24 +16,41 @@ let error = null;
 try {
   if (existsSync(predictionsDir)) {
     // 階層構造（jra/YYYY/MM/YYYY-MM-DD.json）から最新ファイルを検索
-    const years = readdirSync(predictionsDir).filter(name => /^\d{4}$/.test(name)).sort().reverse();
+    const years = readdirSync(predictionsDir).filter(name => /^\d{4}$/.test(name));
     let latestFile = null;
     let latestPath = null;
 
-    outerLoop: for (const year of years) {
+    // 全ファイルを収集して日付でソート
+    let allFiles = [];
+
+    for (const year of years) {
       const yearPath = join(predictionsDir, year);
-      const months = readdirSync(yearPath).filter(name => /^\d{2}$/.test(name)).sort().reverse();
+      const months = readdirSync(yearPath).filter(name => /^\d{2}$/.test(name));
 
       for (const month of months) {
         const monthPath = join(yearPath, month);
-        const files = readdirSync(monthPath).filter(file => file.endsWith('.json')).sort().reverse();
+        const files = readdirSync(monthPath).filter(file => file.endsWith('.json') && /^\d{4}-\d{2}-\d{2}\.json$/.test(file));
 
-        if (files.length > 0) {
-          latestFile = files[0];
-          latestPath = join(monthPath, latestFile);
-          break outerLoop;
+        for (const file of files) {
+          // ファイル名から日付を抽出（YYYY-MM-DD.json）
+          const dateMatch = file.match(/^(\d{4}-\d{2}-\d{2})\.json$/);
+          if (dateMatch) {
+            allFiles.push({
+              date: dateMatch[1],
+              path: join(monthPath, file),
+              timestamp: new Date(dateMatch[1]).getTime()
+            });
+          }
         }
       }
+    }
+
+    // 日付でソート（最新が先頭）
+    allFiles.sort((a, b) => b.timestamp - a.timestamp);
+
+    if (allFiles.length > 0) {
+      latestFile = allFiles[0].date + '.json';
+      latestPath = allFiles[0].path;
     }
 
     if (latestPath) {
