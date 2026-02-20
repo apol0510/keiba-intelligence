@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import AccessControl from '../components/AccessControl.astro';
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { sortHorsesByRole } from '../utils/sortHorsesByRole.js';
 import { getStore } from '@netlify/blobs';
 
 export const prerender = false;
@@ -321,7 +322,8 @@ function generateUmatanBets(horses) {
               }));
 
               // 全馬表示（プロ会員特典）
-              const sortedHorses = horsesWithMetrics.sort((a, b) => b.pt - a.pt);
+              // 役割順にソート（本命→対抗→単穴→連下最上位→連下→補欠→無）
+              const sortedHorses = sortHorsesByRole(horsesWithMetrics);
 
               // 買い目生成
               const umatanBets = generateUmatanBets(allHorses);
