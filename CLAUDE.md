@@ -932,9 +932,11 @@ function normalizeVenue(venue) {
 **ALERT_SYSTEM.md参照:**
 - 自動アラートシステム設計書
 - アーカイブ同期確認ワークフロー（verify-archive-sync.yml）
+- 2段階検知機構（予想あり・結果なし / 予想あり・結果あり・アーカイブなし）
 - アラートメール仕様（SendGrid使用）
-- 設定方法（GitHub Secrets: ALERT_EMAIL）
+- 設定方法（GitHub Secrets: ALERT_EMAIL, SENDGRID_FROM_EMAIL）
 - 運用フロー・トラブルシューティング
+- 日次チェックワークフロー（南関・JRA）
 
 ---
 
@@ -948,8 +950,15 @@ AIRTABLE_API_KEY=patxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 AIRTABLE_BASE_ID=appxxxxxxxxxxxxxxx
 
 # SendGrid（必須）
-# 用途: マジックリンク、ウェルカムメール、メルマガ配信
+# 用途: マジックリンク、ウェルカムメール、メルマガ配信、アラートメール
 SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+SENDGRID_FROM_EMAIL=your-verified-email@example.com  # SendGrid Verified Sender
+
+# アラートメール（必須 - アラートシステム用）
+# 用途: GitHub Actions失敗通知、異常値検知、予想データ欠損通知
+# 取得方法: 個人メールアドレス（SendGridに登録不要）
+ALERT_EMAIL=your-email@example.com  # 管理者のメールアドレス
+ADMIN_EMAIL=admin@keiba-intelligence.netlify.app  # 管理者メールアドレス（任意）
 
 # Gemini AI（必須 - Priority 2で実装済み）
 # 用途: AIチャットボット（全ページ右下ウィジェット）
@@ -1042,6 +1051,31 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 **🌐 本番URL**: https://keiba-intelligence.netlify.app/
 
 **✨ 本日の成果（2026-02-21）**:
+  - **keiba.linkドメイン完全削除（netlify.appに統一）** ✅
+    - **問題**: keiba.linkは別プロジェクト、intelligenceで使用禁止
+    - **修正内容**:
+      - 全Netlify Functions（9ファイル）のkeiba.link参照削除
+      - 管理画面（2ファイル）のkeiba.link参照削除
+      - astro.config.mjs、sitemap.xml.js のドメイン変更
+      - FROM_EMAIL: 環境変数 SENDGRID_FROM_EMAIL 使用（フォールバック: noreply@keiba-intelligence.netlify.app）
+      - ADMIN_EMAIL: 環境変数 ADMIN_EMAIL 使用（フォールバック: admin@keiba-intelligence.netlify.app）
+      - allowedOrigins: keiba.link削除、netlify.appのみ許可
+    - **影響範囲**: 12ファイル修正
+    - **コミット**: aa01dc5
+
+  - **アラートシステム実装（予想あり・結果なし検知）** ✅
+    - **問題**: 2/21 JRA結果が反映されない（結果データ自体がkeiba-data-sharedに存在しない）
+    - **修正内容**:
+      - verify-archive-sync.yml 作成（毎日0:00 JSTチェック）
+      - 2段階検知機構:
+        1. 🚨🚨 予想あり + 結果なし（最優先アラート）
+        2. 🚨 予想あり + 結果あり + アーカイブなし
+      - import-results-jra-daily.yml 修正（失敗アラート追加）
+      - import-results-nankan-daily.yml 作成（南関用日次チェック）
+      - ALERT_SYSTEM.md 作成（設計書）
+    - **環境変数**: ALERT_EMAIL 設定完了（Yahoo認証済み）
+    - **SendGrid設定**: SENDGRID_FROM_EMAIL 環境変数化
+
   - **Git競合自動解決ロジック実装（完全自動化達成）** ✅
     - **問題**: 同時実行により同じファイルに対してrebase競合が発生
       - 2026-02-22 JRA予想で5回リトライしても失敗
