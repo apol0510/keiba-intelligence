@@ -929,6 +929,13 @@ function normalizeVenue(venue) {
 - 8点 or 12点の動的切り替え
 - 具体例・計算式・実装詳細
 
+**ALERT_SYSTEM.md参照:**
+- 自動アラートシステム設計書
+- アーカイブ同期確認ワークフロー（verify-archive-sync.yml）
+- アラートメール仕様（SendGrid使用）
+- 設定方法（GitHub Secrets: ALERT_EMAIL）
+- 運用フロー・トラブルシューティング
+
 ---
 
 ## 🔐 **環境変数（Netlify環境変数）** 🔐
@@ -1072,6 +1079,32 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       - dispatch失敗時の自動リカバリー
       - 手動実行完全不要（真の自動化）
       - 毎日定期チェックで取りこぼしゼロ
+
+  - **自動アラートシステム実装（目視確認不要の真の自動化）** ✅
+    - **問題**: 反映されているか目視確認が必要（自動化ではない）
+    - **解決策**:
+      1. アーカイブ同期確認ワークフロー（verify-archive-sync.yml）
+         - 毎日0時（JST）に過去7日間をチェック
+         - keiba-data-sharedとアーカイブの不一致を検出
+         - 未反映の日付があれば即座にアラートメール送信
+      2. 定期チェック失敗時アラート
+         - import-results-jra-daily.yml
+         - import-results-nankan-daily.yml
+         - ワークフロー失敗時にメール通知
+      3. 南関競馬定期チェック追加（import-results-nankan-daily.yml）
+         - 毎日23:30 JST実行
+         - 未処理データ自動インポート
+    - **アラートメール仕様**:
+      - SendGrid使用（既存APIキー活用）
+      - 送信先: ALERT_EMAIL（GitHub Secrets）
+      - 件名: 🚨 [JRA/南関]結果アーカイブ未反映検出
+      - 本文: 未反映日付、手動実行手順、GitHub Actionsログ
+    - **メリット**:
+      - 目視確認完全不要
+      - 異常時は即座にメール通知
+      - 手動実行手順をメールで案内
+      - 取りこぼしゼロ（過去7日間監視）
+    - **ドキュメント**: ALERT_SYSTEM.md作成
 
 **✨ 過去の成果（2026-02-20）**:
   - **馬券順序バグ修正（役割順ソート実装）** ✅
@@ -1331,7 +1364,7 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 **🎉 累積成果**:
   - **共有リポジトリ**: keiba-data-shared（全プロジェクト共有・南関中央対応・GitHub自動Push対応）
   - **Netlify Functions**: 10個実装（Newsletter 5個, Auth 4個, Gemini-Chat, Bank-Transfer）
-  - **設計書**: 4個作成（NEWSLETTER_SYSTEM.md, NEWSLETTER_MIGRATION.md, AUTH_SYSTEM.md, BET_POINT_LOGIC.md）
+  - **設計書**: 5個作成（NEWSLETTER_SYSTEM.md, NEWSLETTER_MIGRATION.md, AUTH_SYSTEM.md, BET_POINT_LOGIC.md, ALERT_SYSTEM.md）
   - **管理画面**: 3ページ実装（/admin/newsletter/*）
   - **公開ページ**:
     - 南関競馬: トップ, 無料予想, 有料予想, 料金, 月別アーカイブ, ログイン, サイト概要
@@ -1347,6 +1380,7 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     - **Git競合自動解決**: 全5ワークフローに実装（同時実行対応）
     - **定期チェック機構**: 毎日23:30 JST（未処理データ自動インポート）
     - **Dispatchリトライ**: 最大3回・10秒間隔（失敗時自動リカバリー）
+    - **自動アラートシステム**: 毎日0時（JST）アーカイブ同期確認・異常時メール通知
     - 2段階買い目調整ロジック（8点 or 12点）
     - 自動的中判定システム
     - 月別アーカイブ自動生成
