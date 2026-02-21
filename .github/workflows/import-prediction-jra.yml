@@ -10,10 +10,10 @@ on:
         required: false
         default: ''
 
-# 並行実行制御：同じリポジトリのimport-prediction-jraは1つずつ実行
+# 並行実行制御：リポジトリ全体で1つのワークフローのみ実行（同じファイルへの同時コミット防止）
 concurrency:
-  group: import-prediction-jra-${{ github.ref }}
-  cancel-in-progress: false  # 実行中のジョブをキャンセルせず待機
+  group: import-prediction-jra
+  cancel-in-progress: false  # 実行中のジョブをキャンセルせず待機（順番に実行）
 
 jobs:
   import-prediction-jra:

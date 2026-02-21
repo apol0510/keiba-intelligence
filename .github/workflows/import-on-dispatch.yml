@@ -10,10 +10,10 @@ on:
         required: false
         type: string
 
-# 並行実行制御：同じリポジトリのimport-predictionは1つずつ実行
+# 並行実行制御：リポジトリ全体で1つのワークフローのみ実行（同じファイルへの同時コミット防止）
 concurrency:
-  group: import-prediction-${{ github.ref }}
-  cancel-in-progress: false  # 実行中のジョブをキャンセルせず待機
+  group: import-prediction
+  cancel-in-progress: false  # 実行中のジョブをキャンセルせず待機（順番に実行）
 
 jobs:
   import-prediction:
