@@ -112,6 +112,12 @@ jobs:
           while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" = false ]; do
             echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Pulling latest changes..."
 
+            # rebase中の競合を検出してabort
+            if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
+              echo "⚠️  Detected ongoing rebase, aborting..."
+              git rebase --abort
+            fi
+
             # 最新状態を取得（rebase）
             if git pull --rebase origin main; then
               echo "✅ Successfully pulled latest changes"
@@ -126,7 +132,40 @@ jobs:
                 sleep $((RETRY_COUNT * 2))  # Exponential backoff
               fi
             else
-              echo "⚠️  Pull --rebase failed, retrying..."
+              # rebase失敗時の処理
+              echo "⚠️  Pull --rebase failed"
+
+              # 競合が発生している場合は自動解決を試みる
+              if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
+                echo "🔧 Attempting to resolve conflicts automatically..."
+
+                # 競合ファイルをチェック
+                CONFLICT_FILES=$(git diff --name-only --diff-filter=U)
+
+                if [ -n "$CONFLICT_FILES" ]; then
+                  echo "   Conflicted files: $CONFLICT_FILES"
+
+                  # 予想データファイルの競合のみ自動解決（ours戦略: 自分の変更を優先）
+                  for FILE in $CONFLICT_FILES; do
+                    if [[ "$FILE" == src/data/predictions/jra/* ]]; then
+                      echo "   Resolving $FILE (using ours strategy)"
+                      git checkout --ours "$FILE"
+                      git add "$FILE"
+                    fi
+                  done
+
+                  # rebase続行
+                  if git rebase --continue; then
+                    echo "✅ Conflicts resolved, rebase continued"
+                    # 次のループでpush試行
+                    continue
+                  else
+                    echo "❌ Failed to continue rebase"
+                    git rebase --abort
+                  fi
+                fi
+              fi
+
               RETRY_COUNT=$((RETRY_COUNT + 1))
               sleep $((RETRY_COUNT * 2))
             fi
