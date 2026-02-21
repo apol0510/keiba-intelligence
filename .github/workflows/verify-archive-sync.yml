@@ -24,7 +24,9 @@ jobs:
         run: |
           # 過去7日間の日付をチェック
           MISSING_DATES=""
+          NO_RESULTS_DATES=""
           ALERT_NEEDED=false
+          NO_RESULTS_ALERT=false
 
           for i in {0..6}; do
             DATE=$(date -u -d "$i days ago" +%Y-%m-%d 2>/dev/null || date -u -v-${i}d +%Y-%m-%d)
@@ -33,14 +35,25 @@ jobs:
 
             echo "━━━ Checking: $DATE ━━━"
 
-            # keiba-data-sharedに結果データがあるかチェック
+            # 予想データがあるかチェック
+            PREDICTION_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/predictions/$YEAR/$MONTH/$DATE.json"
+            HAS_PREDICTION=false
+
+            if curl -sf "$PREDICTION_URL" > /dev/null; then
+              echo "✅ Prediction: Found"
+              HAS_PREDICTION=true
+            else
+              echo "⏭️  Prediction: Not found"
+            fi
+
+            # 結果データがあるかチェック
             RESULT_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/results/$YEAR/$MONTH/$DATE.json"
 
             if curl -sf "$RESULT_URL" > /tmp/result.json; then
               RACE_COUNT=$(cat /tmp/result.json | jq -r '.races | length')
-              echo "✅ keiba-data-shared: $RACE_COUNT races"
+              echo "✅ Results: $RACE_COUNT races"
 
-              # 10レース以上ある場合のみチェック（中央競馬は10レース以上で処理）
+              # 10レース以上ある場合のみチェック
               if [ "$RACE_COUNT" -ge 10 ]; then
                 # keiba-intelligenceのアーカイブにあるかチェック
                 if grep -q "\"date\": \"$DATE\"" astro-site/src/data/archiveResultsJra.json; then
@@ -54,18 +67,35 @@ jobs:
                 echo "⏭️  Skipped: $RACE_COUNT races (< 10)"
               fi
             else
-              echo "⏭️  No results in keiba-data-shared"
+              echo "⏭️  Results: Not found"
+
+              # 予想データがあるのに結果データがない → アラート
+              if [ "$HAS_PREDICTION" = true ]; then
+                echo "🚨 PROBLEM: Prediction exists but NO results!"
+                NO_RESULTS_DATES="${NO_RESULTS_DATES}${DATE}, "
+                NO_RESULTS_ALERT=true
+              fi
             fi
           done
 
           if [ "$ALERT_NEEDED" = true ]; then
             echo "alert_needed=true" >> $GITHUB_OUTPUT
             echo "missing_dates=${MISSING_DATES%, }" >> $GITHUB_OUTPUT
-            echo ""
-            echo "🚨 ALERT: Missing dates detected!"
-            echo "   $MISSING_DATES"
           else
             echo "alert_needed=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "$NO_RESULTS_ALERT" = true ]; then
+            echo "no_results_alert=true" >> $GITHUB_OUTPUT
+            echo "no_results_dates=${NO_RESULTS_DATES%, }" >> $GITHUB_OUTPUT
+            echo ""
+            echo "🚨 ALERT: Dates with predictions but NO results!"
+            echo "   $NO_RESULTS_DATES"
+          else
+            echo "no_results_alert=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "$ALERT_NEEDED" = false ] && [ "$NO_RESULTS_ALERT" = false ]; then
             echo ""
             echo "✅ All dates synchronized"
           fi
@@ -75,7 +105,9 @@ jobs:
         run: |
           # 過去7日間の日付をチェック
           MISSING_DATES=""
+          NO_RESULTS_DATES=""
           ALERT_NEEDED=false
+          NO_RESULTS_ALERT=false
 
           for i in {0..6}; do
             DATE=$(date -u -d "$i days ago" +%Y-%m-%d 2>/dev/null || date -u -v-${i}d +%Y-%m-%d)
@@ -84,12 +116,23 @@ jobs:
 
             echo "━━━ Checking: $DATE ━━━"
 
-            # keiba-data-sharedに結果データがあるかチェック
+            # 予想データがあるかチェック
+            PREDICTION_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/predictions/$YEAR/$MONTH/$DATE.json"
+            HAS_PREDICTION=false
+
+            if curl -sf "$PREDICTION_URL" > /dev/null; then
+              echo "✅ Prediction: Found"
+              HAS_PREDICTION=true
+            else
+              echo "⏭️  Prediction: Not found"
+            fi
+
+            # 結果データがあるかチェック
             RESULT_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/$YEAR/$MONTH/$DATE.json"
 
             if curl -sf "$RESULT_URL" > /tmp/result.json; then
               RACE_COUNT=$(cat /tmp/result.json | jq -r '.races | length')
-              echo "✅ keiba-data-shared: $RACE_COUNT races"
+              echo "✅ Results: $RACE_COUNT races"
 
               # 12レース揃っている場合のみチェック
               if [ "$RACE_COUNT" -ge 12 ]; then
@@ -105,18 +148,35 @@ jobs:
                 echo "⏭️  Skipped: $RACE_COUNT races (< 12)"
               fi
             else
-              echo "⏭️  No results in keiba-data-shared"
+              echo "⏭️  Results: Not found"
+
+              # 予想データがあるのに結果データがない → アラート
+              if [ "$HAS_PREDICTION" = true ]; then
+                echo "🚨 PROBLEM: Prediction exists but NO results!"
+                NO_RESULTS_DATES="${NO_RESULTS_DATES}${DATE}, "
+                NO_RESULTS_ALERT=true
+              fi
             fi
           done
 
           if [ "$ALERT_NEEDED" = true ]; then
             echo "alert_needed=true" >> $GITHUB_OUTPUT
             echo "missing_dates=${MISSING_DATES%, }" >> $GITHUB_OUTPUT
-            echo ""
-            echo "🚨 ALERT: Missing dates detected!"
-            echo "   $MISSING_DATES"
           else
             echo "alert_needed=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "$NO_RESULTS_ALERT" = true ]; then
+            echo "no_results_alert=true" >> $GITHUB_OUTPUT
+            echo "no_results_dates=${NO_RESULTS_DATES%, }" >> $GITHUB_OUTPUT
+            echo ""
+            echo "🚨 ALERT: Dates with predictions but NO results!"
+            echo "   $NO_RESULTS_DATES"
+          else
+            echo "no_results_alert=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "$ALERT_NEEDED" = false ] && [ "$NO_RESULTS_ALERT" = false ]; then
             echo ""
             echo "✅ All dates synchronized"
           fi
@@ -158,6 +218,41 @@ jobs:
             このメールは自動送信されています。
             ワークフロー: verify-archive-sync.yml
 
+      - name: Send alert email (JRA - No Results)
+        if: steps.check-jra.outputs.no_results_alert == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.sendgrid.net
+          server_port: 587
+          username: apikey
+          password: ${{ secrets.SENDGRID_API_KEY }}
+          subject: '🚨🚨 JRA結果データ未登録検出 - keiba-data-shared'
+          to: ${{ secrets.ALERT_EMAIL }}
+          from: noreply@keiba-intelligence.netlify.app
+          body: |
+            マコさん、
+
+            JRA予想データは存在しますが、結果データがkeiba-data-sharedに登録されていません。
+
+            【結果データが未登録の日付】
+            ${{ steps.check-jra.outputs.no_results_dates }}
+
+            【確認事項】
+            1. keiba-data-sharedに予想データは存在します
+            2. しかし、結果データが登録されていません
+
+            【対応方法】
+            1. 結果データをkeiba-data-sharedに登録してください
+            2. 結果データのファイルパス:
+               keiba-data-shared/jra/results/YYYY/MM/YYYY-MM-DD.json
+
+            【keiba-data-sharedリポジトリ】
+            https://github.com/apol0510/keiba-data-shared
+
+            ---
+            このメールは自動送信されています。
+            ワークフロー: verify-archive-sync.yml
+
       - name: Send alert email (Nankan)
         if: steps.check-nankan.outputs.alert_needed == 'true'
         uses: dawidd6/action-send-mail@v3
@@ -190,6 +285,41 @@ jobs:
 
             【GitHub Actionsログ】
             https://github.com/apol0510/keiba-intelligence/actions
+
+            ---
+            このメールは自動送信されています。
+            ワークフロー: verify-archive-sync.yml
+
+      - name: Send alert email (Nankan - No Results)
+        if: steps.check-nankan.outputs.no_results_alert == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.sendgrid.net
+          server_port: 587
+          username: apikey
+          password: ${{ secrets.SENDGRID_API_KEY }}
+          subject: '🚨🚨 南関結果データ未登録検出 - keiba-data-shared'
+          to: ${{ secrets.ALERT_EMAIL }}
+          from: noreply@keiba-intelligence.netlify.app
+          body: |
+            マコさん、
+
+            南関予想データは存在しますが、結果データがkeiba-data-sharedに登録されていません。
+
+            【結果データが未登録の日付】
+            ${{ steps.check-nankan.outputs.no_results_dates }}
+
+            【確認事項】
+            1. keiba-data-sharedに予想データは存在します
+            2. しかし、結果データが登録されていません
+
+            【対応方法】
+            1. 結果データをkeiba-data-sharedに登録してください
+            2. 結果データのファイルパス:
+               keiba-data-shared/nankan/results/YYYY/MM/YYYY-MM-DD.json
+
+            【keiba-data-sharedリポジトリ】
+            https://github.com/apol0510/keiba-data-shared
 
             ---
             このメールは自動送信されています。
