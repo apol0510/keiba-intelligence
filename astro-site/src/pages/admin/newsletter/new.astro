@@ -172,7 +172,7 @@ import AuthCheck from '../../../components/AuthCheck.astro';
       const bodyHtml = (document.getElementById('body_html') as HTMLTextAreaElement).value;
 
       // 管理者メールアドレス（仮：実際は認証システムから取得）
-      const createdBy = 'admin@keiba-intelligence.keiba.link';
+      const createdBy = 'admin@keiba-intelligence.netlify.app';
 
       try {
         const response = await fetch('/.netlify/functions/create-broadcast', {

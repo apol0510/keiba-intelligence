@@ -66,8 +66,8 @@ export async function handler(event, context) {
 
     // メール送信
     const msg = {
-      to: process.env.ALERT_EMAIL || 'your-email@example.com', // TODO: マコさんのメールアドレスに変更
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@keiba-intelligence.keiba.link',
+      to: process.env.ALERT_EMAIL || 'your-email@example.com',
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@keiba-intelligence.netlify.app',
       subject,
       html
     };

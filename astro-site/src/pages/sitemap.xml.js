@@ -2,7 +2,7 @@ import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 export async function GET() {
-  const baseUrl = 'https://keiba-intelligence.keiba.link';
+  const baseUrl = 'https://keiba-intelligence.netlify.app';
 
   // 静的ページのURL
   const staticPages = [

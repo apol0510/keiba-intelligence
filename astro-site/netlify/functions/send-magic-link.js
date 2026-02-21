@@ -25,7 +25,6 @@ exports.handler = async (event) => {
   // CORS設定（セキュリティ強化：特定ドメインのみ許可）
   const allowedOrigins = [
     'https://keiba-intelligence.netlify.app',
-    'https://keiba-intelligence.keiba.link',
     'http://localhost:4321',
     'http://localhost:3000'
   ];
@@ -116,11 +115,11 @@ exports.handler = async (event) => {
     console.log('✅ Token created:', token);
 
     // 4. SendGrid経由でマジックリンク送信
-    const magicLink = `https://keiba-intelligence.keiba.link/auth/verify?token=${token}`;
+    const magicLink = `https://keiba-intelligence.netlify.app/auth/verify?token=${token}`;
 
     const msg = {
       to: email,
-      from: 'noreply@keiba-intelligence.keiba.link',
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@keiba-intelligence.netlify.app',
       subject: '【KEIBA Intelligence】ログインリンク',
       html: `
 <div style="font-family: 'Noto Sans JP', sans-serif; max-width: 600px; margin: 0 auto;">

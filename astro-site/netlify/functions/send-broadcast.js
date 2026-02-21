@@ -129,7 +129,7 @@ async function createRecipient(data) {
 async function sendEmail(email, subject, bodyHtml) {
   const msg = {
     to: email,
-    from: 'noreply@keiba-intelligence.keiba.link',
+    from: process.env.SENDGRID_FROM_EMAIL || 'noreply@keiba-intelligence.netlify.app',
     subject,
     html: bodyHtml,
   };

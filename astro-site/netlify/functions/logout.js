@@ -13,7 +13,7 @@ exports.handler = async (event) => {
   // CORS設定（セキュリティ強化：特定ドメインのみ許可）
   const allowedOrigins = [
     'https://keiba-intelligence.netlify.app',
-    'https://keiba-intelligence.keiba.link',
+    'https://keiba-intelligence.netlify.app',
     'http://localhost:4321',
     'http://localhost:3000'
   ];

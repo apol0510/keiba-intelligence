@@ -7,7 +7,7 @@ exports.handler = async (event, context) => {
   // CORS設定（セキュリティ強化：特定ドメインのみ許可）
   const allowedOrigins = [
     'https://keiba-intelligence.netlify.app',
-    'https://keiba-intelligence.keiba.link',
+    'https://keiba-intelligence.netlify.app',
     'http://localhost:4321',
     'http://localhost:3000'
   ];
@@ -74,8 +74,8 @@ exports.handler = async (event, context) => {
 
     // SendGrid API設定
     const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-    const FROM_EMAIL = 'noreply@keiba.link';
-    const ADMIN_EMAIL = 'keiba-intelligence@keiba.link';
+    const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@keiba-intelligence.netlify.app';
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@keiba-intelligence.netlify.app';
 
     if (!SENDGRID_API_KEY) {
       throw new Error('SendGrid API key not configured');
@@ -267,14 +267,14 @@ exports.handler = async (event, context) => {
     <div class="section">
       <p style="margin: 0; color: #475569;">
         <strong>ご不明な点がございましたら、お気軽にお問い合わせください。</strong><br>
-        📧 <a href="mailto:keiba-intelligence@keiba.link" style="color: #3b82f6;">keiba-intelligence@keiba.link</a>
+        📧 <a href="mailto:${ADMIN_EMAIL}" style="color: #3b82f6;">${ADMIN_EMAIL}</a>
       </p>
     </div>
 
     <div class="footer">
       <p><strong>KEIBA Intelligence</strong></p>
       <p>AI-Powered Intelligence Dashboard for 南関競馬</p>
-      <p><a href="https://keiba-intelligence.keiba.link" style="color: #3b82f6; text-decoration: none;">https://keiba-intelligence.keiba.link</a></p>
+      <p><a href="https://keiba-intelligence.netlify.app" style="color: #3b82f6; text-decoration: none;">https://keiba-intelligence.netlify.app</a></p>
     </div>
   </div>
 </body>

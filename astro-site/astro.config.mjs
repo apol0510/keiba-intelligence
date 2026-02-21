@@ -4,7 +4,7 @@ import netlify from '@astrojs/netlify';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://keiba-intelligence.keiba.link',
+  site: 'https://keiba-intelligence.netlify.app',
   base: '/',
   output: 'server',
   adapter: netlify(),
