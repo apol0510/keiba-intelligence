@@ -1056,6 +1056,23 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       - エラー率0%達成（完全自動化）
       - 手動介入不要
 
+  - **JRA結果インポート完全自動化（定期チェック機構追加）** ✅
+    - **問題**: dispatch失敗時に結果が自動インポートされない（2/21で発生）
+    - **解決策**:
+      1. 定期実行ワークフロー追加（import-results-jra-daily.yml）
+         - 毎日23:30 JST実行
+         - keiba-data-sharedの結果データをチェック
+         - アーカイブに未処理データがあれば自動インポート
+         - Git競合自動解決機構搭載
+      2. Dispatchリトライ機構（keiba-data-shared側）
+         - nick-fields/retry@v3使用（最大3回・10秒間隔）
+         - デバッグログ強化
+         - 失敗時のアラート・手動実行手順表示
+    - **メリット**:
+      - dispatch失敗時の自動リカバリー
+      - 手動実行完全不要（真の自動化）
+      - 毎日定期チェックで取りこぼしゼロ
+
 **✨ 過去の成果（2026-02-20）**:
   - **馬券順序バグ修正（役割順ソート実装）** ✅
     - 問題: PT値順ソートで連下最上位が本命より上に表示
@@ -1328,6 +1345,8 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     - 中央競馬: importPredictionJra.js, importResultsJra.js, GitHub Actions自動連携（完成）
     - **会場別→統合ファイル自動生成**: merge-jra-predictions.yml, PAT（WORKFLOW_PAT）
     - **Git競合自動解決**: 全5ワークフローに実装（同時実行対応）
+    - **定期チェック機構**: 毎日23:30 JST（未処理データ自動インポート）
+    - **Dispatchリトライ**: 最大3回・10秒間隔（失敗時自動リカバリー）
     - 2段階買い目調整ロジック（8点 or 12点）
     - 自動的中判定システム
     - 月別アーカイブ自動生成
