@@ -1,4 +1,4 @@
-name: Import JRA Results Daily Check
+name: Import Nankan Results Daily Check
 
 on:
   schedule:
@@ -6,9 +6,9 @@ on:
     - cron: '30 14 * * *'
   workflow_dispatch:
 
-# 並行実行制御：リポジトリ全体で1つのワークフローのみ実行（同じファイルへの同時コミット防止）
+# 並行実行制御
 concurrency:
-  group: import-results-jra-daily
+  group: import-results-nankan-daily
   cancel-in-progress: false
 
 jobs:
@@ -51,20 +51,27 @@ jobs:
           DATE="${{ steps.date.outputs.date }}"
 
           # keiba-data-sharedに結果データがあるかチェック
-          RESULT_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/results/${DATE:0:4}/${DATE:5:2}/${DATE}.json"
+          RESULT_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/${DATE:0:4}/${DATE:5:2}/${DATE}.json"
 
-          echo "🔍 Checking for JRA results: $RESULT_URL"
+          echo "🔍 Checking for Nankan results: $RESULT_URL"
 
-          if curl -sf "$RESULT_URL" > /dev/null; then
-            echo "✅ Results found in keiba-data-shared"
+          if curl -sf "$RESULT_URL" > /tmp/result.json; then
+            RACE_COUNT=$(cat /tmp/result.json | jq -r '.races | length')
+            echo "✅ Results found in keiba-data-shared: $RACE_COUNT races"
 
-            # アーカイブに既に存在するかチェック
-            if grep -q "\"date\": \"$DATE\"" src/data/archiveResultsJra.json; then
-              echo "⏭️  Already processed: $DATE"
-              echo "has_missing=false" >> $GITHUB_OUTPUT
+            # 12レース揃っている場合のみチェック
+            if [ "$RACE_COUNT" -ge 12 ]; then
+              # アーカイブに既に存在するかチェック
+              if grep -q "\"date\": \"$DATE\"" src/data/archiveResults.json; then
+                echo "⏭️  Already processed: $DATE"
+                echo "has_missing=false" >> $GITHUB_OUTPUT
+              else
+                echo "📥 Missing from archive: $DATE"
+                echo "has_missing=true" >> $GITHUB_OUTPUT
+              fi
             else
-              echo "📥 Missing from archive: $DATE"
-              echo "has_missing=true" >> $GITHUB_OUTPUT
+              echo "⏭️  Skipped: $RACE_COUNT races (< 12)"
+              echo "has_missing=false" >> $GITHUB_OUTPUT
             fi
           else
             echo "⏭️  No results in keiba-data-shared yet"
@@ -77,14 +84,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           DATE="${{ steps.date.outputs.date }}"
-          echo "📥 Importing JRA results for: $DATE"
-          node scripts/importResultsJra.js --date "$DATE"
+          echo "📥 Importing Nankan results for: $DATE"
+          npm run import:results -- --date "$DATE"
 
       - name: Check for changes
         id: git-check
         if: steps.check.outputs.has_missing == 'true'
         run: |
-          git add src/data/archiveResultsJra.json
+          git add src/data/archiveResults.json
           git diff --staged --exit-code || echo "changed=true" >> $GITHUB_OUTPUT
 
       - name: Commit and push changes
@@ -94,7 +101,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           DATE="${{ steps.date.outputs.date }}"
-          git commit -m "Auto-verify: ${DATE} JRA results (daily check)"
+          git commit -m "Auto-verify: ${DATE} Nankan results (daily check)"
 
           # Retry logic with conflict resolution
           MAX_RETRIES=5
@@ -104,17 +111,14 @@ jobs:
           while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" = false ]; do
             echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Pulling latest changes..."
 
-            # rebase中の競合を検出してabort
             if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
               echo "⚠️  Detected ongoing rebase, aborting..."
               git rebase --abort
             fi
 
-            # 最新状態を取得（rebase）
             if git pull --rebase origin main; then
               echo "✅ Successfully pulled latest changes"
 
-              # プッシュ試行
               if git push; then
                 echo "✅ Successfully pushed changes"
                 SUCCESS=true
@@ -124,29 +128,24 @@ jobs:
                 sleep $((RETRY_COUNT * 2))
               fi
             else
-              # rebase失敗時の処理
               echo "⚠️  Pull --rebase failed"
 
-              # 競合が発生している場合は自動解決を試みる
               if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
                 echo "🔧 Attempting to resolve conflicts automatically..."
 
-                # 競合ファイルをチェック
                 CONFLICT_FILES=$(git diff --name-only --diff-filter=U)
 
                 if [ -n "$CONFLICT_FILES" ]; then
                   echo "   Conflicted files: $CONFLICT_FILES"
 
-                  # 結果データファイルの競合のみ自動解決（ours戦略: 自分の変更を優先）
                   for FILE in $CONFLICT_FILES; do
-                    if [[ "$FILE" == astro-site/src/data/archiveResultsJra.json ]]; then
+                    if [[ "$FILE" == astro-site/src/data/archiveResults.json ]]; then
                       echo "   Resolving $FILE (using ours strategy)"
                       git checkout --ours "$FILE"
                       git add "$FILE"
                     fi
                   done
 
-                  # rebase続行
                   if git rebase --continue; then
                     echo "✅ Conflicts resolved, rebase continued"
                     continue
@@ -170,14 +169,14 @@ jobs:
       - name: Success notification
         if: steps.git-check.outputs.changed == 'true'
         run: |
-          echo "✅ JRA results imported and pushed (daily check)"
+          echo "✅ Nankan results imported and pushed (daily check)"
           echo "   Date: ${{ steps.date.outputs.date }}"
           echo "   Trigger: scheduled (23:30 JST)"
 
       - name: No changes notification
         if: steps.check.outputs.has_missing != 'true'
         run: |
-          echo "⏭️  No missing JRA results to import"
+          echo "⏭️  No missing Nankan results to import"
           echo "   Date: ${{ steps.date.outputs.date }}"
           echo "   Archive is up-to-date"
 
@@ -189,26 +188,26 @@ jobs:
           server_port: 587
           username: apikey
           password: ${{ secrets.SENDGRID_API_KEY }}
-          subject: '🚨 JRA結果自動インポート失敗 - keiba-intelligence'
+          subject: '🚨 南関結果自動インポート失敗 - keiba-intelligence'
           to: ${{ secrets.ALERT_EMAIL }}
           from: noreply@keiba-intelligence.netlify.app
           body: |
             マコさん、
 
-            JRA結果の自動インポート（定期チェック）が失敗しました。
+            南関結果の自動インポート（定期チェック）が失敗しました。
 
             【対象日付】
             ${{ steps.date.outputs.date }}
 
             【失敗したステップ】
-            ワークフロー: import-results-jra-daily.yml
+            ワークフロー: import-results-nankan-daily.yml
 
             【GitHub Actionsログ】
             https://github.com/apol0510/keiba-intelligence/actions/runs/${{ github.run_id }}
 
             【手動実行コマンド】
             cd /Users/apolon/Projects/keiba-intelligence
-            gh workflow run import-results-jra.yml -f date=${{ steps.date.outputs.date }}
+            gh workflow run import-results-on-dispatch.yml -f date=${{ steps.date.outputs.date }}
 
             ---
             このメールは自動送信されています。
