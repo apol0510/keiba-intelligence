@@ -60,6 +60,7 @@ async function sendAlert(type, date, details = {}, metadata = {}) {
 
 /**
  * keiba-data-sharedから結果データを取得
+ * 統合ファイルがない場合は会場別ファイルをマージ
  */
 async function fetchSharedResults(date, venue = 'jra') {
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -70,42 +71,123 @@ async function fetchSharedResults(date, venue = 'jra') {
 
   console.log(`📡 keiba-data-sharedから取得中: ${path}`);
 
-  // ローカル実行時（GITHUB_TOKENなし）: raw.githubusercontent.comを使用（公開リポジトリ）
-  if (!GITHUB_TOKEN) {
-    console.log(`   ローカル実行モード: raw.githubusercontent.comからダウンロード`);
-    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
-    const response = await fetch(rawUrl);
+  // まず統合ファイルを試す
+  try {
+    // ローカル実行時（GITHUB_TOKENなし）: raw.githubusercontent.comを使用（公開リポジトリ）
+    if (!GITHUB_TOKEN) {
+      console.log(`   ローカル実行モード: raw.githubusercontent.comからダウンロード`);
+      const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
+      const response = await fetch(rawUrl);
 
-    if (!response.ok) {
-      throw new Error(`結果データの取得に失敗: ${response.status} ${response.statusText}`);
+      if (response.ok) {
+        const content = await response.text();
+        const results = JSON.parse(content);
+        console.log(`✅ 取得成功: ${path}`);
+        return results;
+      }
+      // 404の場合は会場別ファイルにフォールバック
+      if (response.status !== 404) {
+        throw new Error(`結果データの取得に失敗: ${response.status} ${response.statusText}`);
+      }
+    } else {
+      // GitHub Actions実行時: GitHub API経由（レート制限回避）
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+
+      const response = await fetch(apiUrl, {
+        headers: {
+          'Authorization': `token ${GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const content = Buffer.from(data.content, 'base64').toString('utf-8');
+        console.log(`✅ 取得成功: ${path}`);
+        return JSON.parse(content);
+      }
+      // 404の場合は会場別ファイルにフォールバック
+      if (response.status !== 404) {
+        throw new Error(`結果データの取得に失敗: ${response.status} ${response.statusText}`);
+      }
     }
 
-    const content = await response.text();
-    const results = JSON.parse(content);
-    console.log(`✅ 取得成功: ${path}`);
-    return results;
+    // 統合ファイルがない場合、会場別ファイルをマージ
+    console.log(`   統合ファイルが見つかりません。会場別ファイルを検索します...`);
+    return await fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN);
+
+  } catch (error) {
+    // ネットワークエラー等
+    throw error;
   }
+}
 
-  // GitHub Actions実行時: GitHub API経由（レート制限回避）
-  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+/**
+ * 会場別結果ファイルを取得してマージ
+ */
+async function fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN) {
+  const owner = 'apol0510';
+  const repo = 'keiba-data-shared';
+  const venueCodesJRA = ['TOK', 'KYO', 'HAN', 'NAK', 'CHU', 'KOK', 'NII', 'FUK', 'SAP', 'HAK'];
 
-  const response = await fetch(apiUrl, {
-    headers: {
-      'Authorization': `token ${GITHUB_TOKEN}`,
-      'Accept': 'application/vnd.github.v3+json'
+  const venues = [];
+  let allRaces = [];
+
+  for (const venueCode of venueCodesJRA) {
+    const venueFile = `${date}-${venueCode}.json`;
+    const venuePath = `jra/results/${year}/${month}/${venueFile}`;
+
+    try {
+      let venueData;
+
+      if (!GITHUB_TOKEN) {
+        // ローカル実行時
+        const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${venuePath}`;
+        const response = await fetch(rawUrl);
+        if (!response.ok) continue; // 404ならスキップ
+        venueData = JSON.parse(await response.text());
+      } else {
+        // GitHub Actions実行時
+        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${venuePath}`;
+        const response = await fetch(apiUrl, {
+          headers: {
+            'Authorization': `token ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+        if (!response.ok) continue; // 404ならスキップ
+        const data = await response.json();
+        venueData = JSON.parse(Buffer.from(data.content, 'base64').toString('utf-8'));
+      }
+
+      console.log(`   ✅ ${venueCode}: ${venueData.races?.length || 0}レース取得`);
+
+      // 会場データを追加
+      if (venueData.races) {
+        allRaces = allRaces.concat(venueData.races);
+        venues.push(venueData.venue || venueCode);
+      }
+
+    } catch (err) {
+      // エラーは無視して次の会場へ
+      continue;
     }
-  });
-
-  if (!response.ok) {
-    throw new Error(`結果データの取得に失敗: ${response.status} ${response.statusText}`);
   }
 
-  const data = await response.json();
-  const content = Buffer.from(data.content, 'base64').toString('utf-8');
+  if (allRaces.length === 0) {
+    throw new Error(`結果データが見つかりません: ${date}（統合ファイル・会場別ファイルともに存在しない）`);
+  }
 
-  console.log(`✅ 取得成功: ${path}`);
+  console.log(`✅ 会場別ファイルからマージ完了: ${allRaces.length}レース（${venues.join('・')}）`);
 
-  return JSON.parse(content);
+  // 統合フォーマットで返す
+  return {
+    date: date,
+    venue: venues.join('・'),
+    totalRaces: allRaces.length,
+    races: allRaces,
+    venues: venues
+  };
 }
 
 /**
