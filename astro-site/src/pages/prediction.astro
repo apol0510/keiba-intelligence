@@ -51,11 +51,11 @@ let error = null;
 
 try {
   if (existsSync(predictionsDir)) {
-    // ファイル名から日付を抽出して日付順にソート
+    // ファイル名から日付を抽出して日付順にソート（会場名付き: YYYY-MM-DD-venue.json）
     const files = readdirSync(predictionsDir)
-      .filter(file => file.endsWith('.json') && /^\d{4}-\d{2}-\d{2}\.json$/.test(file))
+      .filter(file => file.endsWith('.json') && /^\d{4}-\d{2}-\d{2}-[a-z]+\.json$/.test(file))
       .map(file => {
-        const dateMatch = file.match(/^(\d{4}-\d{2}-\d{2})\.json$/);
+        const dateMatch = file.match(/^(\d{4}-\d{2}-\d{2})-[a-z]+\.json$/);
         return {
           file,
           date: dateMatch ? dateMatch[1] : '',
