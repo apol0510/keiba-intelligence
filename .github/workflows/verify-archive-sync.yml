@@ -183,16 +183,12 @@ jobs:
 
       - name: Send alert email (JRA)
         if: steps.check-jra.outputs.alert_needed == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.sendgrid.net
-          server_port: 587
-          username: apikey
-          password: ${{ secrets.SENDGRID_API_KEY }}
-          subject: '🚨 JRA結果アーカイブ未反映検出 - keiba-intelligence'
-          to: ${{ secrets.ALERT_EMAIL }}
-          from: ${{ secrets.SENDGRID_FROM_EMAIL }}
-          body: |
+        env:
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          EMAIL_SUBJECT: '🚨 JRA結果アーカイブ未反映検出 - keiba-intelligence'
+          EMAIL_BODY: |
             マコさん、
 
             JRA結果データがkeiba-intelligenceのアーカイブに反映されていません。
@@ -217,19 +213,16 @@ jobs:
             ---
             このメールは自動送信されています。
             ワークフロー: verify-archive-sync.yml
+        run: node .github/scripts/send-alert-email.js
 
       - name: Send alert email (JRA - No Results)
         if: steps.check-jra.outputs.no_results_alert == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.sendgrid.net
-          server_port: 587
-          username: apikey
-          password: ${{ secrets.SENDGRID_API_KEY }}
-          subject: '🚨🚨 JRA結果データ未登録検出 - keiba-data-shared'
-          to: ${{ secrets.ALERT_EMAIL }}
-          from: ${{ secrets.SENDGRID_FROM_EMAIL }}
-          body: |
+        env:
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          EMAIL_SUBJECT: '🚨🚨 JRA結果データ未登録検出 - keiba-data-shared'
+          EMAIL_BODY: |
             マコさん、
 
             JRA予想データは存在しますが、結果データがkeiba-data-sharedに登録されていません。
@@ -252,19 +245,16 @@ jobs:
             ---
             このメールは自動送信されています。
             ワークフロー: verify-archive-sync.yml
+        run: node .github/scripts/send-alert-email.js
 
       - name: Send alert email (Nankan)
         if: steps.check-nankan.outputs.alert_needed == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.sendgrid.net
-          server_port: 587
-          username: apikey
-          password: ${{ secrets.SENDGRID_API_KEY }}
-          subject: '🚨 南関結果アーカイブ未反映検出 - keiba-intelligence'
-          to: ${{ secrets.ALERT_EMAIL }}
-          from: ${{ secrets.SENDGRID_FROM_EMAIL }}
-          body: |
+        env:
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          EMAIL_SUBJECT: '🚨 南関結果アーカイブ未反映検出 - keiba-intelligence'
+          EMAIL_BODY: |
             マコさん、
 
             南関結果データがkeiba-intelligenceのアーカイブに反映されていません。
@@ -289,19 +279,16 @@ jobs:
             ---
             このメールは自動送信されています。
             ワークフロー: verify-archive-sync.yml
+        run: node .github/scripts/send-alert-email.js
 
       - name: Send alert email (Nankan - No Results)
         if: steps.check-nankan.outputs.no_results_alert == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.sendgrid.net
-          server_port: 587
-          username: apikey
-          password: ${{ secrets.SENDGRID_API_KEY }}
-          subject: '🚨🚨 南関結果データ未登録検出 - keiba-data-shared'
-          to: ${{ secrets.ALERT_EMAIL }}
-          from: ${{ secrets.SENDGRID_FROM_EMAIL }}
-          body: |
+        env:
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          EMAIL_SUBJECT: '🚨🚨 南関結果データ未登録検出 - keiba-data-shared'
+          EMAIL_BODY: |
             マコさん、
 
             南関予想データは存在しますが、結果データがkeiba-data-sharedに登録されていません。
@@ -324,6 +311,7 @@ jobs:
             ---
             このメールは自動送信されています。
             ワークフロー: verify-archive-sync.yml
+        run: node .github/scripts/send-alert-email.js
 
       - name: Success notification
         if: steps.check-jra.outputs.alert_needed != 'true' && steps.check-nankan.outputs.alert_needed != 'true'
