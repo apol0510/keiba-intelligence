@@ -191,7 +191,7 @@ jobs:
           password: ${{ secrets.SENDGRID_API_KEY }}
           subject: '🚨 JRA結果アーカイブ未反映検出 - keiba-intelligence'
           to: ${{ secrets.ALERT_EMAIL }}
-          from: ${{ secrets.ALERT_EMAIL }}
+          from: ${{ secrets.SENDGRID_FROM_EMAIL }}
           body: |
             マコさん、
 
@@ -228,7 +228,7 @@ jobs:
           password: ${{ secrets.SENDGRID_API_KEY }}
           subject: '🚨🚨 JRA結果データ未登録検出 - keiba-data-shared'
           to: ${{ secrets.ALERT_EMAIL }}
-          from: ${{ secrets.ALERT_EMAIL }}
+          from: ${{ secrets.SENDGRID_FROM_EMAIL }}
           body: |
             マコさん、
 
@@ -263,7 +263,7 @@ jobs:
           password: ${{ secrets.SENDGRID_API_KEY }}
           subject: '🚨 南関結果アーカイブ未反映検出 - keiba-intelligence'
           to: ${{ secrets.ALERT_EMAIL }}
-          from: ${{ secrets.ALERT_EMAIL }}
+          from: ${{ secrets.SENDGRID_FROM_EMAIL }}
           body: |
             マコさん、
 
@@ -300,7 +300,7 @@ jobs:
           password: ${{ secrets.SENDGRID_API_KEY }}
           subject: '🚨🚨 南関結果データ未登録検出 - keiba-data-shared'
           to: ${{ secrets.ALERT_EMAIL }}
-          from: ${{ secrets.ALERT_EMAIL }}
+          from: ${{ secrets.SENDGRID_FROM_EMAIL }}
           body: |
             マコさん、
 
