@@ -23,20 +23,39 @@ function sendEmail(to, subject, body) {
   console.log('📧 From:', FROM_EMAIL);
   console.log('📧 Subject:', subject);
 
-  const data = JSON.stringify({
-    personalizations: [{
-      to: [{ email: to }]
-    }],
+  // SendGrid requires from email to be a verified sender
+  // Using a simpler, more compatible format
+  const payload = {
+    personalizations: [
+      {
+        to: [
+          {
+            email: to
+          }
+        ],
+        subject: subject
+      }
+    ],
     from: {
-      email: FROM_EMAIL,
-      name: 'KEIBA Intelligence'
+      email: FROM_EMAIL
     },
+    content: [
+      {
+        type: 'text/html',
+        value: body
+      }
+    ]
+  };
+
+  console.log('📧 SendGrid payload (partial):', JSON.stringify({
+    to: to,
+    from: FROM_EMAIL,
     subject: subject,
-    content: [{
-      type: 'text/html',
-      value: body
-    }]
-  });
+    contentType: 'text/html',
+    bodyLength: body.length
+  }));
+
+  const data = JSON.stringify(payload);
 
   return new Promise((resolve, reject) => {
     const options = {
