@@ -25,7 +25,7 @@ function sendEmail(to, subject, body) {
   console.log('📧 Subject:', subject);
 
   // SendGrid requires from email to be a verified sender
-  // SendGrid API v3 minimal required format
+  // SendGrid API v3 format (nankan-analytics compatible)
   const payload = {
     personalizations: [
       {
@@ -33,22 +33,20 @@ function sendEmail(to, subject, body) {
           {
             email: to
           }
-        ]
+        ],
+        subject: subject
       }
     ],
     from: {
-      email: FROM_EMAIL
+      email: FROM_EMAIL,
+      name: 'KEIBA Intelligence'
     },
-    subject: subject,
     content: [
       {
         type: 'text/html',
         value: body
       }
-    ],
-    reply_to: {
-      email: FROM_EMAIL
-    }
+    ]
   };
 
   console.log('📧 SendGrid payload (partial):', JSON.stringify({
