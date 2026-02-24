@@ -25,7 +25,7 @@ function sendEmail(to, subject, body) {
   console.log('📧 Subject:', subject);
 
   // SendGrid requires from email to be a verified sender
-  // SendGrid API v3 official format
+  // SendGrid API v3 minimal required format
   const payload = {
     personalizations: [
       {
@@ -45,7 +45,10 @@ function sendEmail(to, subject, body) {
         type: 'text/html',
         value: body
       }
-    ]
+    ],
+    reply_to: {
+      email: FROM_EMAIL
+    }
   };
 
   console.log('📧 SendGrid payload (partial):', JSON.stringify({
@@ -55,6 +58,14 @@ function sendEmail(to, subject, body) {
     contentType: 'text/html',
     bodyLength: body.length
   }));
+
+  // Debug: Full payload (without body content for readability)
+  console.log('📧 SendGrid full payload structure:', JSON.stringify({
+    personalizations: payload.personalizations,
+    from: payload.from,
+    subject: payload.subject,
+    content: [{ type: payload.content[0].type, valueLength: payload.content[0].value.length }]
+  }, null, 2));
 
   const data = JSON.stringify(payload);
 
@@ -79,6 +90,7 @@ function sendEmail(to, subject, body) {
 
       res.on('end', () => {
         console.log('SendGrid response status:', res.statusCode);
+        console.log('SendGrid response headers:', JSON.stringify(res.headers));
         console.log('SendGrid response body:', responseBody);
 
         if (res.statusCode === 202) {
@@ -86,6 +98,13 @@ function sendEmail(to, subject, body) {
           resolve();
         } else {
           console.error('❌ SendGrid error:', res.statusCode, responseBody);
+          // Try to parse error details
+          try {
+            const errorData = JSON.parse(responseBody);
+            console.error('❌ SendGrid error details:', JSON.stringify(errorData, null, 2));
+          } catch (e) {
+            console.error('❌ Could not parse error response');
+          }
           reject(new Error(`SendGrid error: ${res.statusCode} ${responseBody}`));
         }
       });
