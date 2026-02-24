@@ -16,10 +16,10 @@ function sendEmail(to, subject, body) {
 
   const data = JSON.stringify({
     personalizations: [{
-      to: [{ email: to }],
-      subject: subject
+      to: [{ email: to }]
     }],
     from: { email: FROM_EMAIL },
+    subject: subject,
     content: [{
       type: 'text/html',
       value: body
