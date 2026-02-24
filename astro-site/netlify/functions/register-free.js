@@ -9,8 +9,8 @@
 
 const https = require('https');
 
-// SendGrid APIでメール送信
-function sendEmail(to, subject, body) {
+// SendGrid APIでメール送信 (nankan-analytics方式: fetchを使用)
+async function sendEmail(to, subject, body) {
   const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
   // Use Domain Authenticated subdomain instead of root domain
   const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@em8410.keiba-intelligence.jp';
@@ -61,57 +61,26 @@ function sendEmail(to, subject, body) {
   console.log('📧 SendGrid full payload structure:', JSON.stringify({
     personalizations: payload.personalizations,
     from: payload.from,
-    subject: payload.subject,
     content: [{ type: payload.content[0].type, valueLength: payload.content[0].value.length }]
   }, null, 2));
 
-  const data = JSON.stringify(payload);
-
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: 'api.sendgrid.com',
-      port: 443,
-      path: '/v3/mail/send',
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SENDGRID_API_KEY}`,
-        'Content-Type': 'application/json',
-        'Content-Length': data.length
-      }
-    };
-
-    const req = https.request(options, (res) => {
-      let responseBody = '';
-      res.on('data', (chunk) => {
-        responseBody += chunk;
-      });
-
-      res.on('end', () => {
-        console.log('SendGrid response status:', res.statusCode);
-        console.log('SendGrid response headers:', JSON.stringify(res.headers));
-        console.log('SendGrid response body:', responseBody);
-
-        if (res.statusCode === 202) {
-          console.log('✅ SendGrid email sent successfully');
-          resolve();
-        } else {
-          console.error('❌ SendGrid error:', res.statusCode, responseBody);
-          // Try to parse error details
-          try {
-            const errorData = JSON.parse(responseBody);
-            console.error('❌ SendGrid error details:', JSON.stringify(errorData, null, 2));
-          } catch (e) {
-            console.error('❌ Could not parse error response');
-          }
-          reject(new Error(`SendGrid error: ${res.statusCode} ${responseBody}`));
-        }
-      });
-    });
-
-    req.on('error', reject);
-    req.write(data);
-    req.end();
+  // Use fetch instead of https.request (nankan-analytics方式)
+  const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${SENDGRID_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
   });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('❌ SendGrid error:', response.status, errorText);
+    throw new Error(`SendGrid error: ${response.status} ${errorText}`);
+  }
+
+  console.log('✅ SendGrid email sent successfully (status:', response.status, ')');
 }
 
 // Airtableに登録
