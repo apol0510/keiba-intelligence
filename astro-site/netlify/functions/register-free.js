@@ -25,7 +25,7 @@ function sendEmail(to, subject, body) {
   console.log('📧 Subject:', subject);
 
   // SendGrid requires from email to be a verified sender
-  // Using a simpler, more compatible format
+  // SendGrid API v3 official format
   const payload = {
     personalizations: [
       {
@@ -33,13 +33,13 @@ function sendEmail(to, subject, body) {
           {
             email: to
           }
-        ],
-        subject: subject
+        ]
       }
     ],
     from: {
       email: FROM_EMAIL
     },
+    subject: subject,
     content: [
       {
         type: 'text/html',
