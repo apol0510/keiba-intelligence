@@ -137,31 +137,28 @@ async function registerToAirtable(email) {
 
 // BlastMailに登録 (隠しパラメータ: registration_source=keiba-intelligence)
 async function registerToBlastMail(email) {
-  const BLASTMAIL_USERNAME = process.env.BLASTMAIL_USERNAME;
-  const BLASTMAIL_PASSWORD = process.env.BLASTMAIL_PASSWORD;
   const BLASTMAIL_API_KEY = process.env.BLASTMAIL_API_KEY;
 
-  if (!BLASTMAIL_USERNAME || !BLASTMAIL_PASSWORD || !BLASTMAIL_API_KEY) {
-    console.log('⚠️ BlastMail環境変数未設定（スキップ）');
+  if (!BLASTMAIL_API_KEY) {
+    console.log('⚠️ BLASTMAIL_API_KEY未設定（スキップ）');
     return null;
   }
 
-  const params = new URLSearchParams({
-    username: BLASTMAIL_USERNAME,
-    password: BLASTMAIL_PASSWORD,
-    apikey: BLASTMAIL_API_KEY,
+  // BlastMail APIリクエストボディ
+  const data = JSON.stringify({
     email: email,
-    registration_source: 'keiba-intelligence' // 隠しパラメータ（項目設定で追加必要）
+    registration_source: 'keiba-intelligence' // 隠しパラメータ
   });
 
   return new Promise((resolve, reject) => {
     const options = {
-      hostname: 'blastmail.jp',
+      hostname: 'a.bme.jp',
       port: 443,
-      path: '/api/v1/register?' + params.toString(),
+      path: '/bm/p/aa/fw.php?d=' + BLASTMAIL_API_KEY,
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Content-Type': 'application/json',
+        'Content-Length': data.length
       }
     };
 
@@ -172,11 +169,13 @@ async function registerToBlastMail(email) {
       });
 
       res.on('end', () => {
-        console.log('BlastMail response:', res.statusCode, responseBody);
+        console.log('BlastMail response status:', res.statusCode);
+        console.log('BlastMail response body (first 500 chars):', responseBody.substring(0, 500));
         if (res.statusCode === 200 || res.statusCode === 201) {
+          console.log('✅ BlastMail registration successful');
           resolve(responseBody);
         } else {
-          console.error('BlastMail error:', responseBody);
+          console.warn('⚠️ BlastMail registration failed (non-critical):', res.statusCode);
           // BlastMail失敗は警告のみ（登録は継続）
           resolve(null);
         }
@@ -189,6 +188,7 @@ async function registerToBlastMail(email) {
       resolve(null);
     });
 
+    req.write(data);
     req.end();
   });
 }
