@@ -114,12 +114,14 @@ grep -r "pattern" ../
 | プラン | 価格 | 内容 |
 |--------|------|------|
 | フリー | ¥0 | 予想閲覧のみ（上位5頭、買い目なし） |
+| **無料会員** | **¥0（登録必要）** | **全頭予想・買い目一部（本命/対抗/単穴/連下最上位）・AI分析・メルマガ** |
 | 買い切り | ¥88,000（永久） | 南関＋中央、全レース馬単買い目、永久アクセス |
 | 年払い | ¥66,000/年 | 南関＋中央、全レース馬単買い目（月額換算¥5,500） |
 | 月払い南関 | ¥12,000/月 | 南関4場のみ（割高・非推奨） |
 | 月払い中央 | ¥12,000/月 | JRA全10場のみ（割高・非推奨） |
 
 **おすすめプラン:**
+- **無料会員登録（¥0）**: メールアドレスのみで全頭予想＋買い目一部が見られる！
 - **買い切りプラン（¥88,000）**: 50年利用で月額換算¥147、AIは毎日進化、追加料金なし
 - **年払いプラン（¥66,000）**: 月額換算¥5,500、年間¥78,000お得
 
@@ -1044,13 +1046,70 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ---
 
-**📅 最終更新日**: 2026-02-21
-**🏁 Project Phase**: Phase 3管理機能実装 🚀（Phase 3: 99.5%完了）
-**🎯 Next Priority**: SEOページ自動生成 → 本番デプロイ → 1000人会員獲得
-**📊 進捗率**: 99.5%完了（Phase 1: 100%、Phase 2: 100%、Phase 3: 99.5%）
+**📅 最終更新日**: 2026-02-24
+**🏁 Project Phase**: Phase 4無料会員登録システム実装 🚀（Phase 3: 100%完了、Phase 4: 80%完了）
+**🎯 Next Priority**: BlastMail設定 → 動作テスト → 本番デプロイ → 会員獲得
+**📊 進捗率**: 99.9%完了（Phase 1: 100%、Phase 2: 100%、Phase 3: 100%、Phase 4: 80%）
 **🌐 本番URL**: https://keiba-intelligence.netlify.app/
 
-**✨ 本日の成果（2026-02-21）**:
+**✨ 本日の成果（2026-02-24）**:
+  - **無料会員登録システム実装（Phase 4開始）** ✅
+    - **コンセプト**: Freemiumモデル実装（無料会員→有料会員の導線強化）
+    - **実装内容**:
+      1. **無料登録ページ（/register）** ✅
+         - メールアドレスのみ登録（パスワード不要）
+         - 無料会員特典表示（全頭予想・買い目一部・AI分析・メルマガ）
+         - 利用規約・プライバシーポリシー同意（登録=同意）
+         - 有料プランへのアップグレード誘導
+      2. **Netlify Function（register-free.js）** ✅
+         - 3段階処理:
+           - Airtable登録（plan: free-registered, status: pending, Source: keiba-intelligence）
+           - BlastMail登録（hidden parameter: registration_source=keiba-intelligence）
+           - マジックリンク送信（HTML形式ウェルカムメール、15分有効期限）
+         - エラーハンドリング（Airtable/BlastMail失敗は警告のみ、メール送信は継続）
+      3. **AccessControl修正** ✅
+         - free-registered プラン追加（階層: 0=free, 1=free-registered, 2=pro, 3=pro-plus）
+         - 無料登録ユーザー対応（登録ユーザーなら誰でもアクセス可能）
+         - isFreeUserフラグをsessionStorageに保存（予想ページで使用）
+      4. **予想ページ修正（南関・JRA両対応）** ✅
+         - prediction.astro（南関）・prediction-jra.astro（JRA）
+         - 無料会員向け制限買い目表示:
+           - 本命・対抗・単穴・連下最上位の馬番号のみ表示
+           - 全頭AI分析は閲覧可能（Feature Importance Analysis含む）
+           - 有料プランへのアップグレード誘導
+         - プロ会員向け完全買い目表示（本線＋抑え）
+         - クライアントサイドでユーザータイプ判定・表示切替
+    - **ユーザー体験（3段階）**:
+      - 登録なし: トップページ・無料予想（上位5頭のみ）
+      - 無料会員: 全頭予想・買い目一部（本命/対抗/単穴/連下最上位）・AI分析・メルマガ
+      - プロ会員: 全買い目（本線＋抑え）・全機能・永久アクセス
+    - **残タスク**: BlastMail登録フォーム設定（hidden parameter追加）、動作テスト
+    - **コミット**: 87bb347
+
+  - **SEOページ自動生成完了（35ページ）** ✅
+    - **日別実績ページ（19ページ）**: `/results/YYYY/MM/DD/`
+      - 全レース詳細、買い目、的中判定、統計サマリー
+      - JSON-LD構造化データ（SportsEventスキーマ）
+      - パンくずリスト
+    - **月別実績ページ（2ページ）**: `/results/YYYY/MM/`
+      - 月間統計、開催別統計、日別実績リスト
+    - **競馬場別統計ページ（14ページ）**: `/stats/[venue]/`
+      - 南関4場：大井・川崎・船橋・浦和
+      - 中央10場：東京・京都・阪神・小倉・中山・新潟・中京・福島・札幌・函館
+      - 累計統計（的中率・回収率）、直近20日実績
+    - **競馬場一覧ページ（1ページ）**: `/stats/`
+    - **メリット**: Google検索流入強化、過去実績による信頼性アピール、自動更新
+    - **デプロイ**: https://keiba-intelligence.netlify.app/
+    - **DEPLOYMENT_REPORT.md作成** ✅
+
+  - **SendGrid Web API v3移行（アラートシステム改善）** ✅
+    - **問題**: SendGrid SMTP認証失敗（535/401エラー）
+    - **解決策**: SMTP → Web API v3（HTTPS）に移行
+    - `.github/scripts/send-alert-email.js`作成
+    - verify-archive-sync.yml修正（4箇所のアラートメール送信）
+    - **メリット**: 認証が安定、SMTPポート不要
+
+**✨ 過去の成果（2026-02-21）**:
   - **keiba.linkドメイン完全削除（netlify.appに統一）** ✅
     - **問題**: keiba.linkは別プロジェクト、intelligenceで使用禁止
     - **修正内容**:
@@ -1412,13 +1471,16 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 **🎉 累積成果**:
   - **共有リポジトリ**: keiba-data-shared（全プロジェクト共有・南関中央対応・GitHub自動Push対応）
-  - **Netlify Functions**: 10個実装（Newsletter 5個, Auth 4個, Gemini-Chat, Bank-Transfer）
-  - **設計書**: 5個作成（NEWSLETTER_SYSTEM.md, NEWSLETTER_MIGRATION.md, AUTH_SYSTEM.md, BET_POINT_LOGIC.md, ALERT_SYSTEM.md）
+  - **Netlify Functions**: 11個実装（Newsletter 5個, Auth 4個, Gemini-Chat, Bank-Transfer, Register-Free）
+  - **設計書**: 6個作成（NEWSLETTER_SYSTEM.md, NEWSLETTER_MIGRATION.md, AUTH_SYSTEM.md, BET_POINT_LOGIC.md, ALERT_SYSTEM.md, DEPLOYMENT_REPORT.md）
   - **管理画面**: 3ページ実装（/admin/newsletter/*）
   - **公開ページ**:
     - 南関競馬: トップ, 無料予想, 有料予想, 料金, 月別アーカイブ, ログイン, サイト概要
     - 中央競馬: /free-prediction-jra, /prediction-jra, /archive-jra/（完成）
+    - SEOページ: 35ページ（日別19, 月別2, 競馬場別14, 一覧1）
+    - 無料登録: /register（メールアドレスのみ）
   - **料金プラン**:
+    - 無料会員: ¥0（登録必要）全頭予想・買い目一部・AI分析・メルマガ
     - 買い切りプラン: ¥88,000（永久アクセス、50年利用で月額換算¥147）
     - 年払いプラン: ¥66,000/年（月額換算¥5,500）
     - 月払いプラン: ¥12,000/月（割高・非推奨）
