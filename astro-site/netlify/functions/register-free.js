@@ -14,6 +14,15 @@ function sendEmail(to, subject, body) {
   const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
   const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'support@keiba-intelligence.jp';
 
+  if (!SENDGRID_API_KEY) {
+    console.error('❌ SENDGRID_API_KEY is not set');
+    throw new Error('SendGrid API key is not configured');
+  }
+
+  console.log('📧 Sending email to:', to);
+  console.log('📧 From:', FROM_EMAIL);
+  console.log('📧 Subject:', subject);
+
   const data = JSON.stringify({
     personalizations: [{
       to: [{ email: to }]
@@ -46,9 +55,14 @@ function sendEmail(to, subject, body) {
       });
 
       res.on('end', () => {
+        console.log('SendGrid response status:', res.statusCode);
+        console.log('SendGrid response body:', responseBody);
+
         if (res.statusCode === 202) {
+          console.log('✅ SendGrid email sent successfully');
           resolve();
         } else {
+          console.error('❌ SendGrid error:', res.statusCode, responseBody);
           reject(new Error(`SendGrid error: ${res.statusCode} ${responseBody}`));
         }
       });
@@ -325,10 +339,14 @@ exports.handler = async (event) => {
     };
   } catch (error) {
     console.error('❌ エラー:', error);
+    console.error('❌ エラースタック:', error.stack);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: error.message || '登録処理に失敗しました' }),
+      body: JSON.stringify({
+        error: error.message || '登録処理に失敗しました',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      }),
     };
   }
 };
