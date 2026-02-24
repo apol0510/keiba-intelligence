@@ -12,7 +12,8 @@ const https = require('https');
 // SendGrid APIでメール送信
 function sendEmail(to, subject, body) {
   const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-  const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'support@keiba-intelligence.jp';
+  // Use Domain Authenticated subdomain instead of root domain
+  const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@em8410.keiba-intelligence.jp';
 
   if (!SENDGRID_API_KEY) {
     console.error('❌ SENDGRID_API_KEY is not set');
