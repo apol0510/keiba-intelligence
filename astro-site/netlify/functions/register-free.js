@@ -27,7 +27,10 @@ function sendEmail(to, subject, body) {
     personalizations: [{
       to: [{ email: to }]
     }],
-    from: { email: FROM_EMAIL },
+    from: {
+      email: FROM_EMAIL,
+      name: 'KEIBA Intelligence'
+    },
     subject: subject,
     content: [{
       type: 'text/html',
