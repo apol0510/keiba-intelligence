@@ -83,7 +83,7 @@ async function sendEmail(to, subject, body) {
   console.log('✅ SendGrid email sent successfully (status:', response.status, ')');
 }
 
-// Airtableに登録
+// Airtableに登録 (重複チェック付き)
 async function registerToAirtable(email) {
   const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
   const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -93,110 +93,149 @@ async function registerToAirtable(email) {
     return null;
   }
 
-  const data = JSON.stringify({
-    records: [{
-      fields: {
-        Email: email,
-        PlanType: 'free-registered',
-        Status: 'pending',
-        AccessEnabled: false,
-        CreatedAt: new Date().toISOString(),
-        Source: 'keiba-intelligence'
-      }
-    }]
-  });
+  try {
+    // Step 1: 既存レコード確認（重複登録防止）
+    const filterFormula = `{Email} = "${email}"`;
+    const searchUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Customers?filterByFormula=${encodeURIComponent(filterFormula)}`;
 
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: 'api.airtable.com',
-      port: 443,
-      path: `/v0/${AIRTABLE_BASE_ID}/Customers`,
+    const searchResponse = await fetch(searchUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${AIRTABLE_API_KEY}`
+      }
+    });
+
+    if (!searchResponse.ok) {
+      throw new Error(`Airtable search failed: ${searchResponse.status}`);
+    }
+
+    const searchData = await searchResponse.json();
+
+    if (searchData.records && searchData.records.length > 0) {
+      console.log('ℹ️ Airtable customer already exists:', email);
+      return searchData.records[0];
+    }
+
+    // Step 2: 新規レコード作成
+    const createUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Customers`;
+    const createPayload = {
+      records: [{
+        fields: {
+          Email: email,
+          PlanType: 'free-registered',
+          Status: 'pending',
+          AccessEnabled: false,
+          CreatedAt: new Date().toISOString(),
+          Source: 'keiba-intelligence'
+        }
+      }]
+    };
+
+    const createResponse = await fetch(createUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-        'Content-Length': data.length
-      }
-    };
-
-    const req = https.request(options, (res) => {
-      let responseBody = '';
-      res.on('data', (chunk) => {
-        responseBody += chunk;
-      });
-
-      res.on('end', () => {
-        if (res.statusCode === 200) {
-          resolve(JSON.parse(responseBody));
-        } else {
-          console.error('Airtable error:', responseBody);
-          reject(new Error(`Airtable error: ${res.statusCode}`));
-        }
-      });
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(createPayload)
     });
 
-    req.on('error', reject);
-    req.write(data);
-    req.end();
-  });
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text();
+      console.error('Airtable create error:', errorText);
+      throw new Error(`Airtable create failed: ${createResponse.status}`);
+    }
+
+    const createData = await createResponse.json();
+    console.log('✅ Airtable customer created:', email);
+    return createData.records[0];
+
+  } catch (error) {
+    console.error('❌ Airtable error:', error);
+    throw error;
+  }
 }
 
-// BlastMailに登録 (隠しパラメータ: registration_source=keiba-intelligence)
+// BlastMailに登録 (nankan-analytics方式: REST API v1.0使用)
 async function registerToBlastMail(email) {
+  const BLASTMAIL_USERNAME = process.env.BLASTMAIL_USERNAME;
+  const BLASTMAIL_PASSWORD = process.env.BLASTMAIL_PASSWORD;
   const BLASTMAIL_API_KEY = process.env.BLASTMAIL_API_KEY;
 
-  if (!BLASTMAIL_API_KEY) {
-    console.log('⚠️ BLASTMAIL_API_KEY未設定（スキップ）');
+  if (!BLASTMAIL_USERNAME || !BLASTMAIL_PASSWORD || !BLASTMAIL_API_KEY) {
+    console.log('⚠️ BlastMail credentials not configured, skipping reader registration');
     return null;
   }
 
-  // BlastMail APIリクエストボディ
-  const data = JSON.stringify({
-    email: email,
-    registration_source: 'keiba-intelligence' // 隠しパラメータ
-  });
+  try {
+    // Step 1: ログイン（access_token取得）
+    const loginUrl = 'https://api.bme.jp/rest/1.0/authenticate/login';
+    const loginParams = new URLSearchParams({
+      username: BLASTMAIL_USERNAME,
+      password: BLASTMAIL_PASSWORD,
+      api_key: BLASTMAIL_API_KEY,
+      format: 'json'
+    });
 
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: 'a.bme.jp',
-      port: 443,
-      path: '/bm/p/aa/fw.php?d=' + BLASTMAIL_API_KEY,
+    const loginResponse = await fetch(loginUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': data.length
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: loginParams.toString()
+    });
+
+    if (!loginResponse.ok) {
+      throw new Error(`BlastMail login failed: ${loginResponse.status}`);
+    }
+
+    const loginData = await loginResponse.json();
+    const accessToken = loginData.accessToken;
+
+    if (!accessToken) {
+      throw new Error('BlastMail access token not returned');
+    }
+
+    console.log('✅ BlastMail login successful, access_token obtained');
+
+    // Step 2: 読者登録 (c16 = registration_source カスタムフィールド)
+    const registerUrl = 'https://api.bme.jp/rest/1.0/contact/detail/create';
+    const registerParams = new URLSearchParams({
+      access_token: accessToken,
+      format: 'json',
+      c15: email,                           // E-Mail（必須フィールド）
+      c16: 'keiba-intelligence'             // 登録元サイト（カスタムフィールド）
+    });
+
+    const registerResponse = await fetch(registerUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: registerParams.toString()
+    });
+
+    if (!registerResponse.ok) {
+      const errorText = await registerResponse.text();
+
+      // 重複登録エラーは成功として扱う
+      if (errorText.includes('Has already been registered')) {
+        console.log('ℹ️ BlastMail reader already registered:', email);
+        return null;
+      } else {
+        throw new Error(`BlastMail reader registration failed: ${registerResponse.status} - ${errorText}`);
       }
-    };
+    }
 
-    const req = https.request(options, (res) => {
-      let responseBody = '';
-      res.on('data', (chunk) => {
-        responseBody += chunk;
-      });
+    const registerData = await registerResponse.json();
+    console.log('✅ BlastMail reader registered:', email, 'ContactID:', registerData.contactID);
+    return registerData;
 
-      res.on('end', () => {
-        console.log('BlastMail response status:', res.statusCode);
-        console.log('BlastMail response body (first 500 chars):', responseBody.substring(0, 500));
-        if (res.statusCode === 200 || res.statusCode === 201) {
-          console.log('✅ BlastMail registration successful');
-          resolve(responseBody);
-        } else {
-          console.warn('⚠️ BlastMail registration failed (non-critical):', res.statusCode);
-          // BlastMail失敗は警告のみ（登録は継続）
-          resolve(null);
-        }
-      });
-    });
-
-    req.on('error', (error) => {
-      console.error('BlastMail request error:', error);
-      // リクエストエラーも警告のみ
-      resolve(null);
-    });
-
-    req.write(data);
-    req.end();
-  });
+  } catch (error) {
+    console.error('❌ BlastMail registration error:', error);
+    // BlastMailエラーでも処理は続行（登録は継続）
+    return null;
+  }
 }
 
 // マジックリンク生成とメール送信
