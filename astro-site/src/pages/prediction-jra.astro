@@ -246,7 +246,7 @@ function generateUmatanBets(horses) {
   title="中央競馬プロ予想 - KEIBA Intelligence"
   description="KEIBA Intelligence 中央競馬（JRA）のプロフェッショナルAI予想。機械学習モデルによる全レース詳細分析と馬単買い目を提供。"
 >
-  <AccessControl requiredPlan="pro">
+  <AccessControl requiredPlan="free-registered">
     <section class="prediction-section">
       <div class="container">
         {error && (
@@ -419,14 +419,41 @@ function generateUmatanBets(horses) {
 
                   <!-- 買い目セクション（プロ会員限定）-->
                   {umatanBets && (
-                    <div class="betting-section pro-exclusive">
+                    <div class="betting-section pro-exclusive" id={`betting-section-${raceIndex}`}>
                       <div class="section-header">
                         <div class="header-icon">💰</div>
                         <h2>AI Recommended Betting Strategy / AI推奨馬単買い目</h2>
-                        <span class="pro-tag">PRO限定</span>
+                        <span class="pro-tag pro-only">PRO限定</span>
                       </div>
 
-                      <div class="betting-formula">
+                      <!-- 無料会員向け制限買い目 -->
+                      <div class="free-user-betting hidden" data-race-index={raceIndex}>
+                        <div class="limited-betting-info">
+                          <p>🎁 <strong>無料会員特典：</strong>本命・対抗・単穴・連下最上位の馬番号を表示</p>
+                          <div class="limited-horses">
+                            {allHorses
+                              .filter(h => ['本命', '対抗', '単穴', '連下最上位'].includes(h.role))
+                              .map((horse) => (
+                                <div class={`limited-horse ${horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : horse.role === '単穴' ? 'tanana' : 'renka-top'}`}>
+                                  <span class="limited-mark">
+                                    {horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : horse.role === '単穴' ? '▲' : '△'}
+                                  </span>
+                                  <span class="limited-number">{horse.horseNumber}</span>
+                                  <span class="limited-name">{horse.horseName}</span>
+                                  <span class="limited-role">{horse.role}</span>
+                                </div>
+                              ))
+                            }
+                          </div>
+                          <div class="upgrade-notice">
+                            <p>💎 <strong>有料プランにアップグレードで全買い目（本線＋抑え）が見られます</strong></p>
+                            <a href="/pricing" class="btn btn-upgrade">料金プランを見る →</a>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- プロ会員向け完全買い目 -->
+                      <div class="betting-formula pro-user-only">
                         <!-- 本命軸 -->
                         <div class="formula-row honmei-axis">
                           <div class="formula-header">
@@ -493,6 +520,7 @@ function generateUmatanBets(horses) {
                           </div>
                         </div>
                       </div>
+                      <!-- /プロ会員向け完全買い目 -->
                     </div>
                   )}
 
@@ -909,6 +937,141 @@ function generateUmatanBets(horses) {
       border-radius: var(--radius-lg);
       margin-bottom: var(--spacing-xl);
       border: 2px solid rgba(251, 191, 36, 0.3);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* 無料会員向け買い目制限表示 */
+    .free-user-betting {
+      margin-top: var(--spacing-md);
+    }
+
+    .limited-betting-info {
+      background: rgba(16, 185, 129, 0.1);
+      border: 2px solid rgba(16, 185, 129, 0.3);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-lg);
+    }
+
+    .limited-betting-info > p {
+      margin-bottom: var(--spacing-md);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+    }
+
+    .limited-horses {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .limited-horse {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-md);
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-sm);
+      border: 2px solid var(--border-color);
+    }
+
+    .limited-horse.honmei {
+      border-color: #3b82f6;
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+    }
+
+    .limited-horse.taikou {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+    }
+
+    .limited-horse.tanana {
+      border-color: #f59e0b;
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+    }
+
+    .limited-horse.renka-top {
+      border-color: #10b981;
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+    }
+
+    .limited-mark {
+      font-size: 1.5rem;
+      font-weight: 900;
+    }
+
+    .limited-horse.honmei .limited-mark {
+      color: #3b82f6;
+    }
+
+    .limited-horse.taikou .limited-mark {
+      color: #8b5cf6;
+    }
+
+    .limited-horse.tanana .limited-mark {
+      color: #f59e0b;
+    }
+
+    .limited-horse.renka-top .limited-mark {
+      color: #10b981;
+    }
+
+    .limited-number {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      min-width: 2rem;
+      text-align: center;
+    }
+
+    .limited-name {
+      flex: 1;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .limited-role {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+    }
+
+    .upgrade-notice {
+      margin-top: var(--spacing-lg);
+      padding: var(--spacing-lg);
+      background: linear-gradient(135deg,
+        rgba(59, 130, 246, 0.1) 0%,
+        rgba(139, 92, 246, 0.1) 100%);
+      border-radius: var(--radius-md);
+      border: 2px solid rgba(59, 130, 246, 0.3);
+      text-align: center;
+    }
+
+    .upgrade-notice p {
+      margin-bottom: var(--spacing-md);
+      font-size: 1rem;
+      color: var(--text-primary);
+    }
+
+    .btn-upgrade {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      transition: all 0.3s;
+    }
+
+    .btn-upgrade:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
     }
 
     .pro-tag {
@@ -1785,6 +1948,32 @@ function generateUmatanBets(horses) {
         activeRace.querySelectorAll('[data-counter]').forEach(el => {
           const target = parseInt(el.getAttribute('data-counter'));
           animateCounter(el, target);
+        });
+      }
+
+      // 無料ユーザーチェック
+      const isFreeUser = sessionStorage.getItem('isFreeUser') === 'true';
+      console.log('🔍 ユーザータイプ:', isFreeUser ? '無料会員' : 'プロ会員');
+
+      if (isFreeUser) {
+        // 無料ユーザー向け表示
+        document.querySelectorAll('.free-user-betting').forEach(el => {
+          el.classList.remove('hidden');
+        });
+        document.querySelectorAll('.betting-formula.pro-user-only').forEach(el => {
+          el.classList.add('hidden');
+        });
+        document.querySelectorAll('.pro-tag.pro-only').forEach(el => {
+          el.textContent = '無料会員';
+          el.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        });
+      } else {
+        // プロユーザー向け表示
+        document.querySelectorAll('.free-user-betting').forEach(el => {
+          el.classList.add('hidden');
+        });
+        document.querySelectorAll('.betting-formula.pro-user-only').forEach(el => {
+          el.classList.remove('hidden');
         });
       }
     });

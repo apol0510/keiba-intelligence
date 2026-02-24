@@ -1,7 +1,7 @@
 ---
 // アクセス制御コンポーネント（KEIBA Intelligence用）
 export interface Props {
-    requiredPlan: 'free' | 'pro' | 'pro-plus';
+    requiredPlan: 'free' | 'free-registered' | 'pro' | 'pro-plus';
     showUpgrade?: boolean;
 }
 
@@ -211,8 +211,9 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
     function canAccessContent(userPlan, requiredPlan, user) {
         const planHierarchy = {
             'free': 0,
-            'pro': 1,
-            'pro-plus': 2
+            'free-registered': 1,
+            'pro': 2,
+            'pro-plus': 3
         };
 
         const userLevel = planHierarchy[userPlan] || 0;
@@ -230,6 +231,13 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
             return true;
         }
 
+        // 無料登録プランが必要な場合 - 登録ユーザーなら誰でもアクセス可能
+        if (requiredPlan === 'free-registered') {
+            const hasValidUser = user !== null && (user.email || user.legacy || user.temp);
+            console.log('📧 無料登録コンテンツ - 登録ユーザーのみアクセス可能:', hasValidUser);
+            return hasValidUser;
+        }
+
         // 有料プランの場合は階層チェック + 登録チェック
         const hasValidUser = user !== null && (user.email || user.legacy || user.temp);
         const hasAccess = userLevel >= requiredLevel && hasValidUser;
@@ -241,6 +249,7 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
     function getPlanDisplayName(plan) {
         const displayNames = {
             'free': 'フリープラン',
+            'free-registered': '無料会員',
             'pro': 'プロプラン',
             'pro-plus': 'プロプラスプラン'
         };
@@ -296,6 +305,11 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
             if (canAccessContent(plan, requiredPlan, user)) {
                 // アクセス許可
                 console.log(`✅ アクセス許可: ${getPlanDisplayName(plan)} → ${requiredPlan}コンテンツ`);
+
+                // 無料登録ユーザーかどうかをsessionStorageに保存
+                const isFreeUser = plan === 'free-registered';
+                sessionStorage.setItem('isFreeUser', isFreeUser ? 'true' : 'false');
+                console.log('💾 無料ユーザーフラグ保存:', isFreeUser);
 
                 if (loadingState) {
                     loadingState.style.display = 'none';

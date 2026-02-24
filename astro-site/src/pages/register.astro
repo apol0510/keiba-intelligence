@@ -1,0 +1,444 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const title = '無料会員登録 - KEIBA Intelligence';
+const description = '無料会員登録で全頭予想・買い目（本命〜連下最上位）が見られます。メールアドレスのみで簡単登録。';
+---
+
+<BaseLayout title={title} description={description}>
+  <main class="container">
+    <div class="register-page">
+      <div class="register-header">
+        <h1>🎁 無料会員登録</h1>
+        <p class="subtitle">全12レースの全頭予想が見られる！</p>
+      </div>
+
+      <!-- 無料会員の特典 -->
+      <section class="benefits">
+        <h2>無料会員の特典</h2>
+        <div class="benefit-grid">
+          <div class="benefit-card">
+            <div class="benefit-icon">🏇</div>
+            <h3>全頭予想</h3>
+            <p>全12レースの全頭予想が見られる</p>
+          </div>
+          <div class="benefit-card">
+            <div class="benefit-icon">🎯</div>
+            <h3>買い目（一部）</h3>
+            <p>本命・対抗・単穴・連下最上位の買い目表示</p>
+          </div>
+          <div class="benefit-card">
+            <div class="benefit-icon">📊</div>
+            <h3>AI分析</h3>
+            <p>Feature Importance分析データ</p>
+          </div>
+          <div class="benefit-card">
+            <div class="benefit-icon">📧</div>
+            <h3>メルマガ配信</h3>
+            <p>週次レポート・限定オファー</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 登録フォーム -->
+      <section class="register-form-section">
+        <div class="form-container">
+          <h2>メールアドレスで登録</h2>
+          <p class="form-description">登録完了メールのリンクをクリックして認証してください</p>
+
+          <form id="registerForm" class="register-form">
+            <div class="form-group">
+              <label for="email">メールアドレス</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="your-email@example.com"
+                required
+                autocomplete="email"
+              />
+            </div>
+
+            <div class="terms-notice">
+              <p>
+                登録することで、
+                <a href="/terms" target="_blank">利用規約</a>および
+                <a href="/privacy" target="_blank">プライバシーポリシー</a>に同意し、
+                メールマガジンの配信を承諾したものとみなします。
+              </p>
+            </div>
+
+            <button type="submit" class="btn-register" id="submitBtn">
+              無料で登録する
+            </button>
+
+            <div class="login-link">
+              <p>すでに登録済みの方は <a href="/login">ログイン</a></p>
+            </div>
+          </form>
+
+          <div id="message" class="message"></div>
+        </div>
+      </section>
+
+      <!-- 有料プランへの誘導 -->
+      <section class="upgrade-section">
+        <h2>🚀 有料会員になると...</h2>
+        <div class="upgrade-grid">
+          <div class="upgrade-item">
+            <span class="upgrade-icon">✅</span>
+            <span>全買い目（本線+抑え）が見られる</span>
+          </div>
+          <div class="upgrade-item">
+            <span class="upgrade-icon">✅</span>
+            <span>全期間の的中実績が見られる</span>
+          </div>
+          <div class="upgrade-item">
+            <span class="upgrade-icon">✅</span>
+            <span>永久アクセス（買い切り¥88,000）</span>
+          </div>
+        </div>
+        <a href="/pricing" class="btn-upgrade">料金プランを見る →</a>
+      </section>
+    </div>
+  </main>
+</BaseLayout>
+
+<script>
+  const form = document.getElementById('registerForm') as HTMLFormElement;
+  const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
+  const messageDiv = document.getElementById('message') as HTMLDivElement;
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const email = (document.getElementById('email') as HTMLInputElement).value;
+
+    // ボタン無効化
+    submitBtn.disabled = true;
+    submitBtn.textContent = '送信中...';
+    messageDiv.textContent = '';
+    messageDiv.className = 'message';
+
+    try {
+      const response = await fetch('/.netlify/functions/register-free', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        messageDiv.textContent = '✅ 登録完了メールを送信しました。メールをご確認ください。';
+        messageDiv.className = 'message success';
+        form.reset();
+      } else {
+        messageDiv.textContent = `❌ ${data.error || '登録に失敗しました'}`;
+        messageDiv.className = 'message error';
+      }
+    } catch (error) {
+      messageDiv.textContent = '❌ ネットワークエラーが発生しました';
+      messageDiv.className = 'message error';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '無料で登録する';
+    }
+  });
+</script>
+
+<style>
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.register-page {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+/* ヘッダー */
+.register-header {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.register-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: var(--primary-blue);
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+}
+
+/* 特典セクション */
+.benefits {
+  background: var(--card-bg);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.benefits h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--heading-color);
+}
+
+.benefit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.benefit-card {
+  text-align: center;
+  padding: 1.5rem;
+  background: var(--background);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.benefit-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.benefit-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: var(--primary-blue);
+}
+
+.benefit-card p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* 登録フォーム */
+.register-form-section {
+  background: var(--card-bg);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.form-container {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.form-container h2 {
+  text-align: center;
+  margin-bottom: 0.5rem;
+  color: var(--heading-color);
+}
+
+.form-description {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: var(--heading-color);
+}
+
+.form-group input {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 1rem;
+  background: var(--background);
+  color: var(--text-color);
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.terms-notice {
+  padding: 1rem;
+  background: var(--background);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.terms-notice p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.terms-notice a {
+  color: var(--primary-blue);
+  text-decoration: none;
+}
+
+.terms-notice a:hover {
+  text-decoration: underline;
+}
+
+.btn-register {
+  padding: 1rem 2rem;
+  background: var(--primary-blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-register:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-register:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-link {
+  text-align: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.login-link a {
+  color: var(--primary-blue);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.login-link a:hover {
+  text-decoration: underline;
+}
+
+/* メッセージ */
+.message {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.message.success {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid #22c55e;
+}
+
+.message.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+/* アップグレードセクション */
+.upgrade-section {
+  background: linear-gradient(135deg, var(--card-bg) 0%, rgba(59, 130, 246, 0.05) 100%);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 2px solid var(--primary-blue);
+  text-align: center;
+}
+
+.upgrade-section h2 {
+  margin-bottom: 1.5rem;
+  color: var(--heading-color);
+}
+
+.upgrade-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.upgrade-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--background);
+  border-radius: 6px;
+  text-align: left;
+}
+
+.upgrade-icon {
+  font-size: 1.5rem;
+}
+
+.btn-upgrade {
+  display: inline-block;
+  padding: 1rem 2rem;
+  background: var(--primary-blue);
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.btn-upgrade:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .register-header h1 {
+    font-size: 2rem;
+  }
+
+  .benefit-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .register-form-section,
+  .benefits,
+  .upgrade-section {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .benefit-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
