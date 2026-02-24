@@ -1,0 +1,210 @@
+# Netlify環境変数チェックリスト
+
+## 📋 必須環境変数一覧
+
+無料会員登録システムが正常に動作するために必要な環境変数のチェックリストです。
+
+---
+
+## ✅ チェック方法
+
+1. Netlify管理画面にログイン: https://app.netlify.com/
+2. サイトを選択: keiba-intelligence
+3. Site settings → Environment variables を開く
+4. 以下の環境変数がすべて設定されているか確認
+
+---
+
+## 🔑 必須環境変数（優先度順）
+
+### 【最優先】無料登録システム用
+
+| 環境変数名 | 用途 | 設定必須 | 確認方法 |
+|-----------|------|---------|---------|
+| **SENDGRID_API_KEY** | マジックリンクメール送信 | ✅ 必須 | SendGrid管理画面で作成 |
+| **SENDGRID_FROM_EMAIL** | メール送信元アドレス | ✅ 必須 | support@keiba-intelligence.jp |
+| **AIRTABLE_API_KEY** | 顧客情報保存 | ✅ 必須 | Airtable管理画面で作成 |
+| **AIRTABLE_BASE_ID** | Airtableベース識別 | ✅ 必須 | Airtable URLから取得 |
+
+### 【推奨】メルマガ自動登録用
+
+| 環境変数名 | 用途 | 設定必須 | 確認方法 |
+|-----------|------|---------|---------|
+| **BLASTMAIL_USERNAME** | BlastMail API認証 | ⚠️ 推奨 | BlastMail管理画面 |
+| **BLASTMAIL_PASSWORD** | BlastMail API認証 | ⚠️ 推奨 | BlastMail管理画面 |
+| **BLASTMAIL_API_KEY** | BlastMail API認証 | ⚠️ 推奨 | BlastMail管理画面 |
+
+**注意**: BlastMail未設定でも無料登録は可能（警告のみ、メール送信は継続）
+
+### 【既存システム用】
+
+| 環境変数名 | 用途 | 設定必須 |
+|-----------|------|---------|
+| **GEMINI_API_KEY** | AIチャットボット | ✅ 必須 |
+| **GITHUB_TOKEN** | 自動デプロイ | ⚠️ 推奨 |
+| **ALERT_EMAIL** | アラートメール送信先 | ✅ 必須 |
+| **ADMIN_EMAIL** | 管理者メール | ⚠️ 推奨 |
+
+---
+
+## 🔍 個別確認手順
+
+### 1. SendGrid設定確認
+
+```bash
+# 必要な設定:
+SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+SENDGRID_FROM_EMAIL=support@keiba-intelligence.jp
+
+# 確認:
+# - SendGrid管理画面でVerified Senderに登録済みか
+# - APIキーが有効か（Create時に Full Access 選択）
+```
+
+**Verified Sender設定**:
+1. SendGrid → Settings → Sender Authentication
+2. Single Sender Verification → Verify a Single Sender
+3. `support@keiba-intelligence.jp` を登録
+4. 確認メールのリンクをクリック
+
+### 2. Airtable設定確認
+
+```bash
+# 必要な設定:
+AIRTABLE_API_KEY=patxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+AIRTABLE_BASE_ID=appxxxxxxxxxxxxxxx
+
+# 確認:
+# - AirtableでCustomersテーブルが存在するか
+# - 以下のフィールドが存在するか:
+#   - Email (Single line text)
+#   - PlanType (Single select: free-registered, pro, etc.)
+#   - Status (Single select: pending, active, etc.)
+#   - AccessEnabled (Checkbox)
+#   - CreatedAt (Date)
+#   - Source (Single line text)
+```
+
+**Customersテーブル作成**:
+1. Airtable Base を開く
+2. 新しいテーブル「Customers」を作成
+3. 以下のフィールドを追加:
+   - Email: Single line text
+   - PlanType: Single select (options: free-registered, pro, pro-plus)
+   - Status: Single select (options: pending, active, cancelled)
+   - AccessEnabled: Checkbox
+   - CreatedAt: Date
+   - Source: Single line text
+
+### 3. BlastMail設定確認
+
+```bash
+# 必要な設定:
+BLASTMAIL_USERNAME=xxxxxxxxx
+BLASTMAIL_PASSWORD=xxxxxxxxx
+BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# 確認:
+# - BlastMail管理画面でAPI連携が有効か
+# - registration_source フィールドが設定済みか（BLASTMAIL_SETUP.md参照）
+```
+
+---
+
+## 🧪 動作テスト手順
+
+### ステップ1: ローカル開発環境でテスト
+
+```bash
+# 1. 環境変数ファイル作成（astro-site/.env）
+cd /Users/apolon/Projects/keiba-intelligence/astro-site
+cat > .env << 'ENVEOF'
+SENDGRID_API_KEY=SG.xxxxx（実際のキー）
+SENDGRID_FROM_EMAIL=support@keiba-intelligence.jp
+AIRTABLE_API_KEY=patxxxxx（実際のキー）
+AIRTABLE_BASE_ID=appxxxxx（実際のID）
+BLASTMAIL_USERNAME=xxxxx
+BLASTMAIL_PASSWORD=xxxxx
+BLASTMAIL_API_KEY=xxxxx
+ENVEOF
+
+# 2. Netlify Dev起動
+netlify dev
+
+# 3. ブラウザで開く
+# http://localhost:8888/register
+```
+
+### ステップ2: テスト登録
+
+1. ブラウザで http://localhost:8888/register を開く
+2. テスト用メールアドレスを入力（例: test@example.com）
+3. 「無料で登録する」ボタンをクリック
+4. 成功メッセージが表示されることを確認
+
+### ステップ3: 各システムで確認
+
+**Airtable**:
+- Customersテーブルに新しいレコードが追加されているか
+- PlanType: free-registered
+- Status: pending
+- Source: keiba-intelligence
+
+**SendGrid**:
+- Activity Feed でメール送信履歴を確認
+- Delivered 状態になっているか
+
+**BlastMail**:
+- 読者一覧に新しい登録が追加されているか
+- 「登録元サイト」列に `keiba-intelligence` が表示されているか
+
+**メール受信**:
+- テスト用メールアドレスにマジックリンクメールが届いているか
+- メール本文が正しく表示されているか
+- マジックリンクをクリックして認証できるか
+
+---
+
+## ⚠️ トラブルシューティング
+
+### エラー: "SENDGRID_API_KEY is not defined"
+
+**原因**: 環境変数が設定されていない
+
+**解決策**:
+1. Netlify管理画面で環境変数を確認
+2. 変数名にスペルミスがないか確認
+3. Netlifyサイトを再デプロイ（環境変数変更後は再デプロイ必要）
+
+### エラー: "Airtable error: 404"
+
+**原因**: テーブル名またはベースIDが間違っている
+
+**解決策**:
+1. Airtable URLからベースIDを再確認（`app` で始まる文字列）
+2. テーブル名が "Customers" であることを確認（大文字小文字区別）
+
+### エラー: "BlastMail error"
+
+**原因**: API認証情報が間違っている、またはフィールド未設定
+
+**解決策**:
+1. BlastMail管理画面でAPI設定を確認
+2. `registration_source` フィールドが設定されているか確認（BLASTMAIL_SETUP.md参照）
+3. **注意**: BlastMail失敗しても登録は継続される（警告のみ）
+
+---
+
+## 📝 次のステップ
+
+1. ✅ このチェックリストで全環境変数を確認
+2. ✅ ローカル開発環境でテスト登録
+3. ✅ 各システムでデータ反映を確認
+4. ✅ BlastMail設定（BLASTMAIL_SETUP.md参照）
+5. ✅ 本番環境でテスト登録
+6. ✅ 問題なければ正式リリース
+
+---
+
+## 📅 作成日: 2026-02-24
+## 👤 作成者: Claude Code（クロちゃん）
