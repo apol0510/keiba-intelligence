@@ -59,6 +59,21 @@ const description = '無料会員登録で全頭予想・買い目（本命〜�
               />
             </div>
 
+            <div class="form-group">
+              <label for="emailConfirm">メールアドレス（確認）</label>
+              <input
+                type="email"
+                id="emailConfirm"
+                name="emailConfirm"
+                placeholder="もう一度入力してください"
+                required
+                autocomplete="off"
+              />
+              <div id="emailMatchError" class="error-message hidden">
+                ⚠️ メールアドレスが一致しません
+              </div>
+            </div>
+
             <div class="terms-notice">
               <p>
                 登録することで、
@@ -108,11 +123,40 @@ const description = '無料会員登録で全頭予想・買い目（本命〜�
   const form = document.getElementById('registerForm') as HTMLFormElement;
   const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
   const messageDiv = document.getElementById('message') as HTMLDivElement;
+  const emailInput = document.getElementById('email') as HTMLInputElement;
+  const emailConfirmInput = document.getElementById('emailConfirm') as HTMLInputElement;
+  const emailMatchError = document.getElementById('emailMatchError') as HTMLDivElement;
+
+  // リアルタイム検証（確認用メールアドレス入力時）
+  emailConfirmInput?.addEventListener('input', () => {
+    const email = emailInput.value;
+    const emailConfirm = emailConfirmInput.value;
+
+    if (emailConfirm && email !== emailConfirm) {
+      emailMatchError?.classList.remove('hidden');
+      emailConfirmInput.style.borderColor = '#ef4444';
+    } else {
+      emailMatchError?.classList.add('hidden');
+      emailConfirmInput.style.borderColor = '';
+    }
+  });
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const email = (document.getElementById('email') as HTMLInputElement).value;
+    const email = emailInput.value;
+    const emailConfirm = emailConfirmInput.value;
+
+    // メールアドレス一致チェック
+    if (email !== emailConfirm) {
+      emailMatchError?.classList.remove('hidden');
+      emailConfirmInput.style.borderColor = '#ef4444';
+      emailConfirmInput.focus();
+      return;
+    }
+
+    emailMatchError?.classList.add('hidden');
+    emailConfirmInput.style.borderColor = '';
 
     // ボタン無効化
     submitBtn.disabled = true;
@@ -341,6 +385,25 @@ const description = '無料会員登録で全頭予想・買い目（本命〜�
 
 .login-link a:hover {
   text-decoration: underline;
+}
+
+/* エラーメッセージ */
+.error-message {
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.error-message.hidden {
+  display: none;
 }
 
 /* メッセージ */
