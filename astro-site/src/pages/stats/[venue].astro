@@ -1,0 +1,442 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import archiveResults from '../../data/archiveResults.json';
+import archiveResultsJra from '../../data/archiveResultsJra.json';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  // 会場マッピング
+  const venueMapping = {
+    // 南関競馬
+    'ohi': { name: '大井', type: 'nankan' },
+    'kawasaki': { name: '川崎', type: 'nankan' },
+    'funabashi': { name: '船橋', type: 'nankan' },
+    'urawa': { name: '浦和', type: 'nankan' },
+    // 中央競馬
+    'tokyo': { name: '東京', type: 'jra' },
+    'kyoto': { name: '京都', type: 'jra' },
+    'hanshin': { name: '阪神', type: 'jra' },
+    'kokura': { name: '小倉', type: 'jra' },
+    'nakayama': { name: '中山', type: 'jra' },
+    'niigata': { name: '新潟', type: 'jra' },
+    'chukyo': { name: '中京', type: 'jra' },
+    'fukushima': { name: '福島', type: 'jra' },
+    'sapporo': { name: '札幌', type: 'jra' },
+    'hakodate': { name: '函館', type: 'jra' },
+  };
+
+  return Object.keys(venueMapping).map(slug => ({
+    params: { venue: slug }
+  }));
+}
+
+// 会場マッピング（ページレンダリング用）
+const venueMapping = {
+  // 南関競馬
+  'ohi': { name: '大井', type: 'nankan' },
+  'kawasaki': { name: '川崎', type: 'nankan' },
+  'funabashi': { name: '船橋', type: 'nankan' },
+  'urawa': { name: '浦和', type: 'nankan' },
+  // 中央競馬
+  'tokyo': { name: '東京', type: 'jra' },
+  'kyoto': { name: '京都', type: 'jra' },
+  'hanshin': { name: '阪神', type: 'jra' },
+  'kokura': { name: '小倉', type: 'jra' },
+  'nakayama': { name: '中山', type: 'jra' },
+  'niigata': { name: '新潟', type: 'jra' },
+  'chukyo': { name: '中京', type: 'jra' },
+  'fukushima': { name: '福島', type: 'jra' },
+  'sapporo': { name: '札幌', type: 'jra' },
+  'hakodate': { name: '函館', type: 'jra' },
+};
+
+const { venue } = Astro.params;
+const venueInfo = venueMapping[venue];
+
+if (!venueInfo) {
+  return Astro.redirect('/404');
+}
+
+// 会場別データ抽出
+function filterByVenue(entries, venueName, type) {
+  if (type === 'nankan') {
+    return entries.filter(e => e.venue === venueName);
+  } else {
+    // JRAは venues 配列をチェック
+    return entries.filter(e => e.venues && e.venues.includes(venueName));
+  }
+}
+
+const data = venueInfo.type === 'nankan'
+  ? filterByVenue(archiveResults, venueInfo.name, 'nankan')
+  : filterByVenue(archiveResultsJra, venueInfo.name, 'jra');
+
+// 会場別統計計算
+function calculateVenueStats(entries, venueName, type) {
+  if (entries.length === 0) return null;
+
+  let totalRaces = 0;
+  let hitRaces = 0;
+  let betAmount = 0;
+  let totalPayout = 0;
+
+  entries.forEach(entry => {
+    if (type === 'nankan') {
+      // 南関は全レースがその会場
+      totalRaces += entry.totalRaces;
+      hitRaces += entry.hitRaces;
+      betAmount += entry.betAmount;
+      totalPayout += entry.totalPayout;
+    } else {
+      // JRAは会場別にフィルタリング
+      entry.races.forEach(race => {
+        if (race.venue === venueName) {
+          totalRaces++;
+          if (race.isHit) hitRaces++;
+          betAmount += race.bettingPoints || entry.betPointsPerRace || 12;
+          if (race.isHit && race.umatan) {
+            totalPayout += race.umatan.payout;
+          }
+        }
+      });
+      betAmount *= 100; // 1点100円
+    }
+  });
+
+  return {
+    days: entries.length,
+    totalRaces,
+    hitRaces,
+    missRaces: totalRaces - hitRaces,
+    hitRate: totalRaces > 0 ? Math.round((hitRaces / totalRaces) * 100) : 0,
+    betAmount,
+    totalPayout,
+    returnRate: betAmount > 0 ? Math.round((totalPayout / betAmount) * 100 * 10) / 10 : 0,
+    profit: totalPayout - betAmount
+  };
+}
+
+const stats = calculateVenueStats(data, venueInfo.name, venueInfo.type);
+
+const title = `${venueInfo.name}競馬場 統計 - KEIBA Intelligence`;
+const description = stats
+  ? `${venueInfo.name}競馬場の${venueInfo.type === 'jra' ? '中央競馬' : '南関競馬'}予想統計。${stats.days}日間、的中率${stats.hitRate}%、回収率${stats.returnRate}%、${stats.hitRaces}/${stats.totalRaces}レース的中。`
+  : `${venueInfo.name}競馬場の${venueInfo.type === 'jra' ? '中央競馬' : '南関競馬'}予想統計。`;
+---
+
+<BaseLayout title={title} description={description}>
+  <main class="container">
+    <div class="page-header">
+      <h1>🏇 {venueInfo.name}競馬場 統計</h1>
+      <p class="subtitle">{venueInfo.type === 'jra' ? '中央競馬' : '南関競馬'} 累計データ</p>
+    </div>
+
+    <!-- パンくずリスト -->
+    <nav class="breadcrumb">
+      <a href="/">ホーム</a>
+      <span>›</span>
+      <a href="/stats">競馬場別統計</a>
+      <span>›</span>
+      <span>{venueInfo.name}</span>
+    </nav>
+
+    {stats ? (
+      <>
+        <!-- 累計統計 -->
+        <section class="venue-stats">
+          <h2>📊 累計統計</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">開催日数</div>
+              <div class="stat-value">{stats.days}日</div>
+              <div class="stat-detail">{stats.totalRaces}レース</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">的中率</div>
+              <div class="stat-value">{stats.hitRate}%</div>
+              <div class="stat-detail">{stats.hitRaces}/{stats.totalRaces}R</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">回収率</div>
+              <div class="stat-value">{stats.returnRate}%</div>
+              <div class="stat-detail">
+                {stats.profit >= 0 ? '+' : ''}¥{stats.profit.toLocaleString()}
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">投資額</div>
+              <div class="stat-value">¥{stats.betAmount.toLocaleString()}</div>
+              <div class="stat-detail">払戻 ¥{stats.totalPayout.toLocaleString()}</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 日別実績リスト -->
+        <section class="daily-list">
+          <h2>📅 開催日別実績（直近{Math.min(data.length, 20)}日）</h2>
+          <div class="results-list">
+            {data.slice(-20).reverse().map((entry) => {
+              const [year, month, day] = entry.date.split('-');
+              return (
+                <a href={`/results/${year}/${month}/${day}`} class="result-item">
+                  <div class="result-date">{entry.date}</div>
+                  <div class="result-stats">
+                    <span class="hit-rate">的中率 {entry.hitRate}%</span>
+                    <span class="return-rate">回収率 {entry.returnRate}%</span>
+                    <span class="races">{entry.hitRaces}/{entry.totalRaces}R</span>
+                  </div>
+                  <div class="result-payout">
+                    ¥{entry.totalPayout.toLocaleString()}
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </section>
+      </>
+    ) : (
+      <section class="no-data">
+        <p>現在、{venueInfo.name}競馬場のデータはありません。</p>
+      </section>
+    )}
+
+    <!-- 関連リンク -->
+    <section class="related-links">
+      <h3>関連ページ</h3>
+      <div class="link-grid">
+        <a href="/stats" class="link-card">
+          📊 全競馬場統計
+        </a>
+        <a href={venueInfo.type === 'jra' ? '/archive-jra' : '/archive'} class="link-card">
+          📅 的中実績一覧
+        </a>
+        <a href={venueInfo.type === 'jra' ? '/prediction-jra' : '/prediction'} class="link-card">
+          🔮 最新予想を見る
+        </a>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
+
+<style>
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: var(--primary-blue);
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
+/* パンくずリスト */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: var(--card-bg);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.breadcrumb a {
+  color: var(--primary-blue);
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb span:not(:has(a)) {
+  color: var(--text-muted);
+}
+
+/* 累計統計 */
+.venue-stats {
+  margin-bottom: 3rem;
+}
+
+.venue-stats h2 {
+  margin-bottom: 1.5rem;
+  color: var(--heading-color);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--primary-blue);
+  margin-bottom: 0.25rem;
+}
+
+.stat-detail {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* 日別実績リスト */
+.daily-list {
+  margin-bottom: 3rem;
+}
+
+.daily-list h2 {
+  margin-bottom: 1.5rem;
+  color: var(--heading-color);
+}
+
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.result-item {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text-color);
+  transition: all 0.3s ease;
+}
+
+.result-item:hover {
+  background: var(--primary-blue);
+  color: white;
+  border-color: var(--primary-blue);
+  transform: translateX(4px);
+}
+
+.result-date {
+  font-weight: 600;
+}
+
+.result-stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.hit-rate, .return-rate, .races {
+  padding: 0.25rem 0.5rem;
+  background: var(--background);
+  border-radius: 4px;
+}
+
+.result-item:hover .hit-rate,
+.result-item:hover .return-rate,
+.result-item:hover .races {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.result-payout {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+/* データなし */
+.no-data {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: var(--card-bg);
+  border-radius: 12px;
+  color: var(--text-muted);
+}
+
+/* 関連リンク */
+.related-links {
+  margin-top: 3rem;
+  padding: 2rem;
+  background: var(--card-bg);
+  border-radius: 12px;
+}
+
+.related-links h3 {
+  margin-bottom: 1rem;
+  color: var(--heading-color);
+}
+
+.link-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.link-card {
+  padding: 1rem;
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text-color);
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.link-card:hover {
+  background: var(--primary-blue);
+  color: white;
+  border-color: var(--primary-blue);
+  transform: translateY(-2px);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .result-item {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .result-stats {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .link-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

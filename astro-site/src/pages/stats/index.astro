@@ -1,0 +1,294 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const title = '競馬場別統計 - KEIBA Intelligence';
+const description = 'AI競馬予想の競馬場別統計。南関競馬（大井・川崎・船橋・浦和）、中央競馬（京都・東京・阪神など）の的中率・回収率を公開。';
+
+const nankanVenues = [
+  { slug: 'ohi', name: '大井競馬場', icon: '🏇' },
+  { slug: 'kawasaki', name: '川崎競馬場', icon: '🏇' },
+  { slug: 'funabashi', name: '船橋競馬場', icon: '🏇' },
+  { slug: 'urawa', name: '浦和競馬場', icon: '🏇' },
+];
+
+const jraVenues = [
+  { slug: 'tokyo', name: '東京競馬場', icon: '🏆' },
+  { slug: 'kyoto', name: '京都競馬場', icon: '🏆' },
+  { slug: 'hanshin', name: '阪神競馬場', icon: '🏆' },
+  { slug: 'kokura', name: '小倉競馬場', icon: '🏆' },
+  { slug: 'nakayama', name: '中山競馬場', icon: '🏆' },
+  { slug: 'niigata', name: '新潟競馬場', icon: '🏆' },
+  { slug: 'chukyo', name: '中京競馬場', icon: '🏆' },
+  { slug: 'fukushima', name: '福島競馬場', icon: '🏆' },
+  { slug: 'sapporo', name: '札幌競馬場', icon: '🏆' },
+  { slug: 'hakodate', name: '函館競馬場', icon: '🏆' },
+];
+---
+
+<BaseLayout title={title} description={description}>
+  <main class="container">
+    <div class="page-header">
+      <h1>📊 競馬場別統計</h1>
+      <p class="subtitle">AI競馬予想の競馬場別パフォーマンス</p>
+    </div>
+
+    <!-- パンくずリスト -->
+    <nav class="breadcrumb">
+      <a href="/">ホーム</a>
+      <span>›</span>
+      <span>競馬場別統計</span>
+    </nav>
+
+    <!-- 南関競馬 -->
+    <section class="venue-section">
+      <div class="section-header">
+        <h2>🏇 南関競馬</h2>
+        <p>地方競馬（大井・川崎・船橋・浦和）</p>
+      </div>
+      <div class="venue-grid">
+        {nankanVenues.map((venue) => (
+          <a href={`/stats/${venue.slug}`} class="venue-card nankan">
+            <div class="venue-icon">{venue.icon}</div>
+            <div class="venue-name">{venue.name}</div>
+            <div class="venue-badge">統計を見る →</div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <!-- 中央競馬 -->
+    <section class="venue-section">
+      <div class="section-header">
+        <h2>🏆 中央競馬（JRA）</h2>
+        <p>全10競馬場</p>
+      </div>
+      <div class="venue-grid">
+        {jraVenues.map((venue) => (
+          <a href={`/stats/${venue.slug}`} class="venue-card jra">
+            <div class="venue-icon">{venue.icon}</div>
+            <div class="venue-name">{venue.name}</div>
+            <div class="venue-badge">統計を見る →</div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <!-- 関連リンク -->
+    <section class="related-links">
+      <h3>関連ページ</h3>
+      <div class="link-grid">
+        <a href="/archive" class="link-card">
+          📅 南関実績一覧
+        </a>
+        <a href="/archive-jra" class="link-card">
+          📅 中央実績一覧
+        </a>
+        <a href="/prediction" class="link-card">
+          🔮 南関予想を見る
+        </a>
+        <a href="/prediction-jra" class="link-card">
+          🔮 中央予想を見る
+        </a>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
+
+<style>
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: var(--primary-blue);
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
+/* パンくずリスト */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 3rem;
+  padding: 1rem;
+  background: var(--card-bg);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.breadcrumb a {
+  color: var(--primary-blue);
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb span:not(:has(a)) {
+  color: var(--text-muted);
+}
+
+/* 会場セクション */
+.venue-section {
+  margin-bottom: 4rem;
+}
+
+.section-header {
+  margin-bottom: 2rem;
+}
+
+.section-header h2 {
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+  color: var(--heading-color);
+}
+
+.section-header p {
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.venue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.venue-card {
+  background: var(--card-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  text-decoration: none;
+  color: var(--text-color);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.venue-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.venue-card.nankan {
+  border-color: #10b981;
+}
+
+.venue-card.nankan:hover {
+  background: linear-gradient(135deg, var(--card-bg) 0%, rgba(16, 185, 129, 0.1) 100%);
+  border-color: #10b981;
+}
+
+.venue-card.jra {
+  border-color: var(--primary-blue);
+}
+
+.venue-card.jra:hover {
+  background: linear-gradient(135deg, var(--card-bg) 0%, rgba(59, 130, 246, 0.1) 100%);
+  border-color: var(--primary-blue);
+}
+
+.venue-icon {
+  font-size: 3rem;
+}
+
+.venue-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--heading-color);
+}
+
+.venue-card:hover .venue-name {
+  color: var(--primary-blue);
+}
+
+.venue-badge {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  padding: 0.5rem 1rem;
+  background: var(--background);
+  border-radius: 6px;
+}
+
+.venue-card.nankan:hover .venue-badge {
+  background: #10b981;
+  color: white;
+}
+
+.venue-card.jra:hover .venue-badge {
+  background: var(--primary-blue);
+  color: white;
+}
+
+/* 関連リンク */
+.related-links {
+  margin-top: 4rem;
+  padding: 2rem;
+  background: var(--card-bg);
+  border-radius: 12px;
+}
+
+.related-links h3 {
+  margin-bottom: 1rem;
+  color: var(--heading-color);
+}
+
+.link-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.link-card {
+  padding: 1rem;
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text-color);
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.link-card:hover {
+  background: var(--primary-blue);
+  color: white;
+  border-color: var(--primary-blue);
+  transform: translateY(-2px);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .venue-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .link-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .venue-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
