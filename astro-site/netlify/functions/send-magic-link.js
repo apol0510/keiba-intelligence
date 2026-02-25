@@ -12,11 +12,12 @@ const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 
+// SendGrid初期化
+sgMail.setApiKey(SENDGRID_API_KEY);
+
 const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(AIRTABLE_BASE_ID);
 const customersTable = base('Customers');
 const authTokensTable = base('AuthTokens');
-
-sgMail.setApiKey(SENDGRID_API_KEY);
 
 /**
  * メインハンドラー
@@ -101,13 +102,13 @@ exports.handler = async (event) => {
     await authTokensTable.create([
       {
         fields: {
-          token,
-          email,
-          created_at: new Date().toISOString(),
-          expires_at: expiresAt.toISOString(),
-          used: false,
-          ip_address: event.headers['x-forwarded-for'] || 'unknown',
-          user_agent: event.headers['user-agent'] || 'unknown',
+          Token: token,
+          Email: email,
+          CreatedAt: new Date().toISOString(),
+          ExpiresAt: expiresAt.toISOString(),
+          Used: false,
+          Ip_Address: event.headers['x-forwarded-for'] || 'unknown',
+          User_Agent: event.headers['user-agent'] || 'unknown',
         },
       },
     ]);
