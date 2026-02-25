@@ -65,7 +65,7 @@ exports.handler = async (event) => {
     // 1. トークン検証
     const tokens = await authTokensTable
       .select({
-        filterByFormula: `{token} = "${token}"`,
+        filterByFormula: `{Token} = "${token}"`,
         maxRecords: 1,
       })
       .firstPage();
@@ -83,7 +83,7 @@ exports.handler = async (event) => {
     const tokenData = tokenRecord.fields;
 
     // 使用済みチェック
-    if (tokenData.used) {
+    if (tokenData.Used) {
       console.error('❌ Token already used:', token);
       return {
         statusCode: 403,
@@ -93,7 +93,7 @@ exports.handler = async (event) => {
     }
 
     // 有効期限チェック
-    if (new Date() > new Date(tokenData.expires_at)) {
+    if (new Date() > new Date(tokenData.ExpiresAt)) {
       console.error('❌ Token expired:', token);
       return {
         statusCode: 403,
@@ -107,8 +107,7 @@ exports.handler = async (event) => {
       {
         id: tokenRecord.id,
         fields: {
-          used: true,
-          used_at: new Date().toISOString(),
+          Used: true,
         },
       },
     ]);
@@ -118,7 +117,7 @@ exports.handler = async (event) => {
     // 3. 顧客情報を取得
     const customers = await customersTable
       .select({
-        filterByFormula: `{Email} = "${tokenData.email}"`,
+        filterByFormula: `{Email} = "${tokenData.Email}"`,
         maxRecords: 1,
       })
       .firstPage();
@@ -133,15 +132,27 @@ exports.handler = async (event) => {
 
     const customer = customers[0].fields;
 
+    // 3.5. 顧客ステータスを更新（pending → active, AccessEnabled → true, PlanType → free）
+    await customersTable.update([
+      {
+        id: customers[0].id,
+        fields: {
+          Status: 'active',
+          AccessEnabled: true,
+          PlanType: 'free',
+        },
+      },
+    ]);
+
+    console.log('✅ Customer status updated to active:', customer.Email);
+
     // 4. セッション作成（Netlify Blobs）
     const sessionId = uuidv4();
     const store = getStore('sessions');
 
     const sessionData = {
       email: customer.Email,
-      name: customer.Name,
-      plan: customer.Plan,
-      plan_type: customer.plan_type,
+      plan_type: customer.PlanType || 'free',
       created_at: new Date().toISOString(),
     };
 
@@ -155,11 +166,11 @@ exports.handler = async (event) => {
 
     // 5. セッションIDをCookieに設定してリダイレクト
     // プラン別リダイレクト先
-    let redirectTo = '/';
-    if (customer.Plan?.toLowerCase() === 'pro' || customer.Plan?.toLowerCase() === 'pro-plus') {
+    let redirectTo = '/free-prediction'; // デフォルト: 無料予想ページ
+
+    const planType = customer.PlanType?.toLowerCase();
+    if (planType === 'pro' || planType === 'pro-plus') {
       redirectTo = '/prediction'; // プロ会員は有料予想ページへ
-    } else if (customer.Plan?.toLowerCase() === 'free') {
-      redirectTo = '/free-prediction'; // 無料会員は無料予想ページへ
     }
 
     return {
