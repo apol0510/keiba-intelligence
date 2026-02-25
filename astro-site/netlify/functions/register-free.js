@@ -207,6 +207,9 @@ async function registerToBlastMail(email) {
     });
     const searchUrl = `https://api.bme.jp/rest/1.0/contact/list?${searchParams.toString()}`;
 
+    console.log('🔍 BlastMail search URL:', searchUrl);
+    console.log('🔍 BlastMail search method: GET');
+
     const searchResponse = await fetch(searchUrl, {
       method: 'GET'
     });
