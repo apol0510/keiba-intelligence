@@ -95,7 +95,8 @@ async function registerToAirtable(email) {
 
   try {
     // Step 1: 既存レコード確認（重複登録防止）
-    const filterFormula = `{Email} = "${email}"`;
+    // 🚨 重要: Sourceフィールドでフィルタリング（keiba-intelligence登録者のみ）
+    const filterFormula = `AND({Email} = "${email}", OR({Source} = "keiba-intelligence", {Source} = BLANK()))`;
     const searchUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Customers?filterByFormula=${encodeURIComponent(filterFormula)}`;
 
     const searchResponse = await fetch(searchUrl, {
