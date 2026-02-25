@@ -123,32 +123,42 @@ exports.handler = async (event) => {
       from: process.env.SENDGRID_FROM_EMAIL || 'noreply@keiba-intelligence.netlify.app',
       subject: '【KEIBA Intelligence】ログインリンク',
       html: `
-<div style="font-family: 'Noto Sans JP', sans-serif; max-width: 600px; margin: 0 auto;">
-  <h2 style="color: #3b82f6;">ログインリンク</h2>
+<div style="font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
+  <div style="background-color: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <h2 style="color: #1e40af; margin-top: 0; font-size: 24px;">ログインリンク</h2>
 
-  <p>${customer.Name || 'お客様'} 様</p>
+    <p style="color: #334155; font-size: 16px; line-height: 1.6;">${customer.Name || 'お客様'} 様</p>
 
-  <p>以下のボタンをクリックしてログインしてください。</p>
+    <p style="color: #334155; font-size: 16px; line-height: 1.6;">以下のボタンをクリックしてログインしてください。</p>
 
-  <a href="${magicLink}" style="display: inline-block; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 24px 0;">
-    ログインする
-  </a>
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${magicLink}" style="display: inline-block; background-color: #3b82f6; color: #ffffff !important; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; border: 2px solid #3b82f6;">
+        ログインする
+      </a>
+    </div>
 
-  <p style="color: #64748b; font-size: 14px;">
-    ボタンが動作しない場合は、以下のリンクをコピーしてブラウザに貼り付けてください。<br>
-    <a href="${magicLink}">${magicLink}</a>
-  </p>
+    <div style="background-color: #f1f5f9; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="color: #475569; font-size: 14px; margin: 0; line-height: 1.6;">
+        ボタンが動作しない場合は、以下のリンクをコピーしてブラウザに貼り付けてください。
+      </p>
+      <p style="margin: 8px 0 0 0;">
+        <a href="${magicLink}" style="color: #3b82f6; word-break: break-all; font-size: 13px;">${magicLink}</a>
+      </p>
+    </div>
 
-  <p style="color: #ef4444; font-size: 14px;">
-    ⚠️ このリンクは15分間有効です。<br>
-    心当たりがない場合は、このメールを無視してください。
-  </p>
+    <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="color: #991b1b; font-size: 14px; margin: 0; line-height: 1.6;">
+        ⚠️ このリンクは15分間有効です。<br>
+        心当たりがない場合は、このメールを無視してください。
+      </p>
+    </div>
 
-  <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
 
-  <p style="color: #64748b; font-size: 14px;">
-    KEIBA Intelligence チーム
-  </p>
+    <p style="color: #64748b; font-size: 14px; margin: 0;">
+      KEIBA Intelligence チーム
+    </p>
+  </div>
 </div>
       `,
     };

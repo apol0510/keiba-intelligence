@@ -301,63 +301,67 @@ async function sendMagicLink(email) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-    <h1 style="color: white; margin: 0;">KEIBA Intelligence</h1>
-    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">AI競馬予想サービス</p>
+<body style="font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
+  <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+    <h1 style="color: #ffffff; margin: 0; font-size: 28px;">KEIBA Intelligence</h1>
+    <p style="color: rgba(255,255,255,0.95); margin: 10px 0 0 0; font-size: 16px;">AI競馬予想サービス</p>
   </div>
 
-  <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px;">
-    <h2 style="color: #1e3a8a; margin-top: 0;">無料会員登録ありがとうございます！</h2>
+  <div style="background: #ffffff; padding: 32px; border-radius: 0 0 12px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <h2 style="color: #1e40af; margin-top: 0; font-size: 22px;">無料会員登録ありがとうございます！</h2>
 
-    <p>以下のボタンをクリックして、登録を完了してください。</p>
+    <p style="color: #334155; font-size: 16px; line-height: 1.6;">以下のボタンをクリックして、登録を完了してください。</p>
 
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${magicLink}" style="display: inline-block; background: #3b82f6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${magicLink}" style="display: inline-block; background-color: #3b82f6; color: #ffffff !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 18px; border: 2px solid #3b82f6;">
         登録を完了する
       </a>
     </div>
 
-    <p style="font-size: 0.9em; color: #666;">
-      ボタンが機能しない場合は、以下のURLをコピーしてブラウザに貼り付けてください：<br>
-      <a href="${magicLink}" style="color: #3b82f6; word-break: break-all;">${magicLink}</a>
-    </p>
+    <div style="background-color: #f1f5f9; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="color: #475569; font-size: 14px; margin: 0 0 8px 0; line-height: 1.6;">
+        ボタンが機能しない場合は、以下のURLをコピーしてブラウザに貼り付けてください：
+      </p>
+      <p style="margin: 0;">
+        <a href="${magicLink}" style="color: #3b82f6; word-break: break-all; font-size: 13px;">${magicLink}</a>
+      </p>
+    </div>
 
-    <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;">
 
-    <h3 style="color: #1e3a8a;">無料会員の特典</h3>
-    <ul style="padding-left: 20px;">
-      <li>✅ 全12レースの全頭予想が見られる</li>
-      <li>✅ 本命・対抗・単穴・連下最上位の買い目表示</li>
-      <li>✅ AI分析データが見られる</li>
-      <li>✅ メールマガジン配信</li>
+    <h3 style="color: #1e40af; margin-top: 0; font-size: 18px;">無料会員の特典</h3>
+    <ul style="padding-left: 20px; color: #334155; line-height: 1.8;">
+      <li style="margin-bottom: 8px;">✅ 全12レースの全頭予想が見られる</li>
+      <li style="margin-bottom: 8px;">✅ 本命・対抗・単穴・連下最上位の買い目表示</li>
+      <li style="margin-bottom: 8px;">✅ AI分析データが見られる</li>
+      <li style="margin-bottom: 8px;">✅ メールマガジン配信</li>
     </ul>
 
-    <h3 style="color: #1e3a8a;">有料会員になると...</h3>
-    <ul style="padding-left: 20px;">
-      <li>🎯 全買い目（本線+抑え）が見られる</li>
-      <li>🎯 全期間の的中実績が見られる</li>
-      <li>🎯 永久アクセス（買い切り¥88,000）</li>
+    <h3 style="color: #1e40af; font-size: 18px;">有料会員になると...</h3>
+    <ul style="padding-left: 20px; color: #334155; line-height: 1.8;">
+      <li style="margin-bottom: 8px;">🎯 全買い目（本線+抑え）が見られる</li>
+      <li style="margin-bottom: 8px;">🎯 全期間の的中実績が見られる</li>
+      <li style="margin-bottom: 8px;">🎯 永久アクセス（買い切り¥88,000）</li>
     </ul>
 
-    <div style="text-align: center; margin-top: 30px;">
-      <a href="https://keiba-intelligence.jp/pricing" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+    <div style="text-align: center; margin-top: 32px;">
+      <a href="https://keiba-intelligence.netlify.app/pricing" style="display: inline-block; background-color: #10b981; color: #ffffff !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; border: 2px solid #10b981;">
         料金プランを見る →
       </a>
     </div>
 
-    <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;">
 
-    <p style="font-size: 0.85em; color: #666;">
-      このメールに心当たりがない場合は、このメールを無視してください。<br>
-      リンクの有効期限は15分です。
-    </p>
+    <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="color: #991b1b; font-size: 14px; margin: 0; line-height: 1.6;">
+        このメールに心当たりがない場合は、このメールを無視してください。<br>
+        リンクの有効期限は15分です。
+      </p>
+    </div>
 
-    <p style="font-size: 0.85em; color: #666; margin-top: 30px;">
-      ---<br>
+    <p style="font-size: 14px; color: #64748b; margin-top: 32px; line-height: 1.6;">
       KEIBA Intelligence<br>
-      <a href="https://keiba-intelligence.jp" style="color: #3b82f6;">https://keiba-intelligence.jp</a><br>
-      お問い合わせ: <a href="mailto:support@keiba-intelligence.jp" style="color: #3b82f6;">support@keiba-intelligence.jp</a>
+      <a href="https://keiba-intelligence.netlify.app" style="color: #3b82f6; text-decoration: none;">https://keiba-intelligence.netlify.app</a>
     </p>
   </div>
 </body>
