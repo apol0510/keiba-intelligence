@@ -238,10 +238,60 @@ async function registerToBlastMail(email) {
   }
 }
 
+// トークンをAirtable AuthTokensテーブルに保存
+async function saveAuthToken(email, token) {
+  const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
+  const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
+
+  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
+    console.log('⚠️ Airtable環境変数未設定（トークン保存スキップ）');
+    return null;
+  }
+
+  try {
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15分後
+    const createUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/AuthTokens`;
+    const createPayload = {
+      records: [{
+        fields: {
+          Token: token,
+          Email: email,
+          ExpiresAt: expiresAt.toISOString(),
+          Used: false,
+          CreatedAt: new Date().toISOString()
+        }
+      }]
+    };
+
+    const response = await fetch(createUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(createPayload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('AuthTokens save error:', errorText);
+      throw new Error(`AuthTokens save failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ AuthToken saved:', token.substring(0, 8) + '...');
+    return data.records[0];
+
+  } catch (error) {
+    console.error('❌ AuthToken save error:', error);
+    throw error;
+  }
+}
+
 // マジックリンク生成とメール送信
 async function sendMagicLink(email) {
   const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  const magicLink = `https://keiba-intelligence.jp/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
+  const magicLink = `https://keiba-intelligence.netlify.app/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
 
   const subject = '【KEIBA Intelligence】無料会員登録ありがとうございます！';
   const body = `
@@ -375,7 +425,14 @@ exports.handler = async (event) => {
     const token = await sendMagicLink(email);
     console.log('✅ マジックリンク送信完了');
 
-    // TODO: AuthTokensテーブルにトークン保存（後で実装）
+    // 4. AuthTokensテーブルにトークン保存
+    try {
+      await saveAuthToken(email, token);
+      console.log('✅ AuthToken保存完了');
+    } catch (error) {
+      console.error('⚠️ AuthToken保存エラー:', error.message);
+      // トークン保存失敗は警告のみ（メールは既に送信済み）
+    }
 
     return {
       statusCode: 200,
