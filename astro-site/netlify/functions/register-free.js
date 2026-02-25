@@ -198,7 +198,75 @@ async function registerToBlastMail(email) {
 
     console.log('✅ BlastMail login successful, access_token obtained');
 
-    // Step 2: 読者登録 (c19 = registration_source カスタムフィールド)
+    // Step 2: 既存ユーザーチェック（メールアドレスで検索）
+    const searchUrl = 'https://api.bme.jp/rest/1.0/contact/list';
+    const searchParams = new URLSearchParams({
+      access_token: accessToken,
+      format: 'json',
+      c15: email  // メールアドレスで検索
+    });
+
+    const searchResponse = await fetch(searchUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: searchParams.toString()
+    });
+
+    let existingContact = null;
+    if (searchResponse.ok) {
+      const searchData = await searchResponse.json();
+      if (searchData.contacts && searchData.contacts.length > 0) {
+        existingContact = searchData.contacts[0];
+        console.log('ℹ️ BlastMail existing contact found:', email, 'ContactID:', existingContact.contactID);
+      }
+    }
+
+    // Step 3: 既存ユーザーの場合は registration_source を追加更新
+    if (existingContact) {
+      const registrationSource = 'keiba-intelligence';
+      const currentSource = existingContact.c19 || '';
+      const sources = currentSource.split(',').map(s => s.trim()).filter(s => s);
+
+      // 既に含まれている場合はスキップ
+      if (sources.includes(registrationSource)) {
+        console.log('ℹ️ Registration source already includes:', registrationSource);
+        return existingContact;
+      }
+
+      // 新しいsourceを追加
+      sources.push(registrationSource);
+      const newSource = sources.join(',');
+
+      // 既存ユーザーを更新
+      const updateUrl = 'https://api.bme.jp/rest/1.0/contact/detail/update';
+      const updateParams = new URLSearchParams({
+        access_token: accessToken,
+        format: 'json',
+        contact_id: existingContact.contactID,
+        c19: newSource  // カンマ区切りで追加
+      });
+
+      const updateResponse = await fetch(updateUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: updateParams.toString()
+      });
+
+      if (!updateResponse.ok) {
+        const errorText = await updateResponse.text();
+        console.error('⚠️ BlastMail update failed:', errorText);
+        throw new Error(`BlastMail update failed: ${updateResponse.status}`);
+      }
+
+      console.log('✅ BlastMail registration_source updated:', email, 'New sources:', newSource);
+      return existingContact;
+    }
+
+    // Step 4: 新規ユーザー登録
     const registerUrl = 'https://api.bme.jp/rest/1.0/contact/detail/create';
     const registerParams = new URLSearchParams({
       access_token: accessToken,
@@ -218,21 +286,11 @@ async function registerToBlastMail(email) {
     if (!registerResponse.ok) {
       const errorText = await registerResponse.text();
       console.log('⚠️ BlastMail registration response (not ok):', registerResponse.status, errorText);
-
-      // 重複登録エラーは成功として扱う
-      if (errorText.includes('Has already been registered') ||
-          errorText.includes('already registered') ||
-          errorText.includes('既に登録')) {
-        console.log('ℹ️ BlastMail reader already registered:', email);
-        console.log('ℹ️ Error details:', errorText);
-        return null;
-      } else {
-        throw new Error(`BlastMail reader registration failed: ${registerResponse.status} - ${errorText}`);
-      }
+      throw new Error(`BlastMail reader registration failed: ${registerResponse.status} - ${errorText}`);
     }
 
     const registerData = await registerResponse.json();
-    console.log('✅ BlastMail reader registered:', email, 'ContactID:', registerData.contactID);
+    console.log('✅ BlastMail reader registered:', email, 'ContactID:', registerData.contactID, 'registration_source: keiba-intelligence');
     return registerData;
 
   } catch (error) {
