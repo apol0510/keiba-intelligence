@@ -198,13 +198,13 @@ async function registerToBlastMail(email) {
 
     console.log('✅ BlastMail login successful, access_token obtained');
 
-    // Step 2: 読者登録 (c16 = registration_source カスタムフィールド)
+    // Step 2: 読者登録 (c19 = registration_source カスタムフィールド)
     const registerUrl = 'https://api.bme.jp/rest/1.0/contact/detail/create';
     const registerParams = new URLSearchParams({
       access_token: accessToken,
       format: 'json',
       c15: email,                           // E-Mail（必須フィールド）
-      c16: 'keiba-intelligence'             // 登録元サイト（カスタムフィールド）
+      c19: 'keiba-intelligence'             // 登録元サイト（registration_source: c19）
     });
 
     const registerResponse = await fetch(registerUrl, {
