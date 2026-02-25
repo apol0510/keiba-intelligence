@@ -6,7 +6,6 @@
 
 const { v4: uuidv4 } = require('uuid');
 const Airtable = require('airtable');
-const { getStore } = require('@netlify/blobs');
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -146,25 +145,19 @@ exports.handler = async (event) => {
 
     console.log('✅ Customer status updated to active:', customer.Email);
 
-    // 4. セッション作成（Netlify Blobs）
+    // 4. セッション作成（簡易実装: Cookieのみ、Blobsは不使用）
     const sessionId = uuidv4();
-    const store = getStore('sessions');
 
+    // セッションデータをJSON化してCookieに保存
     const sessionData = {
       email: customer.Email,
       plan_type: customer.PlanType || 'free',
       created_at: new Date().toISOString(),
     };
 
-    await store.set(sessionId, JSON.stringify(sessionData), {
-      metadata: {
-        ttl: 7 * 24 * 60 * 60, // 7日間（秒）
-      },
-    });
-
     console.log('✅ Session created:', sessionId, 'for:', customer.Email);
 
-    // 5. セッションIDをCookieに設定してリダイレクト
+    // 5. セッションデータをCookieに設定してリダイレクト
     // プラン別リダイレクト先
     let redirectTo = '/free-prediction'; // デフォルト: 無料予想ページ
 
@@ -173,10 +166,13 @@ exports.handler = async (event) => {
       redirectTo = '/prediction'; // プロ会員は有料予想ページへ
     }
 
+    // セッションデータをBase64エンコードしてCookieに保存
+    const sessionCookie = Buffer.from(JSON.stringify(sessionData)).toString('base64');
+
     return {
       statusCode: 302,
       headers: {
-        'Set-Cookie': `session_id=${sessionId}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}`,
+        'Set-Cookie': `session=${sessionCookie}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}`,
         'Location': redirectTo,
       },
       body: '',
