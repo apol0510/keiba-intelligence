@@ -200,19 +200,15 @@ async function registerToBlastMail(email) {
     console.log('✅ BlastMail login successful, access_token obtained');
 
     // Step 2: 既存ユーザーチェック（メールアドレスで検索）
-    const searchUrl = 'https://api.bme.jp/rest/1.0/contact/list';
     const searchParams = new URLSearchParams({
       access_token: accessToken,
       format: 'json',
       c15: email  // メールアドレスで検索
     });
+    const searchUrl = `https://api.bme.jp/rest/1.0/contact/list?${searchParams.toString()}`;
 
     const searchResponse = await fetch(searchUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: searchParams.toString()
+      method: 'GET'
     });
 
     let existingContact = null;
