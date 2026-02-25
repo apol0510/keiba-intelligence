@@ -282,7 +282,8 @@ async function registerToBlastMail(email) {
       access_token: accessToken,
       format: 'json',
       c15: email,                           // E-Mail（必須フィールド）
-      c19: 'keiba-intelligence'             // 登録元サイト（registration_source: c19）
+      c19: 'keiba-intelligence',            // 登録元サイト（registration_source: c19）
+      recipient_group_no: '3'               // リスト: keiba-intelligence（グループ番号3）
     });
 
     const registerResponse = await fetch(registerUrl, {
