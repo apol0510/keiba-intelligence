@@ -63,12 +63,18 @@ exports.handler = async (event) => {
     console.log('✅ BlastMail login successful');
 
     // Step 2: 読者検索（E-Mailで検索）
-    const searchUrl = 'https://api.bme.jp/rest/1.0/contact/search';
+    // BlastMail REST API v1.0: /contact/detail/search
+    const searchUrl = 'https://api.bme.jp/rest/1.0/contact/detail/search';
     const searchParams = new URLSearchParams({
       access_token: accessToken,
       format: 'json',
       c15: email,  // E-Mail検索（c15 = E-Mailフィールド）
+      limit: '10',
+      offset: '0'
     });
+
+    console.log('🔍 Searching with URL:', searchUrl);
+    console.log('🔍 Search params:', searchParams.toString());
 
     const searchResponse = await fetch(searchUrl, {
       method: 'POST',
@@ -78,8 +84,12 @@ exports.handler = async (event) => {
       body: searchParams.toString()
     });
 
+    console.log('📡 Search response status:', searchResponse.status);
+
     if (!searchResponse.ok) {
-      throw new Error(`BlastMail search failed: ${searchResponse.status}`);
+      const errorText = await searchResponse.text();
+      console.error('❌ Search error response:', errorText);
+      throw new Error(`BlastMail search failed: ${searchResponse.status} - ${errorText}`);
     }
 
     const searchData = await searchResponse.json();
@@ -87,16 +97,20 @@ exports.handler = async (event) => {
     console.log('✅ BlastMail search result:', JSON.stringify(searchData, null, 2));
 
     // 結果を返す
+    const contacts = searchData.contacts || searchData.contact || [];
+    const count = searchData.totalCount || searchData.count || contacts.length;
+
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         email: email,
-        found: searchData.count > 0,
-        count: searchData.count,
-        readers: searchData.contact || [],
-        message: searchData.count > 0
-          ? `Found ${searchData.count} reader(s)`
+        found: count > 0,
+        count: count,
+        readers: contacts,
+        rawResponse: searchData,
+        message: count > 0
+          ? `Found ${count} reader(s)`
           : 'Reader not found in BlastMail',
       }, null, 2),
     };
