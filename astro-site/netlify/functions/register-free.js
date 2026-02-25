@@ -217,10 +217,16 @@ async function registerToBlastMail(email) {
     let existingContact = null;
     if (searchResponse.ok) {
       const searchData = await searchResponse.json();
+      console.log('🔍 BlastMail search response:', JSON.stringify(searchData));
       if (searchData.contacts && searchData.contacts.length > 0) {
         existingContact = searchData.contacts[0];
-        console.log('ℹ️ BlastMail existing contact found:', email, 'ContactID:', existingContact.contactID);
+        console.log('ℹ️ BlastMail existing contact found:', email, 'ContactID:', existingContact.contactID, 'Current c19:', existingContact.c19);
+      } else {
+        console.log('ℹ️ BlastMail existing contact not found, will create new');
       }
+    } else {
+      const errorText = await searchResponse.text();
+      console.error('⚠️ BlastMail search failed:', searchResponse.status, errorText);
     }
 
     // Step 3: 既存ユーザーの場合は registration_source を追加更新
