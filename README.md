@@ -27,7 +27,7 @@
 | **データベース** | Airtable Pro（5テーブル） |
 | **バックエンド** | Netlify Functions (10個) |
 | **メール** | SendGrid Essential 100 |
-| **メルマガ** | BlastMail API連携 |
+| **メルマガ** | SendGrid Marketing Campaigns |
 | **可視化** | Chart.js v4.4.0 |
 | **AI** | Google Gemini 1.5 Flash |
 | **自動化** | GitHub Actions（7ワークフロー） |
@@ -130,7 +130,7 @@ npm run test:validation          # データ検証テスト
 - [x] 有料予想ページ（/prediction, /prediction-jra）
 - [x] ~~PayPal Webhook実装~~ → 銀行振り込み自動化に変更
 - [x] ~~Zapier連携~~ → Netlify Functions直接実装（コスト削減$73.50/月）
-- [x] メルマガ配信システム（BlastMail API連携）
+- [x] メルマガ配信システム（SendGrid Marketing Campaigns）
 - [x] 会員認証システム（マジックリンク）
 - [x] Gemini AIチャットボット（全ページ右下ウィジェット）
 - [x] Netlify環境変数設定完了

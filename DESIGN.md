@@ -676,7 +676,7 @@ THRIVECART_WEBHOOK_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 - ✅ 自動的中判定システム（2段階買い目調整）
 - ✅ データ検証システム（再発防止）
 - ✅ 銀行振り込み自動化
-- ✅ メルマガ配信システム（BlastMail連携）
+- ✅ メルマガ配信システム（SendGrid Marketing Campaigns）
 - ✅ Gemini AIチャットボット
 - ✅ 月別アーカイブページ
 

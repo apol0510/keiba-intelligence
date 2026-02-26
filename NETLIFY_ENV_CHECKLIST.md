@@ -30,11 +30,9 @@
 
 | 環境変数名 | 用途 | 設定必須 | 確認方法 |
 |-----------|------|---------|---------|
-| **BLASTMAIL_USERNAME** | BlastMail API認証 | ⚠️ 推奨 | BlastMail管理画面 |
-| **BLASTMAIL_PASSWORD** | BlastMail API認証 | ⚠️ 推奨 | BlastMail管理画面 |
-| **BLASTMAIL_API_KEY** | BlastMail API認証 | ⚠️ 推奨 | BlastMail管理画面 |
+| **SENDGRID_CUSTOM_FIELD_INTELLIGENCE** | SendGrid Marketing Campaignsカスタムフィールド | ⚠️ 推奨 | SendGrid管理画面（Custom Fields） |
 
-**注意**: BlastMail未設定でも無料登録は可能（警告のみ、メール送信は継続）
+**注意**: SendGrid Marketing Campaigns未設定でも無料登録は可能（警告のみ、メール送信は継続）
 
 ### 【既存システム用】
 
@@ -96,17 +94,16 @@ AIRTABLE_BASE_ID=appxxxxxxxxxxxxxxx
    - CreatedAt: Date
    - Source: Single line text
 
-### 3. BlastMail設定確認
+### 3. SendGrid Marketing Campaigns設定確認
 
 ```bash
 # 必要な設定:
-BLASTMAIL_USERNAME=xxxxxxxxx
-BLASTMAIL_PASSWORD=xxxxxxxxx
-BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+SENDGRID_CUSTOM_FIELD_INTELLIGENCE=e2_T  # カスタムフィールドID
 
 # 確認:
-# - BlastMail管理画面でAPI連携が有効か
-# - registration_source フィールドが設定済みか（BLASTMAIL_SETUP.md参照）
+# - SendGrid管理画面 → Marketing → Contacts → Custom Fields
+# - 「registered_intelligence」フィールドが作成済みか
+# - フィールドIDを環境変数に設定
 ```
 
 ---
@@ -123,9 +120,7 @@ SENDGRID_API_KEY=SG.xxxxx（実際のキー）
 SENDGRID_FROM_EMAIL=support@keiba-intelligence.jp
 AIRTABLE_API_KEY=patxxxxx（実際のキー）
 AIRTABLE_BASE_ID=appxxxxx（実際のID）
-BLASTMAIL_USERNAME=xxxxx
-BLASTMAIL_PASSWORD=xxxxx
-BLASTMAIL_API_KEY=xxxxx
+SENDGRID_CUSTOM_FIELD_INTELLIGENCE=e2_T（実際のカスタムフィールドID）
 ENVEOF
 
 # 2. Netlify Dev起動
@@ -154,9 +149,9 @@ netlify dev
 - Activity Feed でメール送信履歴を確認
 - Delivered 状態になっているか
 
-**BlastMail**:
-- 読者一覧に新しい登録が追加されているか
-- 「登録元サイト」列に `keiba-intelligence` が表示されているか
+**SendGrid Marketing Campaigns**:
+- Contacts一覧に新しい登録が追加されているか
+- カスタムフィールド `registered_intelligence` が `true` になっているか
 
 **メール受信**:
 - テスト用メールアドレスにマジックリンクメールが届いているか
@@ -184,23 +179,23 @@ netlify dev
 1. Airtable URLからベースIDを再確認（`app` で始まる文字列）
 2. テーブル名が "Customers" であることを確認（大文字小文字区別）
 
-### エラー: "BlastMail error"
+### エラー: "SendGrid Marketing Campaigns error"
 
-**原因**: API認証情報が間違っている、またはフィールド未設定
+**原因**: カスタムフィールドIDが間違っている、またはAPI認証失敗
 
 **解決策**:
-1. BlastMail管理画面でAPI設定を確認
-2. `registration_source` フィールドが設定されているか確認（BLASTMAIL_SETUP.md参照）
-3. **注意**: BlastMail失敗しても登録は継続される（警告のみ）
+1. SendGrid管理画面 → Marketing → Contacts → Custom Fields でカスタムフィールドIDを確認
+2. `SENDGRID_CUSTOM_FIELD_INTELLIGENCE` 環境変数が正しく設定されているか確認
+3. **注意**: SendGrid Marketing Campaigns失敗しても登録は継続される（警告のみ）
 
 ---
 
 ## 📝 次のステップ
 
 1. ✅ このチェックリストで全環境変数を確認
-2. ✅ ローカル開発環境でテスト登録
-3. ✅ 各システムでデータ反映を確認
-4. ✅ BlastMail設定（BLASTMAIL_SETUP.md参照）
+2. ✅ SendGrid Marketing Campaignsカスタムフィールド作成
+3. ✅ ローカル開発環境でテスト登録
+4. ✅ 各システムでデータ反映を確認
 5. ✅ 本番環境でテスト登録
 6. ✅ 問題なければ正式リリース
 

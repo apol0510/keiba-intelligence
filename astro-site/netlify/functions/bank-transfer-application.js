@@ -427,78 +427,54 @@ exports.handler = async (event, context) => {
     }
 
     // ========================================
-    // BlastMail読者登録
+    // SendGrid Marketing Campaigns読者登録
     // ========================================
     try {
-      const BLASTMAIL_USERNAME = process.env.BLASTMAIL_USERNAME;
-      const BLASTMAIL_PASSWORD = process.env.BLASTMAIL_PASSWORD;
-      const BLASTMAIL_API_KEY = process.env.BLASTMAIL_API_KEY;
+      const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+      const CUSTOM_FIELD_INTELLIGENCE = process.env.SENDGRID_CUSTOM_FIELD_INTELLIGENCE || 'e2_T';  // デフォルト値
 
-      if (!BLASTMAIL_USERNAME || !BLASTMAIL_PASSWORD || !BLASTMAIL_API_KEY) {
-        console.warn('⚠️ BlastMail credentials not configured, skipping reader registration');
+      if (!SENDGRID_API_KEY) {
+        console.warn('⚠️ SendGrid API key not configured, skipping Marketing Campaigns registration');
       } else {
-        // Step 1: ログイン（access_token取得）
-        const loginUrl = 'https://api.bme.jp/rest/1.0/authenticate/login';
-        const loginParams = new URLSearchParams({
-          username: BLASTMAIL_USERNAME,
-          password: BLASTMAIL_PASSWORD,
-          api_key: BLASTMAIL_API_KEY,
-          format: 'json'
-        });
+        // SendGrid Marketing Campaigns API v3: Add or Update Contact
+        // PUT /v3/marketing/contacts (upsert: 既存コンタクトは自動更新)
+        const url = 'https://api.sendgrid.com/v3/marketing/contacts';
+        const payload = {
+          contacts: [
+            {
+              email: email,
+              first_name: fullName.split(' ')[0] || fullName,  // 姓名分割（スペース区切り）
+              last_name: fullName.split(' ')[1] || '',
+              custom_fields: {
+                [CUSTOM_FIELD_INTELLIGENCE]: 'true'  // カスタムフィールド: registered_intelligence = 'true'
+              }
+            }
+          ]
+        };
 
-        const loginResponse = await fetch(loginUrl, {
-          method: 'POST',
+        console.log('📧 SendGrid Marketing Campaigns: Registering contact:', email);
+
+        const response = await fetch(url, {
+          method: 'PUT',
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
+            'Authorization': `Bearer ${SENDGRID_API_KEY}`,
+            'Content-Type': 'application/json'
           },
-          body: loginParams.toString()
+          body: JSON.stringify(payload)
         });
 
-        if (!loginResponse.ok) {
-          throw new Error(`BlastMail login failed: ${loginResponse.status}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ SendGrid Marketing Campaigns error:', response.status, errorText);
+          throw new Error(`SendGrid Marketing Campaigns error: ${response.status} - ${errorText}`);
         }
 
-        const loginData = await loginResponse.json();
-        const accessToken = loginData.accessToken;
-
-        if (!accessToken) {
-          throw new Error('BlastMail access token not returned');
-        }
-
-        // Step 2: 読者登録
-        const registerUrl = 'https://api.bme.jp/rest/1.0/contact/detail/create';
-        const registerParams = new URLSearchParams({
-          access_token: accessToken,
-          format: 'json',
-          c15: email,      // E-Mail（必須）
-          c0: fullName     // 氏名
-        });
-
-        const registerResponse = await fetch(registerUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          body: registerParams.toString()
-        });
-
-        if (!registerResponse.ok) {
-          const errorText = await registerResponse.text();
-
-          // 重複登録エラーは成功として扱う
-          if (errorText.includes('Has already been registered')) {
-            console.log('ℹ️ BlastMail reader already registered:', email);
-          } else {
-            throw new Error(`BlastMail reader registration failed: ${registerResponse.status} - ${errorText}`);
-          }
-        } else {
-          const registerData = await registerResponse.json();
-          console.log('✅ BlastMail reader registered:', email, 'ContactID:', registerData.contactID);
-        }
+        const result = await response.json();
+        console.log('✅ SendGrid Marketing Campaigns registered:', email);
       }
-    } catch (blastMailError) {
-      console.error('❌ BlastMail registration error:', blastMailError);
-      // BlastMailエラーでも処理は続行（メール送信・Airtable登録は成功しているため）
+    } catch (sendGridMarketingError) {
+      console.error('❌ SendGrid Marketing Campaigns registration error:', sendGridMarketingError);
+      // SendGridエラーでも処理は続行（メール送信・Airtable登録は成功しているため）
     }
 
     console.log('✅ Bank transfer application submitted:', {

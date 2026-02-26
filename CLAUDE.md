@@ -102,7 +102,7 @@ grep -r "pattern" ../
 | フロントエンド | Astro 5.16+ + Sass | SSR mode（server） |
 | ホスティング | Netlify Pro | Functions/Blobs含む |
 | 決済 | 銀行振り込み | 自動化システム実装済み |
-| メルマガ | BlastMail | API連携・自動読者登録 |
+| メルマガ | SendGrid Marketing Campaigns | API連携・自動読者登録 |
 | 顧客管理 | Airtable Pro | 5テーブル運用 |
 | メール | SendGrid | 確認メール・マジックリンク送信 |
 | バックエンド | Netlify Functions (Node.js 20) | 15個実装済み |
@@ -983,25 +983,23 @@ GITHUB_BRANCH=main
 # 専用トークンを使用する場合のみ設定
 GITHUB_TOKEN_KEIBA_DATA_SHARED=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-# BlastMail（必須 - メルマガ配信）
-# 用途: 銀行振り込み申請時の自動読者登録
-# 取得方法: BlastMail管理画面 → API設定
-BLASTMAIL_USERNAME=xxxxxxxxx
-BLASTMAIL_PASSWORD=xxxxxxxxx
-BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# SendGrid Marketing Campaigns（必須 - メルマガ配信）
+# 用途: 無料会員登録・銀行振り込み申請時の自動読者登録
+# 取得方法: SendGrid管理画面 → Custom Fields作成後、IDを取得
+SENDGRID_CUSTOM_FIELD_INTELLIGENCE=e2_T  # カスタムフィールドID: registered_intelligence
 ```
 
 **重要な注意事項:**
 - ✅ **決済**: 銀行振り込み自動化（PayPalアカウント停止対応）
-- ✅ **メルマガ**: BlastMail API連携（自動読者登録）
+- ✅ **メルマガ**: SendGrid Marketing Campaigns API連携（自動読者登録）
 - ✅ **SendGrid**: マジックリンク・確認メール送信
 - ✅ **Netlify Blobs**: Pro版で自動有効化（セッション保存用）
 
 **Airtable必須テーブル:**
 1. Customers（顧客管理）
 2. ProcessedWebhookEvents（~~Webhook重複排除~~ 不要）
-3. Broadcasts（~~メルマガ配信管理~~ BlastMail使用のため不要）
-4. BroadcastRecipients（~~配信履歴~~ BlastMail使用のため不要）
+3. Broadcasts（~~メルマガ配信管理~~ SendGrid Marketing Campaigns使用のため不要）
+4. BroadcastRecipients（~~配信履歴~~ SendGrid Marketing Campaigns使用のため不要）
 5. AuthTokens（認証トークン）
 
 ---
@@ -1021,7 +1019,7 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 - [x] 料金プランページ作成（/pricing）
 - [x] 無料予想ページ作成（/free-prediction）
 - [x] ~~PayPal Webhook実装~~ → 銀行振り込み自動化に変更 ✅
-- [x] メルマガ配信システム実装（BlastMail連携）
+- [x] メルマガ配信システム実装（SendGrid Marketing Campaigns連携）
 - [x] 会員認証システム実装（マジックリンク）
 - [x] Gemini AIチャットボット実装（全ページ右下ウィジェット）
 - [x] 有料予想ページ作成（/prediction）✅
@@ -1048,7 +1046,7 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 **📅 最終更新日**: 2026-02-24
 **🏁 Project Phase**: Phase 4無料会員登録システム実装 🚀（Phase 3: 100%完了、Phase 4: 80%完了）
-**🎯 Next Priority**: BlastMail設定 → 動作テスト → 本番デプロイ → 会員獲得
+**🎯 Next Priority**: SendGrid Marketing Campaigns設定 → 動作テスト → 本番デプロイ → 会員獲得
 **📊 進捗率**: 99.9%完了（Phase 1: 100%、Phase 2: 100%、Phase 3: 100%、Phase 4: 80%）
 **🌐 本番URL**: https://keiba-intelligence.netlify.app/
 
@@ -1064,9 +1062,9 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       2. **Netlify Function（register-free.js）** ✅
          - 3段階処理:
            - Airtable登録（plan: free-registered, status: pending, Source: keiba-intelligence）
-           - BlastMail登録（hidden parameter: registration_source=keiba-intelligence）
+           - SendGrid Marketing Campaigns登録（custom_fields.registered_intelligence = 'true'）
            - マジックリンク送信（HTML形式ウェルカムメール、15分有効期限）
-         - エラーハンドリング（Airtable/BlastMail失敗は警告のみ、メール送信は継続）
+         - エラーハンドリング（Airtable/SendGrid失敗は警告のみ、メール送信は継続）
       3. **AccessControl修正** ✅
          - free-registered プラン追加（階層: 0=free, 1=free-registered, 2=pro, 3=pro-plus）
          - 無料登録ユーザー対応（登録ユーザーなら誰でもアクセス可能）
@@ -1083,7 +1081,7 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       - 登録なし: トップページ・無料予想（上位5頭のみ）
       - 無料会員: 全頭予想・買い目一部（本命/対抗/単穴/連下最上位）・AI分析・メルマガ
       - プロ会員: 全買い目（本線＋抑え）・全機能・永久アクセス
-    - **残タスク**: BlastMail登録フォーム設定（hidden parameter追加）、動作テスト
+    - **残タスク**: SendGrid Marketing Campaignsカスタムフィールド設定、動作テスト
     - **コミット**: 87bb347
 
   - **SEOページ自動生成完了（35ページ）** ✅
@@ -1382,7 +1380,7 @@ BLASTMAIL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     - nankan-analytics完全移植
     - 管理者・申請者へ自動メール送信
     - Airtable顧客登録自動化（Status: pending）
-    - BlastMail読者登録自動化（メルマガ配信）
+    - SendGrid Marketing Campaigns読者登録自動化（メルマガ配信）
 
   - **PayPal関連コード無効化** ✅
     - paypal-webhook.js → paypal-webhook.js.disabled

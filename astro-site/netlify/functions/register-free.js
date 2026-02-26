@@ -3,7 +3,7 @@
  *
  * 処理フロー:
  * 1. Airtableに登録 (plan: free-registered, status: pending)
- * 2. BlastMailに登録 (登録元: keiba-intelligence, 隠しパラメータ使用)
+ * 2. SendGrid Marketing Campaignsに登録 (カスタムフィールド: registered_intelligence)
  * 3. マジックリンク送信 (既存のsend-magic-link.js流用)
  */
 
@@ -157,85 +157,57 @@ async function registerToAirtable(email) {
   }
 }
 
-// BlastMailに登録 (nankan-analytics方式: REST API v1.0使用)
-async function registerToBlastMail(email) {
-  const BLASTMAIL_USERNAME = process.env.BLASTMAIL_USERNAME;
-  const BLASTMAIL_PASSWORD = process.env.BLASTMAIL_PASSWORD;
-  const BLASTMAIL_API_KEY = process.env.BLASTMAIL_API_KEY;
+// SendGrid Marketing Campaignsに登録（upsert: 既存コンタクトは自動更新）
+async function registerToSendGridMarketing(email) {
+  const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+  const CUSTOM_FIELD_INTELLIGENCE = process.env.SENDGRID_CUSTOM_FIELD_INTELLIGENCE || 'e2_T';  // デフォルト値
 
-  if (!BLASTMAIL_USERNAME || !BLASTMAIL_PASSWORD || !BLASTMAIL_API_KEY) {
-    console.log('⚠️ BlastMail credentials not configured, skipping reader registration');
+  if (!SENDGRID_API_KEY) {
+    console.log('⚠️ SendGrid API key not configured, skipping Marketing Campaigns registration');
     return null;
   }
 
   try {
-    // Step 1: ログイン（access_token取得）
-    const loginUrl = 'https://api.bme.jp/rest/1.0/authenticate/login';
-    const loginParams = new URLSearchParams({
-      username: BLASTMAIL_USERNAME,
-      password: BLASTMAIL_PASSWORD,
-      api_key: BLASTMAIL_API_KEY,
-      format: 'json'
-    });
+    // SendGrid Marketing Campaigns API v3: Add or Update Contact
+    // PUT /v3/marketing/contacts (upsert: 既存コンタクトは自動更新)
+    const url = 'https://api.sendgrid.com/v3/marketing/contacts';
+    const payload = {
+      contacts: [
+        {
+          email: email,
+          custom_fields: {
+            [CUSTOM_FIELD_INTELLIGENCE]: 'true'  // カスタムフィールド: registered_intelligence = 'true'
+          }
+        }
+      ]
+    };
 
-    const loginResponse = await fetch(loginUrl, {
-      method: 'POST',
+    console.log('📧 SendGrid Marketing Campaigns: Registering contact:', email);
+    console.log('📧 Custom field ID:', CUSTOM_FIELD_INTELLIGENCE);
+
+    const response = await fetch(url, {
+      method: 'PUT',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Authorization': `Bearer ${SENDGRID_API_KEY}`,
+        'Content-Type': 'application/json'
       },
-      body: loginParams.toString()
+      body: JSON.stringify(payload)
     });
 
-    if (!loginResponse.ok) {
-      throw new Error(`BlastMail login failed: ${loginResponse.status}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ SendGrid Marketing Campaigns error:', response.status, errorText);
+      throw new Error(`SendGrid Marketing Campaigns error: ${response.status} - ${errorText}`);
     }
 
-    const loginData = await loginResponse.json();
-    const accessToken = loginData.accessToken;
-
-    if (!accessToken) {
-      throw new Error('BlastMail access token not returned');
-    }
-
-    console.log('✅ BlastMail login successful, access_token obtained');
-
-    // Step 2: 新規ユーザー登録（検索・更新機能は削除）
-    // BlastMail REST API v1.0 の検索機能は利用不可（404エラー）
-    // 常に新規登録を試み、既存ユーザーの場合は400エラーを無視する
-    const registerUrl = 'https://api.bme.jp/rest/1.0/contact/detail/create';
-    const registerParams = new URLSearchParams({
-      access_token: accessToken,
-      format: 'json',
-      c15: email,                           // E-Mail（必須フィールド）
-      recipient_group_no: '3'               // リスト: keiba-intelligence（グループ番号3）
-    });
-
-    const registerResponse = await fetch(registerUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: registerParams.toString()
-    });
-
-    if (!registerResponse.ok) {
-      const errorText = await registerResponse.text();
-      // 400エラー（既に登録済み）は無視
-      if (registerResponse.status === 400 && errorText.includes('already been registered')) {
-        console.log('ℹ️ BlastMail already registered:', email, '（スキップ）');
-        return null;
-      }
-      // その他のエラーは例外を投げる
-      throw new Error(`BlastMail registration failed: ${registerResponse.status} - ${errorText}`);
-    }
-
-    const registerData = await registerResponse.json();
-    console.log('✅ BlastMail reader registered:', email, 'ContactID:', registerData.contactID, 'List: keiba-intelligence');
-    return registerData;
+    const result = await response.json();
+    console.log('✅ SendGrid Marketing Campaigns registered:', email);
+    console.log('✅ Result:', result);
+    return result;
 
   } catch (error) {
-    console.error('❌ BlastMail registration error:', error);
-    // BlastMailエラーでも処理は続行（マジックリンク送信を優先）
+    console.error('❌ SendGrid Marketing Campaigns registration error:', error);
+    // SendGridエラーでも処理は続行（マジックリンク送信を優先）
     return null;
   }
 }
@@ -418,13 +390,13 @@ exports.handler = async (event) => {
       // Airtable失敗は警告のみ（登録は継続）
     }
 
-    // 2. BlastMailに登録
+    // 2. SendGrid Marketing Campaignsに登録
     try {
-      await registerToBlastMail(email);
-      console.log('✅ BlastMail登録完了');
+      await registerToSendGridMarketing(email);
+      console.log('✅ SendGrid Marketing Campaigns登録完了');
     } catch (error) {
-      console.error('⚠️ BlastMail登録エラー:', error.message);
-      // BlastMail失敗は警告のみ（登録は継続）
+      console.error('⚠️ SendGrid Marketing Campaigns登録エラー:', error.message);
+      // SendGridエラーは警告のみ（登録は継続）
     }
 
     // 3. マジックリンク送信
