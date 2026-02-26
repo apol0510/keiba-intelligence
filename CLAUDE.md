@@ -102,7 +102,7 @@ grep -r "pattern" ../
 | フロントエンド | Astro 5.16+ + Sass | SSR mode（server） |
 | ホスティング | Netlify Pro | Functions/Blobs含む |
 | 決済 | 銀行振り込み | 自動化システム実装済み |
-| メルマガ | SendGrid Marketing Campaigns | API連携・自動読者登録 |
+| メルマガ | SendGrid Marketing Campaigns | API連携・自動読者登録（2026-02-26移行完了） |
 | 顧客管理 | Airtable Pro | 5テーブル運用 |
 | メール | SendGrid | 確認メール・マジックリンク送信 |
 | バックエンド | Netlify Functions (Node.js 20) | 15個実装済み |
@@ -636,6 +636,48 @@ try {
 
 ---
 
+## 📧 **メルマガシステム現状（2026-02-26更新）** 📧
+
+### **keiba-intelligence（このプロジェクト）**
+
+**✅ SendGrid Marketing Campaigns 移行完了（2026-02-26）**
+
+| 項目 | 内容 |
+|------|------|
+| **システム** | SendGrid Marketing Campaigns |
+| **API** | PUT /v3/marketing/contacts（upsert対応） |
+| **カスタムフィールド** | `registered_intelligence = 'true'` |
+| **環境変数** | `SENDGRID_CUSTOM_FIELD_INTELLIGENCE` |
+| **実装ファイル** | `register-free.js`, `bank-transfer-application.js` |
+| **状態** | 移行完了・動作テスト待ち ⏳ |
+
+**次のステップ:**
+1. SendGrid管理画面でカスタムフィールド作成（`registered_intelligence`）
+2. カスタムフィールドIDを環境変数に設定
+3. Netlifyサイト再デプロイ
+4. 動作テスト実施
+
+**詳細:** `SENDGRID_MARKETING_CAMPAIGNS_SETUP.md` 参照
+
+---
+
+### **nankan-analytics（参考プロジェクト）**
+
+**⏳ BlastMail 継続使用（安定運用確認まで）**
+
+| 項目 | 内容 |
+|------|------|
+| **システム** | BlastMail（当面継続） |
+| **理由** | keiba-intelligence移行の安定性確認後に移行 |
+| **移行予定** | keiba-intelligence安定運用後 |
+
+**重要:**
+- ✅ **keiba-intelligenceとnankan-analyticsは別システム**
+- ✅ **keiba-intelligence**: SendGrid Marketing Campaigns（移行完了）
+- ✅ **nankan-analytics**: BlastMail（継続使用）
+
+---
+
 ## 💰 **月額コスト** 💰
 
 | サービス | プラン | 月額 | 備考 |
@@ -643,14 +685,18 @@ try {
 | Netlify | Pro | $19 | Functions/Blobs含む |
 | Airtable | Pro | $20 | 250,000件まで |
 | ~~Zapier~~ | ~~Premium~~ | ~~$73.50~~ | **削減（Netlify Functionsで代替）** |
-| SendGrid | Essential 100 | $0（無料枠） | 100,000通/月 |
+| SendGrid | Essential 100 | $0（無料枠） | メール送信（100,000通/月） |
+| SendGrid Marketing | Advanced | $90（予定） | メルマガ配信（100,000通/月）※nankan共有 |
 | Claude | Pro | $20 | AI開発 |
 | ChatGPT | Plus | $20 | AI開発 |
-| **合計** | - | **$79（約¥11,850）** | **$73.50/月削減 🎉** |
+| **合計** | - | **$169（約¥25,350）** | **※SendGrid Marketingはnankan-analyticsと共有** |
 
-**コスト削減内訳:**
-- Zapier削減: $73.50/月 → Netlify Functions直接実装
-- 10年間削減額: $8,820（約¥1,323,000）
+**コスト内訳:**
+- ✅ Zapier削減: $73.50/月 → Netlify Functions直接実装（10年間$8,820削減）
+- ⏳ SendGrid Marketing Campaigns: $90/月（nankan-analytics + keiba-intelligence共有）
+  - keiba-intelligence: 2,000通/月
+  - nankan-analytics: 100,000通/月
+  - 合計: 両プロジェクトで共有、1アカウント管理
 
 ---
 

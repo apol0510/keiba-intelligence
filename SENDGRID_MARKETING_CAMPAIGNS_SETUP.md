@@ -28,22 +28,27 @@
 
 ## 🎯 移行方針
 
-### 統合管理アーキテクチャ
+### 統合管理アーキテクチャ（将来構想）
 
 ```
-nankan-analytics（10万通/月）+ keiba-intelligence（2,000通/月）
+【将来】nankan-analytics（10万通/月）+ keiba-intelligence（2,000通/月）
     ↓
 SendGrid Marketing Campaigns Advanced プラン（$90/月、100,000通）
     ↓
 同じアカウントで統合管理
 ```
 
+**⚠️ 重要: 現在の状況（2026-02-26）**
+- ✅ **keiba-intelligence**: SendGrid Marketing Campaigns 移行完了
+- ⏳ **nankan-analytics**: BlastMail 継続使用（安定運用確認まで）
+- 📅 **nankan移行時期**: keiba-intelligence安定運用後に実施
+
 ### カスタムフィールド設計
 
-| カスタムフィールド名 | 用途 | 値 |
-|-------------------|------|-----|
-| `registered_nankan` | nankan-analyticsに登録したか | `'true'` or 空 |
-| `registered_intelligence` | keiba-intelligenceに登録したか | `'true'` or 空 |
+| カスタムフィールド名 | 用途 | 値 | 状態 |
+|-------------------|------|-----|------|
+| `registered_nankan` | nankan-analyticsに登録したか | `'true'` or 空 | ⏳ 将来実装 |
+| `registered_intelligence` | keiba-intelligenceに登録したか | `'true'` or 空 | ✅ 実装済み |
 
 ### セグメント配信
 
@@ -66,17 +71,11 @@ https://app.sendgrid.com/
 1. 左メニューから **Marketing → Contacts → Custom Fields** を選択
 2. **Create Custom Field** ボタンをクリック
 
-### Step 3: カスタムフィールド2つを作成
+### Step 3: カスタムフィールド作成
 
-#### カスタムフィールド1: nankan-analytics用
+**⚠️ 現在はkeiba-intelligence用のみ作成（1つ）**
 
-| 設定項目 | 設定値 |
-|---------|--------|
-| **Field Name** | `registered_nankan` |
-| **Field Type** | `Text` |
-| **Description** | nankan-analyticsに登録したかどうか |
-
-#### カスタムフィールド2: keiba-intelligence用
+#### カスタムフィールド: keiba-intelligence用
 
 | 設定項目 | 設定値 |
 |---------|--------|
@@ -86,16 +85,15 @@ https://app.sendgrid.com/
 
 ### Step 4: カスタムフィールドIDを確認
 
-カスタムフィールド作成後、各フィールドに自動生成されるIDを確認します。
+カスタムフィールド作成後、自動生成されるIDを確認します。
 
 **確認方法**:
 1. **Marketing → Contacts → Custom Fields** を開く
-2. 各カスタムフィールドの詳細を確認
-3. **Field ID**（例: `e1_T`, `e2_T`）をメモ
+2. カスタムフィールドの詳細を確認
+3. **Field ID**（例: `e2_T`）をメモ
 
 **IDの例**:
-- `registered_nankan` → `e1_T`
-- `registered_intelligence` → `e2_T`
+- `registered_intelligence` → `e2_T`（実際のIDは異なる可能性あり）
 
 ### Step 5: 環境変数に設定
 
@@ -110,10 +108,9 @@ https://app.sendgrid.com/
 SENDGRID_CUSTOM_FIELD_INTELLIGENCE=e2_T  # Step 4で確認したID
 ```
 
-**nankan-analyticsでも同様に設定**:
-```bash
-SENDGRID_CUSTOM_FIELD_NANKAN=e1_T  # Step 4で確認したID
-```
+**⚠️ nankan-analyticsについて:**
+- 現在はBlastMail継続使用のため、環境変数設定は不要
+- keiba-intelligence安定運用後に移行予定
 
 ### Step 6: Netlifyサイトを再デプロイ
 
@@ -133,14 +130,16 @@ SENDGRID_CUSTOM_FIELD_NANKAN=e1_T  # Step 4で確認したID
    - 新しいコンタクトが追加されているか
    - `registered_intelligence` = `'true'` になっているか
 
-### テストケース2: 既存ユーザー（nankan-analyticsで登録済み）
+### テストケース2: 既存ユーザー（将来のテスト）
 
-1. **前提**: nankan-analyticsで既に登録済みのメールアドレスを使用
+**⚠️ 現在は実施不要（nankan-analytics移行後に実施）**
+
+1. **前提**: nankan-analyticsがSendGrid Marketing Campaignsに移行済み
 2. **登録**: keiba-intelligenceに同じメールアドレスで登録
 3. **確認**: SendGrid Marketing Campaigns → Contacts
    - 既存コンタクトが更新されているか
-   - `registered_nankan` = `'true'` が維持されているか ✅
-   - `registered_intelligence` = `'true'` が追加されているか ✅
+   - `registered_nankan` = `'true'` が維持されているか
+   - `registered_intelligence` = `'true'` が追加されているか
 
 ### テストケース3: セグメント配信
 
@@ -248,13 +247,17 @@ try {
 
 ## 📋 移行チェックリスト
 
-### マコさん作業
+### マコさん作業（keiba-intelligence）
 
 - [ ] SendGrid Management Consoleにログイン
-- [ ] カスタムフィールド `registered_intelligence` を作成
+- [ ] カスタムフィールド `registered_intelligence` を作成（1つのみ）
 - [ ] カスタムフィールドIDを確認（例: `e2_T`）
 - [ ] Netlify環境変数 `SENDGRID_CUSTOM_FIELD_INTELLIGENCE` に設定
 - [ ] Netlifyサイトを再デプロイ
+
+**⚠️ nankan-analyticsについて:**
+- 現在はBlastMail継続使用（作業不要）
+- keiba-intelligence安定運用後に移行予定
 
 ### クロ作業（完了済み ✅）
 
@@ -265,12 +268,15 @@ try {
 - [x] NETLIFY_ENV_CHECKLIST.md更新
 - [x] SENDGRID_MARKETING_CAMPAIGNS_SETUP.md作成
 
-### 動作確認
+### 動作確認（keiba-intelligence）
 
 - [ ] テストケース1: 新規ユーザー登録（keiba-intelligence）
-- [ ] テストケース2: 既存ユーザー更新（nankan-analytics登録済み）
 - [ ] テストケース3: セグメント配信テスト
 - [ ] 本番環境でテスト登録
+- [ ] 安定運用確認（1週間〜1ヶ月）
+
+**⏳ nankan-analytics移行後の追加テスト:**
+- [ ] テストケース2: 既存ユーザー更新（nankan-analytics登録済み）
 
 ---
 
@@ -303,20 +309,24 @@ try {
 
 ## 🎉 移行完了後のメリット
 
-**技術的成果**:
-- ✅ 複数サイト登録ユーザーの完全自動化
-- ✅ 既存ユーザーのカスタムフィールド更新が可能
+**技術的成果（keiba-intelligence）**:
 - ✅ BlastMailのAPI制約から解放
+- ✅ 既存ユーザーのカスタムフィールド更新が可能（upsert対応）
+- ✅ 完全自動化（手動作業ゼロ）
 
-**ビジネス価値**:
+**ビジネス価値（現在）**:
 - ✅ **keiba-intelligence: 2,000通/月対応**
+- ⏳ **nankan-analytics: BlastMail継続使用**（安定運用確認後に移行）
+
+**将来的なメリット（nankan移行後）**:
 - ✅ **nankan-analytics: 10万通/月対応**
 - ✅ **同じアカウントで統合管理**
-- ✅ **完全自動化（手動作業ゼロ）**
+- ✅ **複数サイト登録ユーザーの完全自動化**
 
-**料金**:
+**料金（将来）**:
 - $90/月（Advanced プラン、100,000通）
 - 両プロジェクトで共有
+- 現在はkeiba-intelligenceのみ使用
 
 ---
 
