@@ -215,12 +215,16 @@ const description = '無料会員登録で全頭予想・買い目（本命〜�
 .register-header h1 {
   font-size: 2.5rem;
   margin-bottom: 1rem;
-  color: var(--primary-blue);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .subtitle {
   font-size: 1.2rem;
-  color: var(--text-muted);
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 /* 特典セクション */
@@ -234,7 +238,10 @@ const description = '無料会員登録で全頭予想・買い目（本命〜�
 .benefits h2 {
   text-align: center;
   margin-bottom: 2rem;
-  color: var(--heading-color);
+  background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .benefit-grid {
@@ -259,7 +266,11 @@ const description = '無料会員登録で全頭予想・買い目（本命〜�
 .benefit-card h3 {
   font-size: 1.1rem;
   margin-bottom: 0.5rem;
-  color: var(--primary-blue);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
 }
 
 .benefit-card p {
@@ -283,7 +294,10 @@ const description = '無料会員登録で全頭予想・買い目（本命〜�
 .form-container h2 {
   text-align: center;
   margin-bottom: 0.5rem;
-  color: var(--heading-color);
+  background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .form-description {
@@ -349,20 +363,22 @@ const description = '無料会員登録で全頭予想・買い目（本命〜�
 
 .btn-register {
   padding: 1rem 2rem;
-  background: var(--primary-blue);
-  color: white;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #1e293b;
   border: none;
   border-radius: 8px;
   font-size: 1.1rem;
-  font-weight: bold;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.3), 0 4px 12px rgba(251, 191, 36, 0.4);
 }
 
 .btn-register:hover:not(:disabled) {
-  background: #2563eb;
+  background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.5), 0 6px 16px rgba(251, 191, 36, 0.6);
+  color: #0f172a;
 }
 
 .btn-register:disabled {
@@ -438,7 +454,10 @@ const description = '無料会員登録で全頭予想・買い目（本命〜�
 
 .upgrade-section h2 {
   margin-bottom: 1.5rem;
-  color: var(--heading-color);
+  background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .upgrade-grid {
@@ -468,18 +487,19 @@ const description = '無料会員登録で全頭予想・買い目（本命〜�
 .btn-upgrade {
   display: inline-block;
   padding: 1rem 2rem;
-  background: var(--primary-blue);
+  background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
   color: white;
   text-decoration: none;
   border-radius: 8px;
-  font-weight: bold;
+  font-weight: 700;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .btn-upgrade:hover {
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb 0%, #9333ea 100%);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
 }
 
 /* レスポンシブ */
