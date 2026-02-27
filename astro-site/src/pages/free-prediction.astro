@@ -444,14 +444,43 @@ function generateAdvancedMetrics(horse, allHorses) {
             <a href="/register" class="btn btn-success btn-lg">今すぐ無料登録 →</a>
           </div>
 
-          <!-- 買い目セクション（ロック・全レース共通） -->
-          <div class="locked-section">
+          <!-- 買い目セクション（ブラーマスク付きプレビュー） -->
+          <div class="locked-section blurred-preview">
+            <!-- ブラーされた買い目プレビュー -->
+            <div class="blurred-content">
+              <div class="betting-preview-card">
+                <h4>🎯 馬単買い目</h4>
+                <div class="betting-formula-preview">
+                  <div class="main-line">
+                    <span class="label">本線</span>
+                    <span class="formula">3-8.12.5.10.7.2</span>
+                  </div>
+                  <div class="backup-line">
+                    <span class="label">抑え</span>
+                    <span class="formula">8-3.12.5.10.7.2</span>
+                  </div>
+                </div>
+                <div class="betting-info-preview">
+                  <div class="info-item">
+                    <span class="label">買い目点数</span>
+                    <span class="value">8点 or 12点</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">推奨投資額</span>
+                    <span class="value">¥1,200</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ガラスモーフィズムオーバーレイ -->
             <div class="lock-overlay">
               <div class="lock-icon">🔒</div>
-              <h3>買い目情報は有料プランで提供</h3>
-              <p>プロフェッショナルな期待値分析、馬単買い目を有料プランでご提供</p>
+              <h3>プロ会員で全て表示</h3>
+              <p>馬単買い目（本線+抑え）・期待値分析・的中実績をご提供</p>
               <div class="lock-buttons">
                 <a href="/pricing" class="btn btn-primary">料金プランを見る</a>
+                <a href="/register" class="btn btn-success">無料会員登録</a>
               </div>
             </div>
           </div>
@@ -1407,7 +1436,7 @@ function generateAdvancedMetrics(horse, allHorses) {
       font-size: 0.9rem;
     }
 
-    /* ロックセクション */
+    /* ロックセクション（ブラープレビュー版） */
     .locked-section {
       position: relative;
       background: linear-gradient(135deg,
@@ -1415,20 +1444,104 @@ function generateAdvancedMetrics(horse, allHorses) {
         rgba(251, 191, 36, 0.05) 100%);
       padding: var(--spacing-lg) var(--spacing-xl);
       border-radius: var(--radius-lg);
-      min-height: 200px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      min-height: 300px;
       border: 2px solid rgba(245, 158, 11, 0.3);
       box-shadow:
         0 4px 6px rgba(0, 0, 0, 0.1),
         inset 0 1px 0 rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+
+    /* ブラーされたコンテンツ */
+    .blurred-content {
+      filter: blur(8px);
+      opacity: 0.6;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .betting-preview-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(100, 116, 139, 0.3);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-lg);
+    }
+
+    .betting-preview-card h4 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-md);
+      color: var(--text-primary);
+    }
+
+    .betting-formula-preview {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .betting-formula-preview .main-line,
+    .betting-formula-preview .backup-line {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md);
+      background: rgba(59, 130, 246, 0.1);
+      border-radius: var(--radius-sm);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .betting-formula-preview .label {
+      font-weight: 700;
+      color: var(--color-accent);
+      min-width: 60px;
+    }
+
+    .betting-formula-preview .formula {
+      font-family: 'Courier New', monospace;
+      font-size: 1.125rem;
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    .betting-info-preview {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-md);
+    }
+
+    .betting-info-preview .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xs);
+    }
+
+    .betting-info-preview .label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .betting-info-preview .value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--color-accent);
     }
 
     .lock-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(10px) saturate(180%);
+      -webkit-backdrop-filter: blur(10px) saturate(180%);
       text-align: center;
+      padding: var(--spacing-xl);
       max-width: 600px;
+      margin: 0 auto;
       padding: var(--spacing-lg);
     }
 
@@ -1458,6 +1571,13 @@ function generateAdvancedMetrics(horse, allHorses) {
       display: flex;
       gap: var(--spacing-md);
       justify-content: center;
+      flex-wrap: wrap;
+      z-index: 10;
+      position: relative;
+    }
+
+    .lock-buttons .btn {
+      min-width: 160px;
     }
 
     /* Technical Notes */

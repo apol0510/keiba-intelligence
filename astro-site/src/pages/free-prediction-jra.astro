@@ -467,12 +467,45 @@ function generateAdvancedMetrics(horse, allHorses) {
             <a href="/register" class="btn btn-success btn-lg">今すぐ無料登録 →</a>
           </div>
 
-          {/* 買い目ロック（全レース共通）*/}
-          <div class="locked-section">
-            <div class="locked-icon">🔒</div>
-            <h3>完全な馬単買い目はプロプラン限定</h3>
-            <p>全レースの詳細な馬単買い目（本線+抑え）は<strong>買い切り¥88,000</strong>または<strong>年払い¥66,000/年</strong>でご利用いただけます。</p>
-            <a href="/pricing" class="btn btn-primary btn-lg">料金プランを見る</a>
+          {/* 買い目ロック（ブラーマスク付きプレビュー）*/}
+          <div class="locked-section blurred-preview">
+            {/* ブラーされた買い目プレビュー */}
+            <div class="blurred-content">
+              <div class="betting-preview-card">
+                <h4>🎯 馬単買い目</h4>
+                <div class="betting-formula-preview">
+                  <div class="main-line">
+                    <span class="label">本線</span>
+                    <span class="formula">2-16.11.8.13.5.4</span>
+                  </div>
+                  <div class="backup-line">
+                    <span class="label">抑え</span>
+                    <span class="formula">16-2.11.8.13.5.4</span>
+                  </div>
+                </div>
+                <div class="betting-info-preview">
+                  <div class="info-item">
+                    <span class="label">買い目点数</span>
+                    <span class="value">8点 or 12点</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">推奨投資額</span>
+                    <span class="value">¥1,200</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ガラスモーフィズムオーバーレイ */}
+            <div class="lock-overlay">
+              <div class="locked-icon">🔒</div>
+              <h3>プロ会員で全て表示</h3>
+              <p>馬単買い目（本線+抑え）・期待値分析・的中実績をご提供</p>
+              <div class="lock-buttons">
+                <a href="/pricing" class="btn btn-primary">料金プランを見る</a>
+                <a href="/register" class="btn btn-success">無料会員登録</a>
+              </div>
+            </div>
           </div>
 
           <!-- CTA -->
@@ -1223,39 +1256,146 @@ function generateAdvancedMetrics(horse, allHorses) {
       color: #fbbf24;
     }
 
-    /* 買い目ロック */
+    /* 買い目ロック（ブラープレビュー版） */
     .locked-section {
-      text-align: center;
-      padding: var(--spacing-2xl);
+      position: relative;
       background: linear-gradient(135deg,
-        rgba(59, 130, 246, 0.1) 0%,
-        rgba(139, 92, 246, 0.1) 100%);
+        rgba(245, 158, 11, 0.05) 0%,
+        rgba(251, 191, 36, 0.05) 100%);
+      padding: var(--spacing-lg) var(--spacing-xl);
       border-radius: var(--radius-lg);
-      border: 2px solid rgba(59, 130, 246, 0.3);
+      min-height: 300px;
+      border: 2px solid rgba(245, 158, 11, 0.3);
+      box-shadow:
+        0 4px 6px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      overflow: hidden;
       margin-bottom: var(--spacing-xl);
+    }
+
+    /* ブラーされたコンテンツ */
+    .blurred-content {
+      filter: blur(8px);
+      opacity: 0.6;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .betting-preview-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(100, 116, 139, 0.3);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-lg);
+    }
+
+    .betting-preview-card h4 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-md);
+      color: var(--text-primary);
+    }
+
+    .betting-formula-preview {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .betting-formula-preview .main-line,
+    .betting-formula-preview .backup-line {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md);
+      background: rgba(59, 130, 246, 0.1);
+      border-radius: var(--radius-sm);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .betting-formula-preview .label {
+      font-weight: 700;
+      color: var(--color-accent);
+      min-width: 60px;
+    }
+
+    .betting-formula-preview .formula {
+      font-family: 'Courier New', monospace;
+      font-size: 1.125rem;
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    .betting-info-preview {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-md);
+    }
+
+    .betting-info-preview .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xs);
+    }
+
+    .betting-info-preview .label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .betting-info-preview .value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--color-accent);
+    }
+
+    /* ガラスモーフィズムオーバーレイ */
+    .lock-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(10px) saturate(180%);
+      -webkit-backdrop-filter: blur(10px) saturate(180%);
+      text-align: center;
+      padding: var(--spacing-xl);
     }
 
     .locked-icon {
       font-size: 4rem;
       margin-bottom: var(--spacing-md);
-      filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));
+      filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.5));
     }
 
-    .locked-section h3 {
+    .lock-overlay h3 {
       font-size: 1.5rem;
-      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: #fbbf24;
       margin-bottom: var(--spacing-md);
       font-weight: 800;
+      text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
     }
 
-    .locked-section p {
+    .lock-overlay p {
       font-size: 1rem;
       color: var(--text-secondary);
       margin-bottom: var(--spacing-lg);
       line-height: 1.6;
+    }
+
+    .lock-buttons {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: center;
+      flex-wrap: wrap;
+      z-index: 10;
+      position: relative;
+    }
+
+    .lock-buttons .btn {
+      min-width: 160px;
     }
 
     /* CTA */
