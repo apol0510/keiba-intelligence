@@ -80,10 +80,20 @@ jobs:
           while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" = false ]; do
             echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Pulling latest changes..."
 
-            # rebase中の競合を検出してabort
+            # rebase中の競合を検出してabort + クリーンアップ
             if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
               echo "⚠️  Detected ongoing rebase, aborting..."
               git rebase --abort
+              # 競合ファイルをリセット
+              git reset --hard HEAD
+              git clean -fd
+            fi
+
+            # マージ競合状態をチェック
+            if git ls-files -u | grep -q .; then
+              echo "⚠️  Detected unmerged files, resetting..."
+              git reset --hard HEAD
+              git clean -fd
             fi
 
             # 最新状態を取得（rebase）
