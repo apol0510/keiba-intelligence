@@ -141,21 +141,34 @@ function generateAdvancedMetrics(horse, allHorses) {
           <!-- 無料予想について -->
           <div class="free-info-card">
             <div class="free-info-header">
-              <div class="info-icon">ℹ️</div>
+              <div class="info-icon">🎁</div>
               <h2>無料予想について</h2>
             </div>
             <div class="free-info-content">
-              <p><strong>無料予想では全レースのAI予想（上位5頭 + Feature Importance Analysis）を公開しています。</strong></p>
-              <p>全頭の詳細分析と馬単買い目情報は有料プラン（<a href="/pricing" class="inline-link">買い切り¥88,000</a>または<a href="/pricing" class="inline-link">年払い¥66,000</a>）でご利用いただけます。</p>
-              <ul class="free-info-list">
-                <li>✅ 南関4場＋JRA全10場 全レース予想</li>
-                <li>✅ 馬単買い目提供（本線8点 + 抑え4点）</li>
-                <li>✅ 全頭詳細なAI分析</li>
-                <li>✅ 的中実績閲覧（過去全データ）</li>
-                <li>✅ Feature Importance Analysis</li>
-                <li>✅ 永久アクセス（買い切りプランのみ）</li>
-              </ul>
-              <a href="/pricing" class="btn btn-primary">料金プランを見る</a>
+              <p><strong>無料予想では全レースの上位5頭のPT値のみを公開しています。</strong></p>
+              <div class="upgrade-benefits">
+                <div class="benefit-section">
+                  <h3>🆓 無料会員登録でできること</h3>
+                  <ul class="free-info-list">
+                    <li>✅ 全頭予想（全出走馬のPT値・順位）</li>
+                    <li>✅ 買い目（一部）: 本命・対抗・単穴・連下最上位の馬番号</li>
+                    <li>✅ AI分析データ（Feature Importance Analysis）</li>
+                    <li>✅ メールマガジン配信</li>
+                  </ul>
+                  <a href="/register" class="btn btn-success">今すぐ無料登録 →</a>
+                </div>
+                <div class="benefit-section">
+                  <h3>💎 プロ会員でできること</h3>
+                  <ul class="free-info-list">
+                    <li>✅ 完全な馬単買い目（本線+抑え）</li>
+                    <li>✅ 全期間の的中実績</li>
+                    <li>✅ 買い目シミュレーター</li>
+                    <li>✅ 南関4場＋JRA全10場対応</li>
+                    <li>✅ 永久アクセス（買い切りプラン）</li>
+                  </ul>
+                  <a href="/pricing" class="btn btn-primary">料金プランを見る →</a>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -183,10 +196,10 @@ function generateAdvancedMetrics(horse, allHorses) {
               metrics: generateAdvancedMetrics(horse, allHorses)
             }));
 
-            // 本命・対抗・単穴のみ表示
-            const freeContenders = horsesWithMetrics.filter(h =>
-              h.role === '本命' || h.role === '対抗' || h.role === '単穴'
-            );
+            // PT値順にソートして上位5頭のみ表示
+            const topHorses = horsesWithMetrics
+              .sort((a, b) => b.pt - a.pt)
+              .slice(0, 5);
 
             // モデル統計
             const avgConfidence = (horsesWithMetrics.reduce((sum, h) =>
@@ -264,155 +277,42 @@ function generateAdvancedMetrics(horse, allHorses) {
                 <div class="analysis-section">
                   <div class="section-header">
                     <div class="header-icon">📊</div>
-                    <h2>Multi-Dimensional Performance Analysis / 多次元パフォーマンス分析</h2>
+                    <h2>上位5頭 PT値ランキング</h2>
                     <span class="free-tag">無料公開</span>
                   </div>
 
-                  <!-- 本命・対抗・単穴の詳細分析 -->
-                  {freeContenders.map((horse) => {
-                    const roleClass = horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : 'tanana';
-                    const roleMark = horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : '▲';
-                    const m = horse.metrics;
-
-                    return (
-                      <div class={`detailed-horse-card ${roleClass}`}>
-                        <div class="dhc-header">
-                          <div class="dhc-main-info">
-                            <div class="dhc-info-card">
-                              <div class="dhc-title-line">
-                                <span class="dhc-mark-mobile">{roleMark}</span>
-                                <span class="dhc-number">{horse.horseNumber}</span>
-                                <span class="dhc-name">{horse.horseName}</span>
-                                <span class="dhc-role-badge">{horse.role}</span>
-                              </div>
-                              {(horse.jockey || horse.trainer || horse.age || horse.weight) && (
-                                <div class="dhc-jockey-trainer">
-                                  {horse.age && <span class="dhc-age">🎂 {horse.age}</span>}
-                                  {horse.weight && <span class="dhc-weight">⚖️ {horse.weight}kg</span>}
-                                  {horse.jockey && <span class="dhc-jockey">🏇 {horse.jockey}</span>}
-                                  {horse.trainer && <span class="dhc-trainer">🏠 {horse.trainer}</span>}
-                                </div>
-                              )}
-                              <div class="dhc-quick-metrics">
-                                <div class="qm-item">
-                                  <span class="qm-label">Win Prob. / 勝率</span>
-                                  <span class="qm-value">{m.winProbability}%</span>
-                                </div>
-                                <div class="qm-item">
-                                  <span class="qm-label">Model Certainty / 確信度</span>
-                                  <span class="qm-value">{m.modelCertainty}%</span>
-                                </div>
-                                <div class="qm-item">
-                                  <span class="qm-label">Risk / リスク</span>
-                                  <span class={`qm-value risk-${m.riskLevel.toLowerCase()}`}>{m.riskLevel}</span>
-                                </div>
-                                <div class="qm-item">
-                                  <span class="qm-label">Expected Value / 期待値</span>
-                                  <span class={`qm-value ${m.expectedValue.startsWith('+') ? 'positive' : 'negative'}`}>
-                                    {m.expectedValue}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                  <!-- 上位5頭の簡易表示 -->
+                  <div class="top-horses-simple">
+                    {topHorses.map((horse, index) => (
+                      <div class="simple-horse-card">
+                        <div class="rank-badge">{index + 1}位</div>
+                        <div class="horse-basic-info">
+                          <span class="horse-number-simple">{horse.horseNumber}番</span>
+                          <span class="horse-name-simple">{horse.horseName}</span>
                         </div>
-
-                        <!-- Feature Analysis (本命・対抗のみ) -->
-                        {(horse.role === '本命' || horse.role === '対抗') && (
-                          <div class="dhc-features">
-                            <div class="feature-title">Feature Importance Analysis / 特徴量重要度分析</div>
-                            <div class="feature-grid">
-                              <div class="feature-item">
-                                <div class="feature-label">
-                                  <span class="feature-icon">⚡</span>
-                                  <span>Speed Index / スピード指数</span>
-                                </div>
-                                <div class="feature-bar-container">
-                                  <div class="feature-bar" style={`width: ${m.speedIndex}%`}></div>
-                                </div>
-                                <div class="feature-value">{m.speedIndex}</div>
-                              </div>
-
-                              <div class="feature-item">
-                                <div class="feature-label">
-                                  <span class="feature-icon">💪</span>
-                                  <span>Stamina Rating / スタミナ評価</span>
-                                </div>
-                                <div class="feature-bar-container">
-                                  <div class="feature-bar" style={`width: ${m.staminaRating}%`}></div>
-                                </div>
-                                <div class="feature-value">{m.staminaRating}</div>
-                              </div>
-
-                              <div class="feature-item">
-                                <div class="feature-label">
-                                  <span class="feature-icon">📈</span>
-                                  <span>Form Trend / 調子傾向</span>
-                                </div>
-                                <div class="feature-bar-container trend">
-                                  <div class="feature-bar-center"></div>
-                                  <div class="feature-bar trend" style={`width: ${Math.abs(parseFloat(m.formTrend))}%; ${parseFloat(m.formTrend) >= 0 ? 'left: 50%;' : 'right: 50%;'}`}></div>
-                                </div>
-                                <div class="feature-value">{m.formTrend}</div>
-                              </div>
-
-                              <div class="feature-item">
-                                <div class="feature-label">
-                                  <span class="feature-icon">🏁</span>
-                                  <span>Track Compatibility / コース適性</span>
-                                </div>
-                                <div class="feature-bar-container">
-                                  <div class="feature-bar" style={`width: ${m.trackCompatibility}%`}></div>
-                                </div>
-                                <div class="feature-value">{m.trackCompatibility}</div>
-                              </div>
-
-                              <div class="feature-item">
-                                <div class="feature-label">
-                                  <span class="feature-icon">📏</span>
-                                  <span>Distance Fitness / 距離適性</span>
-                                </div>
-                                <div class="feature-bar-container">
-                                  <div class="feature-bar" style={`width: ${m.distanceFitness}%`}></div>
-                                </div>
-                                <div class="feature-value">{m.distanceFitness}</div>
-                              </div>
-
-                              <div class="feature-item">
-                                <div class="feature-label">
-                                  <span class="feature-icon">👤</span>
-                                  <span>Jockey Factor / 騎手要因</span>
-                                </div>
-                                <div class="feature-bar-container">
-                                  <div class="feature-bar" style={`width: ${m.jockeyFactor}%`}></div>
-                                </div>
-                                <div class="feature-value">{m.jockeyFactor}</div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        <!-- Prediction Confidence Interval -->
-                        <div class="dhc-confidence">
-                          <div class="confidence-title">Prediction Confidence Interval (95%) / 予測信頼区間 (95%)</div>
-                          <div class="confidence-viz">
-                            <div class="confidence-range">
-                              <span class="range-value">{m.confidenceInterval.lower.toFixed(1)}%</span>
-                              <div class="range-bar">
-                                <div class="range-fill" style={`left: ${m.confidenceInterval.lower}%; width: ${m.confidenceInterval.upper - m.confidenceInterval.lower}%`}>
-                                  <div class="range-point" style="left: 50%"></div>
-                                </div>
-                              </div>
-                              <span class="range-value">{m.confidenceInterval.upper.toFixed(1)}%</span>
-                            </div>
-                            <div class="confidence-note">
-                              予測勝率 / Predicted Win Rate: <strong>{m.winProbability}%</strong> ± {((m.confidenceInterval.upper - m.confidenceInterval.lower) / 2).toFixed(1)}%
-                            </div>
-                          </div>
+                        <div class="pt-value-simple">
+                          <span class="pt-label">PT値</span>
+                          <span class="pt-number">{horse.pt.toFixed(2)}</span>
                         </div>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+
+                  <!-- 無料会員登録誘導 -->
+                  <div class="upgrade-cta-box">
+                    <div class="upgrade-icon">🎁</div>
+                    <h3>無料会員登録で全頭予想が見られます</h3>
+                    <p>メールアドレスのみで登録完了。全出走馬のPT値・AI分析データ・買い目（一部）が閲覧可能になります。</p>
+                    <div class="upgrade-benefits-mini">
+                      <span>✅ 全頭予想</span>
+                      <span>✅ 買い目（馬番のみ）</span>
+                      <span>✅ AI分析データ</span>
+                      <span>✅ メールマガジン</span>
+                    </div>
+                    <a href="/register" class="btn btn-success btn-lg">今すぐ無料登録 →</a>
+                  </div>
+
+                  </div>
                 </div>
 
                 <!-- 買い目セクション（ロック） -->
@@ -1252,6 +1152,163 @@ function generateAdvancedMetrics(horse, allHorses) {
       color: #60a5fa;
     }
 
+    /* 上位5頭シンプル表示 */
+    .top-horses-simple {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .simple-horse-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-md);
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: var(--spacing-md);
+      align-items: center;
+      transition: all var(--transition-base);
+    }
+
+    .simple-horse-card:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .rank-badge {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #1e293b;
+      font-weight: 700;
+      font-size: 1.25rem;
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-radius: var(--radius-md);
+      min-width: 60px;
+      text-align: center;
+    }
+
+    .horse-basic-info {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+    }
+
+    .horse-number-simple {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--primary-end);
+    }
+
+    .horse-name-simple {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .pt-value-simple {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.25rem;
+    }
+
+    .pt-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    .pt-number {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* アップグレード誘導ボックス */
+    .upgrade-cta-box {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
+      border: 2px solid #fbbf24;
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-xl);
+      text-align: center;
+      margin: var(--spacing-xl) 0;
+      box-shadow: 0 0 20px rgba(251, 191, 36, 0.2);
+    }
+
+    .upgrade-icon {
+      font-size: 3rem;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .upgrade-cta-box h3 {
+      font-size: 1.5rem;
+      margin-bottom: var(--spacing-sm);
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .upgrade-cta-box p {
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-lg);
+      line-height: 1.6;
+    }
+
+    .upgrade-benefits-mini {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+      justify-content: center;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .upgrade-benefits-mini span {
+      background: rgba(251, 191, 36, 0.1);
+      color: var(--text-primary);
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    /* 無料会員登録特典セクション */
+    .upgrade-benefits {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--spacing-lg);
+      margin-top: var(--spacing-lg);
+    }
+
+    .benefit-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-lg);
+    }
+
+    .benefit-section h3 {
+      font-size: 1.125rem;
+      margin-bottom: var(--spacing-md);
+      color: var(--text-primary);
+    }
+
+    .benefit-section ul {
+      list-style: none;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .benefit-section ul li {
+      padding: var(--spacing-xs) 0;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
     /* ロックセクション */
     .locked-section {
       position: relative;
@@ -1407,6 +1464,10 @@ function generateAdvancedMetrics(horse, allHorses) {
         grid-template-columns: 1fr;
       }
 
+      .upgrade-benefits {
+        grid-template-columns: 1fr;
+      }
+
       .dhc-quick-metrics {
         grid-template-columns: repeat(2, 1fr);
       }
@@ -1417,6 +1478,23 @@ function generateAdvancedMetrics(horse, allHorses) {
     }
 
     @media (max-width: 768px) {
+      .simple-horse-card {
+        grid-template-columns: auto 1fr;
+        gap: var(--spacing-sm);
+      }
+
+      .pt-value-simple {
+        grid-column: 1 / -1;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: var(--spacing-sm);
+        border-top: 1px solid var(--border-color);
+      }
+
+      .upgrade-benefits-mini {
+        flex-direction: column;
+      }
       .page-title {
         font-size: 1.5rem;
       }
