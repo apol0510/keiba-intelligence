@@ -197,9 +197,22 @@ function generateAdvancedMetrics(horse, allHorses) {
             }));
 
             // PT値順にソートして上位5頭のみ表示
-            const topHorses = horsesWithMetrics
+            const sortedTop5 = horsesWithMetrics
               .sort((a, b) => b.pt - a.pt)
               .slice(0, 5);
+
+            // 1位・2位はそのまま、3〜5位はシャッフルして順位を隠す
+            const top2 = sortedTop5.slice(0, 2);
+            const rest3 = sortedTop5.slice(2, 5);
+
+            // シャッフル関数（Fisher-Yates）
+            const shuffled = [...rest3];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+
+            const topHorses = [...top2, ...shuffled];
 
             // モデル統計
             const avgConfidence = (horsesWithMetrics.reduce((sum, h) =>
@@ -281,15 +294,19 @@ function generateAdvancedMetrics(horse, allHorses) {
                     <span class="free-tag">無料公開</span>
                   </div>
 
-                  <!-- 上位5頭の分析（本命・対抗は詳細、それ以外は簡易） -->
+                  <!-- 上位5頭の分析（1位・2位は詳細、3〜5位は順位隠してシャッフル） -->
                   {topHorses.map((horse, index) => {
                     const m = horse.metrics;
-                    const isTopTwo = index < 2; // 本命・対抗（上位2頭）のみ詳細分析
+                    const isTopTwo = index < 2; // 1位・2位のみ詳細分析
 
                     return (
                       <div class={`detailed-horse-card ${isTopTwo ? 'top-horse-detailed' : 'top-horse-simple'}`}>
                         <div class="dhc-header">
-                          <div class="rank-badge-large">{index + 1}位</div>
+                          {isTopTwo ? (
+                            <div class="rank-badge-large">{index + 1}位</div>
+                          ) : (
+                            <div class="candidate-badge">有力候補</div>
+                          )}
                           <div class="dhc-main-info">
                             <div class="dhc-info-card">
                               <div class="dhc-title-line">
@@ -1272,6 +1289,20 @@ function generateAdvancedMetrics(horse, allHorses) {
       padding: var(--spacing-xs) var(--spacing-md);
       border-radius: var(--radius-md);
       box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+      z-index: 1;
+    }
+
+    .candidate-badge {
+      position: absolute;
+      top: var(--spacing-md);
+      left: var(--spacing-md);
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(167, 139, 250, 0.3) 100%);
+      color: #a78bfa;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: var(--spacing-xs) var(--spacing-md);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(139, 92, 246, 0.5);
       z-index: 1;
     }
 
