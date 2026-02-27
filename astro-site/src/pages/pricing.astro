@@ -216,9 +216,14 @@ const monthlyPlans = [
               </>
             )}
 
-            <a href={plan.ctaLink} class={`btn ${plan.id === 'lifetime' ? 'btn-lifetime' : 'btn-primary'} w-full`}>
+            <button
+              class={`btn ${plan.id === 'lifetime' ? 'btn-lifetime' : 'btn-primary'} w-full open-apply-modal`}
+              data-plan={plan.id}
+              data-price={plan.price}
+              data-name={plan.name}
+            >
               {plan.cta}
-            </a>
+            </button>
           </div>
         ))}
       </div>
@@ -260,9 +265,14 @@ const monthlyPlans = [
               ))}
             </ul>
 
-            <a href={plan.ctaLink} class="btn btn-secondary w-full">
+            <button
+              class="btn btn-secondary w-full open-apply-modal"
+              data-plan={plan.id}
+              data-price={plan.price}
+              data-name={plan.name}
+            >
               {plan.cta}
-            </a>
+            </button>
           </div>
         ))}
       </div>
@@ -492,11 +502,157 @@ const monthlyPlans = [
       <h2>今すぐ始めて、勝ち馬を見つけよう</h2>
       <p class="mb-3">買い切り¥88,000（永久アクセス）または年払い¥66,000</p>
       <div class="cta-buttons">
-        <a href="/apply" class="btn btn-primary btn-lg">銀行振込で申し込む</a>
+        <button id="open-apply-modal-cta" class="btn btn-primary btn-lg">銀行振込で申し込む</button>
         <a href="/register" class="btn btn-secondary btn-lg">まずは無料会員登録</a>
       </div>
     </div>
   </section>
+
+  <!-- 申し込みモーダル -->
+  <div id="apply-modal" class="modal hidden">
+    <div class="modal-overlay" id="modal-overlay"></div>
+    <div class="modal-content">
+      <button class="modal-close" id="modal-close">&times;</button>
+
+      <h2 class="modal-title">銀行振込で申し込む</h2>
+
+      <!-- Step 1: プラン選択 -->
+      <div id="step-plan-selection" class="modal-step">
+        <h3>プランを選択してください</h3>
+        <div class="plan-selection-grid">
+          <div class="plan-select-card" data-plan="lifetime" data-price="88000">
+            <div class="plan-badge">一番お得</div>
+            <h4>買い切りプラン</h4>
+            <div class="plan-price">¥88,000</div>
+            <p>永久アクセス（追加料金なし）</p>
+            <button class="btn btn-primary btn-sm select-plan-btn">このプランを選ぶ</button>
+          </div>
+
+          <div class="plan-select-card" data-plan="yearly" data-price="66000">
+            <div class="plan-badge">おすすめ</div>
+            <h4>年払いプラン</h4>
+            <div class="plan-price">¥66,000<span class="plan-period">/年</span></div>
+            <p>月額換算¥5,500</p>
+            <button class="btn btn-primary btn-sm select-plan-btn">このプランを選ぶ</button>
+          </div>
+
+          <div class="plan-select-card" data-plan="monthly-nankan" data-price="12000">
+            <h4>南関のみ（月払い）</h4>
+            <div class="plan-price">¥12,000<span class="plan-period">/月</span></div>
+            <p class="plan-warning">年払いより2.2倍割高</p>
+            <button class="btn btn-secondary btn-sm select-plan-btn">このプランを選ぶ</button>
+          </div>
+
+          <div class="plan-select-card" data-plan="monthly-jra" data-price="12000">
+            <h4>中央のみ（月払い）</h4>
+            <div class="plan-price">¥12,000<span class="plan-period">/月</span></div>
+            <p class="plan-warning">年払いより2.2倍割高</p>
+            <button class="btn btn-secondary btn-sm select-plan-btn">このプランを選ぶ</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: 振込情報・フォーム -->
+      <div id="step-application-form" class="modal-step hidden">
+        <button class="back-btn" id="back-to-plan-selection">← プラン選択に戻る</button>
+
+        <div class="selected-plan-info">
+          <h3>選択プラン: <span id="selected-plan-name"></span></h3>
+          <div class="selected-plan-price">お支払い金額: <span id="selected-plan-price"></span></div>
+        </div>
+
+        <!-- 振込先情報 -->
+        <div class="bank-info-section">
+          <h3>振込先情報</h3>
+          <div class="bank-info-card">
+            <div class="bank-detail">
+              <span class="bank-label">金融機関</span>
+              <span class="bank-value">GMOあおぞらネット銀行</span>
+            </div>
+            <div class="bank-detail">
+              <span class="bank-label">支店名</span>
+              <span class="bank-value">法人第一支店（支店番号：101）</span>
+            </div>
+            <div class="bank-detail">
+              <span class="bank-label">口座種別</span>
+              <span class="bank-value">普通</span>
+            </div>
+            <div class="bank-detail">
+              <span class="bank-label">口座番号</span>
+              <span class="bank-value">1657485</span>
+            </div>
+            <div class="bank-detail">
+              <span class="bank-label">口座名義</span>
+              <span class="bank-value">カ）ライフストーリー</span>
+            </div>
+          </div>
+          <div class="bank-notice">
+            <p>⚠️ 振込手数料はお客様負担となります。</p>
+            <p>💡 振込を完了してから、以下のフォームをご入力ください。</p>
+          </div>
+        </div>
+
+        <!-- 申し込みフォーム -->
+        <form id="application-form" class="application-form">
+          <div class="form-group">
+            <label for="fullName">お名前 <span class="required">*</span></label>
+            <input type="text" id="fullName" name="fullName" required placeholder="山田 太郎">
+          </div>
+
+          <div class="form-group">
+            <label for="email">メールアドレス <span class="required">*</span></label>
+            <input type="email" id="email" name="email" required placeholder="example@example.com">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="transferDate">振込日 <span class="required">*</span></label>
+              <input type="date" id="transferDate" name="transferDate" required>
+            </div>
+
+            <div class="form-group">
+              <label for="transferTime">振込時刻 <span class="required">*</span></label>
+              <input type="time" id="transferTime" name="transferTime" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="transferAmount">振込金額 <span class="required">*</span></label>
+            <input type="number" id="transferAmount" name="transferAmount" required readonly>
+          </div>
+
+          <div class="form-group">
+            <label for="transferName">振込人名義 <span class="required">*</span></label>
+            <input type="text" id="transferName" name="transferName" required placeholder="ヤマダ タロウ">
+            <small>銀行で振込時に入力した名義をご記入ください</small>
+          </div>
+
+          <div class="form-group">
+            <label for="remarks">備考（任意）</label>
+            <textarea id="remarks" name="remarks" rows="3" placeholder="ご質問・ご要望などがあればご記入ください"></textarea>
+          </div>
+
+          <div class="form-notice">
+            <p>✅ フォーム送信後、確認メールをお送りします。</p>
+            <p>✅ 入金確認後、アカウントを有効化いたします（通常1-2営業日）。</p>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-full" id="submit-btn">
+            申し込みを送信する
+          </button>
+        </form>
+
+        <!-- 送信完了メッセージ -->
+        <div id="success-message" class="success-message hidden">
+          <div class="success-icon">✅</div>
+          <h3>申し込みを受け付けました！</h3>
+          <p>確認メールをお送りしましたので、ご確認ください。</p>
+          <p>入金確認後、アカウントを有効化いたします。</p>
+          <button class="btn btn-secondary" id="close-modal-success">閉じる</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <style>
     /* ヘッダー */
@@ -1212,5 +1368,509 @@ const monthlyPlans = [
         padding: var(--spacing-sm);
       }
     }
+
+    /* モーダル */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.hidden {
+      display: none;
+    }
+
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+      position: relative;
+      background: var(--card-bg);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: var(--radius-lg);
+      max-width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: var(--spacing-2xl);
+      margin: var(--spacing-lg);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: var(--spacing-lg);
+      right: var(--spacing-lg);
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 2rem;
+      cursor: pointer;
+      transition: color 0.3s;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      color: var(--color-accent);
+    }
+
+    .modal-title {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: var(--spacing-xl);
+      background: linear-gradient(135deg, #e0f2fe 0%, #60a5fa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .modal-step {
+      animation: fadeIn 0.3s;
+    }
+
+    .modal-step.hidden {
+      display: none;
+    }
+
+    /* プラン選択グリッド */
+    .plan-selection-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-lg);
+      margin-top: var(--spacing-xl);
+    }
+
+    .plan-select-card {
+      background: rgba(30, 41, 59, 0.8);
+      border: 2px solid rgba(59, 130, 246, 0.3);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-lg);
+      text-align: center;
+      transition: all 0.3s;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .plan-select-card:hover {
+      border-color: var(--color-accent);
+      transform: translateY(-4px);
+      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+    }
+
+    .plan-select-card .plan-badge {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-alt) 100%);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .plan-select-card h4 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-md);
+      color: var(--text-primary);
+    }
+
+    .plan-select-card .plan-price {
+      font-size: 1.75rem;
+      font-weight: 900;
+      color: var(--color-accent);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .plan-select-card .plan-period {
+      font-size: 1rem;
+      font-weight: 400;
+    }
+
+    .plan-select-card p {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .plan-select-card .plan-warning {
+      color: #ef4444;
+      font-weight: 600;
+    }
+
+    .select-plan-btn {
+      width: 100%;
+      margin-top: var(--spacing-sm);
+    }
+
+    /* 選択プラン情報 */
+    .selected-plan-info {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+      text-align: center;
+    }
+
+    .selected-plan-info h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-sm);
+      color: var(--text-primary);
+    }
+
+    .selected-plan-price {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--color-accent);
+    }
+
+    /* 銀行情報 */
+    .bank-info-section {
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .bank-info-section h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-md);
+      color: var(--text-primary);
+    }
+
+    .bank-info-card {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .bank-detail {
+      display: flex;
+      justify-content: space-between;
+      padding: var(--spacing-sm) 0;
+      border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+    }
+
+    .bank-detail:last-child {
+      border-bottom: none;
+    }
+
+    .bank-label {
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .bank-value {
+      color: var(--text-primary);
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+    }
+
+    .bank-notice {
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      border-radius: var(--radius-sm);
+      padding: var(--spacing-md);
+    }
+
+    .bank-notice p {
+      margin: var(--spacing-xs) 0;
+      font-size: 0.875rem;
+    }
+
+    /* フォーム */
+    .application-form {
+      margin-top: var(--spacing-xl);
+    }
+
+    .form-group {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-md);
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: var(--spacing-sm);
+      color: var(--text-primary);
+    }
+
+    .required {
+      color: #ef4444;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: var(--spacing-md);
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(100, 116, 139, 0.3);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 1rem;
+      transition: border-color 0.3s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--color-accent);
+    }
+
+    .form-group small {
+      display: block;
+      margin-top: var(--spacing-xs);
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .form-notice {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: var(--radius-sm);
+      padding: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .form-notice p {
+      margin: var(--spacing-xs) 0;
+      font-size: 0.875rem;
+    }
+
+    /* 成功メッセージ */
+    .success-message {
+      text-align: center;
+      padding: var(--spacing-2xl);
+    }
+
+    .success-message.hidden {
+      display: none;
+    }
+
+    .success-icon {
+      font-size: 4rem;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .success-message h3 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-md);
+      color: var(--text-primary);
+    }
+
+    .success-message p {
+      margin-bottom: var(--spacing-sm);
+      color: var(--text-secondary);
+    }
+
+    /* 戻るボタン */
+    .back-btn {
+      background: transparent;
+      border: none;
+      color: var(--color-accent);
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: var(--spacing-lg);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      transition: opacity 0.3s;
+    }
+
+    .back-btn:hover {
+      opacity: 0.8;
+    }
+
+    /* レスポンシブ */
+    @media (max-width: 768px) {
+      .modal-content {
+        padding: var(--spacing-lg);
+        margin: var(--spacing-md);
+      }
+
+      .plan-selection-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
+
+  <script>
+    // モーダル要素取得
+    const modal = document.getElementById('apply-modal');
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalClose = document.getElementById('modal-close');
+    const stepPlanSelection = document.getElementById('step-plan-selection');
+    const stepApplicationForm = document.getElementById('step-application-form');
+    const applicationForm = document.getElementById('application-form');
+    const successMessage = document.getElementById('success-message');
+    const backBtn = document.getElementById('back-to-plan-selection');
+
+    // 選択プラン情報
+    let selectedPlan = {
+      type: '',
+      name: '',
+      price: 0
+    };
+
+    // モーダルを開く（プラン選択から）
+    document.querySelectorAll('.open-apply-modal').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const planType = btn.dataset.plan;
+        const planPrice = parseInt(btn.dataset.price);
+        const planName = btn.dataset.name;
+
+        // プランが指定されている場合は直接フォームへ
+        if (planType && planPrice && planName) {
+          selectedPlan = { type: planType, name: planName, price: planPrice };
+          showApplicationForm();
+        } else {
+          // プラン選択画面を表示
+          showPlanSelection();
+        }
+        modal.classList.remove('hidden');
+      });
+    });
+
+    // モーダルを開く（CTAボタンから）
+    document.getElementById('open-apply-modal-cta')?.addEventListener('click', () => {
+      showPlanSelection();
+      modal.classList.remove('hidden');
+    });
+
+    // モーダルを閉じる
+    const closeModal = () => {
+      modal.classList.add('hidden');
+      resetModal();
+    };
+
+    modalOverlay.addEventListener('click', closeModal);
+    modalClose.addEventListener('click', closeModal);
+    document.getElementById('close-modal-success')?.addEventListener('click', closeModal);
+
+    // プラン選択画面を表示
+    const showPlanSelection = () => {
+      stepPlanSelection.classList.remove('hidden');
+      stepApplicationForm.classList.add('hidden');
+    };
+
+    // 申し込みフォーム画面を表示
+    const showApplicationForm = () => {
+      stepPlanSelection.classList.add('hidden');
+      stepApplicationForm.classList.remove('hidden');
+
+      // 選択プラン情報を表示
+      document.getElementById('selected-plan-name').textContent = selectedPlan.name;
+      document.getElementById('selected-plan-price').textContent = `¥${selectedPlan.price.toLocaleString()}`;
+
+      // 振込金額フィールドに自動入力
+      document.getElementById('transferAmount').value = selectedPlan.price;
+
+      // フォーム・成功メッセージをリセット
+      applicationForm.classList.remove('hidden');
+      successMessage.classList.add('hidden');
+    };
+
+    // プラン選択ボタンのイベント
+    document.querySelectorAll('.select-plan-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const card = btn.closest('.plan-select-card');
+        selectedPlan = {
+          type: card.dataset.plan,
+          name: card.querySelector('h4').textContent,
+          price: parseInt(card.dataset.price)
+        };
+        showApplicationForm();
+      });
+    });
+
+    // 戻るボタン
+    backBtn.addEventListener('click', showPlanSelection);
+
+    // モーダルリセット
+    const resetModal = () => {
+      applicationForm.reset();
+      applicationForm.classList.remove('hidden');
+      successMessage.classList.add('hidden');
+      showPlanSelection();
+    };
+
+    // フォーム送信
+    applicationForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById('submit-btn');
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = '送信中...';
+
+      try {
+        const formData = {
+          fullName: document.getElementById('fullName').value,
+          email: document.getElementById('email').value,
+          transferDate: document.getElementById('transferDate').value,
+          transferTime: document.getElementById('transferTime').value,
+          transferAmount: selectedPlan.price,
+          transferName: document.getElementById('transferName').value,
+          remarks: document.getElementById('remarks').value,
+          productName: selectedPlan.name,
+          planType: selectedPlan.type,
+          timestamp: new Date().toISOString()
+        };
+
+        console.log('📤 送信データ:', formData);
+
+        const response = await fetch('/.netlify/functions/bank-transfer-application', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`送信エラー: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log('✅ 送信成功:', result);
+
+        // 成功メッセージを表示
+        applicationForm.classList.add('hidden');
+        successMessage.classList.remove('hidden');
+
+      } catch (error) {
+        console.error('❌ 送信エラー:', error);
+        alert('送信に失敗しました。もう一度お試しください。\n\nエラー: ' + error.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    });
+  </script>
 </BaseLayout>
