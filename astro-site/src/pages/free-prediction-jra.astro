@@ -935,6 +935,12 @@ function generateAdvancedMetrics(horse, allHorses) {
       border: 2px solid var(--border-color);
     }
 
+    .detailed-horse-card.top-horse-detailed,
+    .detailed-horse-card.top-horse-simple {
+      margin-bottom: var(--spacing-lg);
+      position: relative;
+    }
+
     .detailed-horse-card.top-horse-detailed {
       border-color: rgba(251, 191, 36, 0.5);
       background: linear-gradient(135deg,
@@ -942,9 +948,26 @@ function generateAdvancedMetrics(horse, allHorses) {
         rgba(30, 41, 59, 0.8) 100%);
     }
 
+    .detailed-horse-card.top-horse-detailed .dhc-header,
+    .detailed-horse-card.top-horse-simple .dhc-header {
+      padding-top: calc(var(--spacing-md) + 40px);
+    }
+
     .detailed-horse-card.top-horse-simple {
       background: var(--bg-card);
       border: 1px solid rgba(251, 191, 36, 0.2);
+    }
+
+    .detailed-horse-card.top-horse-simple:hover {
+      border-color: rgba(251, 191, 36, 0.4);
+    }
+
+    .dhc-header {
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .dhc-main-info {
+      width: 100%;
     }
 
     .rank-badge-large {
