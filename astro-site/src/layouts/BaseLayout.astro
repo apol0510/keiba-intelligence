@@ -141,12 +141,32 @@ const archiveUrl = '/archive/';
 
         <div class="footer-section">
           <h4>対象競馬場</h4>
-          <ul>
-            <li>大井競馬場</li>
-            <li>川崎競馬場</li>
-            <li>船橋競馬場</li>
-            <li>浦和競馬場</li>
-          </ul>
+          <div class="venue-grid">
+            <div class="venue-category">
+              <h5>南関東4場</h5>
+              <ul>
+                <li>大井競馬場</li>
+                <li>川崎競馬場</li>
+                <li>船橋競馬場</li>
+                <li>浦和競馬場</li>
+              </ul>
+            </div>
+            <div class="venue-category">
+              <h5>中央競馬（JRA）全10場</h5>
+              <ul>
+                <li>東京競馬場</li>
+                <li>中山競馬場</li>
+                <li>京都競馬場</li>
+                <li>阪神競馬場</li>
+                <li>小倉競馬場</li>
+                <li>新潟競馬場</li>
+                <li>中京競馬場</li>
+                <li>福島競馬場</li>
+                <li>札幌競馬場</li>
+                <li>函館競馬場</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -345,6 +365,29 @@ const archiveUrl = '/archive/';
       color: var(--primary-end);
     }
 
+    .venue-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-lg);
+    }
+
+    .venue-category h5 {
+      color: var(--color-accent);
+      font-size: 0.875rem;
+      margin-bottom: var(--spacing-sm);
+      font-weight: 600;
+    }
+
+    .venue-category ul {
+      list-style: none;
+    }
+
+    .venue-category ul li {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      margin-bottom: var(--spacing-xs);
+    }
+
     .copyright {
       margin-top: var(--spacing-md);
       padding-top: var(--spacing-md);
@@ -370,6 +413,11 @@ const archiveUrl = '/archive/';
       .footer-content {
         grid-template-columns: 1fr;
         gap: var(--spacing-xl);
+      }
+
+      .venue-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
       }
     }
   </style>
