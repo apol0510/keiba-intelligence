@@ -445,27 +445,6 @@ function generateAdvancedMetrics(horse, allHorses) {
                           })}
                         </div>
 
-                        {/* アップグレード誘導（無料会員向け）*/}
-                        <div class="upgrade-cta-box">
-                          <div class="upgrade-icon">🎁</div>
-                          <h3>無料会員登録で全頭予想が見られます</h3>
-                          <p>メールアドレスのみで登録完了。全出走馬のPT値・AI分析データ・買い目（一部）が閲覧可能になります。</p>
-                          <div class="upgrade-benefits-mini">
-                            <span>✅ 全頭予想</span>
-                            <span>✅ 買い目（馬番のみ）</span>
-                            <span>✅ AI分析データ</span>
-                            <span>✅ メールマガジン</span>
-                          </div>
-                          <a href="/register" class="btn btn-success btn-lg">今すぐ無料登録 →</a>
-                        </div>
-
-                        {/* 買い目ロック（プロ会員向け）*/}
-                        <div class="locked-section">
-                          <div class="locked-icon">🔒</div>
-                          <h3>完全な馬単買い目はプロプラン限定</h3>
-                          <p>全レースの詳細な馬単買い目（本線+抑え）は<strong>買い切り¥88,000</strong>または<strong>年払い¥66,000/年</strong>でご利用いただけます。</p>
-                          <a href="/pricing" class="btn btn-primary btn-lg">料金プランを見る</a>
-                        </div>
                       </div>
                     );
                   })}
@@ -473,6 +452,28 @@ function generateAdvancedMetrics(horse, allHorses) {
               </div>
             );
           })}
+
+          {/* アップグレード誘導（全レース共通）*/}
+          <div class="upgrade-cta-box">
+            <div class="upgrade-icon">🎁</div>
+            <h3>無料会員登録で全頭予想が見られます</h3>
+            <p>メールアドレスのみで登録完了。全出走馬のPT値・AI分析データ・買い目（一部）が閲覧可能になります。</p>
+            <div class="upgrade-benefits-mini">
+              <span>✅ 全頭予想</span>
+              <span>✅ 買い目（馬番のみ）</span>
+              <span>✅ AI分析データ</span>
+              <span>✅ メールマガジン</span>
+            </div>
+            <a href="/register" class="btn btn-success btn-lg">今すぐ無料登録 →</a>
+          </div>
+
+          {/* 買い目ロック（全レース共通）*/}
+          <div class="locked-section">
+            <div class="locked-icon">🔒</div>
+            <h3>完全な馬単買い目はプロプラン限定</h3>
+            <p>全レースの詳細な馬単買い目（本線+抑え）は<strong>買い切り¥88,000</strong>または<strong>年払い¥66,000/年</strong>でご利用いただけます。</p>
+            <a href="/pricing" class="btn btn-primary btn-lg">料金プランを見る</a>
+          </div>
 
           <!-- CTA -->
           <div class="cta-card">

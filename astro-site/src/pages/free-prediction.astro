@@ -423,37 +423,37 @@ function generateAdvancedMetrics(horse, allHorses) {
                     );
                   })}
 
-                  <!-- 無料会員登録誘導 -->
-                  <div class="upgrade-cta-box">
-                    <div class="upgrade-icon">🎁</div>
-                    <h3>無料会員登録で全頭予想が見られます</h3>
-                    <p>メールアドレスのみで登録完了。全出走馬のPT値・AI分析データ・買い目（一部）が閲覧可能になります。</p>
-                    <div class="upgrade-benefits-mini">
-                      <span>✅ 全頭予想</span>
-                      <span>✅ 買い目（馬番のみ）</span>
-                      <span>✅ AI分析データ</span>
-                      <span>✅ メールマガジン</span>
-                    </div>
-                    <a href="/register" class="btn btn-success btn-lg">今すぐ無料登録 →</a>
-                  </div>
-
-                  </div>
-                </div>
-
-                <!-- 買い目セクション（ロック） -->
-                <div class="locked-section">
-                  <div class="lock-overlay">
-                    <div class="lock-icon">🔒</div>
-                    <h3>買い目情報は有料プランで提供</h3>
-                    <p>プロフェッショナルな期待値分析、馬単買い目を有料プランでご提供</p>
-                    <div class="lock-buttons">
-                      <a href="/pricing" class="btn btn-primary">料金プランを見る</a>
-                    </div>
                   </div>
                 </div>
               </div>
             );
           })}
+          </div>
+
+          <!-- 無料会員登録誘導（全レース共通）-->
+          <div class="upgrade-cta-box">
+            <div class="upgrade-icon">🎁</div>
+            <h3>無料会員登録で全頭予想が見られます</h3>
+            <p>メールアドレスのみで登録完了。全出走馬のPT値・AI分析データ・買い目（一部）が閲覧可能になります。</p>
+            <div class="upgrade-benefits-mini">
+              <span>✅ 全頭予想</span>
+              <span>✅ 買い目（馬番のみ）</span>
+              <span>✅ AI分析データ</span>
+              <span>✅ メールマガジン</span>
+            </div>
+            <a href="/register" class="btn btn-success btn-lg">今すぐ無料登録 →</a>
+          </div>
+
+          <!-- 買い目セクション（ロック・全レース共通） -->
+          <div class="locked-section">
+            <div class="lock-overlay">
+              <div class="lock-icon">🔒</div>
+              <h3>買い目情報は有料プランで提供</h3>
+              <p>プロフェッショナルな期待値分析、馬単買い目を有料プランでご提供</p>
+              <div class="lock-buttons">
+                <a href="/pricing" class="btn btn-primary">料金プランを見る</a>
+              </div>
+            </div>
           </div>
 
           <!-- Technical Notes -->
