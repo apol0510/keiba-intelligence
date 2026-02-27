@@ -154,38 +154,14 @@ const description = 'KEIBA Intelligence プロプラン（買い切り・年払�
             />
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label for="transferDate">振込日<span class="required">*</span></label>
-              <input
-                type="date"
-                id="transferDate"
-                name="transferDate"
-                required
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="transferTime">振込時刻<span class="required">*</span></label>
-              <input
-                type="time"
-                id="transferTime"
-                name="transferTime"
-                required
-              />
-            </div>
-          </div>
-
           <div class="form-group">
-            <label for="transferName">振込人名義<span class="required">*</span></label>
+            <label for="transferDate">振込日<span class="required">*</span></label>
             <input
-              type="text"
-              id="transferName"
-              name="transferName"
-              placeholder="ヤマダ タロウ（カタカナ）"
+              type="date"
+              id="transferDate"
+              name="transferDate"
               required
             />
-            <p class="form-help">銀行振込時に入力した名義を正確にご入力ください</p>
           </div>
 
           <div class="form-group">
@@ -659,9 +635,9 @@ const description = 'KEIBA Intelligence プロプラン（買い切り・年払�
         fullName: document.getElementById('fullName').value,
         email: document.getElementById('email').value,
         transferDate: document.getElementById('transferDate').value,
-        transferTime: document.getElementById('transferTime').value,
+        transferTime: '',  // 不要（空文字列）
         transferAmount: selectedPlanPrice,
-        transferName: document.getElementById('transferName').value,
+        transferName: '',  // 不要（空文字列）
         remarks: document.getElementById('remarks').value,
         productName: selectedPlanName,
         planType: selectedPlanType,
