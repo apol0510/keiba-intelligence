@@ -315,36 +315,72 @@ const archiveUrl = '/archive/';
 
     /* フッター */
     .main-footer {
-      background: var(--bg-secondary);
-      border-top: 1px solid var(--border-color);
+      background: linear-gradient(135deg,
+        rgba(59, 130, 246, 0.1) 0%,
+        rgba(139, 92, 246, 0.1) 100%);
+      border-top: 2px solid rgba(59, 130, 246, 0.3);
       padding: var(--spacing-2xl) 0 var(--spacing-lg);
       margin-top: var(--spacing-2xl);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .main-footer::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(59, 130, 246, 0.5) 50%,
+        transparent 100%);
     }
 
     .footer-content {
       display: grid;
       grid-template-columns: 2fr 1fr 1fr 1fr;
       gap: var(--spacing-2xl);
+      position: relative;
+      z-index: 1;
     }
 
     .footer-section h3 {
-      background: var(--primary-gradient);
+      background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
       margin-bottom: var(--spacing-md);
+      font-weight: 800;
+      font-size: 1.125rem;
+      position: relative;
+      padding-bottom: var(--spacing-sm);
+    }
+
+    .footer-section h3::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 40px;
+      height: 2px;
+      background: linear-gradient(90deg, #60a5fa 0%, #a78bfa 100%);
+      border-radius: 2px;
     }
 
     .footer-section h4 {
-      color: var(--text-primary);
+      color: #60a5fa;
       font-size: 1rem;
       margin-bottom: var(--spacing-md);
+      font-weight: 700;
     }
 
     .footer-section p {
-      color: var(--text-secondary);
+      color: rgba(255, 255, 255, 0.8);
       font-size: 0.875rem;
       margin-bottom: var(--spacing-sm);
+      line-height: 1.6;
     }
 
     .footer-section ul {
@@ -353,16 +389,28 @@ const archiveUrl = '/archive/';
 
     .footer-section ul li {
       margin-bottom: var(--spacing-sm);
+      padding-left: var(--spacing-md);
+      position: relative;
+    }
+
+    .footer-section ul li::before {
+      content: '▸';
+      position: absolute;
+      left: 0;
+      color: #60a5fa;
+      font-size: 0.75rem;
     }
 
     .footer-section ul li a {
-      color: var(--text-secondary);
+      color: rgba(255, 255, 255, 0.7);
       font-size: 0.875rem;
-      transition: color var(--transition-fast);
+      transition: all 0.2s ease;
+      position: relative;
     }
 
     .footer-section ul li a:hover {
-      color: var(--primary-end);
+      color: #60a5fa;
+      padding-left: 4px;
     }
 
     .venue-grid {
