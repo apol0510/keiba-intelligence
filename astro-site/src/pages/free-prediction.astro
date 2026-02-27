@@ -281,11 +281,13 @@ function generateAdvancedMetrics(horse, allHorses) {
                     <span class="free-tag">無料公開</span>
                   </div>
 
-                  <!-- 上位5頭の詳細分析 -->
+                  <!-- 上位5頭の分析（本命・対抗は詳細、それ以外は簡易） -->
                   {topHorses.map((horse, index) => {
                     const m = horse.metrics;
+                    const isTopTwo = index < 2; // 本命・対抗（上位2頭）のみ詳細分析
+
                     return (
-                      <div class="detailed-horse-card top-horse">
+                      <div class={`detailed-horse-card ${isTopTwo ? 'top-horse-detailed' : 'top-horse-simple'}`}>
                         <div class="dhc-header">
                           <div class="rank-badge-large">{index + 1}位</div>
                           <div class="dhc-main-info">
@@ -326,78 +328,80 @@ function generateAdvancedMetrics(horse, allHorses) {
                           </div>
                         </div>
 
-                        <!-- Feature Importance Analysis -->
-                        <div class="dhc-features">
-                          <div class="feature-title">Feature Importance Analysis / 特徴量重要度分析</div>
-                          <div class="feature-grid">
-                            <div class="feature-item">
-                              <div class="feature-label">
-                                <span class="feature-icon">⚡</span>
-                                <span>Speed Index / スピード指数</span>
+                        <!-- Feature Importance Analysis（本命・対抗のみ詳細表示） -->
+                        {isTopTwo && (
+                          <div class="dhc-features">
+                            <div class="feature-title">Feature Importance Analysis / 特徴量重要度分析</div>
+                            <div class="feature-grid">
+                              <div class="feature-item">
+                                <div class="feature-label">
+                                  <span class="feature-icon">⚡</span>
+                                  <span>Speed Index / スピード指数</span>
+                                </div>
+                                <div class="feature-bar-container">
+                                  <div class="feature-bar" style={`width: ${m.speedIndex}%`}></div>
+                                </div>
+                                <div class="feature-value">{m.speedIndex}</div>
                               </div>
-                              <div class="feature-bar-container">
-                                <div class="feature-bar" style={`width: ${m.speedIndex}%`}></div>
-                              </div>
-                              <div class="feature-value">{m.speedIndex}</div>
-                            </div>
 
-                            <div class="feature-item">
-                              <div class="feature-label">
-                                <span class="feature-icon">💪</span>
-                                <span>Stamina Rating / スタミナ評価</span>
+                              <div class="feature-item">
+                                <div class="feature-label">
+                                  <span class="feature-icon">💪</span>
+                                  <span>Stamina Rating / スタミナ評価</span>
+                                </div>
+                                <div class="feature-bar-container">
+                                  <div class="feature-bar" style={`width: ${m.staminaRating}%`}></div>
+                                </div>
+                                <div class="feature-value">{m.staminaRating}</div>
                               </div>
-                              <div class="feature-bar-container">
-                                <div class="feature-bar" style={`width: ${m.staminaRating}%`}></div>
-                              </div>
-                              <div class="feature-value">{m.staminaRating}</div>
-                            </div>
 
-                            <div class="feature-item">
-                              <div class="feature-label">
-                                <span class="feature-icon">📈</span>
-                                <span>Form Trend / 調子傾向</span>
+                              <div class="feature-item">
+                                <div class="feature-label">
+                                  <span class="feature-icon">📈</span>
+                                  <span>Form Trend / 調子傾向</span>
+                                </div>
+                                <div class="feature-bar-container trend">
+                                  <div class="feature-bar-center"></div>
+                                  <div class="feature-bar trend" style={`width: ${Math.abs(parseFloat(m.formTrend))}%; ${parseFloat(m.formTrend) >= 0 ? 'left: 50%;' : 'right: 50%;'}`}></div>
+                                </div>
+                                <div class="feature-value">{m.formTrend}</div>
                               </div>
-                              <div class="feature-bar-container trend">
-                                <div class="feature-bar-center"></div>
-                                <div class="feature-bar trend" style={`width: ${Math.abs(parseFloat(m.formTrend))}%; ${parseFloat(m.formTrend) >= 0 ? 'left: 50%;' : 'right: 50%;'}`}></div>
-                              </div>
-                              <div class="feature-value">{m.formTrend}</div>
-                            </div>
 
-                            <div class="feature-item">
-                              <div class="feature-label">
-                                <span class="feature-icon">🏁</span>
-                                <span>Track Compatibility / コース適性</span>
+                              <div class="feature-item">
+                                <div class="feature-label">
+                                  <span class="feature-icon">🏁</span>
+                                  <span>Track Compatibility / コース適性</span>
+                                </div>
+                                <div class="feature-bar-container">
+                                  <div class="feature-bar" style={`width: ${m.trackCompatibility}%`}></div>
+                                </div>
+                                <div class="feature-value">{m.trackCompatibility}</div>
                               </div>
-                              <div class="feature-bar-container">
-                                <div class="feature-bar" style={`width: ${m.trackCompatibility}%`}></div>
-                              </div>
-                              <div class="feature-value">{m.trackCompatibility}</div>
-                            </div>
 
-                            <div class="feature-item">
-                              <div class="feature-label">
-                                <span class="feature-icon">📏</span>
-                                <span>Distance Fitness / 距離適性</span>
+                              <div class="feature-item">
+                                <div class="feature-label">
+                                  <span class="feature-icon">📏</span>
+                                  <span>Distance Fitness / 距離適性</span>
+                                </div>
+                                <div class="feature-bar-container">
+                                  <div class="feature-bar" style={`width: ${m.distanceFitness}%`}></div>
+                                </div>
+                                <div class="feature-value">{m.distanceFitness}</div>
                               </div>
-                              <div class="feature-bar-container">
-                                <div class="feature-bar" style={`width: ${m.distanceFitness}%`}></div>
-                              </div>
-                              <div class="feature-value">{m.distanceFitness}</div>
-                            </div>
 
-                            <div class="feature-item">
-                              <div class="feature-label">
-                                <span class="feature-icon">👤</span>
-                                <span>Jockey Factor / 騎手要因</span>
+                              <div class="feature-item">
+                                <div class="feature-label">
+                                  <span class="feature-icon">👤</span>
+                                  <span>Jockey Factor / 騎手要因</span>
+                                </div>
+                                <div class="feature-bar-container">
+                                  <div class="feature-bar" style={`width: ${m.jockeyFactor}%`}></div>
+                                </div>
+                                <div class="feature-value">{m.jockeyFactor}</div>
                               </div>
-                              <div class="feature-bar-container">
-                                <div class="feature-bar" style={`width: ${m.jockeyFactor}%`}></div>
-                              </div>
-                              <div class="feature-value">{m.jockeyFactor}</div>
                             </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1256,7 +1260,7 @@ function generateAdvancedMetrics(horse, allHorses) {
       color: #60a5fa;
     }
 
-    /* 上位5頭詳細表示用のランクバッジ */
+    /* 上位5頭表示用のランクバッジ */
     .rank-badge-large {
       position: absolute;
       top: var(--spacing-md);
@@ -1271,13 +1275,25 @@ function generateAdvancedMetrics(horse, allHorses) {
       z-index: 1;
     }
 
-    .detailed-horse-card.top-horse {
+    .detailed-horse-card.top-horse-detailed,
+    .detailed-horse-card.top-horse-simple {
       margin-bottom: var(--spacing-lg);
       position: relative;
     }
 
-    .detailed-horse-card.top-horse .dhc-header {
+    .detailed-horse-card.top-horse-detailed .dhc-header,
+    .detailed-horse-card.top-horse-simple .dhc-header {
       padding-top: calc(var(--spacing-md) + 40px);
+    }
+
+    /* 簡易表示（3位以降）はコンパクトに */
+    .detailed-horse-card.top-horse-simple {
+      background: var(--bg-card);
+      border: 1px solid rgba(251, 191, 36, 0.2);
+    }
+
+    .detailed-horse-card.top-horse-simple:hover {
+      border-color: rgba(251, 191, 36, 0.4);
     }
 
     /* アップグレード誘導ボックス */
