@@ -470,7 +470,7 @@ function generateAdvancedMetrics(horse, allHorses) {
 
           {/* 買い目ロック（ブラーマスク付きプレビュー）*/}
           <div class="locked-section blurred-preview">
-            {/* ブラーされた買い目プレビュー */}
+            <!-- ブラーされた買い目プレビュー -->
             <div class="blurred-content">
               <div class="betting-preview-card">
                 <h4>🎯 馬単買い目</h4>
@@ -497,9 +497,9 @@ function generateAdvancedMetrics(horse, allHorses) {
               </div>
             </div>
 
-            {/* ガラスモーフィズムオーバーレイ */}
+            <!-- ガラスモーフィズムオーバーレイ -->
             <div class="lock-overlay">
-              <div class="locked-icon">🔒</div>
+              <div class="lock-icon">🔒</div>
               <h3>プロ会員で全て表示</h3>
               <p>馬単買い目（本線+抑え）・期待値分析・的中実績をご提供</p>
               <div class="lock-buttons">
@@ -1347,7 +1347,6 @@ function generateAdvancedMetrics(horse, allHorses) {
       color: var(--color-accent);
     }
 
-    /* ガラスモーフィズムオーバーレイ */
     .lock-overlay {
       position: absolute;
       top: 0;
@@ -1363,27 +1362,31 @@ function generateAdvancedMetrics(horse, allHorses) {
       -webkit-backdrop-filter: blur(10px) saturate(180%);
       text-align: center;
       padding: var(--spacing-xl);
+      max-width: 600px;
+      margin: 0 auto;
+      padding: var(--spacing-lg);
     }
 
-    .locked-icon {
-      font-size: 4rem;
+    .lock-icon {
+      font-size: 2.5rem;
       margin-bottom: var(--spacing-md);
-      filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.5));
+      opacity: 0.7;
+      filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.3));
     }
 
     .lock-overlay h3 {
-      font-size: 1.5rem;
-      color: #fbbf24;
-      margin-bottom: var(--spacing-md);
+      font-size: 1.25rem;
       font-weight: 800;
+      color: #fbbf24;
+      margin-bottom: var(--spacing-sm);
       text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
     }
 
     .lock-overlay p {
-      font-size: 1rem;
       color: var(--text-secondary);
       margin-bottom: var(--spacing-lg);
-      line-height: 1.6;
+      line-height: 1.5;
+      font-size: 0.9375rem;
     }
 
     .lock-buttons {
