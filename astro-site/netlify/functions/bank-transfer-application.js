@@ -49,6 +49,7 @@ exports.handler = async (event, context) => {
       transferName,
       remarks,
       productName,
+      planType,
       timestamp
     } = formData;
 
@@ -249,9 +250,10 @@ exports.handler = async (event, context) => {
       <ol style="margin: 0; padding-left: 20px; color: #1e293b;">
         <li style="margin-bottom: 10px;">
           <strong>振込先口座</strong><br>
-          三井住友銀行 洲本支店<br>
-          普通 5338892<br>
-          ﾏ-ｸｱﾂﾌﾟｴ-ｱｲｻ-ﾋﾞｽ ｱｻｲ ﾄｼﾋﾛ
+          GMOあおぞらネット銀行<br>
+          法人第一支店（支店番号：101）<br>
+          普通 1657485<br>
+          カ）ライフストーリー
         </li>
         <li style="margin-bottom: 10px;">
           <strong>入金確認</strong><br>
@@ -364,8 +366,10 @@ exports.handler = async (event, context) => {
             fields: {
               'Name': fullName,
               'Plan': planName,
+              'plan_type': planType,
               'Status': 'pending',
-              'PaymentMethod': 'Bank Transfer'
+              'PaymentMethod': 'Bank Transfer',
+              'Source': 'keiba-intelligence'
             }
           };
 
@@ -394,10 +398,11 @@ exports.handler = async (event, context) => {
               'Email': email,
               'Name': fullName,
               'Plan': planName,
-              'plan_type': planName,
+              'plan_type': planType,
               'Status': 'pending',
               'PaymentMethod': 'Bank Transfer',
-              'AccessEnabled': false
+              'AccessEnabled': false,
+              'Source': 'keiba-intelligence'
             }
           };
 
