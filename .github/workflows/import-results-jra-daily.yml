@@ -5,6 +5,8 @@ on:
     # 毎日 23:30 JST (14:30 UTC) に実行
     - cron: '30 14 * * *'
   workflow_dispatch:
+  repository_dispatch:
+    types: [jra-results-updated]
 
 # 並行実行制御：リポジトリ全体で1つのワークフローのみ実行（同じファイルへの同時コミット防止）
 concurrency:

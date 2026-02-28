@@ -5,6 +5,8 @@ on:
     # 毎日 23:30 JST (14:30 UTC) に実行
     - cron: '30 14 * * *'
   workflow_dispatch:
+  repository_dispatch:
+    types: [nankan-results-updated]
 
 # 並行実行制御
 concurrency:
