@@ -40,10 +40,18 @@ jobs:
 
       - name: Get current date (JST)
         id: date
+        env:
+          PAYLOAD_DATE: ${{ github.event.client_payload.date }}
         run: |
-          DATE=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+          # repository_dispatchで日付が指定されている場合はそれを使用
+          if [ -n "$PAYLOAD_DATE" ] && [ "$PAYLOAD_DATE" != "null" ]; then
+            DATE="$PAYLOAD_DATE"
+            echo "📅 Using date from repository_dispatch: $DATE"
+          else
+            DATE=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+            echo "📅 Current date (JST): $DATE"
+          fi
           echo "date=$DATE" >> $GITHUB_OUTPUT
-          echo "📅 Current date (JST): $DATE"
 
       - name: Check for missing results
         id: check
