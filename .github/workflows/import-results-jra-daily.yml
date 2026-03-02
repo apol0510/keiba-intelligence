@@ -118,16 +118,26 @@ jobs:
             if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
               echo "⚠️  Detected ongoing rebase, aborting..."
               git rebase --abort
-              # 競合ファイルをリセット
-              git reset --hard HEAD
+              # mainブランチに戻る（detached HEAD回避）
+              git checkout main
+              git reset --hard origin/main
               git clean -fd
             fi
 
             # マージ競合状態をチェック
             if git ls-files -u | grep -q .; then
               echo "⚠️  Detected unmerged files, resetting..."
-              git reset --hard HEAD
+              # mainブランチに戻る（detached HEAD回避）
+              git checkout main
+              git reset --hard origin/main
               git clean -fd
+            fi
+
+            # mainブランチにいることを確認
+            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            if [ "$CURRENT_BRANCH" != "main" ]; then
+              echo "⚠️  Not on main branch (current: $CURRENT_BRANCH), checking out main..."
+              git checkout main
             fi
 
             # 最新状態を取得（rebase）
@@ -173,7 +183,16 @@ jobs:
                   else
                     echo "❌ Failed to continue rebase"
                     git rebase --abort
+                    # mainブランチに戻る
+                    git checkout main
+                    git reset --hard origin/main
                   fi
+                else
+                  echo "❌ No conflict files found but rebase failed"
+                  git rebase --abort
+                  # mainブランチに戻る
+                  git checkout main
+                  git reset --hard origin/main
                 fi
               fi
 
