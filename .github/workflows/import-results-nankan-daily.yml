@@ -219,35 +219,3 @@ jobs:
           echo "⏭️  No missing Nankan results to import"
           echo "   Date: ${{ steps.date.outputs.date }}"
           echo "   Archive is up-to-date"
-
-      - name: Send failure alert
-        if: failure()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.sendgrid.net
-          server_port: 587
-          username: apikey
-          password: ${{ secrets.SENDGRID_API_KEY }}
-          subject: '🚨 南関結果自動インポート失敗 - keiba-intelligence'
-          to: ${{ secrets.ALERT_EMAIL }}
-          from: noreply@keiba-intelligence.netlify.app
-          body: |
-            マコさん、
-
-            南関結果の自動インポート（定期チェック）が失敗しました。
-
-            【対象日付】
-            ${{ steps.date.outputs.date }}
-
-            【失敗したステップ】
-            ワークフロー: import-results-nankan-daily.yml
-
-            【GitHub Actionsログ】
-            https://github.com/apol0510/keiba-intelligence/actions/runs/${{ github.run_id }}
-
-            【手動実行コマンド】
-            cd /Users/apolon/Projects/keiba-intelligence
-            gh workflow run import-results-on-dispatch.yml -f date=${{ steps.date.outputs.date }}
-
-            ---
-            このメールは自動送信されています。
