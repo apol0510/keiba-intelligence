@@ -115,23 +115,20 @@ jobs:
             # rebase中の競合を検出してabort + クリーンアップ
             if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
               echo "⚠️  Detected ongoing rebase, aborting..."
-              git rebase --abort
-              # mainブランチに戻る（detached HEAD回避）
-              git checkout main
-              git reset  # インデックスをクリア
-              git reset --hard origin/main
-              git clean -fd
+              git rebase --abort || true
             fi
 
-            # マージ競合状態をチェック
+            # merge中の競合を検出してabort
             if git ls-files -u | grep -q .; then
-              echo "⚠️  Detected unmerged files, resetting..."
-              # mainブランチに戻る（detached HEAD回避）
-              git checkout main
-              git reset  # インデックスをクリア
-              git reset --hard origin/main
-              git clean -fd
+              echo "⚠️  Detected unmerged files, aborting merge..."
+              git merge --abort || true
             fi
+
+            # 完全クリーンアップ（detached HEAD回避 + インデックス/ワーキングツリークリア）
+            git checkout -f main 2>/dev/null || git checkout main
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
 
             # mainブランチにいることを確認
             CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -179,21 +176,21 @@ jobs:
                   # rebase続行
                   if git rebase --continue; then
                     echo "✅ Conflicts resolved, rebase continued"
-                    # 次のループでpush試行
-                    continue
+                    # Push試行（次のループではなく即座に）
+                    if git push; then
+                      echo "✅ Successfully pushed changes"
+                      SUCCESS=true
+                      break
+                    else
+                      echo "⚠️  Push failed after conflict resolution, retrying..."
+                    fi
                   else
-                    echo "❌ Failed to continue rebase"
-                    git rebase --abort
-                    # mainブランチに戻る
-                    git checkout main
-                    git reset --hard origin/main
+                    echo "❌ Failed to continue rebase, aborting..."
+                    git rebase --abort || true
                   fi
                 else
-                  echo "❌ No conflict files found but rebase failed"
-                  git rebase --abort
-                  # mainブランチに戻る
-                  git checkout main
-                  git reset --hard origin/main
+                  echo "❌ No conflict files found but rebase failed, aborting..."
+                  git rebase --abort || true
                 fi
               fi
 
