@@ -4,18 +4,18 @@
  * 正規化された予想データに対して調整ルールを適用
  * 南関競馬・中央競馬（JRA）共通のロジック
  *
+ * 【独自ロジック】
+ * 1. 印1◎の馬を必ず本命または対抗に固定
+ * 2. 独自スコアリング（印1×4 + 印2×3 + 印3×2 + 印4×1）
+ * 3. 独自スコア順で役割を決定
+ * 4. 著作権回避のため、印1の複製ではなく複数の印を総合評価
+ *
  * 調整内容:
- * 1. displayScore計算（rawScore + 70、0点は0のまま）
- * 2. 本命15点以下の降格処理（本命→単穴、対抗→本命）
- * 3. 差4点以上の役割入れ替え（対抗→連下最上位、単穴→対抗、連下最上位→単穴）
+ * 1. 独自スコア計算（印1〜4の重み付け合計）
+ * 2. displayScore計算（rawScore + 70、0点は0のまま）
+ * 3. 印1◎固定 + 独自スコア順で役割決定
  * 4. 連下3頭制限（連下最上位1頭維持 + 連下最大3頭、残りは補欠）
  * 5. 表示用印の割り当て
- *
- * ⚠️ 重要:
- * - assignmentをそのまま使用（印1による上書きなし）
- * - 元データでassignmentと印1は既に一致している
- * - marks（記者印）など入力材料は変更しない
- * - roleのみ調整対象
  */
 
 /**
@@ -39,6 +39,34 @@ function getRoleMark(role) {
 }
 
 /**
+ * 独自スコア計算（印1〜4の重み付け合計）
+ *
+ * @param {Object} horse - 馬データ
+ * @returns {number} 独自スコア
+ */
+function calculateCustomScore(horse) {
+  const markPoints = {
+    '◎': 4,
+    '○': 3,
+    '▲': 2,
+    '△': 1,
+    '-': 0,
+    'svg': 0,
+    '無': 0
+  };
+
+  const marks = horse.marks || {};
+
+  const score =
+    (markPoints[marks['印1']] || 0) * 4 +
+    (markPoints[marks['印2']] || 0) * 3 +
+    (markPoints[marks['印3']] || 0) * 2 +
+    (markPoints[marks['印4']] || 0) * 1;
+
+  return score;
+}
+
+/**
  * 正規化された予想データに調整ルールを適用
  * 南関競馬・中央競馬（JRA）共通のロジック
  *
@@ -59,12 +87,6 @@ export function adjustPrediction(normalized) {
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // Step 0: assignmentをそのまま使用
-    // （元データでassignmentと印1は既に一致している）
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // 何もしない（roleは既にnormalizeで設定済み）
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Step 1: displayScore計算
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     for (const horse of race.horses) {
@@ -76,42 +98,86 @@ export function adjustPrediction(normalized) {
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // Step 2: 本命15点以下の場合、3頭ローテーション
+    // Step 2: 独自スコア計算（印1×4 + 印2×3 + 印3×2 + 印4×1）
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const honmeiAfterMark1 = race.horses.find(h => h.role === '本命');
-    const taikouAfterMark1 = race.horses.find(h => h.role === '対抗');
-    const tananaAfterMark1 = race.horses.find(h => h.role === '単穴');
-
-    if (honmeiAfterMark1 && honmeiAfterMark1.rawScore <= 15) {
-      if (taikouAfterMark1 && tananaAfterMark1) {
-        // 3頭ローテーション: 本命→単穴、対抗→本命、単穴→対抗
-        honmeiAfterMark1.role = '単穴';
-        taikouAfterMark1.role = '本命';
-        tananaAfterMark1.role = '対抗';
-      } else if (taikouAfterMark1) {
-        // 単穴がいない場合: 本命→単穴、対抗→本命
-        honmeiAfterMark1.role = '単穴';
-        taikouAfterMark1.role = '本命';
-      }
+    for (const horse of race.horses) {
+      horse.customScore = calculateCustomScore(horse);
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // Step 3: 差4点以上の役割入れ替え
+    // Step 3: 印1◎固定 + 独自スコア順で役割決定
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // Step 2後の最新状態を取得
-    const honmeiAfterSwap = race.horses.find(h => h.role === '本命');
-    const taikouAfterSwap = race.horses.find(h => h.role === '対抗');
-    const tananaAfterSwap = race.horses.find(h => h.role === '単穴');
-    const renkaTopAfterSwap = race.horses.find(h => h.role === '連下最上位');
 
-    // 対抗と単穴が存在し、差が4点以上の場合
-    if (taikouAfterSwap && tananaAfterSwap &&
-        (taikouAfterSwap.rawScore - tananaAfterSwap.rawScore >= 4)) {
-      // 対抗→連下最上位、単穴→対抗、連下最上位→単穴
-      taikouAfterSwap.role = '連下最上位';
-      tananaAfterSwap.role = '対抗';
-      if (renkaTopAfterSwap) {
-        renkaTopAfterSwap.role = '単穴';
+    // 印1◎の馬を特定
+    const honmeiMarkHorse = race.horses.find(h => h.marks && h.marks['印1'] === '◎');
+
+    // 独自スコアで降順ソート
+    const sortedHorses = [...race.horses].sort((a, b) => b.customScore - a.customScore);
+
+    // 全馬の役割をリセット
+    for (const horse of race.horses) {
+      horse.role = '無';
+    }
+
+    // 印1◎の順位を確認
+    let honmeiRank = -1;
+    if (honmeiMarkHorse) {
+      honmeiRank = sortedHorses.indexOf(honmeiMarkHorse);
+    }
+
+    if (honmeiMarkHorse && honmeiRank === 0) {
+      // 印1◎が1位 → 本命
+      sortedHorses[0].role = '本命';
+      if (sortedHorses[1]) sortedHorses[1].role = '対抗';
+      if (sortedHorses[2]) sortedHorses[2].role = '単穴';
+      if (sortedHorses[3]) sortedHorses[3].role = '連下最上位';
+
+      // 4位以降は連下
+      for (let i = 4; i < sortedHorses.length; i++) {
+        sortedHorses[i].role = '連下';
+      }
+
+    } else if (honmeiMarkHorse && honmeiRank > 0) {
+      // 印1◎が2位以下 → 1位を本命、印1◎を対抗に固定
+      sortedHorses[0].role = '本命';
+      honmeiMarkHorse.role = '対抗';
+
+      // 単穴: 印1◎を除いた2位
+      let tananaCandidateIndex = 1;
+      while (tananaCandidateIndex < sortedHorses.length &&
+             sortedHorses[tananaCandidateIndex] === honmeiMarkHorse) {
+        tananaCandidateIndex++;
+      }
+      if (tananaCandidateIndex < sortedHorses.length) {
+        sortedHorses[tananaCandidateIndex].role = '単穴';
+      }
+
+      // 連下最上位: 印1◎を除いた3位
+      let renkaTopCandidateIndex = tananaCandidateIndex + 1;
+      while (renkaTopCandidateIndex < sortedHorses.length &&
+             sortedHorses[renkaTopCandidateIndex] === honmeiMarkHorse) {
+        renkaTopCandidateIndex++;
+      }
+      if (renkaTopCandidateIndex < sortedHorses.length) {
+        sortedHorses[renkaTopCandidateIndex].role = '連下最上位';
+      }
+
+      // 残りは連下
+      for (let i = 0; i < sortedHorses.length; i++) {
+        if (sortedHorses[i].role === '無' && sortedHorses[i] !== honmeiMarkHorse) {
+          sortedHorses[i].role = '連下';
+        }
+      }
+
+    } else {
+      // 印1◎がない場合（まれ）→ 独自スコア順で機械的に決定
+      if (sortedHorses[0]) sortedHorses[0].role = '本命';
+      if (sortedHorses[1]) sortedHorses[1].role = '対抗';
+      if (sortedHorses[2]) sortedHorses[2].role = '単穴';
+      if (sortedHorses[3]) sortedHorses[3].role = '連下最上位';
+
+      for (let i = 4; i < sortedHorses.length; i++) {
+        sortedHorses[i].role = '連下';
       }
     }
 
@@ -125,8 +191,8 @@ export function adjustPrediction(normalized) {
     // 連下を抽出（連下最上位は除外）
     const renkaList = race.horses.filter(h => h.role === '連下');
 
-    // rawScoreで降順ソート
-    renkaList.sort((a, b) => b.rawScore - a.rawScore);
+    // customScoreで降順ソート
+    renkaList.sort((a, b) => b.customScore - a.customScore);
 
     // 上位3頭のみ連下、残りは補欠
     for (let i = 0; i < renkaList.length; i++) {
