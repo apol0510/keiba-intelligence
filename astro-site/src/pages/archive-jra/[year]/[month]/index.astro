@@ -128,41 +128,26 @@ const pageDescription = monthData.length > 0
 
                 <div class="races-list">
                   {(() => {
-                    // 的中レースのみを抽出
+                    // 的中レースのみを元の順序で表示
                     const hitRaces = dayData.races.filter(race => race.isHit);
 
                     if (hitRaces.length === 0) {
                       return <div class="no-hits">的中レースなし</div>;
                     }
 
-                    // 会場ごとにグループ化
-                    const venueGroups = {};
-                    hitRaces.forEach(race => {
-                      if (!venueGroups[race.venue]) {
-                        venueGroups[race.venue] = [];
-                      }
-                      venueGroups[race.venue].push(race);
+                    return hitRaces.map((race) => {
+                      const payout = race.umatan?.payout || 0;
+                      return (
+                        <div class="race-line hit">
+                          <span class="race-number">{race.venue}{race.raceNumber}レース</span>
+                          <span class="race-name">{race.raceName}</span>
+                          <span class="hit-badge">✅ 的中</span>
+                          {payout > 0 && (
+                            <span class="payout">¥{payout.toLocaleString()}</span>
+                          )}
+                        </div>
+                      );
                     });
-
-                    // 会場ごとに表示
-                    return Object.entries(venueGroups).map(([venue, races]) => (
-                      <div class="venue-group">
-                        <div class="venue-label">{venue}</div>
-                        {races.map((race) => {
-                          const payout = race.umatan?.payout || 0;
-                          return (
-                            <div class="race-line hit">
-                              <span class="race-number">{race.raceNumber}R</span>
-                              <span class="race-name">{race.raceName}</span>
-                              <span class="hit-badge">✅ 的中</span>
-                              {payout > 0 && (
-                                <span class="payout">¥{payout.toLocaleString()}</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ));
                   })()}
                 </div>
               </section>
@@ -341,22 +326,7 @@ const pageDescription = monthData.length > 0
     padding: var(--spacing-lg);
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xl);
-  }
-
-  .venue-group {
-    display: flex;
-    flex-direction: column;
     gap: var(--spacing-sm);
-  }
-
-  .venue-label {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: #60a5fa;
-    margin-bottom: var(--spacing-xs);
-    padding-left: var(--spacing-sm);
-    border-left: 4px solid #60a5fa;
   }
 
   .race-line {
