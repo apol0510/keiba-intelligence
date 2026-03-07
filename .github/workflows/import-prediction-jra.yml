@@ -184,15 +184,17 @@ jobs:
                   else
                     echo "❌ Failed to continue rebase"
                     git rebase --abort
-                    # mainブランチに戻る
+                    # mainブランチに戻る（2段階リセット）
                     git checkout main
+                    git reset  # インデックスをクリア
                     git reset --hard origin/main
                   fi
                 else
                   echo "❌ No conflict files found but rebase failed"
                   git rebase --abort
-                  # mainブランチに戻る
+                  # mainブランチに戻る（2段階リセット）
                   git checkout main
+                  git reset  # インデックスをクリア
                   git reset --hard origin/main
                 fi
               fi
