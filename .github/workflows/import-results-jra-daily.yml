@@ -65,13 +65,28 @@ jobs:
 
           echo "🔍 Checking for JRA results: $RESULT_URL"
 
-          if curl -sf "$RESULT_URL" > /dev/null; then
+          if curl -sf "$RESULT_URL" > /tmp/results.json; then
             echo "✅ Results found in keiba-data-shared"
+
+            # keiba-data-sharedの会場数を取得
+            EXPECTED_VENUES=$(cat /tmp/results.json | node -e "const data = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8')); const venues = [...new Set(data.races.map(r => r.venue))]; console.log(venues.length);")
+            echo "   Expected venues: $EXPECTED_VENUES"
 
             # アーカイブに既に存在するかチェック
             if grep -q "\"date\": \"$DATE\"" src/data/archiveResultsJra.json; then
-              echo "⏭️  Already processed: $DATE"
-              echo "has_missing=false" >> $GITHUB_OUTPUT
+              # アーカイブの会場数を取得
+              ARCHIVED_VENUES=$(node -e "const data = JSON.parse(require('fs').readFileSync('src/data/archiveResultsJra.json', 'utf8')); const entry = data.find(e => e.date === '$DATE'); console.log(entry ? entry.venues.length : 0);")
+              echo "   Archived venues: $ARCHIVED_VENUES"
+
+              # 会場数が一致するかチェック
+              if [ "$ARCHIVED_VENUES" -ge "$EXPECTED_VENUES" ]; then
+                echo "⏭️  Already processed with all venues: $DATE"
+                echo "has_missing=false" >> $GITHUB_OUTPUT
+              else
+                echo "📥 Missing venues detected (archived: $ARCHIVED_VENUES, expected: $EXPECTED_VENUES)"
+                echo "   Reimporting to include all venues"
+                echo "has_missing=true" >> $GITHUB_OUTPUT
+              fi
             else
               echo "📥 Missing from archive: $DATE"
               echo "has_missing=true" >> $GITHUB_OUTPUT
