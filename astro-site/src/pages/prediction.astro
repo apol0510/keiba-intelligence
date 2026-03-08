@@ -44,30 +44,60 @@ let userPlan = 'pro'; // 強制的にpro
 //   }
 // }
 
-// 最新の予想JSONファイルを取得
+// 最新の予想JSONファイルを取得（複数会場対応）
 const predictionsDir = join(process.cwd(), 'src', 'data', 'predictions');
-let predictionData = null;
+let predictionsByVenue = {};
+let venues = [];
+let latestDate = null;
 let error = null;
 
 try {
   if (existsSync(predictionsDir)) {
-    // ファイル名から日付を抽出して日付順にソート（会場名付き: YYYY-MM-DD-venue.json）
+    // ファイル名から日付と会場を抽出して日付順にソート（会場名付き: YYYY-MM-DD-venue.json）
     const files = readdirSync(predictionsDir)
       .filter(file => file.endsWith('.json') && /^\d{4}-\d{2}-\d{2}-[a-z]+\.json$/.test(file))
       .map(file => {
-        const dateMatch = file.match(/^(\d{4}-\d{2}-\d{2})-[a-z]+\.json$/);
-        return {
-          file,
-          date: dateMatch ? dateMatch[1] : '',
-          timestamp: dateMatch ? new Date(dateMatch[1]).getTime() : 0
-        };
+        const match = file.match(/^(\d{4}-\d{2}-\d{2})-([a-z]+)\.json$/);
+        if (match) {
+          const [, date, venue] = match;
+          return {
+            file,
+            date,
+            venue,
+            timestamp: new Date(date).getTime()
+          };
+        }
+        return null;
       })
+      .filter(item => item !== null)
       .sort((a, b) => b.timestamp - a.timestamp); // 日付降順（最新が先頭）
 
     if (files.length > 0) {
-      const latestFile = files[0].file;
-      const fileContent = readFileSync(join(predictionsDir, latestFile), 'utf-8');
-      predictionData = JSON.parse(fileContent);
+      // 最新の日付を取得
+      latestDate = files[0].date;
+
+      // 同じ日付のファイルをすべて読み込む
+      const latestFiles = files.filter(f => f.date === latestDate);
+
+      for (const fileInfo of latestFiles) {
+        const fileContent = readFileSync(join(predictionsDir, fileInfo.file), 'utf-8');
+        const data = JSON.parse(fileContent);
+
+        // 会場名を日本語に変換
+        const venueMap = {
+          'ooi': '大井',
+          'funabashi': '船橋',
+          'kawasaki': '川崎',
+          'urawa': '浦和'
+        };
+        const venueName = venueMap[fileInfo.venue] || fileInfo.venue;
+
+        predictionsByVenue[venueName] = data;
+        venues.push(venueName);
+      }
+
+      console.log(`✅ 最新予想データ読み込み完了: ${latestDate}`);
+      console.log(`   会場: ${venues.join('・')}`);
     } else {
       throw new Error('予想データがありません');
     }
@@ -77,6 +107,10 @@ try {
 } catch (err) {
   error = err.message;
 }
+
+// 表示用の最初の会場データ（後方互換性）
+const predictionData = venues.length > 0 ? predictionsByVenue[venues[0]] : null;
+const isMultiVenue = venues.length > 1;
 
 // 複雑なAI分析値を生成する関数（free-prediction.astroと同じ）
 function generateAdvancedMetrics(horse, allHorses) {
@@ -224,32 +258,62 @@ function generateUmatanBets(horses) {
                 <span class="pro-text">PRO MEMBER EXCLUSIVE</span>
               </div>
               <h1 class="page-title">
-                {predictionData.eventInfo.date} {predictionData.eventInfo.venue}
+                {latestDate || predictionData.eventInfo.date}
+                {isMultiVenue ? ` ${venues.join('・')}` : ` ${predictionData.eventInfo.venue}`}
               </h1>
               <p class="page-subtitle">
-                Ensemble Neural Network Analysis / アンサンブル型ニューラルネットワーク分析 - {predictionData.eventInfo.totalRaces} Races
+                Ensemble Neural Network Analysis / アンサンブル型ニューラルネットワーク分析
+                {isMultiVenue ? ` - ${venues.length}会場` : ` - ${predictionData.eventInfo.totalRaces} Races`}
               </p>
               <div class="scan-line"></div>
             </div>
 
-            <!-- レース選択ボタン -->
-            <div class="race-selector">
-              {predictionData.predictions.map((race, index) => (
-                <button
-                  class={`race-btn ${index === 0 ? 'active' : ''}`}
-                  data-race-index={index}
-                  onclick="selectRace(event, this)"
-                  title={race.raceInfo.raceName || `第${race.raceInfo.raceNumber}レース`}
-                >
-                  <span class="race-label">{race.raceInfo.raceNumber}R</span>
-                  <span class="race-indicator"></span>
-                </button>
-              ))}
-            </div>
+            <!-- 会場タブ切り替え（複数会場の場合のみ表示）-->
+            {isMultiVenue && (
+              <div class="venue-tabs">
+                {venues.map((venue, index) => (
+                  <button
+                    class={`venue-tab ${index === 0 ? 'active' : ''}`}
+                    data-venue-index={index}
+                    data-venue={venue}
+                    onclick="selectVenue(event, this)"
+                  >
+                    <span class="venue-icon">🏇</span>
+                    <span class="venue-name">{venue}</span>
+                    <span class="venue-races">{predictionsByVenue[venue].eventInfo.totalRaces}R</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
-            <!-- レース表示エリア -->
-            <div class="race-display-area">
-              {predictionData.predictions.map((race, index) => {
+            <!-- 【複数会場対応】会場ごとのレース表示エリア -->
+            {venues.map((venueName, venueIndex) => {
+              const venueData = predictionsByVenue[venueName];
+
+              return (
+                <div
+                  class={`venue-content ${venueIndex === 0 ? 'active' : ''}`}
+                  data-venue-index={venueIndex}
+                  data-venue={venueName}
+                >
+                  <!-- レース選択ボタン -->
+                  <div class="race-selector">
+                    {venueData.predictions.map((race, index) => (
+                      <button
+                        class={`race-btn ${index === 0 ? 'active' : ''}`}
+                        data-race-index={index}
+                        onclick="selectRace(event, this)"
+                        title={race.raceInfo.raceName || `第${race.raceInfo.raceNumber}レース`}
+                      >
+                        <span class="race-label">{race.raceInfo.raceNumber}R</span>
+                        <span class="race-indicator"></span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <!-- レース表示エリア -->
+                  <div class="race-display-area">
+                    {venueData.predictions.map((race, index) => {
               const allHorses = race.horses;
               const horsesWithMetrics = allHorses.map(horse => ({
                 ...horse,
@@ -585,9 +649,12 @@ function generateUmatanBets(horses) {
                     })}
                   </div>
                 </div>
+                    );
+                  })}
+                  </div>
+                </div>
               );
             })}
-            </div>
 
             <!-- Technical Notes -->
             <div class="info-card">
@@ -750,6 +817,72 @@ function generateUmatanBets(horses) {
     @keyframes scanLine {
       0% { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
+    }
+
+    /* 会場タブ切り替え */
+    .venue-tabs {
+      display: flex;
+      gap: var(--spacing-sm);
+      justify-content: center;
+      margin-bottom: var(--spacing-xl);
+      padding: var(--spacing-md);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    .venue-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: var(--spacing-md) var(--spacing-lg);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      min-width: 100px;
+    }
+
+    .venue-tab:hover {
+      border-color: var(--primary-end);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .venue-tab.active {
+      background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+      border-color: var(--primary-end);
+      color: white;
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+    }
+
+    .venue-icon {
+      font-size: 1.5rem;
+    }
+
+    .venue-name {
+      font-size: 1.125rem;
+      font-weight: 800;
+    }
+
+    .venue-races {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      font-family: 'Courier New', monospace;
+    }
+
+    .venue-content {
+      display: none;
+    }
+
+    .venue-content.active {
+      display: block;
     }
 
     /* 買い目セクション（横並び形式） */
@@ -1710,22 +1843,58 @@ function generateUmatanBets(horses) {
   </style>
 
   <script is:inline>
+    // 会場切り替え
+    function selectVenue(event, button) {
+      event.preventDefault();
+
+      const venueIndex = button.getAttribute('data-venue-index');
+
+      // すべての会場タブから active を削除
+      document.querySelectorAll('.venue-tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+
+      // クリックされた会場タブに active を追加
+      button.classList.add('active');
+
+      // すべての会場コンテンツを非表示
+      document.querySelectorAll('.venue-content').forEach(content => {
+        content.classList.remove('active');
+      });
+
+      // 選択された会場コンテンツを表示
+      const selectedVenue = document.querySelector(`.venue-content[data-venue-index="${venueIndex}"]`);
+      if (selectedVenue) {
+        selectedVenue.classList.add('active');
+
+        // 最初のレースを表示
+        const firstRaceBtn = selectedVenue.querySelector('.race-btn');
+        if (firstRaceBtn) {
+          firstRaceBtn.click();
+        }
+      }
+    }
+
     function selectRace(event, button) {
       event.preventDefault();
 
       const raceIndex = button.getAttribute('data-race-index');
 
-      document.querySelectorAll('.race-btn').forEach(btn => {
+      // 現在アクティブな会場コンテンツ内でのみレースボタンを切り替え
+      const activeVenue = document.querySelector('.venue-content.active');
+      if (!activeVenue) return;
+
+      activeVenue.querySelectorAll('.race-btn').forEach(btn => {
         btn.classList.remove('active');
       });
 
       button.classList.add('active');
 
-      document.querySelectorAll('.race-content').forEach(content => {
+      activeVenue.querySelectorAll('.race-content').forEach(content => {
         content.classList.remove('active');
       });
 
-      const selectedRace = document.querySelector(`.race-content[data-race-index="${raceIndex}"]`);
+      const selectedRace = activeVenue.querySelector(`.race-content[data-race-index="${raceIndex}"]`);
       if (selectedRace) {
         selectedRace.classList.add('active');
 

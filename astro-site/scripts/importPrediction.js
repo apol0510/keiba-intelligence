@@ -130,7 +130,7 @@ async function fetchSharedPrediction(date, venue = 'nankan') {
  *
  * @param {string} date - 日付（YYYY-MM-DD）
  * @param {string} venue - 競馬場カテゴリ（デフォルト: 'nankan'）
- * @returns {Promise<Object>} 調整済みNormalizedPrediction
+ * @returns {Promise<Object[]>} 調整済みNormalizedPrediction配列（複数会場対応）
  */
 async function importPrediction(date, venue = 'nankan') {
   console.log(`\n━━━ ${date} 予想データ取り込み開始 ━━━`);
@@ -144,32 +144,75 @@ async function importPrediction(date, venue = 'nankan') {
     return null;
   }
 
-  // 正規化 + 調整ルール適用
-  console.log(`⚙️  正規化 + 調整ルール適用中...`);
-  const normalizedAndAdjusted = normalizeAndAdjust(sharedJSON);
+  // 【複数会場対応】venues配列があるか確認
+  if (sharedJSON.venues && Array.isArray(sharedJSON.venues) && sharedJSON.venues.length > 0) {
+    // 複数会場形式（venues配列）
+    console.log(`📍 複数会場形式を検出: ${sharedJSON.venues.length}会場`);
 
-  console.log(`✅ 正規化完了`);
-  console.log(`   - 開催日: ${normalizedAndAdjusted.date}`);
-  console.log(`   - 競馬場: ${normalizedAndAdjusted.venue}`);
-  console.log(`   - レース数: ${normalizedAndAdjusted.totalRaces}`);
+    const results = [];
 
-  // 各レースの調整結果を表示
-  for (const race of normalizedAndAdjusted.races) {
-    console.log(`   - ${race.raceNumber}R: ${race.raceName}`);
-    console.log(`     hasHorseData=${race.hasHorseData}, isAbsoluteAxis=${race.isAbsoluteAxis}`);
-    if (race.hasHorseData) {
-      const honmei = race.horses.find(h => h.role === '本命');
-      const taikou = race.horses.find(h => h.role === '対抗');
-      if (honmei) {
-        console.log(`     本命: ${honmei.number} ${honmei.name} (${honmei.rawScore}点 → ${honmei.displayScore})`);
+    for (const venueData of sharedJSON.venues) {
+      const venueName = venueData.venue || venueData.name || '不明';
+      console.log(`\n⚙️  ${venueName} の正規化 + 調整ルール適用中...`);
+
+      const normalizedAndAdjusted = normalizeAndAdjust(venueData);
+
+      console.log(`✅ ${venueName} 正規化完了`);
+      console.log(`   - 開催日: ${normalizedAndAdjusted.date}`);
+      console.log(`   - 競馬場: ${normalizedAndAdjusted.venue}`);
+      console.log(`   - レース数: ${normalizedAndAdjusted.totalRaces}`);
+
+      // 各レースの調整結果を表示
+      for (const race of normalizedAndAdjusted.races) {
+        console.log(`   - ${race.raceNumber}R: ${race.raceName}`);
+        console.log(`     hasHorseData=${race.hasHorseData}, isAbsoluteAxis=${race.isAbsoluteAxis}`);
+        if (race.hasHorseData) {
+          const honmei = race.horses.find(h => h.role === '本命');
+          const taikou = race.horses.find(h => h.role === '対抗');
+          if (honmei) {
+            console.log(`     本命: ${honmei.number} ${honmei.name} (${honmei.rawScore}点 → ${honmei.displayScore})`);
+          }
+          if (taikou) {
+            console.log(`     対抗: ${taikou.number} ${taikou.name} (${taikou.rawScore}点 → ${taikou.displayScore})`);
+          }
+        }
       }
-      if (taikou) {
-        console.log(`     対抗: ${taikou.number} ${taikou.name} (${taikou.rawScore}点 → ${taikou.displayScore})`);
+
+      results.push(normalizedAndAdjusted);
+    }
+
+    return results;
+  } else {
+    // 単一会場形式（従来の形式）
+    console.log(`📍 単一会場形式`);
+
+    // 正規化 + 調整ルール適用
+    console.log(`⚙️  正規化 + 調整ルール適用中...`);
+    const normalizedAndAdjusted = normalizeAndAdjust(sharedJSON);
+
+    console.log(`✅ 正規化完了`);
+    console.log(`   - 開催日: ${normalizedAndAdjusted.date}`);
+    console.log(`   - 競馬場: ${normalizedAndAdjusted.venue}`);
+    console.log(`   - レース数: ${normalizedAndAdjusted.totalRaces}`);
+
+    // 各レースの調整結果を表示
+    for (const race of normalizedAndAdjusted.races) {
+      console.log(`   - ${race.raceNumber}R: ${race.raceName}`);
+      console.log(`     hasHorseData=${race.hasHorseData}, isAbsoluteAxis=${race.isAbsoluteAxis}`);
+      if (race.hasHorseData) {
+        const honmei = race.horses.find(h => h.role === '本命');
+        const taikou = race.horses.find(h => h.role === '対抗');
+        if (honmei) {
+          console.log(`     本命: ${honmei.number} ${honmei.name} (${honmei.rawScore}点 → ${honmei.displayScore})`);
+        }
+        if (taikou) {
+          console.log(`     対抗: ${taikou.number} ${taikou.name} (${taikou.rawScore}点 → ${taikou.displayScore})`);
+        }
       }
     }
-  }
 
-  return normalizedAndAdjusted;
+    return [normalizedAndAdjusted]; // 配列で返す
+  }
 }
 
 /**
@@ -333,6 +376,7 @@ function savePrediction(date, normalizedAndAdjusted) {
   // ファイル書き込み
   writeFileSync(filePath, newContent, 'utf-8');
   console.log(`✅ 保存完了: ${filePath}`);
+  console.log(`   会場: ${venue} (${venueSlug})`);
 
   return true; // 保存した
 }
@@ -377,22 +421,30 @@ async function main() {
     }
 
     // 取り込み実行
-    const normalizedAndAdjusted = await importPrediction(date);
+    const results = await importPrediction(date);
 
     // 予想データがない場合は正常終了
-    if (!normalizedAndAdjusted) {
+    if (!results || results.length === 0) {
       console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('⏭️  予想データがないため、処理を終了します');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       return; // 正常終了
     }
 
-    // 保存
-    const saved = savePrediction(date, normalizedAndAdjusted);
+    // 【複数会場対応】各会場のデータを保存
+    console.log(`\n📦 保存対象: ${results.length}会場`);
+    let totalSaved = 0;
+
+    for (const normalizedAndAdjusted of results) {
+      const saved = savePrediction(date, normalizedAndAdjusted);
+      if (saved) {
+        totalSaved++;
+      }
+    }
 
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    if (saved) {
-      console.log('✅ 取り込み完了！');
+    if (totalSaved > 0) {
+      console.log(`✅ 取り込み完了！（${totalSaved}/${results.length}会場）`);
     } else {
       console.log('⏭️  変更なし（既存データと同一）');
     }

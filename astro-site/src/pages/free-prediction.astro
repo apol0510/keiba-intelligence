@@ -5,30 +5,53 @@ import { join } from 'path';
 
 export const prerender = false;
 
-// 最新の予想JSONファイルを取得
+// 最新の予想JSONファイルを取得（複数会場対応）
 const predictionsDir = join(process.cwd(), 'src', 'data', 'predictions');
-let predictionData = null;
+let predictionsByVenue = {};
+let venues = [];
+let latestDate = null;
 let error = null;
 
 try {
   if (existsSync(predictionsDir)) {
-    // ファイル名から日付を抽出して日付順にソート（会場名付き: YYYY-MM-DD-venue.json）
+    // ファイル名から日付と会場を抽出して日付順にソート
     const files = readdirSync(predictionsDir)
       .filter(file => file.endsWith('.json') && /^\d{4}-\d{2}-\d{2}-[a-z]+\.json$/.test(file))
       .map(file => {
-        const dateMatch = file.match(/^(\d{4}-\d{2}-\d{2})-[a-z]+\.json$/);
-        return {
-          file,
-          date: dateMatch ? dateMatch[1] : '',
-          timestamp: dateMatch ? new Date(dateMatch[1]).getTime() : 0
-        };
+        const match = file.match(/^(\d{4}-\d{2}-\d{2})-([a-z]+)\.json$/);
+        if (match) {
+          const [, date, venue] = match;
+          return {
+            file,
+            date,
+            venue,
+            timestamp: new Date(date).getTime()
+          };
+        }
+        return null;
       })
-      .sort((a, b) => b.timestamp - a.timestamp); // 日付降順（最新が先頭）
+      .filter(item => item !== null)
+      .sort((a, b) => b.timestamp - a.timestamp);
 
     if (files.length > 0) {
-      const latestFile = files[0].file;
-      const fileContent = readFileSync(join(predictionsDir, latestFile), 'utf-8');
-      predictionData = JSON.parse(fileContent);
+      latestDate = files[0].date;
+      const latestFiles = files.filter(f => f.date === latestDate);
+
+      for (const fileInfo of latestFiles) {
+        const fileContent = readFileSync(join(predictionsDir, fileInfo.file), 'utf-8');
+        const data = JSON.parse(fileContent);
+
+        const venueMap = {
+          'ooi': '大井',
+          'funabashi': '船橋',
+          'kawasaki': '川崎',
+          'urawa': '浦和'
+        };
+        const venueName = venueMap[fileInfo.venue] || fileInfo.venue;
+
+        predictionsByVenue[venueName] = data;
+        venues.push(venueName);
+      }
     } else {
       throw new Error('予想データがありません');
     }
@@ -38,6 +61,9 @@ try {
 } catch (err) {
   error = err.message;
 }
+
+const predictionData = venues.length > 0 ? predictionsByVenue[venues[0]] : null;
+const isMultiVenue = venues.length > 1;
 
 // 複雑なAI分析値を生成する関数（prediction/[slug].astroと同じ）
 function generateAdvancedMetrics(horse, allHorses) {

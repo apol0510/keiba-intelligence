@@ -59,7 +59,25 @@ async function sendAlert(type, date, details = {}, metadata = {}) {
 }
 
 /**
+ * 会場名正規化関数（南関版）
+ */
+function normalizeVenue(venue) {
+  const venueMap = {
+    '大井': 'OOI',
+    '船橋': 'FUN',
+    '川崎': 'KAW',
+    '浦和': 'URA',
+    'OOI': 'OOI',
+    'FUN': 'FUN',
+    'KAW': 'KAW',
+    'URA': 'URA'
+  };
+  return venueMap[venue] || venue;
+}
+
+/**
  * keiba-data-sharedから結果データを取得
+ * 統合ファイルがない場合は会場別ファイルをマージ
  */
 async function fetchSharedResults(date, venue = 'nankan') {
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -70,46 +88,127 @@ async function fetchSharedResults(date, venue = 'nankan') {
 
   console.log(`📡 keiba-data-sharedから取得中: ${path}`);
 
-  // ローカル実行時（GITHUB_TOKENなし）: raw.githubusercontent.comを使用（公開リポジトリ）
-  if (!GITHUB_TOKEN) {
-    console.log(`   ローカル実行モード: raw.githubusercontent.comからダウンロード`);
-    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
-    const response = await fetch(rawUrl);
+  // まず統合ファイルを試す
+  try {
+    // ローカル実行時（GITHUB_TOKENなし）: raw.githubusercontent.comを使用（公開リポジトリ）
+    if (!GITHUB_TOKEN) {
+      console.log(`   ローカル実行モード: raw.githubusercontent.comからダウンロード`);
+      const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
+      const response = await fetch(rawUrl);
 
-    if (!response.ok) {
-      throw new Error(`結果データの取得に失敗: ${response.status} ${response.statusText}`);
+      if (response.ok) {
+        const content = await response.text();
+        const results = JSON.parse(content);
+        console.log(`✅ 取得成功: ${path}`);
+        return results;
+      }
+      // 404の場合は会場別ファイルにフォールバック
+      if (response.status !== 404) {
+        throw new Error(`結果データの取得に失敗: ${response.status} ${response.statusText}`);
+      }
+    } else {
+      // GitHub Actions実行時: GitHub API経由（レート制限回避）
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+
+      const response = await fetch(apiUrl, {
+        headers: {
+          'Authorization': `token ${GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const content = Buffer.from(data.content, 'base64').toString('utf-8');
+        console.log(`✅ 取得成功: ${path}`);
+        return JSON.parse(content);
+      }
+      // 404の場合は会場別ファイルにフォールバック
+      if (response.status !== 404) {
+        throw new Error(`結果データの取得に失敗: ${response.status} ${response.statusText}`);
+      }
     }
 
-    const content = await response.text();
-    const results = JSON.parse(content);
-    console.log(`✅ 取得成功: ${path}`);
-    return results;
+    // 統合ファイルがない場合、会場別ファイルをマージ
+    console.log(`   統合ファイルが見つかりません。会場別ファイルを検索します...`);
+    return await fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN);
+
+  } catch (error) {
+    // ネットワークエラー等
+    throw error;
   }
-
-  // GitHub Actions実行時: GitHub API経由（レート制限回避）
-  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-
-  const response = await fetch(apiUrl, {
-    headers: {
-      'Authorization': `token ${GITHUB_TOKEN}`,
-      'Accept': 'application/vnd.github.v3+json'
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error(`結果データの取得に失敗: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  const content = Buffer.from(data.content, 'base64').toString('utf-8');
-
-  console.log(`✅ 取得成功: ${path}`);
-
-  return JSON.parse(content);
 }
 
 /**
- * 予想データを読み込む
+ * 会場別結果ファイルを取得してマージ（南関版）
+ */
+async function fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN) {
+  const owner = 'apol0510';
+  const repo = 'keiba-data-shared';
+  const venueCodes = ['OOI', 'FUN', 'KAW', 'URA']; // 大井・船橋・川崎・浦和
+
+  const venues = [];
+  let allRaces = [];
+
+  for (const venueCode of venueCodes) {
+    const venueFile = `${date}-${venueCode}.json`;
+    const venuePath = `nankan/results/${year}/${month}/${venueFile}`;
+
+    try {
+      let venueData;
+
+      if (!GITHUB_TOKEN) {
+        // ローカル実行時
+        const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${venuePath}`;
+        const response = await fetch(rawUrl);
+        if (!response.ok) continue; // 404ならスキップ
+        venueData = JSON.parse(await response.text());
+      } else {
+        // GitHub Actions実行時
+        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${venuePath}`;
+        const response = await fetch(apiUrl, {
+          headers: {
+            'Authorization': `token ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+        if (!response.ok) continue; // 404ならスキップ
+        const data = await response.json();
+        venueData = JSON.parse(Buffer.from(data.content, 'base64').toString('utf-8'));
+      }
+
+      console.log(`   ✅ ${venueCode}: ${venueData.races?.length || 0}レース取得`);
+
+      // 会場データを追加
+      if (venueData.races) {
+        allRaces = allRaces.concat(venueData.races);
+        venues.push(venueData.venue || venueCode);
+      }
+
+    } catch (err) {
+      // エラーは無視して次の会場へ
+      continue;
+    }
+  }
+
+  if (allRaces.length === 0) {
+    throw new Error(`結果データが見つかりません: ${date}（統合ファイル・会場別ファイルともに存在しない）`);
+  }
+
+  console.log(`✅ 会場別ファイルからマージ完了: ${allRaces.length}レース（${venues.join('・')}）`);
+
+  // 統合フォーマットで返す
+  return {
+    date: date,
+    venue: venues.join('・'),
+    totalRaces: allRaces.length,
+    races: allRaces,
+    venues: venues
+  };
+}
+
+/**
+ * 予想データを読み込む（複数会場対応）
  */
 function loadPrediction(date, venue) {
   const venueMap = {
@@ -120,17 +219,17 @@ function loadPrediction(date, venue) {
   };
   const venueSlug = venueMap[venue] || 'ooi';
 
-  // 優先順位1: 新しい形式（keiba-data-shared自動インポート）: predictions/2026/02/2026-02-04.json
+  // 優先順位1: 会場別ファイル（新形式）: predictions/2026-03-09-ooi.json
+  const venueSpecificFileName = `${date}-${venueSlug}.json`;
+  const venueSpecificPath = join(projectRoot, 'src', 'data', 'predictions', venueSpecificFileName);
+
+  // 優先順位2: 古い形式（月別ディレクトリ）: predictions/2026/02/2026-02-04.json
   const [year, month] = date.split('-');
-  const newFormatPath = join(projectRoot, 'src', 'data', 'predictions', year, month, `${date}.json`);
+  const oldFormatPath = join(projectRoot, 'src', 'data', 'predictions', year, month, `${date}.json`);
 
-  // 優先順位2: 古い形式（手動作成）: predictions/2026-02-04-kawasaki.json
-  const oldFormatFileName = `${date}-${venueSlug}.json`;
-  const oldFormatPath = join(projectRoot, 'src', 'data', 'predictions', oldFormatFileName);
-
-  // 新しい形式から試す
-  if (existsSync(newFormatPath)) {
-    const content = readFileSync(newFormatPath, 'utf-8');
+  // 会場別ファイルから試す
+  if (existsSync(venueSpecificPath)) {
+    const content = readFileSync(venueSpecificPath, 'utf-8');
     return JSON.parse(content);
   }
 
@@ -141,7 +240,7 @@ function loadPrediction(date, venue) {
   }
 
   // どちらも見つからない場合
-  throw new Error(`予想データが見つかりません: ${newFormatPath} または ${oldFormatPath} (会場: ${venue})`);
+  throw new Error(`予想データが見つかりません: ${venueSpecificPath} または ${oldFormatPath} (会場: ${venue})`);
 }
 
 /**
@@ -190,7 +289,7 @@ function checkUmatanHit(bettingLine, result) {
 }
 
 /**
- * 的中判定メイン処理
+ * 的中判定メイン処理（複数会場対応）
  */
 function verifyResults(prediction, results) {
   const raceResults = [];
@@ -200,23 +299,38 @@ function verifyResults(prediction, results) {
 
   for (const race of results.races) {
     const raceNumber = race.raceNumber;
+    const raceVenue = race.venue; // 結果データの会場
 
     // raceNumberを数値に正規化（"1R" → 1, 1 → 1）
     const normalizedRaceNumber = typeof raceNumber === 'string'
       ? parseInt(raceNumber.replace(/[^0-9]/g, ''))
       : raceNumber;
 
-    // 予想データを検索（raceNumberの型の違いに対応）
+    // 【複数会場対応】予想データを検索（raceNumber + venue で一致判定）
     const predRace = predictionRaces.find(p => {
       const predRaceNum = p.raceInfo.raceNumber;
       const normalizedPredRaceNum = typeof predRaceNum === 'string'
         ? parseInt(predRaceNum.replace(/[^0-9]/g, ''))
         : predRaceNum;
-      return normalizedPredRaceNum === normalizedRaceNumber;
+
+      // raceNumberが一致しない場合はfalse
+      if (normalizedPredRaceNum !== normalizedRaceNumber) {
+        return false;
+      }
+
+      // 【重要】会場情報がある場合は会場も一致確認
+      if (raceVenue && p.raceInfo.venue) {
+        const predVenue = normalizeVenue(p.raceInfo.venue);
+        const resVenue = normalizeVenue(raceVenue);
+        return predVenue === resVenue;
+      }
+
+      // 会場情報がない場合はraceNumberのみで判定（後方互換性）
+      return true;
     });
 
     if (!predRace) {
-      console.log(`⚠️  ${raceNumber}Rの予想データが見つかりません`);
+      console.log(`⚠️  ${raceNumber}R (${raceVenue || '会場不明'}) の予想データが見つかりません`);
       continue;
     }
 
@@ -235,6 +349,7 @@ function verifyResults(prediction, results) {
     raceResults.push({
       raceNumber,
       raceName: predRace.raceInfo?.raceName || race.raceName || '',
+      venue: race.venue || predRace.raceInfo?.venue || '', // 会場情報追加
       result: {
         first: { number: first.number, name: first.name },
         second: { number: second.number, name: second.name },
@@ -261,9 +376,9 @@ function verifyResults(prediction, results) {
 }
 
 /**
- * archiveResults.jsonに保存
+ * archiveResults.jsonに保存（複数会場対応）
  */
-function saveArchive(date, venue, raceResults) {
+function saveArchive(date, venue, raceResults, venues = []) {
   const archivePath = join(projectRoot, 'src', 'data', 'archiveResults.json');
 
   let archive = [];
@@ -311,6 +426,7 @@ function saveArchive(date, venue, raceResults) {
   const newEntry = {
     date,
     venue,
+    venues: venues.length > 0 ? venues : undefined, // 複数会場の場合のみvenuesを追加
     totalRaces,
     hitRaces,
     missRaces: totalRaces - hitRaces,
@@ -367,6 +483,7 @@ async function main() {
     // 1. 結果データ取得
     const results = await fetchSharedResults(date);
     const venue = results.venue || results.races[0]?.venue || '大井';
+    const venues = results.venues || []; // 複数会場の場合
 
     // venue情報が取得できたか確認
     const venueSource = results.venue ? 'results.venue' : (results.races[0]?.venue ? 'races[0].venue' : 'デフォルト');
@@ -374,6 +491,9 @@ async function main() {
 
     console.log(`\n✅ 結果データ取得完了`);
     console.log(`   会場: ${venue} (取得元: ${venueSource})`);
+    if (venues.length > 0) {
+      console.log(`   複数会場: ${venues.join('・')}`);
+    }
     console.log(`   レース数: ${results.races.length}`);
 
     // venue情報がデフォルト値の場合、警告
@@ -383,74 +503,111 @@ async function main() {
       console.warn(`   予想データ読み込みに失敗する可能性があります\n`);
     }
 
-    // 2. 予想データ読み込み
+    // 2. 【複数会場対応】予想データ読み込み
     console.log(`\n📖 予想データ読み込み中...`);
-    let prediction;
-    try {
-      prediction = loadPrediction(date, venue);
-      console.log(`✅ 予想データ読み込み完了`);
-    } catch (error) {
-      // 予想データがない場合、keiba-data-sharedに本当に存在しないか二重確認
-      console.log(`⏭️  予想データが見つかりません: ${date}`);
+    let allPredictions = [];
+    let loadErrors = [];
 
-      // keiba-data-sharedに予想データが存在するか確認
-      const [year, month] = date.split('-');
-      const sharedPredictionPath = `nankan/predictions/${year}/${month}/${date}.json`;
-      const checkUrl = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/${sharedPredictionPath}`;
-
-      try {
-        console.log(`\n🔍 keiba-data-sharedの予想データ存在確認中...`);
-        const checkResponse = await fetch(checkUrl);
-
-        if (checkResponse.ok) {
-          // 予想データが存在するのに読み込めなかった → 異常
-          console.error(`\n🚨 異常検知：予想データが存在するのに読み込めませんでした！`);
-          console.error(`   keiba-data-shared: ${sharedPredictionPath} (存在)`);
-          console.error(`   keiba-intelligence: 読み込み失敗`);
-          console.error(`   venue: ${venue}`);
-          console.error(`   元のエラー: ${error.message}\n`);
-
-          // アラート送信
-          await sendAlert('import-results-failure', date, {
-            error: error.message,
-            venue: venue,
-            venueIsUndefined: venue === undefined || venue === 'undefined',
-            sharedPredictionExists: true,
-            sharedPredictionPath: sharedPredictionPath,
-            localSearchPath: error.message
-          }, {
-            timestamp: new Date().toISOString(),
-            critical: true
-          });
-
-          // エラーとして終了（修正が必要）
-          process.exit(1);
-        } else {
-          // 予想データが存在しない → 正常（SEO対策用の結果データのみ）
-          console.log(`   keiba-data-sharedにはSEO対策用の結果データのみ保存されています`);
-          console.log(`   keiba-intelligenceでは的中判定をスキップします\n`);
-          console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-          console.log(`⏭️  処理完了: 予想データなし（スキップ）`);
-          console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-          process.exit(0); // 正常終了
+    // venues配列がある場合は各会場の予想データを読み込み
+    if (venues.length > 0) {
+      for (const venueName of venues) {
+        try {
+          const prediction = loadPrediction(date, venueName);
+          allPredictions.push(prediction);
+          console.log(`   ✅ ${venueName} 予想データ読み込み完了`);
+        } catch (err) {
+          loadErrors.push({ venue: venueName, error: err.message });
+          console.log(`   ⚠️  ${venueName} 予想データが見つかりません`);
         }
-      } catch (checkError) {
-        // ネットワークエラー等でチェック失敗 → 警告して正常終了
-        console.warn(`⚠️  keiba-data-sharedの予想データ存在確認に失敗（ネットワークエラー？）`);
-        console.warn(`   処理を継続します（予想データなしとして扱います）\n`);
-        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-        console.log(`⏭️  処理完了: 予想データなし（スキップ）`);
-        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-        process.exit(0); // 正常終了
+      }
+    } else {
+      // 単一会場の場合（従来の処理）
+      try {
+        const prediction = loadPrediction(date, venue);
+        allPredictions.push(prediction);
+        console.log(`✅ 予想データ読み込み完了`);
+      } catch (err) {
+        loadErrors.push({ venue, error: err.message });
       }
     }
 
-    // 3. 的中判定
-    console.log(`\n🎯 的中判定実行中...\n`);
-    const raceResults = verifyResults(prediction, results);
+    // 予想データが1つも見つからない場合の処理
+    if (allPredictions.length === 0) {
+      const error = loadErrors[0];
+      // 予想データがない場合、keiba-data-sharedに本当に存在しないか二重確認
+      console.log(`⏭️  予想データが見つかりません: ${date}`);
+      console.log(`   検索対象会場: ${loadErrors.map(e => e.venue).join(', ')}`);
+
+      // 【複数会場対応】各会場の予想データが存在するか確認
+      const [year, month] = date.split('-');
+      const checkResults = [];
+
+      for (const { venue: venueName, error: errMsg } of loadErrors) {
+        const venueMap = { '大井': 'OOI', '船橋': 'FUN', '川崎': 'KAW', '浦和': 'URA' };
+        const venueCode = venueMap[venueName] || venueName;
+        const sharedPredictionPath = `nankan/predictions/${year}/${month}/${date}.json`;
+        const checkUrl = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/${sharedPredictionPath}`;
+
+        try {
+          console.log(`\n🔍 keiba-data-sharedの予想データ存在確認中（${venueName}）...`);
+          const checkResponse = await fetch(checkUrl);
+
+          if (checkResponse.ok) {
+            checkResults.push({ venue: venueName, exists: true });
+            console.error(`   🚨 ${venueName}: 予想データが存在するのに読み込めませんでした！`);
+          } else {
+            checkResults.push({ venue: venueName, exists: false });
+            console.log(`   ⏭️  ${venueName}: 予想データなし（SEO対策用の結果データのみ）`);
+          }
+        } catch (checkError) {
+          checkResults.push({ venue: venueName, exists: null });
+          console.warn(`   ⚠️  ${venueName}: 存在確認失敗（ネットワークエラー？）`);
+        }
+      }
+
+      // いずれかの会場で予想データが存在する場合は異常
+      const existingVenues = checkResults.filter(r => r.exists === true);
+      if (existingVenues.length > 0) {
+        console.error(`\n🚨 異常検知：予想データが存在するのに読み込めませんでした！`);
+        console.error(`   会場: ${existingVenues.map(v => v.venue).join(', ')}`);
+        console.error(`   エラー: ${loadErrors.map(e => e.error).join(', ')}\n`);
+
+        // アラート送信
+        await sendAlert('import-results-failure', date, {
+          venues: existingVenues.map(v => v.venue),
+          errors: loadErrors
+        }, {
+          timestamp: new Date().toISOString(),
+          critical: true
+        });
+
+        // エラーとして終了（修正が必要）
+        process.exit(1);
+      }
+
+      // すべての会場で予想データが存在しない場合は正常終了
+      console.log(`   keiba-data-sharedにはSEO対策用の結果データのみ保存されています`);
+      console.log(`   keiba-intelligenceでは的中判定をスキップします\n`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log(`⏭️  処理完了: 予想データなし（スキップ）`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+      process.exit(0); // 正常終了
+    }
+
+    // 3. 【複数会場対応】的中判定
+    console.log(`\n🎯 的中判定実行中...`);
+    console.log(`   予想データ: ${allPredictions.length}会場`);
+    console.log(`   結果データ: ${results.races.length}レース\n`);
+
+    // すべての予想データを統合
+    const mergedPrediction = {
+      predictions: allPredictions.flatMap(p => p.predictions || [])
+    };
+
+    const raceResults = verifyResults(mergedPrediction, results);
 
     // 4. アーカイブ保存
-    const archiveEntry = saveArchive(date, venue, raceResults);
+    const archiveEntry = saveArchive(date, venue, raceResults, venues);
 
     console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`✅ 的中判定完了！`);
