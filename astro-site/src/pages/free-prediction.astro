@@ -162,9 +162,7 @@ function generateAdvancedMetrics(horse, allHorses) {
 ---
 
 <!-- デバッグ情報（HTML内に埋め込み） -->
-<script type="application/json" id="debug-info" data-debug="true">
-{debugInfoString}
-</script>
+<script type="application/json" id="debug-info" data-debug="true" set:html={debugInfoString}></script>
 
 <BaseLayout
   title="無料予想 - KEIBA Intelligence"
