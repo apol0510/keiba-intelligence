@@ -80,6 +80,18 @@ try {
 const predictionData = venues.length > 0 ? predictionsByVenue[venues[0]] : null;
 const isMultiVenue = venues.length > 1;
 
+// デバッグ情報をHTMLコメントとして出力
+const debugInfo = {
+  cwd: process.cwd(),
+  predictionsDir,
+  dirExists: existsSync(predictionsDir),
+  latestDate,
+  venues: venues,
+  venuesLength: venues.length,
+  isMultiVenue,
+  error: error
+};
+
 // 複雑なAI分析値を生成する関数（prediction/[slug].astroと同じ）
 function generateAdvancedMetrics(horse, allHorses) {
   const pt = horse.pt;
@@ -147,6 +159,9 @@ function generateAdvancedMetrics(horse, allHorses) {
   };
 }
 ---
+
+<!-- デバッグ情報 -->
+<!-- DEBUG_INFO: {JSON.stringify(debugInfo)} -->
 
 <BaseLayout
   title="無料予想 - KEIBA Intelligence"
