@@ -35,22 +35,68 @@ const { year, month, day } = Astro.params;
 const title = `${entry.date} ${type === 'jra' ? '中央競馬' : '南関競馬'} 的中実績 - KEIBA Intelligence`;
 const description = `${entry.date}の${type === 'jra' ? '中央競馬' : '南関競馬'}予想の的中実績。的中率${entry.hitRate}%、回収率${entry.returnRate}%、${entry.hitRaces}/${entry.totalRaces}レース的中。AI競馬予想の詳細な結果を公開。`;
 
+// 会場別の住所マッピング
+const venueAddresses = {
+  "大井": "東京都品川区勝島2丁目1-2",
+  "川崎": "神奈川県川崎市川崎区富士見2丁目1-6",
+  "船橋": "千葉県船橋市若松1丁目2-1",
+  "浦和": "埼玉県さいたま市南区別所4丁目1-1",
+  "東京": "東京都府中市日吉町1-1",
+  "京都": "京都府京都市伏見区葭島渡場島町32",
+  "阪神": "兵庫県宝塚市駒の町1-1",
+  "中山": "千葉県船橋市古作1丁目1-1",
+  "小倉": "福岡県北九州市小倉南区北方4丁目5-1",
+  "新潟": "新潟県新潟市北区笹山3490",
+  "中京": "愛知県豊明市間米町敷田1225",
+  "福島": "福島県福島市松浪町9-23",
+  "札幌": "北海道札幌市中央区北16条西16丁目",
+  "函館": "北海道函館市駒場町12-2"
+};
+
+// 会場から住所を取得（複数会場の場合は最初の会場）
+const primaryVenue = entry.venue.split('・')[0];
+const venueAddress = venueAddresses[primaryVenue] || "日本";
+
 // JSON-LD structured data
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SportsEvent",
   "name": `${entry.date} ${type === 'jra' ? '中央競馬' : '南関競馬'} 的中実績`,
   "description": description,
-  "startDate": entry.date,
+  "startDate": `${entry.date}T10:00:00+09:00`,
+  "endDate": `${entry.date}T20:30:00+09:00`,
+  "eventStatus": "https://schema.org/EventScheduled",
+  "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
   "location": {
     "@type": "Place",
-    "name": entry.venue
+    "name": entry.venue,
+    "address": {
+      "@type": "PostalAddress",
+      "addressCountry": "JP",
+      "addressRegion": venueAddress
+    }
   },
-  "sport": "競馬",
+  "image": [
+    "https://keiba-intelligence.netlify.app/og-image.png"
+  ],
   "organizer": {
     "@type": "Organization",
-    "name": "KEIBA Intelligence"
-  }
+    "name": "KEIBA Intelligence",
+    "url": "https://keiba-intelligence.netlify.app"
+  },
+  "performer": {
+    "@type": "SportsTeam",
+    "name": `${entry.totalRaces}レース出走馬`
+  },
+  "offers": {
+    "@type": "Offer",
+    "url": `https://keiba-intelligence.netlify.app/results/${year}/${month}/${day}`,
+    "price": "0",
+    "priceCurrency": "JPY",
+    "availability": "https://schema.org/InStock",
+    "validFrom": entry.date
+  },
+  "sport": "競馬"
 };
 ---
 
