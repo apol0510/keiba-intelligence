@@ -7,12 +7,16 @@ export const prerender = false;
 
 // 最新の予想JSONファイルを取得（複数会場対応）
 const predictionsDir = join(process.cwd(), 'src', 'data', 'predictions');
+console.log('🔍 [free-prediction] process.cwd():', process.cwd());
+console.log('🔍 [free-prediction] predictionsDir:', predictionsDir);
+
 let predictionsByVenue = {};
 let venues = [];
 let latestDate = null;
 let error = null;
 
 try {
+  console.log('🔍 [free-prediction] existsSync(predictionsDir):', existsSync(predictionsDir));
   if (existsSync(predictionsDir)) {
     // ファイル名から日付と会場を抽出して日付順にソート
     const allFiles = readdirSync(predictionsDir);
