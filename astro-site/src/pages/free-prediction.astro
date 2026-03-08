@@ -15,7 +15,10 @@ let error = null;
 try {
   if (existsSync(predictionsDir)) {
     // ファイル名から日付と会場を抽出して日付順にソート
-    const files = readdirSync(predictionsDir)
+    const allFiles = readdirSync(predictionsDir);
+    console.log('📂 [free-prediction] 全ファイル一覧:', allFiles);
+
+    const files = allFiles
       .filter(file => file.endsWith('.json') && /^\d{4}-\d{2}-\d{2}-[a-z]+\.json$/.test(file))
       .map(file => {
         const match = file.match(/^(\d{4}-\d{2}-\d{2})-([a-z]+)\.json$/);
@@ -33,9 +36,14 @@ try {
       .filter(item => item !== null)
       .sort((a, b) => b.timestamp - a.timestamp);
 
+    console.log('📋 [free-prediction] マッチしたファイル:', files.map(f => f.file));
+
     if (files.length > 0) {
       latestDate = files[0].date;
       const latestFiles = files.filter(f => f.date === latestDate);
+
+      console.log('📅 [free-prediction] 最新日付:', latestDate);
+      console.log('📍 [free-prediction] 最新日付のファイル:', latestFiles.map(f => f.file));
 
       for (const fileInfo of latestFiles) {
         const fileContent = readFileSync(join(predictionsDir, fileInfo.file), 'utf-8');
@@ -52,6 +60,9 @@ try {
         predictionsByVenue[venueName] = data;
         venues.push(venueName);
       }
+
+      console.log('🏇 [free-prediction] venues配列:', venues);
+      console.log('🏇 [free-prediction] venues.length:', venues.length);
     } else {
       throw new Error('予想データがありません');
     }
