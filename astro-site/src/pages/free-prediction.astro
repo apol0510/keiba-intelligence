@@ -91,6 +91,7 @@ const debugInfo = {
   isMultiVenue,
   error: error
 };
+const debugInfoString = JSON.stringify(debugInfo, null, 2);
 
 // 複雑なAI分析値を生成する関数（prediction/[slug].astroと同じ）
 function generateAdvancedMetrics(horse, allHorses) {
@@ -161,7 +162,7 @@ function generateAdvancedMetrics(horse, allHorses) {
 ---
 
 <!-- デバッグ情報 -->
-<!-- DEBUG_INFO: {JSON.stringify(debugInfo)} -->
+<!-- DEBUG_INFO: {debugInfoString} -->
 
 <BaseLayout
   title="無料予想 - KEIBA Intelligence"
