@@ -111,21 +111,32 @@ export function adjustPrediction(normalized) {
     // 印1◎の馬を特定
     const honmeiMarkHorse = race.horses.find(h => h.marks && h.marks['印1'] === '◎');
 
-    // 独自スコアで降順ソート
-    const sortedHorses = [...race.horses].sort((a, b) => b.customScore - a.customScore);
+    // 全馬のcustomScoreが0の場合（computer/形式など）、rawScoreでソート
+    const hasCustomScore = race.horses.some(h => h.customScore > 0);
 
-    // 全馬の役割をリセット
-    for (const horse of race.horses) {
-      horse.role = '無';
-    }
+    // 独自スコアで降順ソート（customScoreがない場合はrawScoreでソート）
+    const sortedHorses = hasCustomScore
+      ? [...race.horses].sort((a, b) => b.customScore - a.customScore)
+      : [...race.horses].sort((a, b) => b.rawScore - a.rawScore);
 
-    // 印1◎の順位を確認
-    let honmeiRank = -1;
-    if (honmeiMarkHorse) {
-      honmeiRank = sortedHorses.indexOf(honmeiMarkHorse);
-    }
+    // customScoreがない場合（computer/形式など）で、既に役割が割り当てられている場合は維持
+    const hasExistingRoles = race.horses.some(h => h.role !== '無');
+    if (!hasCustomScore && hasExistingRoles) {
+      // 既存の役割を維持（adjustPredictionでの再割り当てをスキップ）
+      // Step 4（連下3頭制限）以降の処理は実行
+    } else {
+      // 全馬の役割をリセット
+      for (const horse of race.horses) {
+        horse.role = '無';
+      }
 
-    if (honmeiMarkHorse && honmeiRank === 0) {
+      // 印1◎の順位を確認
+      let honmeiRank = -1;
+      if (honmeiMarkHorse) {
+        honmeiRank = sortedHorses.indexOf(honmeiMarkHorse);
+      }
+
+      if (honmeiMarkHorse && honmeiRank === 0) {
       // 印1◎が1位 → 本命
       sortedHorses[0].role = '本命';
       if (sortedHorses[1]) sortedHorses[1].role = '対抗';
@@ -176,10 +187,11 @@ export function adjustPrediction(normalized) {
       if (sortedHorses[2]) sortedHorses[2].role = '単穴';
       if (sortedHorses[3]) sortedHorses[3].role = '連下最上位';
 
-      for (let i = 4; i < sortedHorses.length; i++) {
-        sortedHorses[i].role = '連下';
+        for (let i = 4; i < sortedHorses.length; i++) {
+          sortedHorses[i].role = '連下';
+        }
       }
-    }
+    } // hasExistingRoles のelse終了
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Step 4: 連下3頭制限（連下最上位は保持）

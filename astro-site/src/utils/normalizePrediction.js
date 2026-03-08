@@ -49,8 +49,10 @@ function getVenueCode(venueName) {
  * @returns {string} 'detailed' | 'simple'
  */
 export function detectFormat(input) {
-  // 詳細フォーマット: raceDate がある または races[0].raceInfo がある
-  if (input.raceDate || (input.races && input.races.length > 0 && input.races[0].raceInfo)) {
+  // 詳細フォーマット: raceDate がある または races[0].raceInfo がある または races[0].horses がある
+  if (input.raceDate ||
+      (input.races && input.races.length > 0 && input.races[0].raceInfo) ||
+      (input.races && input.races.length > 0 && input.races[0].horses && input.races[0].horses.length > 0)) {
     return 'detailed';
   }
 
@@ -89,16 +91,16 @@ export function normalizeDetailed(input) {
     // レース詳細情報を保持
     const raceInfo = {
       raceName: raceName,
-      startTime: race.raceInfo?.startTime || '',
-      distance: race.raceInfo?.distance || '',
-      surface: race.raceInfo?.surface || '',
-      raceType: race.raceInfo?.raceType || '',
-      raceSubtitle: race.raceInfo?.raceSubtitle || ''
+      startTime: race.raceInfo?.startTime || race.startTime || '',
+      distance: race.raceInfo?.distance || race.distance || '',
+      surface: race.raceInfo?.surface || race.surface || '',
+      raceType: race.raceInfo?.raceType || race.raceType || '',
+      raceSubtitle: race.raceInfo?.raceSubtitle || race.raceSubtitle || ''
     };
 
     // 馬データ変換
-    const horses = (race.horses || []).map(horse => {
-      const rawScore = horse.PT || horse.totalScore || horse.rawScore || 0;
+    let horses = (race.horses || []).map(horse => {
+      const rawScore = horse.PT || horse.totalScore || horse.computerIndex || horse.rawScore || 0;
       const role = horse.assignment || horse.role || '無';
 
       // 印1を取得（独自予想用）
@@ -114,11 +116,33 @@ export function normalizeDetailed(input) {
         mark1: mark1, // 印1を保持（独自予想用）
         jockey: horse.kisyu || horse.jockey || '', // 騎手
         trainer: horse.kyusya || horse.trainer || '', // 厩舎
-        age: horse.seirei || horse.age || '', // 馬齢（牡3、牝4など）
+        age: horse.seirei || horse.ageGender || horse.age || '', // 馬齢（牡3、牝4など）
         weight: horse.kinryo || horse.weight || '' // 斤量
         // ⚠️ marks（全記者印）は秘匿
       };
     });
+
+    // computer/形式（assignmentがない）の場合、rawScore順に役割を自動割り当て
+    const hasAssignment = horses.some(h => h.role !== '無');
+    if (!hasAssignment && horses.length > 0) {
+      // rawScore降順にソート
+      const sorted = [...horses].sort((a, b) => b.rawScore - a.rawScore);
+
+      // 上位から役割を割り当て
+      if (sorted.length >= 1) sorted[0].role = '本命';
+      if (sorted.length >= 2) sorted[1].role = '対抗';
+      if (sorted.length >= 3) sorted[2].role = '単穴';
+      if (sorted.length >= 4) sorted[3].role = '連下最上位';
+      for (let i = 4; i < sorted.length && i < 7; i++) {
+        sorted[i].role = '連下';
+      }
+      for (let i = 7; i < sorted.length; i++) {
+        sorted[i].role = '補欠';
+      }
+
+      // ソート後の配列をhorsesに戻す（番号順に戻す）
+      horses = sorted.sort((a, b) => a.number - b.number);
+    }
 
     // 買い目データ（存在する場合）
     const bettingLines = race.bettingLines || null;

@@ -50,7 +50,86 @@ function getTodayJST() {
 }
 
 /**
- * keiba-data-sharedから予想JSONを取得
+ * computer/ディレクトリから会場別ファイルを取得してvenues形式に変換
+ *
+ * @param {string} date - 日付（YYYY-MM-DD）
+ * @param {string} venue - 競馬場カテゴリ（デフォルト: 'nankan'）
+ * @returns {Promise<Object|null>} venues配列を持つ統合JSON、またはnull
+ */
+async function fetchComputerPredictions(date, venue = 'nankan') {
+  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+  const [year, month, day] = date.split('-');
+  const dirPath = `${venue}/predictions/computer/${year}/${month}`;
+  const owner = 'apol0510';
+  const repo = 'keiba-data-shared';
+
+  console.log(`📡 computer/ディレクトリから会場別ファイル取得中: ${dirPath}`);
+
+  // ディレクトリ内のファイル一覧を取得
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
+  const headers = GITHUB_TOKEN ? {
+    'Authorization': `token ${GITHUB_TOKEN}`,
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'keiba-intelligence-import'
+  } : {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'keiba-intelligence-import'
+  };
+
+  const dirResponse = await fetch(apiUrl, { headers });
+
+  if (!dirResponse.ok) {
+    if (dirResponse.status === 404) {
+      console.log(`⏭️  computer/ディレクトリが見つかりません`);
+      return null;
+    }
+    throw new Error(`GitHub API Error: ${dirResponse.status}`);
+  }
+
+  const files = await dirResponse.json();
+
+  // 指定日付の会場別ファイルを抽出（例: 2026-03-09-OOI.json）
+  const dateFiles = files.filter(file =>
+    file.name.startsWith(`${date}-`) && file.name.endsWith('.json')
+  );
+
+  if (dateFiles.length === 0) {
+    console.log(`⏭️  ${date}の会場別ファイルが見つかりません`);
+    return null;
+  }
+
+  console.log(`✅ ${dateFiles.length}会場のファイルを検出:`, dateFiles.map(f => f.name).join(', '));
+
+  // 各ファイルを取得
+  const venues = [];
+  for (const file of dateFiles) {
+    const fileUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${file.name}`;
+    const response = await fetch(fileUrl);
+
+    if (response.ok) {
+      const content = await response.text();
+      const venueData = JSON.parse(content);
+      venues.push(venueData);
+      console.log(`   ✅ ${file.name} 取得完了`);
+    } else {
+      console.log(`   ⚠️  ${file.name} 取得失敗: ${response.status}`);
+    }
+  }
+
+  if (venues.length === 0) {
+    return null;
+  }
+
+  // venues配列形式に統合
+  return {
+    date: date,
+    venues: venues,
+    totalVenues: venues.length
+  };
+}
+
+/**
+ * keiba-data-sharedから予想JSONを取得（従来の統合ファイル）
  *
  * GitHub Contents APIを使用（private対応）
  *
@@ -135,8 +214,14 @@ async function fetchSharedPrediction(date, venue = 'nankan') {
 async function importPrediction(date, venue = 'nankan') {
   console.log(`\n━━━ ${date} 予想データ取り込み開始 ━━━`);
 
-  // keiba-data-sharedから取得
-  const sharedJSON = await fetchSharedPrediction(date, venue);
+  // まずcomputer/ディレクトリから会場別ファイルを取得
+  let sharedJSON = await fetchComputerPredictions(date, venue);
+
+  // computer/になければ、従来の統合ファイルを取得
+  if (!sharedJSON) {
+    console.log(`📡 従来の統合ファイルを取得します`);
+    sharedJSON = await fetchSharedPrediction(date, venue);
+  }
 
   // 予想データがない場合はスキップ
   if (!sharedJSON) {
