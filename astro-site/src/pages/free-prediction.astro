@@ -77,8 +77,18 @@ try {
   error = err.message;
 }
 
-const predictionData = venues.length > 0 ? predictionsByVenue[venues[0]] : null;
+// URLパラメータから選択された会場を取得
+const url = new URL(Astro.request.url);
+const selectedVenueParam = url.searchParams.get('venue');
+const selectedVenue = selectedVenueParam && predictionsByVenue[selectedVenueParam]
+  ? selectedVenueParam
+  : venues[0];
+
+const predictionData = venues.length > 0 ? predictionsByVenue[selectedVenue] : null;
 const isMultiVenue = venues.length > 1;
+
+console.log('🎯 [free-prediction] selectedVenue:', selectedVenue);
+console.log('🎯 [free-prediction] isMultiVenue:', isMultiVenue);
 
 // デバッグ情報をHTMLコメントとして出力
 const debugInfo = {
@@ -187,13 +197,28 @@ function generateAdvancedMetrics(horse, allHorses) {
               <span class="badge-text">DEEP LEARNING PREDICTION SYSTEM / 深層学習予測システム</span>
             </div>
             <h1 class="page-title">
-              {predictionData.eventInfo.date} {predictionData.eventInfo.venue}
+              {predictionData.eventInfo.date} {isMultiVenue ? venues.join('・') : predictionData.eventInfo.venue}
             </h1>
             <p class="page-subtitle">
               Ensemble Neural Network Analysis / アンサンブル型ニューラルネットワーク分析 - {predictionData.eventInfo.totalRaces} Races
             </p>
             <div class="scan-line"></div>
           </div>
+
+          {/* 会場選択ボタン（2会場以上の場合のみ表示） */}
+          {isMultiVenue && (
+            <div class="venue-selector">
+              {venues.map((venueName) => (
+                <button
+                  class={`venue-btn ${venueName === selectedVenue ? 'active' : ''}`}
+                  data-venue-name={venueName}
+                  onclick="selectVenue(event, this)"
+                >
+                  {venueName}
+                </button>
+              ))}
+            </div>
+          )}
 
           <!-- 無料予想について -->
           <div class="free-info-card">
@@ -932,6 +957,44 @@ function generateAdvancedMetrics(horse, allHorses) {
       font-size: 0.75rem;
       color: var(--text-tertiary);
       margin-top: 2px;
+    }
+
+    /* 会場選択ボタン */
+    .venue-selector {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: center;
+      margin-bottom: var(--spacing-lg);
+      padding: var(--spacing-md);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+    }
+
+    .venue-btn {
+      padding: var(--spacing-md) var(--spacing-xl);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 1.125rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      min-width: 120px;
+    }
+
+    .venue-btn:hover {
+      border-color: var(--primary-end);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .venue-btn.active {
+      background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+      border-color: var(--primary-end);
+      color: white;
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
     }
 
     /* レース選択ボタン */
@@ -1837,6 +1900,28 @@ function generateAdvancedMetrics(horse, allHorses) {
   </style>
 
   <script is:inline>
+    // 会場切り替え関数
+    function selectVenue(event, button) {
+      event.preventDefault();
+
+      const venueName = button.getAttribute('data-venue-name');
+      console.log('🏇 会場切り替え:', venueName);
+
+      // すべての会場ボタンからactiveを削除
+      document.querySelectorAll('.venue-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      // クリックされたボタンをアクティブに
+      button.classList.add('active');
+
+      // 会場データをリロード（ページ全体をリロードせず、JavaScriptで切り替え）
+      // 今のところシンプルに、URLパラメータで切り替える方法を使用
+      const url = new URL(window.location.href);
+      url.searchParams.set('venue', venueName);
+      window.location.href = url.toString();
+    }
+
     function selectRace(event, button) {
       event.preventDefault();
 
