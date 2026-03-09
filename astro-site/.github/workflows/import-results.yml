@@ -61,70 +61,108 @@ jobs:
             while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" = false ]; do
               echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Pulling latest changes..."
 
-              # rebase中の競合を検出してabort
+              # archiveResults.jsonを退避（競合時に再生成版を優先するため）
+              if [ -f "src/data/archiveResults.json" ]; then
+                cp src/data/archiveResults.json /tmp/archiveResults.json.backup
+                echo "📦 archiveResults.json backed up"
+              fi
+
+              # mainブランチにいることを確認
+              CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+              if [ "$CURRENT_BRANCH" != "main" ]; then
+                echo "⚠️  Not on main branch (current: $CURRENT_BRANCH), checking out main..."
+                git checkout main
+              fi
+
+              # rebase中の競合を検出してabort + クリーンアップ
               if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
-                echo "⚠️  rebase中の競合を検出してabort..."
+                echo "⚠️  Detected ongoing rebase, aborting..."
                 git rebase --abort || true
               fi
 
-              # マージ競合状態をチェック
+              # merge中の競合を検出してabort
               if git ls-files -u | grep -q .; then
-                echo "⚠️  未マージファイルを検出してabort..."
+                echo "⚠️  Detected unmerged files, aborting merge..."
                 git merge --abort || true
               fi
 
-              # mainブランチに強制チェックアウト
-              git checkout -f main 2>/dev/null || git checkout main
+              # 最新状態を取得（fetch only, no reset）
               git fetch origin main
-              git reset --hard origin/main
-              git clean -fd
 
-              # 再度コミット（ファイルが存在する場合）
-              if [ -f "src/data/archiveResults.json" ]; then
-                git add src/data/archiveResults.json
-                git commit -m "Auto-verify: ${COMMIT_DATE} results from keiba-data-shared" || echo "Already committed"
-              fi
-
-              # Pull and push
-              git fetch origin main
+              # 最新状態を取得（rebase）
               if git pull --rebase origin main; then
-
-                # 競合チェック
-                if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
-                  echo "⚠️  rebase競合を検出、ours戦略で自動解決..."
-
-                  # 競合ファイルをチェック
-                  if git ls-files -u | grep -q "archiveResults.json"; then
-                    echo "📝 archiveResults.json の競合を自動解決（ours戦略）"
-                    git checkout --ours src/data/archiveResults.json
-                    git add src/data/archiveResults.json
-                    git rebase --continue || {
-                      echo "❌ rebase --continue失敗、abort"
-                      git rebase --abort
-                      git checkout main
-                      git reset --hard origin/main
-                    }
-                  else
-                    echo "❌ 競合ファイルが見つからない、abort"
-                    git rebase --abort
-                    git checkout main
-                    git reset --hard origin/main
-                  fi
+                # archiveResults.jsonが競合した場合、バックアップから復元
+                if [ -f "/tmp/archiveResults.json.backup" ] && ! git diff --quiet src/data/archiveResults.json 2>/dev/null; then
+                  echo "📦 Restoring updated archiveResults.json from backup"
+                  cp /tmp/archiveResults.json.backup src/data/archiveResults.json
+                  git add src/data/archiveResults.json
                 fi
+                echo "✅ Successfully pulled latest changes"
 
-                # Push試行
-                if git push origin main; then
-                  echo "✅ Push成功"
+                # プッシュ試行
+                if git push; then
+                  echo "✅ Successfully pushed changes"
                   SUCCESS=true
                   echo "committed=true" >> $GITHUB_OUTPUT
                   echo "date=${COMMIT_DATE}" >> $GITHUB_OUTPUT
                 else
-                  echo "⚠️  Push失敗、リトライ..."
+                  echo "⚠️  Push failed, retrying..."
                   RETRY_COUNT=$((RETRY_COUNT + 1))
                   sleep $((RETRY_COUNT * 2))
                 fi
               else
-                echo "⚠️  Pull --rebase失敗"
+                # rebase失敗時の処理
+                echo "⚠️  Pull --rebase failed"
+
+                # 競合が発生している場合は自動解決を試みる
+                if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
+                  echo "🔧 Attempting to resolve conflicts automatically..."
+
+                  # 競合ファイルをチェック
+                  CONFLICT_FILES=$(git diff --name-only --diff-filter=U)
+
+                  if [ -n "$CONFLICT_FILES" ]; then
+                    echo "   Conflicted files: $CONFLICT_FILES"
+
+                    # archiveResults.jsonの競合は再生成版を優先
+                    for FILE in $CONFLICT_FILES; do
+                      if [[ "$FILE" == src/data/archiveResults.json ]]; then
+                        echo "   Resolving $FILE (using regenerated version)"
+                        if [ -f "/tmp/archiveResults.json.backup" ]; then
+                          cp /tmp/archiveResults.json.backup src/data/archiveResults.json
+                          git add "$FILE"
+                          echo "   ✅ Applied regenerated archiveResults.json"
+                        else
+                          echo "   ⚠️ Backup not found, using ours strategy as fallback"
+                          git checkout --ours "$FILE"
+                          git add "$FILE"
+                        fi
+                      fi
+                    done
+
+                    # rebase続行
+                    if git rebase --continue; then
+                      echo "✅ Conflicts resolved, rebase continued"
+                      # Push試行（次のループではなく即座に）
+                      if git push; then
+                        echo "✅ Successfully pushed changes"
+                        SUCCESS=true
+                        echo "committed=true" >> $GITHUB_OUTPUT
+                        echo "date=${COMMIT_DATE}" >> $GITHUB_OUTPUT
+                        break
+                      else
+                        echo "⚠️  Push failed after conflict resolution, retrying..."
+                      fi
+                    else
+                      echo "❌ Failed to continue rebase, aborting..."
+                      git rebase --abort || true
+                    fi
+                  else
+                    echo "❌ No conflict files found but rebase failed, aborting..."
+                    git rebase --abort || true
+                  fi
+                fi
+
                 RETRY_COUNT=$((RETRY_COUNT + 1))
                 sleep $((RETRY_COUNT * 2))
               fi
