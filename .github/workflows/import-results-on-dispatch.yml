@@ -124,11 +124,11 @@ jobs:
               git merge --abort || true
             fi
 
-            # 完全クリーンアップ（detached HEAD回避 + インデックス/ワーキングツリークリア）
-            git checkout -f main 2>/dev/null || git checkout main
-            git fetch origin main
-            git reset --hard origin/main
-            git clean -fd
+            # archiveResults.jsonを退避（競合時に再生成版を優先するため）
+            if [ -f "astro-site/src/data/archiveResults.json" ]; then
+              cp astro-site/src/data/archiveResults.json /tmp/archiveResults.json.backup
+              echo "📦 archiveResults.json backed up"
+            fi
 
             # mainブランチにいることを確認
             CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -137,8 +137,17 @@ jobs:
               git checkout main
             fi
 
+            # 最新状態を取得（fetch only, no reset）
+            git fetch origin main
+
             # 最新状態を取得（rebase）
             if git pull --rebase origin main; then
+              # archiveResults.jsonが競合した場合、バックアップから復元
+              if [ -f "/tmp/archiveResults.json.backup" ] && ! git diff --quiet astro-site/src/data/archiveResults.json 2>/dev/null; then
+                echo "📦 Restoring updated archiveResults.json from backup"
+                cp /tmp/archiveResults.json.backup astro-site/src/data/archiveResults.json
+                git add astro-site/src/data/archiveResults.json
+              fi
               echo "✅ Successfully pulled latest changes"
 
               # プッシュ試行
@@ -164,12 +173,19 @@ jobs:
                 if [ -n "$CONFLICT_FILES" ]; then
                   echo "   Conflicted files: $CONFLICT_FILES"
 
-                  # 結果データファイルの競合のみ自動解決（ours戦略: 自分の変更を優先）
+                  # archiveResults.jsonの競合は再生成版を優先
                   for FILE in $CONFLICT_FILES; do
                     if [[ "$FILE" == astro-site/src/data/archiveResults.json ]]; then
-                      echo "   Resolving $FILE (using ours strategy)"
-                      git checkout --ours "$FILE"
-                      git add "$FILE"
+                      echo "   Resolving $FILE (using regenerated version)"
+                      if [ -f "/tmp/archiveResults.json.backup" ]; then
+                        cp /tmp/archiveResults.json.backup astro-site/src/data/archiveResults.json
+                        git add "$FILE"
+                        echo "   ✅ Applied regenerated archiveResults.json"
+                      else
+                        echo "   ⚠️ Backup not found, using ours strategy as fallback"
+                        git checkout --ours "$FILE"
+                        git add "$FILE"
+                      fi
                     fi
                   done
 
