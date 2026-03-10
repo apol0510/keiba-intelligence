@@ -51,46 +51,37 @@ function getAllPredictionFiles() {
 }
 
 /**
- * results ファイルを全て取得
+ * keiba-data-sharedから結果データを取得
  */
-function getAllResultFiles() {
-  const resultsDir = join(projectRoot, 'src', 'data', 'results');
-  if (!existsSync(resultsDir)) {
-    return [];
+async function fetchResultsFromAPI(date) {
+  try {
+    const [year, month] = date.split('-');
+    const url = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/${year}/${month}/${date}.json`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      return null;
+    }
+
+    return await response.json();
+  } catch (err) {
+    console.error(`   ⚠️  Failed to fetch results for ${date}: ${err.message}`);
+    return null;
   }
-
-  const files = readdirSync(resultsDir)
-    .filter(f => f.endsWith('.json'))
-    .map(f => ({
-      path: join(resultsDir, f),
-      filename: f,
-      date: f.match(/^(\d{4}-\d{2}-\d{2})/)?.[1]
-    }))
-    .filter(f => f.date);
-
-  return files;
 }
 
 /**
- * 日付ごとに prediction と results をマージ
+ * 日付ごとに prediction をグループ化
  */
-function groupByDate(predictionFiles, resultFiles) {
+function groupByDate(predictionFiles) {
   const dateMap = new Map();
 
   // predictions
   predictionFiles.forEach(file => {
     if (!dateMap.has(file.date)) {
-      dateMap.set(file.date, { predictions: [], results: [] });
+      dateMap.set(file.date, { predictions: [] });
     }
     dateMap.get(file.date).predictions.push(file);
-  });
-
-  // results
-  resultFiles.forEach(file => {
-    if (!dateMap.has(file.date)) {
-      dateMap.set(file.date, { predictions: [], results: [] });
-    }
-    dateMap.get(file.date).results.push(file);
   });
 
   return dateMap;
@@ -103,7 +94,9 @@ function verifyResults(prediction, results) {
   const raceResults = [];
 
   for (const predRace of prediction.races) {
-    const resultRace = results.races.find(r => r.raceNumber === predRace.raceNumber);
+    // 新形式（raceInfo.raceNumber）と旧形式（raceNumber）の両方に対応
+    const raceNumber = predRace.raceInfo?.raceNumber || predRace.raceNumber;
+    const resultRace = results.races.find(r => r.raceNumber === raceNumber);
     if (!resultRace || !resultRace.results || resultRace.results.length === 0) {
       continue;
     }
@@ -118,17 +111,18 @@ function verifyResults(prediction, results) {
 
     // 本命的中判定
     const honmei = predRace.horses.find(h => h.mark === '◎' || h.role === '本命');
-    const honmeiHit = honmei && honmei.number === winner.number;
+    const honmeiHit = honmei && (honmei.number === winner.number || honmei.horseNumber === winner.number);
 
-    // 馬単的中判定
-    const umatanHit = predRace.betLines?.umatan?.some(line => {
+    // 馬単的中判定（新形式: bettingLines, 旧形式: betLines）
+    const bettingLines = predRace.bettingLines || predRace.betLines;
+    const umatanHit = bettingLines?.umatan?.some(line => {
       const [first, seconds] = line.split('-');
       const secondNumbers = seconds.split('.');
       return first === String(winner.number) && secondNumbers.includes(String(second.number));
     }) || false;
 
     // 3連複的中判定
-    const sanrenpukuHit = predRace.betLines?.sanrenpuku?.some(line => {
+    const sanrenpukuHit = bettingLines?.sanrenpuku?.some(line => {
       const numbers = line.split('.').map(Number);
       return numbers.includes(winner.number) &&
              numbers.includes(second.number) &&
@@ -136,7 +130,7 @@ function verifyResults(prediction, results) {
     }) || false;
 
     raceResults.push({
-      raceNumber: predRace.raceNumber,
+      raceNumber: raceNumber,
       raceName: resultRace.raceName || `第${predRace.raceNumber}レース`,
       honmeiHit,
       umatanHit,
@@ -211,6 +205,8 @@ function calculateStats(date, venue, raceResults, venues = []) {
  */
 async function rebuildArchive() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+  // archivePathは既に定義済みなので削除
   console.log('📦 Archive Rebuild Starting...');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
@@ -219,27 +215,44 @@ async function rebuildArchive() {
   }
 
   // 1. 全ファイル取得
-  console.log('📂 Step 1/4: Scanning files...');
+  console.log('📂 Step 1/4: Scanning prediction files...');
   const predictionFiles = getAllPredictionFiles();
-  const resultFiles = getAllResultFiles();
 
-  console.log(`   Found ${predictionFiles.length} prediction files`);
-  console.log(`   Found ${resultFiles.length} result files\n`);
+  console.log(`   Found ${predictionFiles.length} prediction files\n`);
 
   // 2. 日付ごとにグループ化
   console.log('🔄 Step 2/4: Grouping by date...');
-  const dateMap = groupByDate(predictionFiles, resultFiles);
+  const dateMap = groupByDate(predictionFiles);
   console.log(`   Grouped into ${dateMap.size} dates\n`);
 
-  // 3. 各日付の統計計算
-  console.log('📊 Step 3/4: Calculating statistics...');
-  const archive = [];
+  // 3. 既存アーカイブを読み込み
+  console.log('📂 Step 3/5: Loading existing archive...');
+  const archivePath = join(projectRoot, 'src', 'data', 'archiveResults.json');
+  let existingArchive = [];
+  if (existsSync(archivePath)) {
+    try {
+      existingArchive = JSON.parse(readFileSync(archivePath, 'utf-8'));
+      console.log(`   Found ${existingArchive.length} existing entries\n`);
+    } catch (err) {
+      console.log(`   ⚠️  Failed to read existing archive: ${err.message}\n`);
+    }
+  } else {
+    console.log(`   No existing archive found\n`);
+  }
+
+  // 日付ごとにマップ化（高速検索用）
+  const archiveMap = new Map(existingArchive.map(entry => [entry.date, entry]));
+
+  // 4. 各日付の統計計算
+  console.log('📊 Step 4/5: Fetching results and calculating statistics...');
   let processedDates = 0;
   let skippedDates = 0;
+  let updatedDates = 0;
+  let addedDates = 0;
 
   for (const [date, files] of dateMap.entries()) {
-    // prediction と results が両方揃っている日付のみ処理
-    if (files.predictions.length === 0 || files.results.length === 0) {
+    // prediction が存在しない日付はスキップ
+    if (files.predictions.length === 0) {
       skippedDates++;
       continue;
     }
@@ -248,25 +261,33 @@ async function rebuildArchive() {
       // 複数会場対応（同日に複数ファイルがある場合）
       const venues = [];
       let mergedPrediction = { races: [] };
-      let mergedResults = { races: [] };
 
       // predictions をマージ
       for (const predFile of files.predictions) {
         const predData = JSON.parse(readFileSync(predFile.path, 'utf-8'));
-        mergedPrediction.races.push(...predData.races);
-        if (predData.venue) venues.push(predData.venue);
+        // 新形式（predictions配列）と旧形式（races配列）の両方に対応
+        const predictionRaces = predData.predictions || predData.races || [];
+        mergedPrediction.races.push(...predictionRaces);
+        // venue情報を取得（新形式はeventInfo.venue、旧形式はvenueプロパティ）
+        const venue = predData.eventInfo?.venue || predData.venue;
+        if (venue) venues.push(venue);
       }
 
-      // results をマージ
-      for (const resultFile of files.results) {
-        const resultData = JSON.parse(readFileSync(resultFile.path, 'utf-8'));
-        mergedResults.races.push(...resultData.races);
+      // results を keiba-data-shared から取得
+      console.log(`   🔍 ${date}: Fetching results from API...`);
+      const apiResults = await fetchResultsFromAPI(date);
+
+      if (!apiResults || !apiResults.races || apiResults.races.length === 0) {
+        console.log(`   ⏭️  ${date}: No results available yet`);
+        skippedDates++;
+        continue;
       }
 
       // 的中判定
-      const raceResults = verifyResults(mergedPrediction, mergedResults);
+      const raceResults = verifyResults(mergedPrediction, apiResults);
 
       if (raceResults.length === 0) {
+        console.log(`   ⏭️  ${date}: No matching races found`);
         skippedDates++;
         continue;
       }
@@ -275,10 +296,18 @@ async function rebuildArchive() {
       const venue = venues[0] || '不明';
       const stats = calculateStats(date, venue, raceResults, venues);
 
-      archive.push(stats);
-      processedDates++;
+      // 既存アーカイブに追加/更新
+      if (archiveMap.has(date)) {
+        archiveMap.set(date, stats);
+        updatedDates++;
+        console.log(`   🔄 ${date}: ${stats.hitRaces}/${stats.totalRaces}R (${stats.hitRate}%, 回収率${stats.returnRate}%) [Updated]`);
+      } else {
+        archiveMap.set(date, stats);
+        addedDates++;
+        console.log(`   ✅ ${date}: ${stats.hitRaces}/${stats.totalRaces}R (${stats.hitRate}%, 回収率${stats.returnRate}%) [Added]`);
+      }
 
-      console.log(`   ✅ ${date}: ${stats.hitRaces}/${stats.totalRaces}R (${stats.hitRate}%, 回収率${stats.returnRate}%)`);
+      processedDates++;
     } catch (err) {
       console.error(`   ❌ ${date}: Error - ${err.message}`);
       skippedDates++;
@@ -286,13 +315,15 @@ async function rebuildArchive() {
   }
 
   console.log(`\n   Processed: ${processedDates} dates`);
-  console.log(`   Skipped: ${skippedDates} dates\n`);
+  console.log(`   Added: ${addedDates} new entries`);
+  console.log(`   Updated: ${updatedDates} existing entries`);
+  console.log(`   Skipped: ${skippedDates} dates`);
+  console.log(`   Preserved: ${archiveMap.size - processedDates} existing entries (not in predictions)\n`);
 
-  // 4. 保存（日付降順ソート）
-  console.log('💾 Step 4/4: Saving archive...');
+  // 5. 保存（日付降順ソート）
+  console.log('💾 Step 5/5: Saving archive...');
+  const archive = Array.from(archiveMap.values());
   archive.sort((a, b) => b.date.localeCompare(a.date));
-
-  const archivePath = join(projectRoot, 'src', 'data', 'archiveResults.json');
 
   if (isDryRun) {
     console.log(`   Would write to: ${archivePath}`);

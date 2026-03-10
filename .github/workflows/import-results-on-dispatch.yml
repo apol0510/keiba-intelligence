@@ -41,6 +41,8 @@ jobs:
         run: npm ci
 
       - name: Import results from keiba-data-shared
+        id: import-results
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MANUAL_DATE: ${{ github.event.inputs.date }}
@@ -71,12 +73,14 @@ jobs:
           fi
 
       - name: Rebuild archive (auto-recovery)
+        if: always()
         run: |
           echo "🔄 Rebuilding archive to ensure consistency..."
           npm run rebuild:archive
 
       - name: Check for changes
         id: git-check
+        if: always()
         run: |
           # archiveResults.jsonの変更をステージング
           git add src/data/archiveResults.json
@@ -84,7 +88,7 @@ jobs:
           git diff --staged --exit-code || echo "changed=true" >> $GITHUB_OUTPUT
 
       - name: Commit and push changes
-        if: steps.git-check.outputs.changed == 'true'
+        if: always() && steps.git-check.outputs.changed == 'true'
         env:
           MANUAL_DATE: ${{ github.event.inputs.date }}
           DATES_JSON: ${{ toJSON(github.event.client_payload.dates) }}
