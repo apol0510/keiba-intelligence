@@ -67,10 +67,10 @@ try {
     // 月別統計の的中率・回収率計算
     Object.values(monthlyStats).forEach(month => {
       if (month.totalRaces > 0) {
-        month.hitRate = ((month.totalHitRaces / month.totalRaces) * 100).toFixed(1);
+        month.hitRate = Number(((month.totalHitRaces / month.totalRaces) * 100).toFixed(1));
       }
       if (month.totalBetAmount > 0) {
-        month.returnRate = ((month.totalPayout / month.totalBetAmount) * 100).toFixed(1);
+        month.returnRate = Number(((month.totalPayout / month.totalBetAmount) * 100).toFixed(1));
       }
 
       // 最高・最低回収率の月
@@ -84,10 +84,10 @@ try {
 
     // 年間統計の的中率・回収率計算
     if (yearStats.totalRaces > 0) {
-      yearStats.hitRate = ((yearStats.totalHitRaces / yearStats.totalRaces) * 100).toFixed(1);
+      yearStats.hitRate = Number(((yearStats.totalHitRaces / yearStats.totalRaces) * 100).toFixed(1));
     }
     if (yearStats.totalBetAmount > 0) {
-      yearStats.returnRate = ((yearStats.totalPayout / yearStats.totalBetAmount) * 100).toFixed(1);
+      yearStats.returnRate = Number(((yearStats.totalPayout / yearStats.totalBetAmount) * 100).toFixed(1));
     }
   }
 } catch (error) {
@@ -145,7 +145,7 @@ const pageDescription = yearData.length > 0
               </div>
               <div class="summary-card">
                 <div class="summary-label">年間合計配当</div>
-                <div class="summary-value profit">¥{yearStats.totalPayout.toLocaleString()}</div>
+                <div class="summary-value profit">¥{(Number(yearStats.totalPayout) || 0).toLocaleString()}</div>
               </div>
             </div>
           </section>
@@ -205,7 +205,7 @@ const pageDescription = yearData.length > 0
                     </div>
                     <div class="stat-row">
                       <span class="stat-label">配当</span>
-                      <span class="stat-value profit">¥{month.totalPayout.toLocaleString()}</span>
+                      <span class="stat-value profit">¥{(Number(month.totalPayout) || 0).toLocaleString()}</span>
                     </div>
                   </div>
                   <div class="month-detail">

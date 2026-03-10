@@ -31,20 +31,20 @@ try {
       return entryYear === year && entryMonth === month;
     }).sort((a, b) => b.date.localeCompare(a.date)); // 降順ソート（新しい日付が上）
 
-    // 月間統計を計算
+    // 月間統計を計算（NaN防止）
     monthData.forEach(entry => {
       monthStats.totalDays++;
-      monthStats.totalRaces += entry.totalRaces;
-      monthStats.totalHitRaces += entry.hitRaces;
-      monthStats.totalBetAmount += entry.betAmount;
-      monthStats.totalPayout += entry.totalPayout;
+      monthStats.totalRaces += Number(entry.totalRaces) || 0;
+      monthStats.totalHitRaces += Number(entry.hitRaces) || 0;
+      monthStats.totalBetAmount += Number(entry.betAmount) || 0;
+      monthStats.totalPayout += Number(entry.totalPayout) || 0;
     });
 
     if (monthStats.totalRaces > 0) {
-      monthStats.hitRate = ((monthStats.totalHitRaces / monthStats.totalRaces) * 100).toFixed(1);
+      monthStats.hitRate = Number(((monthStats.totalHitRaces / monthStats.totalRaces) * 100).toFixed(1));
     }
     if (monthStats.totalBetAmount > 0) {
-      monthStats.returnRate = ((monthStats.totalPayout / monthStats.totalBetAmount) * 100).toFixed(1);
+      monthStats.returnRate = Number(((monthStats.totalPayout / monthStats.totalBetAmount) * 100).toFixed(1));
     }
   }
 } catch (error) {
@@ -85,17 +85,17 @@ const pageDescription = monthData.length > 0
               </div>
               <div class="summary-card">
                 <div class="summary-label">月間的中率</div>
-                <div class="summary-value highlight">{monthStats.hitRate}%</div>
+                <div class="summary-value highlight">{Number(monthStats.hitRate) || 0}%</div>
               </div>
               <div class="summary-card">
                 <div class="summary-label">月間回収率</div>
-                <div class={`summary-value ${parseFloat(monthStats.returnRate) >= 100 ? 'profit' : 'loss'}`}>
-                  {monthStats.returnRate}%
+                <div class={`summary-value ${(Number(monthStats.returnRate) || 0) >= 100 ? 'profit' : 'loss'}`}>
+                  {Number(monthStats.returnRate) || 0}%
                 </div>
               </div>
               <div class="summary-card">
                 <div class="summary-label">月間合計配当</div>
-                <div class="summary-value profit">¥{monthStats.totalPayout.toLocaleString()}</div>
+                <div class="summary-value profit">¥{(Number(monthStats.totalPayout) || 0).toLocaleString()}</div>
               </div>
             </div>
             <div class="summary-detail">
@@ -115,23 +115,25 @@ const pageDescription = monthData.length > 0
                     <span class="day-venue">{dayData.venue}競馬</span>
                   </h2>
                   <div class="day-stats">
-                    <span class="stat">的中 {dayData.hitRaces}/{dayData.totalRaces}R</span>
-                    <span class="stat hit-rate">的中率 {dayData.hitRate}%</span>
+                    <span class="stat">的中 {Number(dayData.hitRaces) || 0}/{Number(dayData.totalRaces) || 0}R</span>
+                    <span class="stat hit-rate">的中率 {Number(dayData.hitRate) || 0}%</span>
                     {dayData.betPointsPerRace && (
-                      <span class="stat">購入点数 {dayData.totalRaces * dayData.betPointsPerRace}点</span>
+                      <span class="stat">購入点数 {(Number(dayData.totalRaces) || 0) * (Number(dayData.betPointsPerRace) || 0)}点</span>
                     )}
-                    {dayData.totalPayout > 0 && (
-                      <span class="stat">配当 ¥{dayData.totalPayout.toLocaleString()}</span>
+                    {(Number(dayData.totalPayout) || 0) > 0 && (
+                      <span class="stat">配当 ¥{(Number(dayData.totalPayout) || 0).toLocaleString()}</span>
                     )}
-                    <span class={`stat ${dayData.returnRate >= 100 ? 'profit' : 'loss'}`}>
-                      回収率 {dayData.returnRate}%
+                    <span class={`stat ${(Number(dayData.returnRate) || 0) >= 100 ? 'profit' : 'loss'}`}>
+                      回収率 {Number(dayData.returnRate) || 0}%
                     </span>
                   </div>
                 </div>
 
                 <div class="races-list">
-                  {dayData.races.filter(race => race.isHit).map((race) => {
-                    const payout = race.umatan?.payout || 0;
+                  {(dayData.raceResults || dayData.races || []).filter(race => race.honmeiHit || race.isHit).map((race) => {
+                    // payout配列形式と単一オブジェクト形式の両対応
+                    const umatanPayout = race.payouts?.umatan?.[0]?.payout || race.umatan?.payout || 0;
+                    const payout = Number(umatanPayout) || 0;
                     const venueLabel = race.venue || '';
                     const raceLabel = venueLabel ? `${venueLabel}${race.raceNumber}R` : `第${race.raceNumber}R`;
 
@@ -146,7 +148,7 @@ const pageDescription = monthData.length > 0
                       </div>
                     );
                   })}
-                  {dayData.races.filter(race => race.isHit).length === 0 && (
+                  {(dayData.raceResults || dayData.races || []).filter(race => race.honmeiHit || race.isHit).length === 0 && (
                     <div class="no-hits">的中レースなし</div>
                   )}
                 </div>

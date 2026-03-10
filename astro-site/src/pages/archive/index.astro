@@ -50,8 +50,8 @@ try {
         totalPayout += entry.totalPayout;
       });
 
-      const hitRate = totalRaces > 0 ? ((totalHitRaces / totalRaces) * 100).toFixed(1) : '0.0';
-      const returnRate = totalBetAmount > 0 ? ((totalPayout / totalBetAmount) * 100).toFixed(1) : '0.0';
+      const hitRate = totalRaces > 0 ? Number(((totalHitRaces / totalRaces) * 100).toFixed(1)) : 0;
+      const returnRate = totalBetAmount > 0 ? Number(((totalPayout / totalBetAmount) * 100).toFixed(1)) : 0;
 
       allMonths.push({
         year,
@@ -132,7 +132,7 @@ const pageDescription = `南関競馬の全的中実績アーカイブ。月別�
                 </div>
                 <div class="stat-item">
                   <div class="stat-label">合計配当</div>
-                  <div class="stat-value profit">¥{monthData.totalPayout.toLocaleString()}</div>
+                  <div class="stat-value profit">¥{(Number(monthData.totalPayout) || 0).toLocaleString()}</div>
                 </div>
               </div>
 
