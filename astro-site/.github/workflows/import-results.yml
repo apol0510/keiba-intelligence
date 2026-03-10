@@ -37,6 +37,9 @@ jobs:
             node scripts/importResults.js
           fi
 
+      - name: Validate archive format
+        run: npm run validate:archive
+
       - name: Commit and push
         id: commit
         run: |

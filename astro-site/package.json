@@ -5,9 +5,10 @@
   "description": "AI-Powered Intelligence Dashboard for 南関競馬",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "npm run validate:archive && astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "validate:archive": "node scripts/validateArchiveFormat.js",
     "import:prediction": "node scripts/importPrediction.js",
     "import:prediction:jra": "node scripts/importPredictionJra.js",
     "import:results": "node scripts/importResults.js",

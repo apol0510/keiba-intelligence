@@ -445,6 +445,21 @@ function saveArchive(date, venue, raceResults, venues = []) {
   // 新しいエントリを追加
   archive.unshift(newEntry);
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 旧フォーマット混入チェック（再発防止）
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const archiveJson = JSON.stringify(archive);
+  const forbiddenKeys = ['raceResults', 'honmeiHit', 'umatanHit', 'sanrenpukuHit'];
+
+  for (const key of forbiddenKeys) {
+    if (archiveJson.includes(`"${key}"`)) {
+      console.error(`\n❌ アーカイブフォーマットエラー検出！`);
+      console.error(`   旧フォーマットキー「${key}」が混入しています`);
+      console.error(`   archiveResults.json を確認してください\n`);
+      throw new Error(`旧フォーマット「${key}」が混入しています（再発防止チェック）`);
+    }
+  }
+
   // 保存
   writeFileSync(archivePath, JSON.stringify(archive, null, 2), 'utf-8');
   console.log(`\n💾 アーカイブ保存完了: ${archivePath}`);
@@ -454,6 +469,7 @@ function saveArchive(date, venue, raceResults, venues = []) {
   console.log(`   投資額: ${betAmount.toLocaleString()}円`);
   console.log(`   払戻額: ${totalPayout.toLocaleString()}円`);
   console.log(`   回収率: ${finalReturnRate}%`);
+  console.log(`   ✅ フォーマット検証: 正常`);
 
   return newEntry;
 }

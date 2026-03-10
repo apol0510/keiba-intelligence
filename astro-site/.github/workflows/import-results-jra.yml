@@ -37,6 +37,9 @@ jobs:
             node scripts/importResultsJra.js
           fi
 
+      - name: Validate archive format
+        run: npm run validate:archive
+
       - name: Commit and push
         run: |
           git config --global user.name "github-actions[bot]"
