@@ -102,36 +102,32 @@ jobs:
             COMMIT_MSG="Auto-import: ${TODAY} prediction (today JST)"
           fi
 
+          # 最初にコミット実行
           git commit -m "$COMMIT_MSG"
+          echo "✅ Changes committed locally"
 
-          # Retry logic: pull --rebase and push (最大5回リトライ)
+          # Retry logic: rebase and push (最大5回リトライ)
           MAX_RETRIES=5
           RETRY_COUNT=0
           SUCCESS=false
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" = false ]; do
-            echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Pulling latest changes..."
+            echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Syncing with remote..."
 
-            # rebase中の競合を検出してabort + クリーンアップ
+            # 必ずクリーンな状態から開始（rebase/merge競合のクリーンアップ）
             if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
               echo "⚠️  Detected ongoing rebase, aborting..."
-              git rebase --abort
-              # mainブランチに戻る（detached HEAD回避）
-              git checkout main
-              git reset  # インデックスをクリア
-              git reset --hard origin/main
-              git clean -fd
+              git rebase --abort || true
             fi
 
-            # マージ競合状態をチェック
             if git ls-files -u | grep -q .; then
-              echo "⚠️  Detected unmerged files, resetting..."
-              # mainブランチに戻る（detached HEAD回避）
-              git checkout main
-              git reset  # インデックスをクリア
-              git reset --hard origin/main
-              git clean -fd
+              echo "⚠️  Detected unmerged files, resetting index..."
+              git reset --hard HEAD || true
+              git clean -fd || true
             fi
+
+            # 最新状態を取得
+            git fetch origin main
 
             # mainブランチにいることを確認
             CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -140,63 +136,62 @@ jobs:
               git checkout main
             fi
 
-            # 最新状態を取得（rebase）
-            if git pull --rebase origin main; then
-              echo "✅ Successfully pulled latest changes"
-
-              # プッシュ試行
-              if git push; then
-                echo "✅ Successfully pushed changes"
-                SUCCESS=true
-              else
-                echo "⚠️  Push failed, retrying..."
-                RETRY_COUNT=$((RETRY_COUNT + 1))
-                sleep $((RETRY_COUNT * 2))  # Exponential backoff
-              fi
+            # origin/mainに対してrebase（競合時は自動解決）
+            if git rebase origin/main; then
+              echo "✅ Successfully rebased onto origin/main"
             else
-              # rebase失敗時の処理
-              echo "⚠️  Pull --rebase failed"
+              echo "⚠️  Rebase failed, attempting to resolve conflicts..."
 
-              # 競合が発生している場合は自動解決を試みる
-              if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
-                echo "🔧 Attempting to resolve conflicts automatically..."
+              # 競合ファイルをチェック
+              CONFLICT_FILES=$(git diff --name-only --diff-filter=U 2>/dev/null || echo "")
 
-                # 競合ファイルをチェック
-                CONFLICT_FILES=$(git diff --name-only --diff-filter=U)
+              if [ -n "$CONFLICT_FILES" ]; then
+                echo "   Conflicted files: $CONFLICT_FILES"
 
-                if [ -n "$CONFLICT_FILES" ]; then
-                  echo "   Conflicted files: $CONFLICT_FILES"
+                # 予想データファイルの競合は自動解決（ours戦略: 新しく生成したデータを優先）
+                RESOLVED=false
+                for FILE in $CONFLICT_FILES; do
+                  if [[ "$FILE" == astro-site/src/data/predictions/* ]]; then
+                    echo "   Resolving $FILE (using ours strategy - newly generated data)"
+                    git checkout --ours "$FILE"
+                    git add "$FILE"
+                    RESOLVED=true
+                  fi
+                done
 
-                  # 予想データファイルの競合のみ自動解決（ours戦略: 自分の変更を優先）
-                  for FILE in $CONFLICT_FILES; do
-                    if [[ "$FILE" == src/data/predictions/* ]]; then
-                      echo "   Resolving $FILE (using ours strategy)"
-                      git checkout --ours "$FILE"
-                      git add "$FILE"
-                    fi
-                  done
-
+                if [ "$RESOLVED" = true ]; then
                   # rebase続行
                   if git rebase --continue; then
                     echo "✅ Conflicts resolved, rebase continued"
-                    # 次のループでpush試行
-                    continue
                   else
-                    echo "❌ Failed to continue rebase"
-                    git rebase --abort
-                    # mainブランチに戻る
-                    git checkout main
-                    git reset --hard origin/main
+                    echo "❌ Failed to continue rebase, aborting and retrying..."
+                    git rebase --abort || true
+                    RETRY_COUNT=$((RETRY_COUNT + 1))
+                    sleep $((RETRY_COUNT * 2))
+                    continue
                   fi
                 else
-                  echo "❌ No conflict files found but rebase failed"
-                  git rebase --abort
-                  # mainブランチに戻る
-                  git checkout main
-                  git reset --hard origin/main
+                  echo "❌ No auto-resolvable conflicts found, aborting and retrying..."
+                  git rebase --abort || true
+                  RETRY_COUNT=$((RETRY_COUNT + 1))
+                  sleep $((RETRY_COUNT * 2))
+                  continue
                 fi
+              else
+                echo "❌ Rebase failed without conflicts, aborting and retrying..."
+                git rebase --abort || true
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                sleep $((RETRY_COUNT * 2))
+                continue
               fi
+            fi
 
+            # プッシュ試行
+            if git push origin main; then
+              echo "✅ Successfully pushed changes"
+              SUCCESS=true
+            else
+              echo "⚠️  Push failed, retrying..."
               RETRY_COUNT=$((RETRY_COUNT + 1))
               sleep $((RETRY_COUNT * 2))
             fi
