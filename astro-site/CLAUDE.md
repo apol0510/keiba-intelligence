@@ -20,6 +20,18 @@
 
 ---
 
+## 🚨 **結果システム設計の参照義務** 🚨
+
+**結果ページ構造を変更する場合は、必ず以下のドキュメントを参照すること:**
+
+- `keiba-data-shared/RESULTS_SYSTEM_ARCHITECTURE.md`（結果システム全体設計）
+- `keiba-data-shared/MULTI_VENUE_CHECK.md`（2会場同時開催チェックリスト）
+- `RESULTS_SYSTEM.md`（このプロジェクトの役割）
+
+**keiba-data-sharedが結果システムの設計本体である。**
+
+---
+
 ## 🚨 **最優先：プロジェクト識別ルール（複数ウィンドウ対応）** 🚨
 
 ### **このプロジェクトの識別情報**
