@@ -5,8 +5,8 @@
 **結果ページの設計は以下を参照:**
 
 ```
-keiba-data-shared/RESULTS_SYSTEM_ARCHITECTURE.md
-keiba-data-shared/MULTI_VENUE_CHECK.md
+../../keiba-data-shared/RESULTS_SYSTEM_ARCHITECTURE.md
+../../keiba-data-shared/MULTI_VENUE_CHECK.md
 ```
 
 ---
@@ -58,7 +58,7 @@ importResults.js（自動取り込み）
 
 **結果ページの構造を変更する場合:**
 
-1. `keiba-data-shared/RESULTS_SYSTEM_ARCHITECTURE.md` を必ず確認
+1. `../../keiba-data-shared/RESULTS_SYSTEM_ARCHITECTURE.md` を必ず確認
 2. 3階層構造（day → venue → race）を維持
 3. JSON読み込みルール（会場別優先 → 統合フォールバック）を守る
 4. venue mapping（slug → venueCode）を変更しない
