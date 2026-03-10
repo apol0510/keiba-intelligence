@@ -132,10 +132,12 @@ const pageDescription = monthData.length > 0
                 <div class="races-list">
                   {dayData.races.filter(race => race.isHit).map((race) => {
                     const payout = race.umatan?.payout || 0;
+                    const venueLabel = race.venue || '';
+                    const raceLabel = venueLabel ? `${venueLabel}${race.raceNumber}R` : `第${race.raceNumber}R`;
 
                     return (
                       <div class="race-line hit">
-                        <span class="race-number">第{race.raceNumber}R</span>
+                        <span class="race-number">{raceLabel}</span>
                         <span class="race-name">{race.raceName}</span>
                         <span class="hit-badge">✅ 的中</span>
                         {payout > 0 && (
