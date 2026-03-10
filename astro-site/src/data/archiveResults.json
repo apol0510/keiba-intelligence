@@ -1,5 +1,1138 @@
 [
   {
+    "date": "2026-03-04",
+    "venue": "川崎",
+    "totalRaces": 12,
+    "hitRaces": 7,
+    "missRaces": 5,
+    "hitRate": 58.3,
+    "betAmount": 9600,
+    "betPointsPerRace": 8,
+    "totalPayout": 18720,
+    "returnRate": 195,
+    "races": [
+      {
+        "raceNumber": 1,
+        "raceName": "サラ４歳以上",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 1,
+            "name": "メガミリオン"
+          },
+          "second": {
+            "number": 2,
+            "name": "スノーウィースカイ"
+          },
+          "third": {
+            "number": 10,
+            "name": "ニットウサニー"
+          }
+        },
+        "bettingLines": [
+          "8-10.1.6.9.2.12(抑え11.3.4.5.7)",
+          "10-8.1.6.9.2.12(抑え11.3.4.5.7)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "1-2",
+          "payout": 10470
+        }
+      },
+      {
+        "raceNumber": 2,
+        "raceName": "フェネック賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 1,
+            "name": "カウニスミエリ"
+          },
+          "second": {
+            "number": 3,
+            "name": "ササキンポピー"
+          },
+          "third": {
+            "number": 2,
+            "name": "ガールズドリーム"
+          }
+        },
+        "bettingLines": [
+          "7-3.2.5.9.10.6(抑え1.4.8.11)",
+          "3-7.2.5.9.10.6(抑え1.4.8.11)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "3-7.2.5.9.10.6(抑え1.4.8.11)"
+        ],
+        "umatan": {
+          "combination": "1-3",
+          "payout": 3110
+        }
+      },
+      {
+        "raceNumber": 3,
+        "raceName": "サラ４歳以上",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 8,
+            "name": "ゼンダントモニ"
+          },
+          "second": {
+            "number": 2,
+            "name": "ダイゴホマレリュウ"
+          },
+          "third": {
+            "number": 6,
+            "name": "フレイム"
+          }
+        },
+        "bettingLines": [
+          "6-9.1.8.2.3.10(抑え5.4.7.11.12)",
+          "9-6.1.8.2.3.10(抑え5.4.7.11.12)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "8-2",
+          "payout": 6020
+        }
+      },
+      {
+        "raceNumber": 4,
+        "raceName": "西洋躑躅賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 9,
+            "name": "ナートゥ"
+          },
+          "second": {
+            "number": 8,
+            "name": "バックビート"
+          },
+          "third": {
+            "number": 2,
+            "name": "マジカルレイズ"
+          }
+        },
+        "bettingLines": [
+          "9-2.11.3.8.4.5(抑え6.1.7.10)",
+          "2-9.11.3.8.4.5(抑え6.1.7.10)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "9-2.11.3.8.4.5(抑え6.1.7.10)"
+        ],
+        "umatan": {
+          "combination": "9-8",
+          "payout": 1380
+        }
+      },
+      {
+        "raceNumber": 5,
+        "raceName": "音速賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 5,
+            "name": "モズアンドモズ"
+          },
+          "second": {
+            "number": 1,
+            "name": "シンフォニーシーズ"
+          },
+          "third": {
+            "number": 9,
+            "name": "イイクニアシェル"
+          }
+        },
+        "bettingLines": [
+          "1-5.2.4.7.9.6(抑え11.3.8.10)",
+          "5-1.2.4.7.9.6(抑え11.3.8.10)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "1-5.2.4.7.9.6(抑え11.3.8.10)",
+          "5-1.2.4.7.9.6(抑え11.3.8.10)"
+        ],
+        "umatan": {
+          "combination": "5-1",
+          "payout": 650
+        }
+      },
+      {
+        "raceNumber": 6,
+        "raceName": "アクアマリンフラワー賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 1,
+            "name": "[J]ライフイズ"
+          },
+          "second": {
+            "number": 4,
+            "name": "トラペジウム"
+          },
+          "third": {
+            "number": 3,
+            "name": "[J]ドナソラーレ"
+          }
+        },
+        "bettingLines": [
+          "7-1.8.4.5.9.3(抑え6.2.10.11)",
+          "1-7.8.4.5.9.3(抑え6.2.10.11)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "1-7.8.4.5.9.3(抑え6.2.10.11)"
+        ],
+        "umatan": {
+          "combination": "1-4",
+          "payout": 3100
+        }
+      },
+      {
+        "raceNumber": 7,
+        "raceName": "鳴門賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 11,
+            "name": "クワイトポッシブル"
+          },
+          "second": {
+            "number": 12,
+            "name": "ノーブルウィスパー"
+          },
+          "third": {
+            "number": 8,
+            "name": "ボルドーティラミス"
+          }
+        },
+        "bettingLines": [
+          "5-4.10.1.2.9.6(抑え7.12.3.8.11)",
+          "4-5.10.1.2.9.6(抑え7.12.3.8.11)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "11-12",
+          "payout": 243500
+        }
+      },
+      {
+        "raceNumber": 8,
+        "raceName": "マーチフラワー賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 7,
+            "name": "[J]ワンモメンタム"
+          },
+          "second": {
+            "number": 8,
+            "name": "[J]ココラッシー"
+          },
+          "third": {
+            "number": 1,
+            "name": "[J]ジャスパーブレイズ"
+          }
+        },
+        "bettingLines": [
+          "9-1.7.8.12.3.2(抑え10.6.4.5.11)",
+          "1-9.7.8.12.3.2(抑え10.6.4.5.11)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "7-8",
+          "payout": 2090
+        }
+      },
+      {
+        "raceNumber": 9,
+        "raceName": "千変万化賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 11,
+            "name": "ルールメイプル"
+          },
+          "second": {
+            "number": 6,
+            "name": "ツツウラウラ"
+          },
+          "third": {
+            "number": 3,
+            "name": "ディーズメイト"
+          }
+        },
+        "bettingLines": [
+          "6-1.3.7.10.12.5(抑え4.8.11.2.9)",
+          "1-6.3.7.10.12.5(抑え4.8.11.2.9)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "6-1.3.7.10.12.5(抑え4.8.11.2.9)"
+        ],
+        "umatan": {
+          "combination": "11-6",
+          "payout": 5070
+        }
+      },
+      {
+        "raceNumber": 10,
+        "raceName": "萌え野特別",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 7,
+            "name": "ミスマルゴー"
+          },
+          "second": {
+            "number": 9,
+            "name": "レグノ"
+          },
+          "third": {
+            "number": 2,
+            "name": "ヤプシ"
+          }
+        },
+        "bettingLines": [
+          "6-7.8.3.5.9.1(抑え2.4)",
+          "7-6.8.3.5.9.1(抑え2.4)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "7-6.8.3.5.9.1(抑え2.4)"
+        ],
+        "umatan": {
+          "combination": "7-9",
+          "payout": 4320
+        }
+      },
+      {
+        "raceNumber": 11,
+        "raceName": "スプリングヒロインカップ",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 3,
+            "name": "シンメルーブス"
+          },
+          "second": {
+            "number": 6,
+            "name": "ラブアンドハピネス"
+          },
+          "third": {
+            "number": 5,
+            "name": "アメストリス"
+          }
+        },
+        "bettingLines": [
+          "2-5.3.1.4.6",
+          "5-2.3.1.4.6"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "3-6",
+          "payout": 1200
+        }
+      },
+      {
+        "raceNumber": 12,
+        "raceName": "２０２６川崎ジョッキーズカップ第１戦",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "シエルラビクトア"
+          },
+          "second": {
+            "number": 5,
+            "name": "フクシマジンロッソ"
+          },
+          "third": {
+            "number": 1,
+            "name": "ガルニエ"
+          }
+        },
+        "bettingLines": [
+          "5-4.1.10.14.3.11(抑え8.12.9.2.6.7.13)",
+          "4-5.1.10.14.3.11(抑え8.12.9.2.6.7.13)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "5-4.1.10.14.3.11(抑え8.12.9.2.6.7.13)",
+          "4-5.1.10.14.3.11(抑え8.12.9.2.6.7.13)"
+        ],
+        "umatan": {
+          "combination": "4-5",
+          "payout": 1090
+        }
+      }
+    ],
+    "verifiedAt": "2026-03-10T14:47:44.225Z"
+  },
+  {
+    "date": "2026-03-03",
+    "venue": "川崎",
+    "totalRaces": 12,
+    "hitRaces": 7,
+    "missRaces": 5,
+    "hitRate": 58.3,
+    "betAmount": 14400,
+    "betPointsPerRace": 12,
+    "totalPayout": 40590,
+    "returnRate": 281.9,
+    "races": [
+      {
+        "raceNumber": 1,
+        "raceName": "サラ４歳以上",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 2,
+            "name": "ナツハヤテ"
+          },
+          "second": {
+            "number": 6,
+            "name": "オーロファルコン"
+          },
+          "third": {
+            "number": 1,
+            "name": "ヤマトカチドキ"
+          }
+        },
+        "bettingLines": [
+          "1-10.2.7.4.9.3(抑え5)",
+          "10-1.2.7.4.9.3(抑え5)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "2-6",
+          "payout": 22850
+        }
+      },
+      {
+        "raceNumber": 2,
+        "raceName": "サラ３歳",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 3,
+            "name": "テルケンユミミヅキ"
+          },
+          "second": {
+            "number": 9,
+            "name": "ナイスキック"
+          },
+          "third": {
+            "number": 8,
+            "name": "ワイルドスマッシュ"
+          }
+        },
+        "bettingLines": [
+          "8-9.6.3.4.5.10(抑え1)",
+          "6-9.8.3.4.5.10(抑え1)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "3-9",
+          "payout": 2260
+        }
+      },
+      {
+        "raceNumber": 3,
+        "raceName": "サラ３歳",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 3,
+            "name": "マルーンドライブ"
+          },
+          "second": {
+            "number": 6,
+            "name": "プリンセスサミット"
+          },
+          "third": {
+            "number": 8,
+            "name": "リュウノアーチスト"
+          }
+        },
+        "bettingLines": [
+          "3-2.1.7.4.6.8(抑え9.5)",
+          "1-3.2.7.4.6.8(抑え9.5)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "3-2.1.7.4.6.8(抑え9.5)"
+        ],
+        "umatan": {
+          "combination": "3-6",
+          "payout": 860
+        }
+      },
+      {
+        "raceNumber": 4,
+        "raceName": "スターアニス賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 6,
+            "name": "シュヴァイゲン"
+          },
+          "second": {
+            "number": 7,
+            "name": "ファイアーワークス"
+          },
+          "third": {
+            "number": 1,
+            "name": "アイビーブリッツ"
+          }
+        },
+        "bettingLines": [
+          "1-2.4.5.7.8.10(抑え6)",
+          "2-1.4.5.7.8.10(抑え6)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "6-7",
+          "payout": 2980
+        }
+      },
+      {
+        "raceNumber": 5,
+        "raceName": "サラ３歳",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 5,
+            "name": "ポッドデスペア"
+          },
+          "second": {
+            "number": 3,
+            "name": "カルダモンロール"
+          },
+          "third": {
+            "number": 2,
+            "name": "カナールゲイル"
+          }
+        },
+        "bettingLines": [
+          "3-2.5.8.4.9",
+          "2-3.5.8.4.9"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "3-2.5.8.4.9"
+        ],
+        "umatan": {
+          "combination": "5-3",
+          "payout": 630
+        }
+      },
+      {
+        "raceNumber": 6,
+        "raceName": "サラ４歳以上",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "ヒソカ"
+          },
+          "second": {
+            "number": 9,
+            "name": "シングンアーメット"
+          },
+          "third": {
+            "number": 6,
+            "name": "アイビージーニー"
+          }
+        },
+        "bettingLines": [
+          "4-6.8.7.5.1.3(抑え9)",
+          "6-4.8.7.5.1.3(抑え9)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "4-6.8.7.5.1.3(抑え9)"
+        ],
+        "umatan": {
+          "combination": "4-9",
+          "payout": 2940
+        }
+      },
+      {
+        "raceNumber": 7,
+        "raceName": "雷鶏賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 5,
+            "name": "ポッドデューク"
+          },
+          "second": {
+            "number": 10,
+            "name": "ナキムシヒカル"
+          },
+          "third": {
+            "number": 6,
+            "name": "モズノセイギ"
+          }
+        },
+        "bettingLines": [
+          "5-3.10.4.12.9.2(抑え6.1)",
+          "3-5.10.4.12.9.2(抑え6.1)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "5-3.10.4.12.9.2(抑え6.1)"
+        ],
+        "umatan": {
+          "combination": "5-10",
+          "payout": 580
+        }
+      },
+      {
+        "raceNumber": 8,
+        "raceName": "サラ４歳以上",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 9,
+            "name": "ヴィトーリアヘーザ"
+          },
+          "second": {
+            "number": 8,
+            "name": "エールラヴィクトワ"
+          },
+          "third": {
+            "number": 1,
+            "name": "ロコモーション"
+          }
+        },
+        "bettingLines": [
+          "1-8.6.9.11.7.10(抑え5)",
+          "6-1.8.9.11.7.10(抑え5)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "9-8",
+          "payout": 1970
+        }
+      },
+      {
+        "raceNumber": 9,
+        "raceName": "折鶴蘭賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 3,
+            "name": "ブラッドライン"
+          },
+          "second": {
+            "number": 6,
+            "name": "ベルエアキング"
+          },
+          "third": {
+            "number": 7,
+            "name": "ジーティーアグリム"
+          }
+        },
+        "bettingLines": [
+          "6-7.3.1.8.5.4(抑え9)",
+          "3-6.7.1.8.5.4(抑え9)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "6-7.3.1.8.5.4(抑え9)",
+          "3-6.7.1.8.5.4(抑え9)"
+        ],
+        "umatan": {
+          "combination": "3-6",
+          "payout": 3890
+        }
+      },
+      {
+        "raceNumber": 10,
+        "raceName": "早花咲月特別",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 8,
+            "name": "オングライドパス"
+          },
+          "second": {
+            "number": 4,
+            "name": "カレンタクト"
+          },
+          "third": {
+            "number": 6,
+            "name": "ファリードゥーン"
+          }
+        },
+        "bettingLines": [
+          "6-4.11.1.5.8.10(抑え2.3)",
+          "4-6.11.1.5.8.10(抑え2.3)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "4-6.11.1.5.8.10(抑え2.3)"
+        ],
+        "umatan": {
+          "combination": "8-4",
+          "payout": 30460
+        }
+      },
+      {
+        "raceNumber": 11,
+        "raceName": "ブルートシュタインチャレンジ",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 13,
+            "name": "[J]サンダーバース"
+          },
+          "second": {
+            "number": 3,
+            "name": "マイケルマキシマス"
+          },
+          "third": {
+            "number": 9,
+            "name": "[J]ミルフルール"
+          }
+        },
+        "bettingLines": [
+          "7-3.10.4.8.12.14(抑え13.5.9)",
+          "10-3.7.4.8.12.14(抑え13.5.9)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "13-3",
+          "payout": 13670
+        }
+      },
+      {
+        "raceNumber": 12,
+        "raceName": "進撃賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 8,
+            "name": "アタゴテンジン"
+          },
+          "second": {
+            "number": 5,
+            "name": "アイアンピッチ"
+          },
+          "third": {
+            "number": 6,
+            "name": "ヴェルデヴェント"
+          }
+        },
+        "bettingLines": [
+          "8-7.4.10.5.6.3(抑え2)",
+          "4-8.7.10.5.6.3(抑え2)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "8-7.4.10.5.6.3(抑え2)"
+        ],
+        "umatan": {
+          "combination": "8-5",
+          "payout": 1230
+        }
+      }
+    ],
+    "verifiedAt": "2026-03-10T14:47:39.115Z"
+  },
+  {
+    "date": "2026-03-02",
+    "venue": "川崎",
+    "totalRaces": 12,
+    "hitRaces": 6,
+    "missRaces": 6,
+    "hitRate": 50,
+    "betAmount": 9600,
+    "betPointsPerRace": 8,
+    "totalPayout": 10210,
+    "returnRate": 106.4,
+    "races": [
+      {
+        "raceNumber": 1,
+        "raceName": "サラ３歳",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 5,
+            "name": "ブラックトルマリン"
+          },
+          "second": {
+            "number": 1,
+            "name": "プラカーシャ"
+          },
+          "third": {
+            "number": 8,
+            "name": "ラヴィッジ"
+          }
+        },
+        "bettingLines": [
+          "5-1.10.4.9.8.2(抑え3)",
+          "10-5.1.4.9.8.2(抑え3)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "5-1.10.4.9.8.2(抑え3)"
+        ],
+        "umatan": {
+          "combination": "5-1",
+          "payout": 330
+        }
+      },
+      {
+        "raceNumber": 2,
+        "raceName": "サラ３歳",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 8,
+            "name": "オーバーユー"
+          },
+          "second": {
+            "number": 4,
+            "name": "ミラクルガイ"
+          },
+          "third": {
+            "number": 6,
+            "name": "ティンガティンガ"
+          }
+        },
+        "bettingLines": [
+          "2-5.4.9.6.7.1",
+          "5-2.4.9.6.7.1"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "8-4",
+          "payout": 25290
+        }
+      },
+      {
+        "raceNumber": 3,
+        "raceName": "ミーアキャット賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 7,
+            "name": "ナリノビスケッツ"
+          },
+          "second": {
+            "number": 6,
+            "name": "マジカルキャンディ"
+          },
+          "third": {
+            "number": 5,
+            "name": "ルディカツー"
+          }
+        },
+        "bettingLines": [
+          "7-2.4.9.5.6.8(抑え1.3)",
+          "4-7.2.9.5.6.8(抑え1.3)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "7-2.4.9.5.6.8(抑え1.3)"
+        ],
+        "umatan": {
+          "combination": "7-6",
+          "payout": 4140
+        }
+      },
+      {
+        "raceNumber": 4,
+        "raceName": "サラ４歳以上",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 5,
+            "name": "アムリタ"
+          },
+          "second": {
+            "number": 8,
+            "name": "モメン"
+          },
+          "third": {
+            "number": 6,
+            "name": "ピコグリーン"
+          }
+        },
+        "bettingLines": [
+          "6-8.5.7.10.3.2",
+          "8-6.5.7.10.3.2"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "8-6.5.7.10.3.2"
+        ],
+        "umatan": {
+          "combination": "5-8",
+          "payout": 1370
+        }
+      },
+      {
+        "raceNumber": 5,
+        "raceName": "サラ４歳以上",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "モコモコ"
+          },
+          "second": {
+            "number": 8,
+            "name": "フィリグラン"
+          },
+          "third": {
+            "number": 9,
+            "name": "ラウレア"
+          }
+        },
+        "bettingLines": [
+          "1-4.11.3.8.10.7",
+          "11-4.1.3.8.10.7"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "4-8",
+          "payout": 1870
+        }
+      },
+      {
+        "raceNumber": 6,
+        "raceName": "花天月地賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 5,
+            "name": "ミスティライズ"
+          },
+          "second": {
+            "number": 8,
+            "name": "コタダブル"
+          },
+          "third": {
+            "number": 4,
+            "name": "リコーパトリオット"
+          }
+        },
+        "bettingLines": [
+          "5-8.7.4.6.1(抑え2.3)",
+          "8-5.7.4.6.1(抑え2.3)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "5-8.7.4.6.1(抑え2.3)",
+          "8-5.7.4.6.1(抑え2.3)"
+        ],
+        "umatan": {
+          "combination": "5-8",
+          "payout": 450
+        }
+      },
+      {
+        "raceNumber": 7,
+        "raceName": "メッシーナ賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 2,
+            "name": "ホースワン"
+          },
+          "second": {
+            "number": 3,
+            "name": "サーブザミッション"
+          },
+          "third": {
+            "number": 6,
+            "name": "ジュウニントイロ"
+          }
+        },
+        "bettingLines": [
+          "2-4.6.1.3(抑え7)",
+          "4-2.6.1.3(抑え7)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "2-4.6.1.3(抑え7)"
+        ],
+        "umatan": {
+          "combination": "2-3",
+          "payout": 1440
+        }
+      },
+      {
+        "raceNumber": 8,
+        "raceName": "カラスミ賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 7,
+            "name": "メイショウマチルダ"
+          },
+          "second": {
+            "number": 4,
+            "name": "ブランディストック"
+          },
+          "third": {
+            "number": 5,
+            "name": "フライングロッド"
+          }
+        },
+        "bettingLines": [
+          "9-7.8.4.1.5.3(抑え2)",
+          "8-9.7.4.1.5.3(抑え2)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "7-4",
+          "payout": 1140
+        }
+      },
+      {
+        "raceNumber": 9,
+        "raceName": "天雷賞",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "ヒューマンライツ"
+          },
+          "second": {
+            "number": 5,
+            "name": "ハーイバービー"
+          },
+          "third": {
+            "number": 9,
+            "name": "エレレラナキラ"
+          }
+        },
+        "bettingLines": [
+          "5-6.4.9.2.11.1(抑え7)",
+          "6-5.4.9.2.11.1(抑え7)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "5-6.4.9.2.11.1(抑え7)"
+        ],
+        "umatan": {
+          "combination": "4-5",
+          "payout": 2480
+        }
+      },
+      {
+        "raceNumber": 10,
+        "raceName": "レコードな町にいかっぷ",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 2,
+            "name": "ヴィブエアー"
+          },
+          "second": {
+            "number": 5,
+            "name": "ヘニーズネフュー"
+          },
+          "third": {
+            "number": 9,
+            "name": "デフィニティーボ"
+          }
+        },
+        "bettingLines": [
+          "9-7.8.10.5.2.6(抑え1.4)",
+          "7-9.8.10.5.2.6(抑え1.4)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "2-5",
+          "payout": 16000
+        }
+      },
+      {
+        "raceNumber": 11,
+        "raceName": "日吉オープン",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 7,
+            "name": "プライルード"
+          },
+          "second": {
+            "number": 1,
+            "name": "オスカーブレイン"
+          },
+          "third": {
+            "number": 8,
+            "name": "ティアラフォーカス"
+          }
+        },
+        "bettingLines": [
+          "8-5.7.6.9.1.2(抑え4)",
+          "5-8.7.6.9.1.2(抑え4)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "7-1",
+          "payout": 8630
+        }
+      },
+      {
+        "raceNumber": 12,
+        "raceName": "啓蟄特別",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 10,
+            "name": "カセノラオー"
+          },
+          "second": {
+            "number": 5,
+            "name": "ラムテリオス"
+          },
+          "third": {
+            "number": 1,
+            "name": "リコーベレッタ"
+          }
+        },
+        "bettingLines": [
+          "4-6.12.10.5.1.11(抑え3)",
+          "6-4.12.10.5.1.11(抑え3)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "10-5",
+          "payout": 2460
+        }
+      }
+    ],
+    "verifiedAt": "2026-03-10T14:47:33.739Z"
+  },
+  {
     "date": "2026-03-10",
     "venue": "大井・船橋",
     "venues": [
@@ -3026,3434 +4159,6 @@
               "combination": "4-9-8",
               "payout": 10080,
               "popularity": 32
-            }
-          ]
-        }
-      }
-    ]
-  },
-  {
-    "date": "2026-03-04",
-    "venue": "川崎",
-    "venues": [
-      "川崎"
-    ],
-    "hitRaces": 1,
-    "totalRaces": 12,
-    "hitRate": 8,
-    "umatanHitRaces": 5,
-    "umatanHitRate": 42,
-    "sanrenpukuHitRaces": 0,
-    "sanrenpukuHitRate": 0,
-    "betPointsPerRace": 10,
-    "betAmount": 12000,
-    "totalPayout": 10540,
-    "returnRate": 88,
-    "raceResults": [
-      {
-        "raceNumber": 1,
-        "raceName": "Ｃ３(三)",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 1,
-        "second": 2,
-        "third": 10,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "1",
-              "payout": 1270,
-              "popularity": 6
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "1",
-              "payout": 290,
-              "popularity": 4
-            },
-            {
-              "number": "2",
-              "payout": 430,
-              "popularity": 7
-            },
-            {
-              "number": "10",
-              "payout": 190,
-              "popularity": 2
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "1-2",
-              "payout": 5860,
-              "popularity": 14
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "1-2",
-              "payout": 5470,
-              "popularity": 17
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "1-2",
-              "payout": 9870,
-              "popularity": 23
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "1-2",
-              "payout": 10470,
-              "popularity": 34
-            }
-          ],
-          "wide": [
-            {
-              "combination": "1-2",
-              "payout": 1240,
-              "popularity": 16
-            },
-            {
-              "combination": "1-10",
-              "payout": 590,
-              "popularity": 7
-            },
-            {
-              "combination": "2-10",
-              "payout": 760,
-              "popularity": 10
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "1-2-10",
-              "payout": 6620,
-              "popularity": 24
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "1-2-10",
-              "payout": 63180,
-              "popularity": 186
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 2,
-        "raceName": "フェネック賞 Ｃ３ 選定馬",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 1,
-        "second": 3,
-        "third": 2,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "1",
-              "payout": 720,
-              "popularity": 4
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "1",
-              "payout": 220,
-              "popularity": 3
-            },
-            {
-              "number": "3",
-              "payout": 160,
-              "popularity": 2
-            },
-            {
-              "number": "2",
-              "payout": 260,
-              "popularity": 5
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "1-3",
-              "payout": 1350,
-              "popularity": 8
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "1-3",
-              "payout": 1480,
-              "popularity": 7
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "1-3",
-              "payout": 3050,
-              "popularity": 15
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "1-3",
-              "payout": 3110,
-              "popularity": 15
-            }
-          ],
-          "wide": [
-            {
-              "combination": "1-3",
-              "payout": 540,
-              "popularity": 6
-            },
-            {
-              "combination": "1-2",
-              "payout": 650,
-              "popularity": 11
-            },
-            {
-              "combination": "2-3",
-              "payout": 530,
-              "popularity": 4
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "1-2-3",
-              "payout": 2510,
-              "popularity": 9
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "1-3-2",
-              "payout": 15130,
-              "popularity": 50
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 3,
-        "raceName": "Ｃ２(七)",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 8,
-        "second": 2,
-        "third": 6,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "8",
-              "payout": 490,
-              "popularity": 3
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "8",
-              "payout": 170,
-              "popularity": 3
-            },
-            {
-              "number": "2",
-              "payout": 260,
-              "popularity": 5
-            },
-            {
-              "number": "6",
-              "payout": 120,
-              "popularity": 1
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "2-6",
-              "payout": 3550,
-              "popularity": 9
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "2-8",
-              "payout": 3800,
-              "popularity": 11
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "6-2",
-              "payout": 6120,
-              "popularity": 18
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "8-2",
-              "payout": 6020,
-              "popularity": 19
-            }
-          ],
-          "wide": [
-            {
-              "combination": "2-8",
-              "payout": 870,
-              "popularity": 10
-            },
-            {
-              "combination": "6-8",
-              "payout": 270,
-              "popularity": 2
-            },
-            {
-              "combination": "2-6",
-              "payout": 540,
-              "popularity": 6
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "2-6-8",
-              "payout": 1720,
-              "popularity": 4
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "8-2-6",
-              "payout": 22460,
-              "popularity": 65
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 4,
-        "raceName": "西洋躑躅（せいようつつじ）賞 Ｃ１(一)(二)",
-        "honmeiHit": true,
-        "umatanHit": true,
-        "sanrenpukuHit": false,
-        "winner": 9,
-        "second": 8,
-        "third": 2,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "9",
-              "payout": 530,
-              "popularity": 3
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "9",
-              "payout": 130,
-              "popularity": 3
-            },
-            {
-              "number": "8",
-              "payout": 120,
-              "popularity": 2
-            },
-            {
-              "number": "2",
-              "payout": 120,
-              "popularity": 1
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "7-7",
-              "payout": 650,
-              "popularity": 2
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "8-9",
-              "payout": 610,
-              "popularity": 1
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "7-7",
-              "payout": 710,
-              "popularity": 1
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "9-8",
-              "payout": 1380,
-              "popularity": 3
-            }
-          ],
-          "wide": [
-            {
-              "combination": "8-9",
-              "payout": 260,
-              "popularity": 2
-            },
-            {
-              "combination": "2-9",
-              "payout": 330,
-              "popularity": 3
-            },
-            {
-              "combination": "2-8",
-              "payout": 240,
-              "popularity": 1
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "2-8-9",
-              "payout": 880,
-              "popularity": 1
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "9-8-2",
-              "payout": 5510,
-              "popularity": 3
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 5,
-        "raceName": "音速（おんそく）賞 Ｃ１ 選定馬",
-        "honmeiHit": false,
-        "umatanHit": true,
-        "sanrenpukuHit": false,
-        "winner": 5,
-        "second": 1,
-        "third": 9,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "5",
-              "payout": 190,
-              "popularity": 1
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "5",
-              "payout": 110,
-              "popularity": 1
-            },
-            {
-              "number": "1",
-              "payout": 130,
-              "popularity": 2
-            },
-            {
-              "number": "9",
-              "payout": 160,
-              "popularity": 4
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "1-5",
-              "payout": 430,
-              "popularity": 2
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "1-5",
-              "payout": 390,
-              "popularity": 2
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "5-1",
-              "payout": 810,
-              "popularity": 2
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "5-1",
-              "payout": 650,
-              "popularity": 2
-            }
-          ],
-          "wide": [
-            {
-              "combination": "1-5",
-              "payout": 230,
-              "popularity": 2
-            },
-            {
-              "combination": "5-9",
-              "payout": 240,
-              "popularity": 3
-            },
-            {
-              "combination": "1-9",
-              "payout": 500,
-              "popularity": 6
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "1-5-9",
-              "payout": 850,
-              "popularity": 3
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "5-1-9",
-              "payout": 2650,
-              "popularity": 5
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 6,
-        "raceName": "川崎ヴィーナスシリーズ　ＪＲＡ交流",
-        "honmeiHit": false,
-        "umatanHit": true,
-        "sanrenpukuHit": false,
-        "winner": 1,
-        "second": 4,
-        "third": 3,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "1",
-              "payout": 500,
-              "popularity": 2
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "1",
-              "payout": 190,
-              "popularity": 2
-            },
-            {
-              "number": "4",
-              "payout": 210,
-              "popularity": 3
-            },
-            {
-              "number": "3",
-              "payout": 420,
-              "popularity": 7
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "1-4",
-              "payout": 2110,
-              "popularity": 9
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "1-4",
-              "payout": 1780,
-              "popularity": 8
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "1-4",
-              "payout": 3880,
-              "popularity": 17
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "1-4",
-              "payout": 3100,
-              "popularity": 12
-            }
-          ],
-          "wide": [
-            {
-              "combination": "1-4",
-              "payout": 620,
-              "popularity": 10
-            },
-            {
-              "combination": "1-3",
-              "payout": 780,
-              "popularity": 12
-            },
-            {
-              "combination": "3-4",
-              "payout": 1740,
-              "popularity": 22
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "1-3-4",
-              "payout": 5820,
-              "popularity": 24
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "1-4-3",
-              "payout": 25060,
-              "popularity": 94
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 7,
-        "raceName": "鳴門（なると）賞 Ｃ１(一)(二)",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 11,
-        "second": 12,
-        "third": 8,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "11",
-              "payout": 15860,
-              "popularity": 12
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "11",
-              "payout": 2170,
-              "popularity": 11
-            },
-            {
-              "number": "12",
-              "payout": 670,
-              "popularity": 7
-            },
-            {
-              "number": "8",
-              "payout": 2840,
-              "popularity": 12
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "8-8",
-              "payout": 33980,
-              "popularity": 31
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "11-12",
-              "payout": 94000,
-              "popularity": 55
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "8-8",
-              "payout": 43190,
-              "popularity": 50
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "11-12",
-              "payout": 243500,
-              "popularity": 113
-            }
-          ],
-          "wide": [
-            {
-              "combination": "11-12",
-              "payout": 11430,
-              "popularity": 50
-            },
-            {
-              "combination": "8-11",
-              "payout": 45380,
-              "popularity": 66
-            },
-            {
-              "combination": "8-12",
-              "payout": 31440,
-              "popularity": 65
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "8-11-12",
-              "payout": 1279890,
-              "popularity": 217
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "11-12-8",
-              "payout": 5193650,
-              "popularity": 1239
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 8,
-        "raceName": "マーチフラワー賞 ３歳 未格付選定馬ＪＲＡ選定馬",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 7,
-        "second": 8,
-        "third": 1,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "7",
-              "payout": 390,
-              "popularity": 2
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "7",
-              "payout": 150,
-              "popularity": 2
-            },
-            {
-              "number": "8",
-              "payout": 200,
-              "popularity": 3
-            },
-            {
-              "number": "1",
-              "payout": 210,
-              "popularity": 4
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "6-6",
-              "payout": 1620,
-              "popularity": 5
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "7-8",
-              "payout": 1490,
-              "popularity": 5
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "6-6",
-              "payout": 1060,
-              "popularity": 3
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "7-8",
-              "payout": 2090,
-              "popularity": 8
-            }
-          ],
-          "wide": [
-            {
-              "combination": "7-8",
-              "payout": 490,
-              "popularity": 6
-            },
-            {
-              "combination": "1-7",
-              "payout": 440,
-              "popularity": 4
-            },
-            {
-              "combination": "1-8",
-              "payout": 640,
-              "popularity": 8
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "1-7-8",
-              "payout": 1910,
-              "popularity": 5
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "7-8-1",
-              "payout": 9080,
-              "popularity": 23
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 9,
-        "raceName": "千変万化（せんぺんばんか）賞 Ｂ３ 選定馬",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 11,
-        "second": 6,
-        "third": 3,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "11",
-              "payout": 1710,
-              "popularity": 4
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "11",
-              "payout": 280,
-              "popularity": 4
-            },
-            {
-              "number": "6",
-              "payout": 120,
-              "popularity": 1
-            },
-            {
-              "number": "3",
-              "payout": 210,
-              "popularity": 3
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "5-8",
-              "payout": 930,
-              "popularity": 4
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "6-11",
-              "payout": 1450,
-              "popularity": 4
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "8-5",
-              "payout": 3370,
-              "popularity": 12
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "11-6",
-              "payout": 5070,
-              "popularity": 15
-            }
-          ],
-          "wide": [
-            {
-              "combination": "6-11",
-              "payout": 460,
-              "popularity": 4
-            },
-            {
-              "combination": "3-11",
-              "payout": 1240,
-              "popularity": 14
-            },
-            {
-              "combination": "3-6",
-              "payout": 370,
-              "popularity": 3
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "3-6-11",
-              "payout": 3250,
-              "popularity": 7
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "11-6-3",
-              "payout": 28420,
-              "popularity": 84
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 10,
-        "raceName": "萌え野（もえの）特別 Ｂ２(二)",
-        "honmeiHit": false,
-        "umatanHit": true,
-        "sanrenpukuHit": false,
-        "winner": 7,
-        "second": 9,
-        "third": 2,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "7",
-              "payout": 230,
-              "popularity": 1
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "7",
-              "payout": 140,
-              "popularity": 1
-            },
-            {
-              "number": "9",
-              "payout": 530,
-              "popularity": 7
-            },
-            {
-              "number": "2",
-              "payout": 350,
-              "popularity": 5
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "7-8",
-              "payout": 480,
-              "popularity": 2
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "7-9",
-              "payout": 3080,
-              "popularity": 11
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "7-8",
-              "payout": 860,
-              "popularity": 2
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "7-9",
-              "payout": 4320,
-              "popularity": 16
-            }
-          ],
-          "wide": [
-            {
-              "combination": "7-9",
-              "payout": 1240,
-              "popularity": 16
-            },
-            {
-              "combination": "2-7",
-              "payout": 680,
-              "popularity": 8
-            },
-            {
-              "combination": "2-9",
-              "payout": 2960,
-              "popularity": 27
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "2-7-9",
-              "payout": 11080,
-              "popularity": 37
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "7-9-2",
-              "payout": 44260,
-              "popularity": 145
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 11,
-        "raceName": "スプリングヒロインカップ（エンプレス杯ＴＲ）",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 3,
-        "second": 6,
-        "third": 5,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "3",
-              "payout": 260,
-              "popularity": 2
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "3",
-              "payout": 160,
-              "popularity": 2
-            },
-            {
-              "number": "6",
-              "payout": 200,
-              "popularity": 3
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "3-6",
-              "payout": 630,
-              "popularity": 3
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "3-6",
-              "payout": 1200,
-              "popularity": 6
-            }
-          ],
-          "wide": [
-            {
-              "combination": "3-6",
-              "payout": 230,
-              "popularity": 3
-            },
-            {
-              "combination": "3-5",
-              "payout": 330,
-              "popularity": 5
-            },
-            {
-              "combination": "5-6",
-              "payout": 430,
-              "popularity": 7
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "3-5-6",
-              "payout": 1150,
-              "popularity": 4
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "3-6-5",
-              "payout": 5300,
-              "popularity": 20
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 12,
-        "raceName": "２０２６川崎ジョッキーズカップ第１戦 Ｃ２ 選定馬",
-        "honmeiHit": false,
-        "umatanHit": true,
-        "sanrenpukuHit": false,
-        "winner": 4,
-        "second": 5,
-        "third": 1,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "4",
-              "payout": 380,
-              "popularity": 2
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "4",
-              "payout": 130,
-              "popularity": 2
-            },
-            {
-              "number": "5",
-              "payout": 120,
-              "popularity": 1
-            },
-            {
-              "number": "1",
-              "payout": 180,
-              "popularity": 4
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "3-4",
-              "payout": 460,
-              "popularity": 1
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "4-5",
-              "payout": 470,
-              "popularity": 1
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "3-4",
-              "payout": 990,
-              "popularity": 2
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "4-5",
-              "payout": 1090,
-              "popularity": 2
-            }
-          ],
-          "wide": [
-            {
-              "combination": "4-5",
-              "payout": 220,
-              "popularity": 1
-            },
-            {
-              "combination": "1-4",
-              "payout": 360,
-              "popularity": 4
-            },
-            {
-              "combination": "1-5",
-              "payout": 310,
-              "popularity": 2
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "1-4-5",
-              "payout": 740,
-              "popularity": 1
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "4-5-1",
-              "payout": 3400,
-              "popularity": 2
-            }
-          ]
-        }
-      }
-    ]
-  },
-  {
-    "date": "2026-03-03",
-    "venue": "川崎",
-    "venues": [
-      "川崎"
-    ],
-    "hitRaces": 4,
-    "totalRaces": 12,
-    "hitRate": 33,
-    "umatanHitRaces": 4,
-    "umatanHitRate": 33,
-    "sanrenpukuHitRaces": 0,
-    "sanrenpukuHitRate": 0,
-    "betPointsPerRace": 10,
-    "betAmount": 12000,
-    "totalPayout": 6560,
-    "returnRate": 55,
-    "raceResults": [
-      {
-        "raceNumber": 1,
-        "raceName": "Ｃ３(四)",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 2,
-        "second": 6,
-        "third": 1,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "2",
-              "payout": 470,
-              "popularity": 2
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "2",
-              "payout": 180,
-              "popularity": 3
-            },
-            {
-              "number": "6",
-              "payout": 1400,
-              "popularity": 8
-            },
-            {
-              "number": "1",
-              "payout": 210,
-              "popularity": 4
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "2-6",
-              "payout": 13340,
-              "popularity": 21
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "2-6",
-              "payout": 15750,
-              "popularity": 21
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "2-6",
-              "payout": 17100,
-              "popularity": 38
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "2-6",
-              "payout": 22850,
-              "popularity": 38
-            }
-          ],
-          "wide": [
-            {
-              "combination": "2-6",
-              "payout": 3820,
-              "popularity": 22
-            },
-            {
-              "combination": "1-2",
-              "payout": 470,
-              "popularity": 7
-            },
-            {
-              "combination": "1-6",
-              "payout": 4280,
-              "popularity": 28
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "1-2-6",
-              "payout": 15160,
-              "popularity": 34
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "2-6-1",
-              "payout": 69930,
-              "popularity": 170
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 2,
-        "raceName": "リプレイ リプレイ",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 3,
-        "second": 9,
-        "third": 8,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "3",
-              "payout": 790,
-              "popularity": 4
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "3",
-              "payout": 140,
-              "popularity": 3
-            },
-            {
-              "number": "9",
-              "payout": 120,
-              "popularity": 2
-            },
-            {
-              "number": "8",
-              "payout": 110,
-              "popularity": 1
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "3-7",
-              "payout": 400,
-              "popularity": 2
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "3-9",
-              "payout": 950,
-              "popularity": 4
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "3-7",
-              "payout": 970,
-              "popularity": 4
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "3-9",
-              "payout": 2260,
-              "popularity": 9
-            }
-          ],
-          "wide": [
-            {
-              "combination": "3-9",
-              "payout": 320,
-              "popularity": 4
-            },
-            {
-              "combination": "3-8",
-              "payout": 270,
-              "popularity": 3
-            },
-            {
-              "combination": "8-9",
-              "payout": 190,
-              "popularity": 1
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "3-8-9",
-              "payout": 560,
-              "popularity": 1
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "3-9-8",
-              "payout": 6630,
-              "popularity": 18
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 3,
-        "raceName": "リプレイ リプレイ",
-        "honmeiHit": true,
-        "umatanHit": true,
-        "sanrenpukuHit": false,
-        "winner": 3,
-        "second": 6,
-        "third": 8,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "3",
-              "payout": 140,
-              "popularity": 1
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "3",
-              "payout": 120,
-              "popularity": 1
-            },
-            {
-              "number": "6",
-              "payout": 260,
-              "popularity": 5
-            },
-            {
-              "number": "8",
-              "payout": 410,
-              "popularity": 7
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "3-6",
-              "payout": 670,
-              "popularity": 3
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "3-6",
-              "payout": 730,
-              "popularity": 4
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "3-6",
-              "payout": 840,
-              "popularity": 4
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "3-6",
-              "payout": 860,
-              "popularity": 4
-            }
-          ],
-          "wide": [
-            {
-              "combination": "3-6",
-              "payout": 350,
-              "popularity": 4
-            },
-            {
-              "combination": "3-8",
-              "payout": 900,
-              "popularity": 10
-            },
-            {
-              "combination": "6-8",
-              "payout": 2810,
-              "popularity": 27
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "3-6-8",
-              "payout": 6790,
-              "popularity": 23
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "3-6-8",
-              "payout": 16170,
-              "popularity": 52
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 4,
-        "raceName": "スターアニス賞 Ｃ３ 選定馬",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 6,
-        "second": 7,
-        "third": 1,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "6",
-              "payout": 640,
-              "popularity": 3
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "6",
-              "payout": 190,
-              "popularity": 4
-            },
-            {
-              "number": "7",
-              "payout": 150,
-              "popularity": 3
-            },
-            {
-              "number": "1",
-              "payout": 120,
-              "popularity": 1
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "6-7",
-              "payout": 1250,
-              "popularity": 6
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "6-7",
-              "payout": 1020,
-              "popularity": 5
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "6-7",
-              "payout": 2690,
-              "popularity": 12
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "6-7",
-              "payout": 2980,
-              "popularity": 13
-            }
-          ],
-          "wide": [
-            {
-              "combination": "6-7",
-              "payout": 430,
-              "popularity": 7
-            },
-            {
-              "combination": "1-6",
-              "payout": 280,
-              "popularity": 3
-            },
-            {
-              "combination": "1-7",
-              "payout": 250,
-              "popularity": 1
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "1-6-7",
-              "payout": 1080,
-              "popularity": 2
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "6-7-1",
-              "payout": 10360,
-              "popularity": 37
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 5,
-        "raceName": "リプレイ リプレイ",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 5,
-        "second": 3,
-        "third": 2,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "5",
-              "payout": 310,
-              "popularity": 2
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "5",
-              "payout": 120,
-              "popularity": 2
-            },
-            {
-              "number": "3",
-              "payout": 100,
-              "popularity": 1
-            },
-            {
-              "number": "2",
-              "payout": 120,
-              "popularity": 3
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "3-5",
-              "payout": 150,
-              "popularity": 1
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "3-5",
-              "payout": 180,
-              "popularity": 1
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "5-3",
-              "payout": 430,
-              "popularity": 2
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "5-3",
-              "payout": 630,
-              "popularity": 3
-            }
-          ],
-          "wide": [
-            {
-              "combination": "3-5",
-              "payout": 110,
-              "popularity": 1
-            },
-            {
-              "combination": "2-5",
-              "payout": 130,
-              "popularity": 3
-            },
-            {
-              "combination": "2-3",
-              "payout": 130,
-              "popularity": 2
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "2-3-5",
-              "payout": 180,
-              "popularity": 1
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "5-3-2",
-              "payout": 950,
-              "popularity": 3
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 6,
-        "raceName": "Ｃ２(三)(四)",
-        "honmeiHit": true,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 4,
-        "second": 9,
-        "third": 6,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "4",
-              "payout": 240,
-              "popularity": 1
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "4",
-              "payout": 120,
-              "popularity": 1
-            },
-            {
-              "number": "9",
-              "payout": 280,
-              "popularity": 5
-            },
-            {
-              "number": "6",
-              "payout": 130,
-              "popularity": 2
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "4-8",
-              "payout": 1150,
-              "popularity": 5
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "4-9",
-              "payout": 1670,
-              "popularity": 4
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "4-8",
-              "payout": 1450,
-              "popularity": 7
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "4-9",
-              "payout": 2940,
-              "popularity": 9
-            }
-          ],
-          "wide": [
-            {
-              "combination": "4-9",
-              "payout": 510,
-              "popularity": 7
-            },
-            {
-              "combination": "4-6",
-              "payout": 180,
-              "popularity": 1
-            },
-            {
-              "combination": "6-9",
-              "payout": 690,
-              "popularity": 10
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "4-6-9",
-              "payout": 2000,
-              "popularity": 6
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "4-9-6",
-              "payout": 13730,
-              "popularity": 48
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 7,
-        "raceName": "雷鶏（らいけい）賞 Ｃ２ 選定馬",
-        "honmeiHit": true,
-        "umatanHit": true,
-        "sanrenpukuHit": false,
-        "winner": 5,
-        "second": 10,
-        "third": 6,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "5",
-              "payout": 130,
-              "popularity": 1
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "5",
-              "payout": 120,
-              "popularity": 1
-            },
-            {
-              "number": "10",
-              "payout": 190,
-              "popularity": 4
-            },
-            {
-              "number": "6",
-              "payout": 210,
-              "popularity": 5
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "5-7",
-              "payout": 430,
-              "popularity": 2
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "5-10",
-              "payout": 430,
-              "popularity": 2
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "5-7",
-              "payout": 440,
-              "popularity": 1
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "5-10",
-              "payout": 580,
-              "popularity": 2
-            }
-          ],
-          "wide": [
-            {
-              "combination": "5-10",
-              "payout": 230,
-              "popularity": 2
-            },
-            {
-              "combination": "5-6",
-              "payout": 420,
-              "popularity": 4
-            },
-            {
-              "combination": "6-10",
-              "payout": 1310,
-              "popularity": 17
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "5-6-10",
-              "payout": 2230,
-              "popularity": 7
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "5-10-6",
-              "payout": 5490,
-              "popularity": 15
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 8,
-        "raceName": "Ｃ２(三)(四)",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 9,
-        "second": 8,
-        "third": 1,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "9",
-              "payout": 510,
-              "popularity": 2
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "9",
-              "payout": 140,
-              "popularity": 3
-            },
-            {
-              "number": "8",
-              "payout": 120,
-              "popularity": 2
-            },
-            {
-              "number": "1",
-              "payout": 100,
-              "popularity": 1
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "7-7",
-              "payout": 1090,
-              "popularity": 6
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "8-9",
-              "payout": 850,
-              "popularity": 4
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "7-7",
-              "payout": 1040,
-              "popularity": 5
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "9-8",
-              "payout": 1970,
-              "popularity": 8
-            }
-          ],
-          "wide": [
-            {
-              "combination": "8-9",
-              "payout": 290,
-              "popularity": 4
-            },
-            {
-              "combination": "1-9",
-              "payout": 180,
-              "popularity": 2
-            },
-            {
-              "combination": "1-8",
-              "payout": 170,
-              "popularity": 1
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "1-8-9",
-              "payout": 460,
-              "popularity": 1
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "9-8-1",
-              "payout": 4260,
-              "popularity": 12
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 9,
-        "raceName": "折鶴蘭（おりづるらん）賞 Ｃ１(三)",
-        "honmeiHit": false,
-        "umatanHit": true,
-        "sanrenpukuHit": false,
-        "winner": 3,
-        "second": 6,
-        "third": 7,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "3",
-              "payout": 1580,
-              "popularity": 5
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "3",
-              "payout": 200,
-              "popularity": 5
-            },
-            {
-              "number": "6",
-              "payout": 110,
-              "popularity": 1
-            },
-            {
-              "number": "7",
-              "payout": 140,
-              "popularity": 4
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "3-6",
-              "payout": 700,
-              "popularity": 4
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "3-6",
-              "payout": 660,
-              "popularity": 4
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "3-6",
-              "payout": 3630,
-              "popularity": 11
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "3-6",
-              "payout": 3890,
-              "popularity": 12
-            }
-          ],
-          "wide": [
-            {
-              "combination": "3-6",
-              "payout": 290,
-              "popularity": 4
-            },
-            {
-              "combination": "3-7",
-              "payout": 730,
-              "popularity": 10
-            },
-            {
-              "combination": "6-7",
-              "payout": 230,
-              "popularity": 3
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "3-6-7",
-              "payout": 1150,
-              "popularity": 6
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "3-6-7",
-              "payout": 14420,
-              "popularity": 50
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 10,
-        "raceName": "早花咲月（さはなさづき）特別 Ｂ３(一)(二)(三)",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 8,
-        "second": 4,
-        "third": 6,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "8",
-              "payout": 2700,
-              "popularity": 6
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "8",
-              "payout": 240,
-              "popularity": 6
-            },
-            {
-              "number": "4",
-              "payout": 190,
-              "popularity": 3
-            },
-            {
-              "number": "6",
-              "payout": 100,
-              "popularity": 1
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "4-6",
-              "payout": 8700,
-              "popularity": 15
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "4-8",
-              "payout": 7520,
-              "popularity": 12
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "6-4",
-              "payout": 26810,
-              "popularity": 34
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "8-4",
-              "payout": 30460,
-              "popularity": 37
-            }
-          ],
-          "wide": [
-            {
-              "combination": "4-8",
-              "payout": 1420,
-              "popularity": 16
-            },
-            {
-              "combination": "6-8",
-              "payout": 310,
-              "popularity": 5
-            },
-            {
-              "combination": "4-6",
-              "payout": 210,
-              "popularity": 1
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "4-6-8",
-              "payout": 1530,
-              "popularity": 5
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "8-4-6",
-              "payout": 51570,
-              "popularity": 117
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 11,
-        "raceName": "ブルートシュタインチャレンジ",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 13,
-        "second": 3,
-        "third": 9,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "13",
-              "payout": 3110,
-              "popularity": 9
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "13",
-              "payout": 820,
-              "popularity": 10
-            },
-            {
-              "number": "3",
-              "payout": 180,
-              "popularity": 2
-            },
-            {
-              "number": "9",
-              "payout": 1630,
-              "popularity": 11
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "3-8",
-              "payout": 2010,
-              "popularity": 9
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "3-13",
-              "payout": 5820,
-              "popularity": 18
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "8-3",
-              "payout": 4660,
-              "popularity": 21
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "13-3",
-              "payout": 13670,
-              "popularity": 49
-            }
-          ],
-          "wide": [
-            {
-              "combination": "3-13",
-              "payout": 2130,
-              "popularity": 28
-            },
-            {
-              "combination": "9-13",
-              "payout": 12660,
-              "popularity": 64
-            },
-            {
-              "combination": "3-9",
-              "payout": 4280,
-              "popularity": 40
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "3-9-13",
-              "payout": 70340,
-              "popularity": 150
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "13-3-9",
-              "payout": 533540,
-              "popularity": 901
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 12,
-        "raceName": "進撃（しんげき）賞 Ｃ１ 選定馬",
-        "honmeiHit": true,
-        "umatanHit": true,
-        "sanrenpukuHit": false,
-        "winner": 8,
-        "second": 5,
-        "third": 6,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "8",
-              "payout": 150,
-              "popularity": 1
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "8",
-              "payout": 100,
-              "popularity": 1
-            },
-            {
-              "number": "5",
-              "payout": 250,
-              "popularity": 4
-            },
-            {
-              "number": "6",
-              "payout": 300,
-              "popularity": 5
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "5-6",
-              "payout": 390,
-              "popularity": 2
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "5-8",
-              "payout": 800,
-              "popularity": 2
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "6-5",
-              "payout": 640,
-              "popularity": 2
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "8-5",
-              "payout": 1230,
-              "popularity": 3
-            }
-          ],
-          "wide": [
-            {
-              "combination": "5-8",
-              "payout": 340,
-              "popularity": 2
-            },
-            {
-              "combination": "6-8",
-              "payout": 650,
-              "popularity": 6
-            },
-            {
-              "combination": "5-6",
-              "payout": 2400,
-              "popularity": 23
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "5-6-8",
-              "payout": 3710,
-              "popularity": 12
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "8-5-6",
-              "payout": 11220,
-              "popularity": 33
-            }
-          ]
-        }
-      }
-    ]
-  },
-  {
-    "date": "2026-03-02",
-    "venue": "川崎",
-    "venues": [
-      "川崎"
-    ],
-    "hitRaces": 4,
-    "totalRaces": 12,
-    "hitRate": 33,
-    "umatanHitRaces": 3,
-    "umatanHitRate": 25,
-    "sanrenpukuHitRaces": 0,
-    "sanrenpukuHitRate": 0,
-    "betPointsPerRace": 10,
-    "betAmount": 12000,
-    "totalPayout": 4920,
-    "returnRate": 41,
-    "raceResults": [
-      {
-        "raceNumber": 1,
-        "raceName": "３歳(八)",
-        "honmeiHit": true,
-        "umatanHit": true,
-        "sanrenpukuHit": false,
-        "winner": 5,
-        "second": 1,
-        "third": 8,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "5",
-              "payout": 120,
-              "popularity": 1
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "5",
-              "payout": 100,
-              "popularity": 1
-            },
-            {
-              "number": "1",
-              "payout": 140,
-              "popularity": 3
-            },
-            {
-              "number": "8",
-              "payout": 360,
-              "popularity": 6
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "1-5",
-              "payout": 240,
-              "popularity": 2
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "1-5",
-              "payout": 230,
-              "popularity": 1
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "5-1",
-              "payout": 390,
-              "popularity": 2
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "5-1",
-              "payout": 330,
-              "popularity": 1
-            }
-          ],
-          "wide": [
-            {
-              "combination": "1-5",
-              "payout": 150,
-              "popularity": 1
-            },
-            {
-              "combination": "5-8",
-              "payout": 530,
-              "popularity": 7
-            },
-            {
-              "combination": "1-8",
-              "payout": 1000,
-              "popularity": 11
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "1-5-8",
-              "payout": 1590,
-              "popularity": 6
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "5-1-8",
-              "payout": 2620,
-              "popularity": 8
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 2,
-        "raceName": "３歳(七)",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 8,
-        "second": 4,
-        "third": 6,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "8",
-              "payout": 11380,
-              "popularity": 8
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "8",
-              "payout": 1200,
-              "popularity": 9
-            },
-            {
-              "number": "4",
-              "payout": 160,
-              "popularity": 2
-            },
-            {
-              "number": "6",
-              "payout": 320,
-              "popularity": 5
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "4-8",
-              "payout": 760,
-              "popularity": 5
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "4-8",
-              "payout": 8790,
-              "popularity": 19
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "8-4",
-              "payout": 1440,
-              "popularity": 8
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "8-4",
-              "payout": 25290,
-              "popularity": 43
-            }
-          ],
-          "wide": [
-            {
-              "combination": "4-8",
-              "payout": 2120,
-              "popularity": 20
-            },
-            {
-              "combination": "6-8",
-              "payout": 4660,
-              "popularity": 29
-            },
-            {
-              "combination": "4-6",
-              "payout": 580,
-              "popularity": 7
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "4-6-8",
-              "payout": 18680,
-              "popularity": 44
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "8-4-6",
-              "payout": 161120,
-              "popularity": 283
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 3,
-        "raceName": "ミーアキャット賞 Ｃ３ 選定馬",
-        "honmeiHit": true,
-        "umatanHit": true,
-        "sanrenpukuHit": false,
-        "winner": 7,
-        "second": 6,
-        "third": 5,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "7",
-              "payout": 250,
-              "popularity": 1
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "7",
-              "payout": 140,
-              "popularity": 2
-            },
-            {
-              "number": "6",
-              "payout": 430,
-              "popularity": 6
-            },
-            {
-              "number": "5",
-              "payout": 290,
-              "popularity": 5
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "6-7",
-              "payout": 2770,
-              "popularity": 10
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "6-7",
-              "payout": 2960,
-              "popularity": 9
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "7-6",
-              "payout": 4960,
-              "popularity": 17
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "7-6",
-              "payout": 4140,
-              "popularity": 14
-            }
-          ],
-          "wide": [
-            {
-              "combination": "6-7",
-              "payout": 950,
-              "popularity": 11
-            },
-            {
-              "combination": "5-7",
-              "payout": 700,
-              "popularity": 7
-            },
-            {
-              "combination": "5-6",
-              "payout": 3690,
-              "popularity": 24
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "5-6-7",
-              "payout": 8670,
-              "popularity": 29
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "7-6-5",
-              "payout": 35260,
-              "popularity": 125
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 4,
-        "raceName": "Ｃ２(一)(二)",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 5,
-        "second": 8,
-        "third": 6,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "5",
-              "payout": 330,
-              "popularity": 3
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "5",
-              "payout": 110,
-              "popularity": 2
-            },
-            {
-              "number": "8",
-              "payout": 110,
-              "popularity": 3
-            },
-            {
-              "number": "6",
-              "payout": 100,
-              "popularity": 1
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "5-7",
-              "payout": 300,
-              "popularity": 1
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "5-8",
-              "payout": 550,
-              "popularity": 3
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "5-7",
-              "payout": 770,
-              "popularity": 4
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "5-8",
-              "payout": 1370,
-              "popularity": 6
-            }
-          ],
-          "wide": [
-            {
-              "combination": "5-8",
-              "payout": 200,
-              "popularity": 3
-            },
-            {
-              "combination": "5-6",
-              "payout": 170,
-              "popularity": 1
-            },
-            {
-              "combination": "6-8",
-              "payout": 180,
-              "popularity": 2
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "5-6-8",
-              "payout": 470,
-              "popularity": 1
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "5-8-6",
-              "payout": 3650,
-              "popularity": 8
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 5,
-        "raceName": "Ｃ２(一)(二)",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 4,
-        "second": 8,
-        "third": 9,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "4",
-              "payout": 400,
-              "popularity": 2
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "4",
-              "payout": 140,
-              "popularity": 2
-            },
-            {
-              "number": "8",
-              "payout": 200,
-              "popularity": 3
-            },
-            {
-              "number": "9",
-              "payout": 400,
-              "popularity": 8
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "4-7",
-              "payout": 1280,
-              "popularity": 7
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "4-8",
-              "payout": 1050,
-              "popularity": 3
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "4-7",
-              "payout": 1880,
-              "popularity": 7
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "4-8",
-              "payout": 1870,
-              "popularity": 5
-            }
-          ],
-          "wide": [
-            {
-              "combination": "4-8",
-              "payout": 550,
-              "popularity": 7
-            },
-            {
-              "combination": "4-9",
-              "payout": 1010,
-              "popularity": 14
-            },
-            {
-              "combination": "8-9",
-              "payout": 1150,
-              "popularity": 17
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "4-8-9",
-              "payout": 8230,
-              "popularity": 30
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "4-8-9",
-              "payout": 40150,
-              "popularity": 158
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 6,
-        "raceName": "花天月地（かてんげっち）賞 ３歳 １１００Ｐ未満未格付選牝",
-        "honmeiHit": true,
-        "umatanHit": true,
-        "sanrenpukuHit": false,
-        "winner": 5,
-        "second": 8,
-        "third": 4,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "5",
-              "payout": 190,
-              "popularity": 1
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "5",
-              "payout": 100,
-              "popularity": 1
-            },
-            {
-              "number": "8",
-              "payout": 120,
-              "popularity": 2
-            },
-            {
-              "number": "4",
-              "payout": 220,
-              "popularity": 5
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "5-8",
-              "payout": 210,
-              "popularity": 1
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "5-8",
-              "payout": 450,
-              "popularity": 1
-            }
-          ],
-          "wide": [
-            {
-              "combination": "5-8",
-              "payout": 170,
-              "popularity": 1
-            },
-            {
-              "combination": "4-5",
-              "payout": 460,
-              "popularity": 8
-            },
-            {
-              "combination": "4-8",
-              "payout": 300,
-              "popularity": 4
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "4-5-8",
-              "payout": 740,
-              "popularity": 3
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "5-8-4",
-              "payout": 2300,
-              "popularity": 8
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 7,
-        "raceName": "メッシーナ賞 Ｃ１ 選定馬",
-        "honmeiHit": true,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 2,
-        "second": 3,
-        "third": 6,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "2",
-              "payout": 140,
-              "popularity": 1
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "2",
-              "payout": 100,
-              "popularity": 1
-            },
-            {
-              "number": "3",
-              "payout": 500,
-              "popularity": 6
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "2-3",
-              "payout": 1090,
-              "popularity": 5
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "2-3",
-              "payout": 1440,
-              "popularity": 6
-            }
-          ],
-          "wide": [
-            {
-              "combination": "2-3",
-              "payout": 390,
-              "popularity": 5
-            },
-            {
-              "combination": "2-6",
-              "payout": 330,
-              "popularity": 3
-            },
-            {
-              "combination": "3-6",
-              "payout": 2240,
-              "popularity": 15
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "2-3-6",
-              "payout": 3460,
-              "popularity": 11
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "2-3-6",
-              "payout": 9680,
-              "popularity": 29
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 8,
-        "raceName": "カラスミ賞 Ｃ２ 選定馬（上）",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 7,
-        "second": 4,
-        "third": 5,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "7",
-              "payout": 280,
-              "popularity": 2
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "7",
-              "payout": 140,
-              "popularity": 2
-            },
-            {
-              "number": "4",
-              "payout": 160,
-              "popularity": 3
-            },
-            {
-              "number": "5",
-              "payout": 240,
-              "popularity": 5
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "4-7",
-              "payout": 590,
-              "popularity": 3
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "4-7",
-              "payout": 750,
-              "popularity": 3
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "7-4",
-              "payout": 1130,
-              "popularity": 4
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "7-4",
-              "payout": 1140,
-              "popularity": 4
-            }
-          ],
-          "wide": [
-            {
-              "combination": "4-7",
-              "payout": 260,
-              "popularity": 3
-            },
-            {
-              "combination": "5-7",
-              "payout": 700,
-              "popularity": 9
-            },
-            {
-              "combination": "4-5",
-              "payout": 1140,
-              "popularity": 13
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "4-5-7",
-              "payout": 3960,
-              "popularity": 13
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "7-4-5",
-              "payout": 12760,
-              "popularity": 38
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 9,
-        "raceName": "天雷（てんらい）賞 Ｃ２ 選定馬",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 4,
-        "second": 5,
-        "third": 9,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "4",
-              "payout": 1250,
-              "popularity": 5
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "4",
-              "payout": 200,
-              "popularity": 5
-            },
-            {
-              "number": "5",
-              "payout": 110,
-              "popularity": 1
-            },
-            {
-              "number": "9",
-              "payout": 190,
-              "popularity": 4
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "4-5",
-              "payout": 520,
-              "popularity": 2
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "4-5",
-              "payout": 820,
-              "popularity": 4
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "4-5",
-              "payout": 2460,
-              "popularity": 10
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "4-5",
-              "payout": 2480,
-              "popularity": 9
-            }
-          ],
-          "wide": [
-            {
-              "combination": "4-5",
-              "payout": 280,
-              "popularity": 3
-            },
-            {
-              "combination": "4-9",
-              "payout": 1210,
-              "popularity": 14
-            },
-            {
-              "combination": "5-9",
-              "payout": 330,
-              "popularity": 4
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "4-5-9",
-              "payout": 1680,
-              "popularity": 6
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "4-5-9",
-              "payout": 14840,
-              "popularity": 49
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 10,
-        "raceName": "レコードな町にいかっぷ Ｂ２Ｂ３ 選定馬",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 2,
-        "second": 5,
-        "third": 9,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "2",
-              "payout": 1790,
-              "popularity": 6
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "2",
-              "payout": 350,
-              "popularity": 6
-            },
-            {
-              "number": "5",
-              "payout": 200,
-              "popularity": 5
-            },
-            {
-              "number": "9",
-              "payout": 170,
-              "popularity": 3
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "2-5",
-              "payout": 7510,
-              "popularity": 15
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "2-5",
-              "payout": 7410,
-              "popularity": 17
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "2-5",
-              "payout": 19640,
-              "popularity": 28
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "2-5",
-              "payout": 16000,
-              "popularity": 39
-            }
-          ],
-          "wide": [
-            {
-              "combination": "2-5",
-              "payout": 1690,
-              "popularity": 15
-            },
-            {
-              "combination": "2-9",
-              "payout": 1210,
-              "popularity": 14
-            },
-            {
-              "combination": "5-9",
-              "payout": 800,
-              "popularity": 11
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "2-5-9",
-              "payout": 9640,
-              "popularity": 30
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "2-5-9",
-              "payout": 127850,
-              "popularity": 273
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 11,
-        "raceName": "日吉（ひよし）オープン Ａ１(下) ４歳以上オープン",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 7,
-        "second": 1,
-        "third": 8,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "7",
-              "payout": 910,
-              "popularity": 5
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "7",
-              "payout": 210,
-              "popularity": 4
-            },
-            {
-              "number": "1",
-              "payout": 310,
-              "popularity": 6
-            },
-            {
-              "number": "8",
-              "payout": 110,
-              "popularity": 1
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "1-7",
-              "payout": 2660,
-              "popularity": 11
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "1-7",
-              "payout": 4230,
-              "popularity": 15
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "7-1",
-              "payout": 6730,
-              "popularity": 22
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "7-1",
-              "payout": 8630,
-              "popularity": 31
-            }
-          ],
-          "wide": [
-            {
-              "combination": "1-7",
-              "payout": 1270,
-              "popularity": 17
-            },
-            {
-              "combination": "7-8",
-              "payout": 330,
-              "popularity": 3
-            },
-            {
-              "combination": "1-8",
-              "payout": 500,
-              "popularity": 8
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "1-7-8",
-              "payout": 3190,
-              "popularity": 14
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "7-1-8",
-              "payout": 27790,
-              "popularity": 105
-            }
-          ]
-        }
-      },
-      {
-        "raceNumber": 12,
-        "raceName": "啓蟄（けいちつ）特別 Ｂ３(一)(二)(三)",
-        "honmeiHit": false,
-        "umatanHit": false,
-        "sanrenpukuHit": false,
-        "winner": 10,
-        "second": 5,
-        "third": 1,
-        "payouts": {
-          "tansho": [
-            {
-              "number": "10",
-              "payout": 310,
-              "popularity": 1
-            }
-          ],
-          "fukusho": [
-            {
-              "number": "10",
-              "payout": 150,
-              "popularity": 1
-            },
-            {
-              "number": "5",
-              "payout": 210,
-              "popularity": 6
-            },
-            {
-              "number": "1",
-              "payout": 300,
-              "popularity": 7
-            }
-          ],
-          "wakuren": [
-            {
-              "combination": "5-7",
-              "payout": 520,
-              "popularity": 1
-            }
-          ],
-          "umaren": [
-            {
-              "combination": "5-10",
-              "payout": 1240,
-              "popularity": 3
-            }
-          ],
-          "wakutan": [
-            {
-              "combination": "7-5",
-              "payout": 1020,
-              "popularity": 1
-            }
-          ],
-          "umatan": [
-            {
-              "combination": "10-5",
-              "payout": 2460,
-              "popularity": 6
-            }
-          ],
-          "wide": [
-            {
-              "combination": "5-10",
-              "payout": 460,
-              "popularity": 2
-            },
-            {
-              "combination": "1-10",
-              "payout": 690,
-              "popularity": 10
-            },
-            {
-              "combination": "1-5",
-              "payout": 990,
-              "popularity": 20
-            }
-          ],
-          "sanrenpuku": [
-            {
-              "combination": "1-5-10",
-              "payout": 3930,
-              "popularity": 15
-            }
-          ],
-          "sanrentan": [
-            {
-              "combination": "10-5-1",
-              "payout": 18340,
-              "popularity": 49
             }
           ]
         }
