@@ -246,4 +246,5 @@ jobs:
             echo "   Date: $DATE_SINGLE"
           else
             echo "   Date: $(TZ=Asia/Tokyo date +%Y-%m-%d) (today JST)"
+          fi
           echo "   Archive is up-to-date"
