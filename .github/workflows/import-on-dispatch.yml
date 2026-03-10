@@ -40,47 +40,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Import prediction from keiba-data-shared
+      - name: Sync and import predictions
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MANUAL_DATE: ${{ github.event.inputs.date }}
-          DATES_JSON: ${{ toJSON(github.event.client_payload.dates) }}
-          DATE_SINGLE: ${{ github.event.client_payload.date }}
-        run: |
-          # 優先順位: 手動入力 > repository_dispatch payload > 今日の日付
-          if [ -n "$MANUAL_DATE" ]; then
-            # 手動実行時の入力
-            echo "📅 Manual import for: $MANUAL_DATE"
-            npm run import:prediction -- --date "$MANUAL_DATE"
-          elif [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
-            # repository_dispatch（複数日付）
-            echo "📅 Importing predictions for multiple dates"
-            while IFS= read -r DATE; do
-              echo "━━━ Processing: $DATE ━━━"
-              npm run import:prediction -- --date "$DATE"
-            done < <(echo "$DATES_JSON" | jq -r '.[]')
-          elif [ -n "$DATE_SINGLE" ] && [ "$DATE_SINGLE" != "null" ]; then
-            # repository_dispatch（単一日付）
-            echo "📅 Importing prediction for single date: $DATE_SINGLE"
-            npm run import:prediction -- --date "$DATE_SINGLE"
-          else
-            # デフォルト：今日の日付（JST）
-            TODAY=$(TZ=Asia/Tokyo date +%Y-%m-%d)
-            echo "📅 Importing for today (JST): $TODAY"
-            npm run import:prediction -- --date "$TODAY"
-          fi
-
-      - name: Check for changes
-        id: git-check
-        run: |
-          # 変更をステージング（新規ファイル + 既存ファイルの変更）
-          git add src/data/predictions/
-          # ステージされた変更があるかチェック
-          git diff --staged --exit-code || echo "changed=true" >> $GITHUB_OUTPUT
-
-      - name: Commit and push changes
-        if: steps.git-check.outputs.changed == 'true'
-        env:
           MANUAL_DATE: ${{ github.event.inputs.date }}
           DATES_JSON: ${{ toJSON(github.event.client_payload.dates) }}
           DATE_SINGLE: ${{ github.event.client_payload.date }}
@@ -92,151 +54,104 @@ jobs:
           # コミットメッセージ生成
           if [ -n "$MANUAL_DATE" ]; then
             COMMIT_MSG="Auto-import: ${MANUAL_DATE} prediction (manual)"
+            DATE_DESC="$MANUAL_DATE (manual)"
           elif [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
             DATES=$(echo "$DATES_JSON" | jq -r 'join(", ")')
             COMMIT_MSG="Auto-import: ${DATES} prediction from ${SOURCE}"
+            DATE_DESC="$DATES from $SOURCE"
           elif [ -n "$DATE_SINGLE" ] && [ "$DATE_SINGLE" != "null" ]; then
             COMMIT_MSG="Auto-import: ${DATE_SINGLE} prediction from ${SOURCE}"
+            DATE_DESC="$DATE_SINGLE from $SOURCE"
           else
             TODAY=$(TZ=Asia/Tokyo date +%Y-%m-%d)
             COMMIT_MSG="Auto-import: ${TODAY} prediction (today JST)"
+            DATE_DESC="$TODAY (today JST)"
           fi
 
-          # 最初にコミット実行
-          git commit -m "$COMMIT_MSG"
-          echo "✅ Changes committed locally"
-
-          # Retry logic: rebase and push (最大5回リトライ)
-          MAX_RETRIES=5
+          # Retry logic: sync → generate → commit → push (最大3回リトライ)
+          MAX_RETRIES=3
           RETRY_COUNT=0
           SUCCESS=false
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" = false ]; do
-            echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Syncing with remote..."
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-            # 必ずクリーンな状態から開始（rebase/merge競合のクリーンアップ）
-            if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
-              echo "⚠️  Detected ongoing rebase, aborting..."
-              git rebase --abort || true
-            fi
-
-            if git ls-files -u | grep -q .; then
-              echo "⚠️  Detected unmerged files, resetting index..."
-              git reset --hard HEAD || true
-              git clean -fd || true
-            fi
-
-            # 最新状態を取得
+            # 1. 完全同期：origin/mainの最新状態にリセット
+            echo "📡 Step 1/5: Syncing to origin/main..."
             git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+            git clean -fd
+            echo "✅ Synced to latest origin/main ($(git rev-parse --short HEAD))"
 
-            # mainブランチにいることを確認
-            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-            if [ "$CURRENT_BRANCH" != "main" ]; then
-              echo "⚠️  Not on main branch (current: $CURRENT_BRANCH), checking out main..."
-              git checkout main
-            fi
-
-            # origin/mainに対してrebase（競合時は自動解決）
-            if git rebase origin/main; then
-              echo "✅ Successfully rebased onto origin/main"
+            # 2. 予想データ生成
+            echo ""
+            echo "📥 Step 2/5: Generating prediction data..."
+            if [ -n "$MANUAL_DATE" ]; then
+              npm run import:prediction -- --date "$MANUAL_DATE"
+            elif [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
+              while IFS= read -r DATE; do
+                echo "  ━━━ Processing: $DATE ━━━"
+                npm run import:prediction -- --date "$DATE"
+              done < <(echo "$DATES_JSON" | jq -r '.[]')
+            elif [ -n "$DATE_SINGLE" ] && [ "$DATE_SINGLE" != "null" ]; then
+              npm run import:prediction -- --date "$DATE_SINGLE"
             else
-              echo "⚠️  Rebase failed, attempting to resolve conflicts..."
+              TODAY=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+              npm run import:prediction -- --date "$TODAY"
+            fi
+            echo "✅ Prediction data generated"
 
-              # 競合ファイルをチェック
-              CONFLICT_FILES=$(git diff --name-only --diff-filter=U 2>/dev/null || echo "")
+            # 3. 差分チェック
+            echo ""
+            echo "🔍 Step 3/5: Checking for changes..."
+            git add src/data/predictions/
 
-              if [ -n "$CONFLICT_FILES" ]; then
-                echo "   Conflicted files: $CONFLICT_FILES"
-
-                # 予想データファイルの競合は自動解決（ours戦略: 新しく生成したデータを優先）
-                RESOLVED=false
-                for FILE in $CONFLICT_FILES; do
-                  if [[ "$FILE" == astro-site/src/data/predictions/* ]]; then
-                    echo "   Resolving $FILE (using ours strategy - newly generated data)"
-                    git checkout --ours "$FILE"
-                    git add "$FILE"
-                    RESOLVED=true
-                  fi
-                done
-
-                if [ "$RESOLVED" = true ]; then
-                  # rebase続行
-                  if git rebase --continue; then
-                    echo "✅ Conflicts resolved, rebase continued"
-                  else
-                    echo "❌ Failed to continue rebase, aborting and retrying..."
-                    git rebase --abort || true
-                    RETRY_COUNT=$((RETRY_COUNT + 1))
-                    sleep $((RETRY_COUNT * 2))
-                    continue
-                  fi
-                else
-                  echo "❌ No auto-resolvable conflicts found, aborting and retrying..."
-                  git rebase --abort || true
-                  RETRY_COUNT=$((RETRY_COUNT + 1))
-                  sleep $((RETRY_COUNT * 2))
-                  continue
-                fi
-              else
-                echo "❌ Rebase failed without conflicts, aborting and retrying..."
-                git rebase --abort || true
-                RETRY_COUNT=$((RETRY_COUNT + 1))
-                sleep $((RETRY_COUNT * 2))
-                continue
-              fi
+            if git diff --cached --quiet; then
+              echo "⏭️  No changes detected (already up-to-date)"
+              echo "   Date: $DATE_DESC"
+              SUCCESS=true
+              break
             fi
 
-            # プッシュ試行
+            CHANGED_FILES=$(git diff --cached --name-only | wc -l | tr -d ' ')
+            echo "✅ Found $CHANGED_FILES file(s) changed"
+
+            # 4. コミット
+            echo ""
+            echo "💾 Step 4/5: Committing changes..."
+            git commit -m "$COMMIT_MSG"
+            echo "✅ Changes committed"
+
+            # 5. プッシュ
+            echo ""
+            echo "📤 Step 5/5: Pushing to origin/main..."
             if git push origin main; then
               echo "✅ Successfully pushed changes"
+              echo ""
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "✅ Import completed successfully"
+              echo "   Date: $DATE_DESC"
+              echo "   Files changed: $CHANGED_FILES"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               SUCCESS=true
             else
-              echo "⚠️  Push failed, retrying..."
+              echo "⚠️  Push failed (likely due to new commits on remote)"
               RETRY_COUNT=$((RETRY_COUNT + 1))
-              sleep $((RETRY_COUNT * 2))
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "   Retrying from scratch (sync → generate → commit → push)..."
+                sleep 2
+              fi
             fi
           done
 
           if [ "$SUCCESS" = false ]; then
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "❌ Failed to push after $MAX_RETRIES attempts"
+            echo "   Date: $DATE_DESC"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             exit 1
-          fi
-
-      - name: Success notification
-        if: steps.git-check.outputs.changed == 'true'
-        env:
-          MANUAL_DATE: ${{ github.event.inputs.date }}
-          DATES_JSON: ${{ toJSON(github.event.client_payload.dates) }}
-          DATE_SINGLE: ${{ github.event.client_payload.date }}
-          SOURCE: ${{ github.event.client_payload.source }}
-        run: |
-          echo "✅ Import completed and pushed"
-          if [ -n "$MANUAL_DATE" ]; then
-            echo "   Date: $MANUAL_DATE (manual)"
-          elif [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
-            echo "   Dates: $(echo "$DATES_JSON" | jq -r 'join(", ")')"
-            echo "   Source: $SOURCE"
-          elif [ -n "$DATE_SINGLE" ] && [ "$DATE_SINGLE" != "null" ]; then
-            echo "   Date: $DATE_SINGLE"
-            echo "   Source: $SOURCE"
-          else
-            echo "   Date: $(TZ=Asia/Tokyo date +%Y-%m-%d) (today JST)"
-          fi
-
-      - name: No changes notification
-        if: steps.git-check.outputs.changed != 'true'
-        env:
-          MANUAL_DATE: ${{ github.event.inputs.date }}
-          DATES_JSON: ${{ toJSON(github.event.client_payload.dates) }}
-          DATE_SINGLE: ${{ github.event.client_payload.date }}
-        run: |
-          echo "⏭️  No changes detected (already up-to-date)"
-          if [ -n "$MANUAL_DATE" ]; then
-            echo "   Date: $MANUAL_DATE (manual)"
-          elif [ -n "$DATES_JSON" ] && [ "$DATES_JSON" != "null" ]; then
-            echo "   Dates: $(echo "$DATES_JSON" | jq -r 'join(", ")')"
-          elif [ -n "$DATE_SINGLE" ] && [ "$DATE_SINGLE" != "null" ]; then
-            echo "   Date: $DATE_SINGLE"
-          else
-            echo "   Date: $(TZ=Asia/Tokyo date +%Y-%m-%d) (today JST)"
           fi
