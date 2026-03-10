@@ -12,6 +12,7 @@
     "import:prediction:jra": "node scripts/importPredictionJra.js",
     "import:results": "node scripts/importResults.js",
     "import:results:jra": "node scripts/importResultsJra.js",
+    "rebuild:archive": "node scripts/rebuildArchive.js",
     "test:validation": "node scripts/utils/validatePrediction.test.js"
   },
   "dependencies": {

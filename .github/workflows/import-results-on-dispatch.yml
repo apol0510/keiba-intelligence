@@ -70,6 +70,11 @@ jobs:
             npm run import:results -- --date "$TODAY"
           fi
 
+      - name: Rebuild archive (auto-recovery)
+        run: |
+          echo "🔄 Rebuilding archive to ensure consistency..."
+          npm run rebuild:archive
+
       - name: Check for changes
         id: git-check
         run: |
