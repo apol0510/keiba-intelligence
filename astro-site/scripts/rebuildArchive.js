@@ -3,12 +3,22 @@
 /**
  * rebuildArchive.js
  *
- * src/data/predictions/ と src/data/results/ から
- * archiveResults.json を完全再生成する（idempotent）
+ * Archive自動復旧スクリプト（非破壊再計算 + 欠損復旧）
  *
  * 使い方:
  *   node scripts/rebuildArchive.js
  *   node scripts/rebuildArchive.js --dry-run  # テスト実行
+ *
+ * 動作方式:
+ *   - predictions/*.json を読み込み（ローカル）
+ *   - keiba-data-shared APIから結果データ取得（リモート）
+ *   - 既存archiveResults.jsonを保持しつつ更新（非破壊）
+ *   - 欠損データを自動検出・修復
+ *
+ * Source of Truth:
+ *   - predictions: ローカルrepo (src/data/predictions/)
+ *   - results: keiba-data-shared API (GitHub raw content)
+ *   - archive: 既存データ保持 + API更新による自己修復
  *
  * 目的:
  *   Import Results が1回失敗しても次回実行で archive を自動復旧
@@ -28,6 +38,36 @@ const projectRoot = join(__dirname, '..');
 // コマンドライン引数
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
+
+/**
+ * 数値サニタイズ（NaN/Infinity防止）
+ */
+function sanitizeNumber(value, fallback = 0) {
+  if (typeof value !== 'number' || !isFinite(value)) {
+    return fallback;
+  }
+  return value;
+}
+
+/**
+ * 統計データサニタイズ（archiveResults.json保存前処理）
+ */
+function sanitizeStats(stats) {
+  return {
+    ...stats,
+    hitRaces: sanitizeNumber(stats.hitRaces, 0),
+    totalRaces: sanitizeNumber(stats.totalRaces, 0),
+    hitRate: sanitizeNumber(stats.hitRate, 0),
+    umatanHitRaces: sanitizeNumber(stats.umatanHitRaces, 0),
+    umatanHitRate: sanitizeNumber(stats.umatanHitRate, 0),
+    sanrenpukuHitRaces: sanitizeNumber(stats.sanrenpukuHitRaces, 0),
+    sanrenpukuHitRate: sanitizeNumber(stats.sanrenpukuHitRate, 0),
+    betPointsPerRace: sanitizeNumber(stats.betPointsPerRace, 0),
+    betAmount: sanitizeNumber(stats.betAmount, 0),
+    totalPayout: sanitizeNumber(stats.totalPayout, 0),
+    returnRate: sanitizeNumber(stats.returnRate, 0)
+  };
+}
 
 /**
  * predictions ファイルを全て取得
@@ -166,12 +206,22 @@ function calculateStats(date, venue, raceResults, venues = []) {
     const raceBetAmount = 10 * 100; // 100円/点
     betAmount += raceBetAmount;
 
-    // 払戻計算
+    // 払戻計算（配列形式と単一オブジェクト形式の両方に対応）
     if (race.umatanHit && race.payouts?.umatan) {
-      totalPayout += race.payouts.umatan.payout;
+      const umatanPayout = Array.isArray(race.payouts.umatan)
+        ? race.payouts.umatan[0]?.payout
+        : race.payouts.umatan.payout;
+      if (typeof umatanPayout === 'number' && isFinite(umatanPayout)) {
+        totalPayout += umatanPayout;
+      }
     }
     if (race.sanrenpukuHit && race.payouts?.sanrenpuku) {
-      totalPayout += race.payouts.sanrenpuku.payout;
+      const sanrenpukuPayout = Array.isArray(race.payouts.sanrenpuku)
+        ? race.payouts.sanrenpuku[0]?.payout
+        : race.payouts.sanrenpuku.payout;
+      if (typeof sanrenpukuPayout === 'number' && isFinite(sanrenpukuPayout)) {
+        totalPayout += sanrenpukuPayout;
+      }
     }
   });
 
@@ -294,7 +344,15 @@ async function rebuildArchive() {
 
       // 統計計算
       const venue = venues[0] || '不明';
-      const stats = calculateStats(date, venue, raceResults, venues);
+      const rawStats = calculateStats(date, venue, raceResults, venues);
+
+      // サニタイズ（NaN/Infinity防止）
+      const stats = sanitizeStats(rawStats);
+
+      // NaN検出時の警告ログ
+      if (rawStats.returnRate !== stats.returnRate && !isFinite(rawStats.returnRate)) {
+        console.log(`   ⚠️  ${date}: returnRate was non-finite (${rawStats.returnRate}), normalized to ${stats.returnRate}%`);
+      }
 
       // 既存アーカイブに追加/更新
       if (archiveMap.has(date)) {
@@ -320,9 +378,9 @@ async function rebuildArchive() {
   console.log(`   Skipped: ${skippedDates} dates`);
   console.log(`   Preserved: ${archiveMap.size - processedDates} existing entries (not in predictions)\n`);
 
-  // 5. 保存（日付降順ソート）
+  // 5. 保存（日付降順ソート + 最終サニタイズ）
   console.log('💾 Step 5/5: Saving archive...');
-  const archive = Array.from(archiveMap.values());
+  const archive = Array.from(archiveMap.values()).map(sanitizeStats);
   archive.sort((a, b) => b.date.localeCompare(a.date));
 
   if (isDryRun) {
@@ -338,15 +396,15 @@ async function rebuildArchive() {
   console.log('✅ Archive Rebuild Completed');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-  // サマリー表示
+  // サマリー表示（サニタイズ済み）
   if (archive.length > 0) {
-    const totalHitRaces = archive.reduce((sum, entry) => sum + entry.hitRaces, 0);
-    const totalRaces = archive.reduce((sum, entry) => sum + entry.totalRaces, 0);
-    const totalBetAmount = archive.reduce((sum, entry) => sum + entry.betAmount, 0);
-    const totalPayout = archive.reduce((sum, entry) => sum + entry.totalPayout, 0);
+    const totalHitRaces = sanitizeNumber(archive.reduce((sum, entry) => sum + entry.hitRaces, 0), 0);
+    const totalRaces = sanitizeNumber(archive.reduce((sum, entry) => sum + entry.totalRaces, 0), 0);
+    const totalBetAmount = sanitizeNumber(archive.reduce((sum, entry) => sum + entry.betAmount, 0), 0);
+    const totalPayout = sanitizeNumber(archive.reduce((sum, entry) => sum + entry.totalPayout, 0), 0);
 
-    const overallHitRate = totalRaces > 0 ? Math.round((totalHitRaces / totalRaces) * 100) : 0;
-    const overallReturnRate = totalBetAmount > 0 ? Math.round((totalPayout / totalBetAmount) * 100) : 0;
+    const overallHitRate = totalRaces > 0 ? sanitizeNumber(Math.round((totalHitRaces / totalRaces) * 100), 0) : 0;
+    const overallReturnRate = totalBetAmount > 0 ? sanitizeNumber(Math.round((totalPayout / totalBetAmount) * 100), 0) : 0;
 
     console.log('📈 Overall Statistics:');
     console.log(`   Total Races: ${totalRaces}`);
@@ -354,7 +412,7 @@ async function rebuildArchive() {
     console.log(`   Return Rate: ${overallReturnRate}%`);
     console.log(`   Bet Amount: ${totalBetAmount.toLocaleString()}円`);
     console.log(`   Total Payout: ${totalPayout.toLocaleString()}円`);
-    const profit = totalPayout - totalBetAmount;
+    const profit = sanitizeNumber(totalPayout - totalBetAmount, 0);
     const profitSign = profit >= 0 ? '+' : '';
     console.log(`   Profit: ${profitSign}${profit.toLocaleString()}円\n`);
   }
