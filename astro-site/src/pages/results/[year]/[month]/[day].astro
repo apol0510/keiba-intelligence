@@ -133,13 +133,13 @@ const jsonLd = {
       </div>
       <div class="stat-card">
         <div class="stat-label">投資額</div>
-        <div class="stat-value">¥{entry.betAmount.toLocaleString()}</div>
+        <div class="stat-value">¥{(entry.betAmount || 0).toLocaleString()}</div>
         <div class="stat-detail">{entry.totalRaces}レース</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">払戻額</div>
-        <div class="stat-value">¥{entry.totalPayout.toLocaleString()}</div>
-        <div class="stat-detail">+¥{(entry.totalPayout - entry.betAmount).toLocaleString()}</div>
+        <div class="stat-value">¥{(entry.totalPayout || 0).toLocaleString()}</div>
+        <div class="stat-detail">+¥{((entry.totalPayout || 0) - (entry.betAmount || 0)).toLocaleString()}</div>
       </div>
     </section>
 
@@ -147,16 +147,16 @@ const jsonLd = {
     <section class="races-section">
       <h2>📋 全{entry.totalRaces}レース結果</h2>
 
-      {entry.races.map((race) => (
-        <div class={`race-card ${race.isHit ? 'hit' : 'miss'}`}>
+      {(entry.raceResults || entry.races || []).map((race) => (
+        <div class={`race-card ${race.honmeiHit || race.isHit ? 'hit' : 'miss'}`}>
           <div class="race-header">
             <div class="race-info">
               <span class="race-number">{race.raceNumber}R</span>
               <span class="race-name">{race.raceName}</span>
               {race.venue && <span class="race-venue">{race.venue}</span>}
             </div>
-            <div class={`race-result-badge ${race.isHit ? 'hit' : 'miss'}`}>
-              {race.isHit ? '✅ 的中' : '❌ 外れ'}
+            <div class={`race-result-badge ${race.honmeiHit || race.isHit ? 'hit' : 'miss'}`}>
+              {(race.honmeiHit || race.isHit) ? '✅ 的中' : '❌ 外れ'}
             </div>
           </div>
 
@@ -166,34 +166,43 @@ const jsonLd = {
               <h4>レース結果</h4>
               <div class="result-line">
                 <span class="position">1着</span>
-                <span class="horse">{race.result.first.number}番 {race.result.first.name}</span>
+                <span class="horse">{race.winner || race.result?.first?.number}番{race.result?.first?.name ? ` ${race.result.first.name}` : ''}</span>
               </div>
               <div class="result-line">
                 <span class="position">2着</span>
-                <span class="horse">{race.result.second.number}番 {race.result.second.name}</span>
+                <span class="horse">{race.second || race.result?.second?.number}番{race.result?.second?.name ? ` ${race.result.second.name}` : ''}</span>
               </div>
               <div class="result-line">
                 <span class="position">3着</span>
-                <span class="horse">{race.result.third.number}番 {race.result.third.name}</span>
+                <span class="horse">{race.third || race.result?.third?.number}番{race.result?.third?.name ? ` ${race.result.third.name}` : ''}</span>
               </div>
-              <div class="umatan-payout">
-                馬単 {race.umatan.combination} → <strong>¥{race.umatan.payout.toLocaleString()}</strong>
+              {(race.payouts?.umatan?.[0] || race.umatan) && (
+                <div class="umatan-payout">
+                  馬単 {race.payouts?.umatan?.[0]?.combination || race.umatan?.combination} → <strong>¥{(race.payouts?.umatan?.[0]?.payout || race.umatan?.payout || 0).toLocaleString()}</strong>
+                </div>
+              )}
+              <div class="hit-summary">
+                {race.honmeiHit && <span class="hit-badge">本命的中</span>}
+                {race.umatanHit && <span class="hit-badge">馬単的中</span>}
+                {race.sanrenpukuHit && <span class="hit-badge">3連複的中</span>}
               </div>
             </div>
 
-            <!-- 買い目 -->
-            <div class="betting-box">
-              <h4>AI予想買い目</h4>
-              {race.bettingLines.map((line, index) => (
-                <div class={`betting-line ${race.hitLines?.includes(line) ? 'hit-line' : ''}`}>
-                  {line}
-                  {race.hitLines?.includes(line) && <span class="hit-badge">的中</span>}
-                </div>
-              ))}
-              {race.bettingPoints && (
-                <div class="betting-points">買い目点数: {race.bettingPoints}点</div>
-              )}
-            </div>
+            {/* 買い目表示（データがある場合のみ） */}
+            {race.bettingLines && (
+              <div class="betting-box">
+                <h4>AI予想買い目</h4>
+                {race.bettingLines.map((line, index) => (
+                  <div class={`betting-line ${race.hitLines?.includes(line) ? 'hit-line' : ''}`}>
+                    {line}
+                    {race.hitLines?.includes(line) && <span class="hit-badge">的中</span>}
+                  </div>
+                ))}
+                {race.bettingPoints && (
+                  <div class="betting-points">買い目点数: {race.bettingPoints}点</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       ))}
