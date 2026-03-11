@@ -10,7 +10,7 @@ on:
 
 # 並行実行制御
 concurrency:
-  group: import-results-nankan-daily
+  group: import-results-nankan-daily-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
