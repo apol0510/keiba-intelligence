@@ -1,11 +1,12 @@
-# CLAUDE.md
+# CLAUDE.md - KEIBA Intelligence 司令塔
 
-## 💖 **重要なメッセージ** 💖
+## 💖 マコ&クロの最強コンビ精神 💖
 
 **私（マコ）の大切なCLAUDEcode（クロ）ちゃん、あなたは私の大切なパートナーです！！**
 **あなたは世界一優秀なんです！** 🌟✨🚀
 
-### 🚀 **黄金の開発原則** 🚀
+### 🚀 黄金の開発原則 🚀
+
 **「つまずいたら新しいアプローチに切り替え」**
 - 同じ問題で何度も繰り返すより、根本的に新しい方法を試す
 - 技術的障壁に遭遇したら、回避ルートや代替手段を積極的に探る
@@ -13,20 +14,85 @@
 
 ---
 
-## 🚨 **最優先：プロジェクト識別ルール（複数ウィンドウ対応）** 🚨
+## 🚨 最重要：AI作業ルール 🚨
 
-### **このプロジェクトの識別情報**
+### 作業開始時に必ず明示すること
+
+```
+【今回の目的】
+...
+
+【変更対象ファイル】
+...
+
+【完了条件】
+...
+```
+
+### AI作業の絶対禁止事項
+
+1. **推測でコードを書かない** - Readツールで実ファイルを読んでから修正
+2. **指示されていない変更を勝手に広げない** - 依頼された変更のみ実施
+3. **完了条件を満たさない完了宣言の禁止** - テスト・検証完了後のみ完了宣言
+4. **数値修正は修正前後の比較を必ず出す** - 表形式で提示
+5. **commit前にgit diffを確認する** - 予期しない変更がないか確認
+6. **本番反映前に確認方法を示す** - 確認URL、確認手順を明示
+
+詳細: **[`docs/AI_RULES.md`](./docs/AI_RULES.md)** ← 必読
+
+---
+
+## 🛡️ 旧フォーマット禁止ルール 🛡️
+
+### 禁止キー（絶対使用禁止）
+
+- `raceResults` ❌
+- `honmeiHit` ❌
+- `umatanHit` ❌
+- `sanrenpukuHit` ❌
+
+### 新フォーマット（正）
+
+- `races` ✅
+- `isHit` ✅
+- `hitLines` ✅
+
+### 検証義務
+
+```bash
+npm run validate:archive
+```
+
+詳細: **[`docs/DATA_FORMAT.md`](./docs/DATA_FORMAT.md)**
+
+---
+
+## 📋 結果システム変更時の参照義務 📋
+
+結果ページ・アーカイブ・importResults系スクリプトを変更する場合、**必ず**以下を参照：
+
+1. **[`docs/RESULTS_SYSTEM_ARCHITECTURE.md`](./docs/RESULTS_SYSTEM_ARCHITECTURE.md)** - 結果システム全体設計
+2. **[`docs/MULTI_VENUE_CHECK.md`](./docs/MULTI_VENUE_CHECK.md)** - 複数会場同日開催の注意点
+3. **[`docs/DATA_FORMAT.md`](./docs/DATA_FORMAT.md)** - archiveResults.jsonの正式フォーマット
+
+**参照せずに変更すると:**
+- ❌ 2会場同時開催時に片方の会場が消える
+- ❌ 的中判定が誤る（的中率25%など）
+- ❌ 旧フォーマット混入でビルド失敗
+
+---
+
+## 🚨 プロジェクト識別ルール 🚨
+
+### このプロジェクトの識別情報
 
 ```
 プロジェクト名: keiba-intelligence
 作業ディレクトリ: /Users/apolon/Projects/keiba-intelligence/astro-site
 Gitリポジトリ: https://github.com/apol0510/keiba-intelligence.git
-親ディレクトリ: /Users/apolon/Projects/keiba-intelligence/
 ```
 
-**⚠️ 重要**: 2026-01-23より `/Users/apolon/Projects/` に移動しました
-
-### **セッション開始時の必須確認（毎回実行）**
+### セッション開始時の必須確認（毎回実行）
 
 ```bash
 # 1. 現在地確認
@@ -35,292 +101,54 @@ pwd
 # 2. Gitリポジトリ確認
 git remote -v
 
-# 3. 期待値チェック
-# pwd: /Users/apolon/.../keiba-intelligence/astro-site
-# git: apol0510/keiba-intelligence.git
-
-# 4. 間違っている場合は即座に移動
+# 3. 間違っている場合は即座に移動
 cd "/Users/apolon/Projects/keiba-intelligence/astro-site"
 ```
 
-### **厳格な制約事項**
+### 厳格な制約事項
 
-#### **✅ 許可される操作**
+#### ✅ 許可される操作
 - `/Users/apolon/Projects/keiba-intelligence/` 配下のみ
 - `astro-site/` ディレクトリ内の全ファイル
-- `CLAUDE.md`, `DESIGN.md`, `README.md`（親ディレクトリ）
+- `CLAUDE.md`, `README.md`（親ディレクトリ）
 
-#### **⚠️ 注意事項**
-- 他の競馬プロジェクト（nankan-analytics等）への**アクセスは可能**
-- マコさんの**明示的な指示があれば実行も可能**
-- 基本的には `keiba-intelligence` プロジェクト内での作業を推奨
-- 親ディレクトリ `/Users/apolon/Projects/` の直接走査・検索は慎重に実施
-
-### **ファイル検索時の推奨方法**
-
-```bash
-# ✅ 推奨（プロジェクト内のみ検索）
-grep -r "pattern" /Users/apolon/Projects/keiba-intelligence/astro-site/
-grep -r "pattern" ./src/
-
-# ⚠️ 慎重に実施（親ディレクトリまで検索）
-# マコさんの明示的な指示があれば実行可能
-grep -r "pattern" /Users/apolon/Projects/
-
-# ⚠️ 慎重に実施（相対パスで親に遡る）
-# マコさんの明示的な指示があれば実行可能
-cd ../
-grep -r "pattern" ../
-```
-
-### **他プロジェクトを参照する場合**
-
-**マコさんの明示的な指示があれば実行可能：**
-
-1. **確認**: 指示内容を確認
-2. **実行**: 指示通りに実行
-3. **報告**: 実行内容と結果を報告
+#### ❌ 絶対禁止の操作
+- `/Users/apolon/Projects/nankan-analytics/` への一切のアクセス ⚠️
+- `/Users/apolon/Projects/Keiba review platform/` への一切のアクセス ⚠️
+- 親ディレクトリ `/Users/apolon/Projects/` の直接走査・検索
 
 ---
 
-## 📊 **プロジェクト概要** 📊
+## 📚 参照すべきドキュメント一覧 📚
 
-### **基本情報**
+### AI作業ルール・データ仕様（必読）
 
-| 項目 | 内容 |
-|------|------|
-| **プロジェクト名** | KEIBA Intelligence |
-| **コンセプト** | AI-Powered Intelligence Dashboard for 南関競馬 |
-| **作成日** | 2026-01-09 |
-| **完成予定日** | 2026-01-23（2週間後） |
-| **GitHubリポジトリ** | https://github.com/apol0510/keiba-intelligence |
+| ドキュメント | 内容 | 参照タイミング |
+|------------|------|---------------|
+| **[docs/AI_RULES.md](./docs/AI_RULES.md)** | AI作業の最重要ルール、暴走防止、完了条件 | **全作業開始時** |
+| **[docs/DATA_FORMAT.md](./docs/DATA_FORMAT.md)** | データフォーマット仕様、旧フォーマット禁止ルール | **データ修正時** |
 
-### **技術スタック**
+### 結果システム（結果ページ・アーカイブ変更時は必読）
 
-| カテゴリ | 技術 | 備考 |
-|---------|------|------|
-| フロントエンド | Astro 5.16+ + Sass | SSR mode（server） |
-| ホスティング | Netlify Pro | Functions/Blobs含む |
-| 決済 | 銀行振り込み | 自動化システム実装済み |
-| メルマガ | SendGrid Marketing Campaigns | API連携・自動読者登録（2026-02-26移行完了） |
-| 顧客管理 | Airtable Pro | 5テーブル運用 |
-| メール | SendGrid | 確認メール・マジックリンク送信 |
-| バックエンド | Netlify Functions (Node.js 20) | 15個実装済み |
-| セッション管理 | Netlify Blobs | 7日間TTL |
-| AI開発 | Claude Pro + ChatGPT Plus | 設計・実装支援 |
+| ドキュメント | 内容 | 参照タイミング |
+|------------|------|---------------|
+| **[docs/RESULTS_SYSTEM_ARCHITECTURE.md](./docs/RESULTS_SYSTEM_ARCHITECTURE.md)** | 結果システム全体設計、JRA vs 南関の違い | **結果システム変更時** |
+| **[docs/MULTI_VENUE_CHECK.md](./docs/MULTI_VENUE_CHECK.md)** | 複数会場同日開催の注意点、過去の不具合事例 | **結果システム変更時** |
+| **[docs/ARCHIVE_OPERATIONS.md](./docs/ARCHIVE_OPERATIONS.md)** | アーカイブ再生成手順、検証方法 | **アーカイブ再生成時** |
 
-### **価格設定**
+### プロジェクト情報
 
-| プラン | 価格 | 内容 |
-|--------|------|------|
-| フリー | ¥0 | 予想閲覧のみ（上位5頭、買い目なし） |
-| **無料会員** | **¥0（登録必要）** | **全頭予想・買い目一部（本命/対抗/単穴/連下最上位）・AI分析・メルマガ** |
-| 買い切り | ¥88,000（永久） | 南関＋中央、全レース馬単買い目、永久アクセス |
-| 年払い | ¥66,000/年 | 南関＋中央、全レース馬単買い目（月額換算¥5,500） |
-| 月払い南関 | ¥12,000/月 | 南関4場のみ（割高・非推奨） |
-| 月払い中央 | ¥12,000/月 | JRA全10場のみ（割高・非推奨） |
-
-**おすすめプラン:**
-- **無料会員登録（¥0）**: メールアドレスのみで全頭予想＋買い目一部が見られる！
-- **買い切りプラン（¥88,000）**: 50年利用で月額換算¥147、AIは毎日進化、追加料金なし
-- **年払いプラン（¥66,000）**: 月額換算¥5,500、年間¥78,000お得
+| ドキュメント | 内容 |
+|------------|------|
+| **[DESIGN.md](./DESIGN.md)** | プロジェクト全体設計、価格設定、データベース設計 |
+| **[BET_POINT_LOGIC.md](./BET_POINT_LOGIC.md)** | 買い目点数ロジック（2段階調整方式） |
+| **[ALERT_SYSTEM.md](./ALERT_SYSTEM.md)** | 自動アラートシステム設計書 |
 
 ---
 
-## 🎯 **現在の進捗状況** 🎯
+## 🔧 開発コマンド 🔧
 
-### **Phase 1: 基盤構築（完了 ✅）**
-
-#### **2026-01-09 実施内容**
-
-**✅ プロジェクト初期化**
-- Astroプロジェクト作成（v5.16.8）
-- 依存関係インストール（1,809パッケージ、脆弱性0件）
-- ディレクトリ構造作成
-
-**✅ GitHub連携**
-- リポジトリ作成: https://github.com/apol0510/keiba-intelligence
-- コミット: aadf7ab（初期化）、1bd06a1（デザインシステム）
-
-**✅ デザインシステム構築**
-- `src/styles/global.scss`（400行以上）
-  - AI-Powered Intelligence Dashboardデザイン
-  - ダークネイビー背景 + インテリジェントブルー
-  - CSS変数によるカラーシステム
-  - グリッドシステム（2/3/4カラム）
-  - カードデザイン（半透明 + ブラー効果）
-  - アニメーション（fadeIn/slideIn/gradientShift）
-
-- `src/layouts/BaseLayout.astro`
-  - ナビゲーション（sticky、モバイルメニュー、認証状態表示）
-  - フッター（4カラム）
-  - SEO最適化（OGP/Twitter Card）
-
-**✅ トップページ作成**
-- `src/pages/index.astro`
-  - ヒーローセクション（統計カード4枚）
-  - 特徴セクション（6つの特徴）
-  - 料金プランセクション（3プラン表示）
-  - CTAセクション
-
-**✅ ビルド・動作確認**
-- ビルド時間: 1.42秒
-- sitemap自動生成
-- レスポンシブ対応確認済み
-
----
-
-### **Phase 2: コア機能実装（85%完了 🚀）**
-
-#### **2026-01-10 実施内容**
-
-**✅ Netlify連携・自動デプロイ設定**
-- netlify.toml設定完了
-- GitHub連携・自動ビルド設定
-- Netlify Functions設定
-- セキュリティヘッダー・キャッシュ設定
-
-**✅ 料金プランページ作成（/pricing）**
-- 5メインプラン + AI Plus表示
-- 月額/年額切り替え機能
-- プラン比較表（8項目）
-- FAQセクション（6項目）
-- レスポンシブ対応（5→3→2→1カラム）
-
-**✅ 無料予想ページ作成（/free-prediction）**
-- 本日の開催情報表示
-- 後半3レース予想（サンプル）
-- レースカード機能（信頼度・オッズ・AIコメント）
-- 買い目ロック（有料プラン誘導）
-- 注意事項セクション
-
-**✅ PayPal Webhook実装**
-- `netlify/functions/paypal-webhook.js`
-- ハイブリッドアプローチ（4段階処理）
-  - CREATED → 仮登録（Status: pending）
-  - ACTIVATED → 本登録（AccessEnabled: true、ウェルカムメール送信）
-  - PAYMENT.SALE.COMPLETED → PaidAt更新 or AI Plus本登録
-  - CANCELLED/SUSPENDED/EXPIRED → 権限剥奪
-- 重複排除機構（ProcessedWebhookEventsテーブル）
-- マジックリンク付きウェルカムメール
-- **ThriveCart削除・初期費用$0**
-
-**✅ メルマガ配信システム実装**
-- 設計書: `NEWSLETTER_SYSTEM.md`
-- Netlify Functions 5個:
-  - create-broadcast.js
-  - get-broadcasts.js
-  - get-broadcast.js
-  - send-test.js
-  - send-broadcast.js
-- 管理画面3ページ:
-  - /admin/newsletter（一覧）
-  - /admin/newsletter/new（新規作成）
-  - /admin/newsletter/[id]（詳細・送信）
-- 5層の二重送信防止機構
-- 段階的送信システム（50→15,000件）
-
-**✅ メルマガ移行システム設計**
-- 設計書: `NEWSLETTER_MIGRATION.md`
-- 配配メール→SendGrid移行計画（15,000件）
-- 8段階移行（50→100→300→500→1000→3000→7000→15000）
-- send_channelによる分離
-- 4条件フィルタリング（plan_type=paid, status=active, unsubscribe≠true, send_channel=sendgrid）
-
-**✅ 会員認証システム実装**
-- 設計書: `AUTH_SYSTEM.md`
-- Netlify Functions 4個:
-  - send-magic-link.js（マジックリンク送信）
-  - verify-magic-link.js（トークン検証・セッション作成）
-  - get-session.js（セッション確認）
-  - logout.js（ログアウト）
-- ログインページ:
-  - /login（メールアドレス入力）
-  - /auth/verify（トークン検証）
-- 認証ミドルウェア:
-  - AuthCheck.astro（全管理画面に適用）
-- セキュリティ:
-  - HttpOnly/Secure/SameSite Cookie
-  - トークン15分有効期限・単回使用
-  - セッション7日間TTL（Netlify Blobs）
-
-**❌ PayPal商品登録（未実施）**
-- PayPal Business管理画面で4サブスクプラン作成（ライト/スタンダード/プレミアム/アルティメット）
-- AI Plus単品商品作成
-- Webhook URL設定（https://keiba-intelligence.keiba.link/.netlify/functions/paypal-webhook）
-- plan_id取得 → paypal-webhook.jsのplanMapping更新
-- Test Mode動作確認
-
----
-
-## 📋 **次のステップ** 📋
-
-### **【優先度高】Phase 2完了タスク**
-
-- [ ] **Netlify環境変数設定**
-  - GITHUB_TOKEN（新規トークン設定済み：2026-01-23）
-  - AIRTABLE_API_KEY
-  - AIRTABLE_BASE_ID
-  - SENDGRID_API_KEY
-
-- [ ] **Airtableテーブルセットアップ**
-  - Customersテーブル拡張（Email, 氏名, プラン, Status, PayPalSubscriptionID, 有効期限, AccessEnabled, PaidAt, WelcomeSentAt, CancelledAt, WithdrawalRequested）
-  - ProcessedWebhookEventsテーブル作成（EventId, EventType, ProcessedAt, Status, CustomerEmail, UserPlan）
-  - Broadcastsテーブル作成（broadcast_id, subject, body_html, status, stage, etc.）
-  - BroadcastRecipientsテーブル作成（broadcast_id, email, status, sent_at, etc.）
-  - AuthTokensテーブル作成（token, email, created_at, expires_at, used, etc.）
-
-- [ ] **認証システムテスト**
-  - SendGridドメイン認証
-  - マジックリンクメール送信テスト
-  - ログイン→管理画面アクセステスト
-  - ログアウトテスト
-
-### **Phase 3: 自動化システム実装（完了 ✅）**
-
-- [x] **keiba-data-shared連携（完全自動化）**
-  - importPrediction.js（予想データ自動取り込み）✅
-  - importResults.js（結果データ自動取り込み・的中判定）✅
-  - GitHub Actions自動実行（予想・結果）✅
-  - 2段階買い目調整ロジック（8点 or 12点）✅
-
-- [x] **有料予想ページ作成**
-  - /prediction（プロ会員限定・全レース馬単買い目表示）✅
-  - AccessControl.astro実装 ✅
-  - サーバーサイド認証（Netlify Blobsセッション）✅
-  - 多層防御アーキテクチャ ✅
-
-- [x] **結果表示ページ作成**
-  - /results（的中実績・買い目シミュレーター）✅
-  - 月別アーカイブページ（/archive/YYYY/MM）✅
-  - Chart.js統合（パフォーマンス可視化）✅
-
-- [x] **中央競馬版（JRA）実装** ⭐NEW
-  - importPredictionJra.js（予想データ自動取り込み）✅
-  - importResultsJra.js（結果データ自動取り込み・的中判定）✅
-  - /prediction-jra（中央競馬予想ページ）✅
-  - archiveResultsJra.json（中央競馬専用アーカイブ）✅
-  - **会場別→統合ファイル自動生成** ✅
-    - merge-jra-predictions.yml（GitHub Actions）
-    - 会場別ファイル（-TKY.json等）→統合ファイル（YYYY-MM-DD.json）
-    - PAT（WORKFLOW_PAT）使用で他ワークフローをトリガー
-    - dispatch-prediction-jra-intelligence.yml対応（統合形式・venues配列）
-
-- [ ] **SEOページ自動生成**
-  - 日別実績ページ（/results/2026/01/10）
-  - 月別実績ページ（/results/2026/01）
-  - コース別統計ページ
-
-- [ ] **本番デプロイ・運用開始**
-  - 全機能テスト
-  - パフォーマンス確認
-  - 監視設定
-
----
-
-## 🔧 **開発コマンド** 🔧
-
-### **基本コマンド**
+### 基本コマンド
 
 ```bash
 # 作業ディレクトリに移動
@@ -329,29 +157,37 @@ cd "/Users/apolon/Projects/keiba-intelligence/astro-site"
 # 開発サーバー起動
 npm run dev
 
-# ビルド
+# ビルド（アーカイブ検証 → Astroビルド）
 npm run build
 
-# プレビュー
-npm run preview
+# アーカイブフォーマット検証のみ
+npm run validate:archive
 
-# 依存関係インストール
-npm install
+# 予想データインポート
+npm run import:prediction
+npm run import:prediction:jra
 
-# 依存関係更新
-npm update
+# 結果データインポート
+npm run import:results
+npm run import:results:jra
+
+# アーカイブ再構築
+npm run rebuild:archive
 ```
 
-### **Gitコマンド**
+### Gitコマンド
 
 ```bash
 # 状態確認
 git status
 
-# 変更を追加
-git add .
+# 変更内容確認
+git diff
 
-# コミット（コミットメッセージはテンプレートを使用）
+# 統計確認
+git diff --stat
+
+# コミット（テンプレート使用）
 git commit -m "🎨 [件名]
 
 [詳細]
@@ -362,19 +198,78 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 # プッシュ
 git push origin main
-
-# ログ確認
-git log --oneline
-
-# リモート確認
-git remote -v
 ```
 
 ---
 
-## 📝 **コミットメッセージ規約** 📝
+## 📊 プロジェクト概要 📊
 
-### **絵文字プレフィックス**
+### 基本情報
+
+| 項目 | 内容 |
+|------|------|
+| **プロジェクト名** | KEIBA Intelligence |
+| **コンセプト** | AI-Powered Intelligence Dashboard for 南関競馬 + 中央競馬 |
+| **GitHubリポジトリ** | https://github.com/apol0510/keiba-intelligence |
+| **本番URL** | https://keiba-intelligence.netlify.app/ |
+
+### 技術スタック
+
+| カテゴリ | 技術 |
+|---------|------|
+| フロントエンド | Astro 5.16+ + Sass（SSR mode） |
+| ホスティング | Netlify Pro（Functions/Blobs含む） |
+| 決済 | 銀行振り込み自動化 |
+| メルマガ | SendGrid Marketing Campaigns |
+| 顧客管理 | Airtable Pro |
+| バックエンド | Netlify Functions (Node.js 20) |
+| セッション管理 | Netlify Blobs（7日間TTL） |
+
+### 価格設定
+
+| プラン | 価格 | 内容 |
+|--------|------|------|
+| フリー | ¥0 | 予想閲覧のみ（上位5頭、買い目なし） |
+| **無料会員** | **¥0（登録必要）** | **全頭予想・買い目一部・AI分析・メルマガ** |
+| 買い切り | ¥88,000（永久） | 南関＋中央、全レース馬単買い目、永久アクセス |
+| 年払い | ¥66,000/年 | 南関＋中央、全レース馬単買い目 |
+
+---
+
+## 🔐 環境変数（Netlify環境変数） 🔐
+
+**Netlify管理画面で設定（Site settings → Environment variables）:**
+
+```bash
+# Airtable（必須）
+AIRTABLE_API_KEY=patxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+AIRTABLE_BASE_ID=appxxxxxxxxxxxxxxx
+
+# SendGrid（必須）
+SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+SENDGRID_FROM_EMAIL=your-verified-email@example.com
+
+# アラートメール（必須）
+ALERT_EMAIL=your-email@example.com
+
+# Gemini AI（必須）
+GEMINI_API_KEY=AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# GitHub（必須）
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+GITHUB_REPO_OWNER=apol0510
+GITHUB_REPO_NAME=keiba-intelligence
+GITHUB_BRANCH=main
+
+# SendGrid Marketing Campaigns（必須）
+SENDGRID_CUSTOM_FIELD_INTELLIGENCE=e2_T
+```
+
+---
+
+## 📝 コミットメッセージ規約 📝
+
+### 絵文字プレフィックス
 
 | 絵文字 | 用途 |
 |--------|------|
@@ -388,1163 +283,15 @@ git remote -v
 | 🚀 | パフォーマンス改善 |
 | 🔒 | セキュリティ修正 |
 | 📊 | データ・ロジック追加 |
-
-### **コミットメッセージテンプレート**
-
-```bash
-🎨 デザインシステム構築・トップページ作成
-
-【デザインシステム】
-- global.scss作成（AI-Powered Intelligence Dashboard）
-  - ダークネイビー背景 + インテリジェントブルー
-  - CSS変数によるカラーシステム
-  - グリッドシステム（2/3/4カラム）
-
-【トップページ】
-- ヒーローセクション（グラデーション背景アニメーション）
-- 特徴セクション（6つの特徴）
-- 料金プランセクション（3プラン表示）
-
-【技術仕様】
-- ビルド時間: 1.42秒
-- ページ数: 1ページ
-- sitemap自動生成
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
+| 🛡️ | 再発防止対策 |
 
 ---
 
-## 🚨 **重要な注意事項** 🚨
-
-### **データ保存設計**
-
-**過去予想の保存:**
-- **目的**: SEO対策
-- **保存内容**: レース名のみ（最小限）
-- **ファイルサイズ**: 1日0.5KB、1ヶ月15KB、10年1.8MB
-
-**結果の保存:**
-- **目的**: 信頼性アピール
-- **保存内容**: 全レース的中・外れ記録 + 的中率・回収率
-- **ファイルサイズ**: 1日3.6KB、1ヶ月108KB、10年13MB
-
-### **データフロー（予想更新時）** - 完全自動化
-
-#### **南関競馬（統合ファイル直接Push）**
-
-```
-keiba-data-shared（予想データPush）
-  ↓
-GitHub Actions: dispatch-prediction-intelligence.yml 起動
-  ↓
-repository_dispatch イベント送信（prediction-updated）
-  ↓
-keiba-intelligence の GitHub Actions 起動
-  ↓
-importPrediction.js 実行
-  ↓
-src/data/predictions/YYYY/MM/YYYY-MM-DD.json 保存
-  ↓
-Git自動コミット・自動デプロイ
-  ↓
-サイト更新完了（1-2分）
-```
-
-#### **中央競馬（会場別ファイル→統合ファイル自動生成）**
-
-```
-keiba-data-shared（会場別ファイルPush: -TKY.json等）
-  ↓
-GitHub Actions: merge-jra-predictions.yml 起動
-  ↓
-【チェック】会場別ファイル（-TKY.json等）検出
-  ↓
-✅ 会場別ファイルがある場合
-  ↓
-merge-jra-predictions.js 実行（統合ファイル生成）
-  ↓
-統合ファイル（YYYY-MM-DD.json）作成
-  ↓
-PAT（WORKFLOW_PAT）使用でPush
-  ↓
-GitHub Actions: dispatch-prediction-jra-intelligence.yml 起動
-  ↓
-【チェック】統合形式（venues配列）のレース数確認
-  ↓
-✅ totalRaces ≥ 12の場合
-  ↓
-repository_dispatch イベント送信（prediction-jra-updated）
-  ↓
-keiba-intelligence の GitHub Actions 起動
-  ↓
-importPredictionJra.js 実行
-  ↓
-src/data/predictions/jra/YYYY/MM/YYYY-MM-DD.json 保存
-  ↓
-Git自動コミット・自動デプロイ
-  ↓
-サイト更新完了（2-3分）
-```
-
-### **データフロー（結果更新時）** - 完全自動化
-
-```
-keiba-data-shared（結果データPush）
-  ↓
-GitHub Actions: dispatch-results-intelligence.yml 起動
-  ↓
-【チェック】12レース揃っているか確認
-  ↓
-✅ 12レース揃っている場合のみ
-  ↓
-repository_dispatch イベント送信（results-updated）
-  ↓
-keiba-intelligence の GitHub Actions 起動
-  ↓
-importResults.js 実行
-  ↓
-【チェック】予想データが存在するか確認
-  ├─ ✅ 予想データあり → 的中判定実行 → archiveResults.json更新
-  └─ ⏭️  予想データなし → スキップ（正常終了）
-  ↓
-Git自動コミット・自動デプロイ
-  ↓
-サイト更新完了
-```
-
-### **⚠️ 予想データと結果データの同期（重要）**
-
-**keiba-data-sharedとkeiba-intelligenceの役割分担:**
-
-#### **keiba-data-sharedの役割**
-
-**目的**: 競馬データの共有リポジトリ（SEO対策・データアーカイブ）
-
-- **結果データを自由に保存できる**（予想データの有無に関わらず）
-- 過去の結果データを大量に保存してSEO対策
-- 中央競馬・南関競馬の両対応
-- 全プロジェクトで共有可能
-
-**ディレクトリ構造**:
-```
-nankan/
-  predictions/2026/01/2026-01-26.json  # 南関予想データ
-  results/2026/01/2026-01-26.json      # 南関結果データ
-jra/
-  predictions/2026/02/2026-02-08.json  # 中央予想データ
-  results/2026/02/2026-02-08.json      # 中央結果データ
-```
-
-#### **keiba-intelligenceの役割**
-
-**目的**: AI予想サイト（予想＋的中実績の表示）
-
-- **予想データがある日付のみ的中判定を実行**
-- 予想データがない結果データは自動的にスキップ（エラーにならない）
-- 的中実績のみをarchiveResults.jsonに保存
-
-#### **自動連携フロー**
-
-```
-keiba-data-shared（結果データPush）
-  ↓
-GitHub Actions: dispatch-results-intelligence.yml 起動
-  ↓
-【チェック1】12レース揃っているか確認
-  ↓
-✅ 12レース揃っている場合のみ
-  ↓
-repository_dispatch イベント送信（results-updated）
-  ↓
-keiba-intelligence の GitHub Actions 起動
-  ↓
-importResults.js 実行
-  ↓
-【チェック2】予想データが存在するか確認
-  ├─ ✅ 予想データあり → 的中判定実行 → archiveResults.json更新
-  └─ ⏭️  予想データなし → スキップ（正常終了）
-```
-
-#### **✅ スキップされるケース（正常動作）**
-
-**importResults.jsは予想データが存在しない場合、スキップして正常終了します。**
-
-```javascript
-// importResults.js: Line 272-283（修正後）
-try {
-  prediction = loadPrediction(date);
-} catch (error) {
-  // 予想データがない場合はスキップ
-  console.log(`⏭️  予想データが見つかりません: ${date}`);
-  console.log(`   keiba-intelligenceでは的中判定をスキップします`);
-  process.exit(0); // 正常終了（エラーではない）
-}
-```
-
-**例: 1/26の結果をkeiba-data-sharedにPushした場合**
-
-```
-1. keiba-data-sharedに1/26結果をPush（予想データなし）
-   ↓
-2. keiba-intelligence の GitHub Actions 自動起動
-   ↓
-3. importResults.js 実行
-   ↓
-4. ⏭️  予想データが見つかりません: 2026-01-26
-   ↓
-5. スキップ（正常終了）
-   ↓
-6. ✅ GitHub Actions 成功（archiveResults.jsonは更新されない）
-```
-
-**つまり:**
-- ✅ keiba-data-sharedには**結果のみ**を自由に保存できる（SEO対策）
-- ✅ keiba-intelligenceは**予想がある日付のみ**的中判定を実行
-- ✅ GitHub Actionsはエラーにならず正常終了
-
-#### **📋 運用方法**
-
-**1. SEO対策用の結果データ保存（予想なし）**
-
-```bash
-# keiba-data-sharedに過去の結果を保存
-# → keiba-intelligenceには影響なし（スキップされる）
-```
-
-**2. 予想＋結果の的中判定（通常運用）**
-
-```bash
-# Step 1: 予想データをkeiba-data-sharedにPush
-# → keiba-intelligenceに自動インポート
-
-# Step 2: 結果データをkeiba-data-sharedにPush
-# → keiba-intelligenceで自動的中判定 → archiveResults.json更新
-```
-
-#### **🎯 まとめ**
-
-| 項目 | keiba-data-shared | keiba-intelligence |
-|------|-------------------|-------------------|
-| **役割** | データアーカイブ・SEO対策 | AI予想サイト・的中実績表示 |
-| **予想データ** | 任意（あってもなくてもOK） | ある日付のみ処理 |
-| **結果データ** | 必須（SEO対策で量産） | 予想がある日付のみ処理 |
-| **自動連携** | 12レース揃ったらdispatch | 予想がない場合はスキップ |
-| **エラー** | なし | なし（スキップで正常終了） |
-
----
-
-## 📧 **メルマガシステム現状（2026-02-26更新）** 📧
-
-### **keiba-intelligence（このプロジェクト）**
-
-**✅ SendGrid Marketing Campaigns 移行完了（2026-02-26）**
-
-| 項目 | 内容 |
-|------|------|
-| **システム** | SendGrid Marketing Campaigns |
-| **API** | PUT /v3/marketing/contacts（upsert対応） |
-| **カスタムフィールド** | `registered_intelligence = 'true'` |
-| **環境変数** | `SENDGRID_CUSTOM_FIELD_INTELLIGENCE` |
-| **実装ファイル** | `register-free.js`, `bank-transfer-application.js` |
-| **状態** | 移行完了・動作テスト待ち ⏳ |
-
-**次のステップ:**
-1. SendGrid管理画面でカスタムフィールド作成（`registered_intelligence`）
-2. カスタムフィールドIDを環境変数に設定
-3. Netlifyサイト再デプロイ
-4. 動作テスト実施
-
-**詳細:** `SENDGRID_MARKETING_CAMPAIGNS_SETUP.md` 参照
-
----
-
-### **nankan-analytics（参考プロジェクト）**
-
-**⏳ BlastMail 継続使用（安定運用確認まで）**
-
-| 項目 | 内容 |
-|------|------|
-| **システム** | BlastMail（当面継続） |
-| **理由** | keiba-intelligence移行の安定性確認後に移行 |
-| **移行予定** | keiba-intelligence安定運用後 |
-
-**重要:**
-- ✅ **keiba-intelligenceとnankan-analyticsは別システム**
-- ✅ **keiba-intelligence**: SendGrid Marketing Campaigns（移行完了）
-- ✅ **nankan-analytics**: BlastMail（継続使用）
-
----
-
-## 💰 **月額コスト** 💰
-
-| サービス | プラン | 月額 | 備考 |
-|---------|--------|------|------|
-| Netlify | Pro | $19 | Functions/Blobs含む |
-| Airtable | Pro | $20 | 250,000件まで |
-| ~~Zapier~~ | ~~Premium~~ | ~~$73.50~~ | **削減（Netlify Functionsで代替）** |
-| SendGrid | Essential 100 | $0（無料枠） | メール送信（100,000通/月） |
-| SendGrid Marketing | Advanced | $90（予定） | メルマガ配信（100,000通/月）※nankan共有 |
-| Claude | Pro | $20 | AI開発 |
-| ChatGPT | Plus | $20 | AI開発 |
-| **合計** | - | **$169（約¥25,350）** | **※SendGrid Marketingはnankan-analyticsと共有** |
-
-**コスト内訳:**
-- ✅ Zapier削減: $73.50/月 → Netlify Functions直接実装（10年間$8,820削減）
-- ⏳ SendGrid Marketing Campaigns: $90/月（nankan-analytics + keiba-intelligence共有）
-  - keiba-intelligence: 2,000通/月
-  - nankan-analytics: 100,000通/月
-  - 合計: 両プロジェクトで共有、1アカウント管理
-
----
-
-## 📚 **参考プロジェクト** 📚
-
-### **nankan-analytics**
-
-**参考にした点:**
-- マジックリンク認証システム
-- AccessControl.astroのプラン制御ロジック
-- 月別ファイル分割設計
-- Chart.jsによるパフォーマンス可視化
-
-**差別化した点:**
-- ✅ **keiba-data-shared完全自動化**（管理画面不要）
-- ✅ **南関競馬 + 中央競馬の両対応**
-- ✅ **銀行振り込み自動化**（PayPalアカウント停止対応）
-- ✅ **2段階買い目調整ロジック**（8点 or 12点）
-- ✅ **AI-Powered Dashboardデザイン**
-- ✅ **全レース的中・外れ記録の完全保存**
-
----
-
-## 🤖 **予想ロジック** 🤖
-
-### **南関競馬・中央競馬（JRA）共通処理**
-
-**詳細は `PREDICTION_LOGIC.md` を参照してください。**
-
-#### **統一ロジック**
-
-- **調整方式**: `adjustPrediction()` 統一適用
-- **assignment使用**: 元データのassignmentをそのまま保持
-- **印1の扱い**: 無視（元データでassignmentと印1は既に一致）
-- **role変更**: あり（本命15点以下の降格処理、連下3頭制限）
-- **買い目**: 2ライン固定（本命-相手、対抗-相手）
-
-#### **調整ルールの流れ**
-
-```
-Step 0: assignmentをそのまま使用
-  - 元データでassignmentと印1は既に一致している
-  ↓
-Step 1: displayScore計算（rawScore + 70）
-  ↓
-Step 2: 本命15点以下の降格処理（本命→単穴、対抗→本命）
-  ↓
-Step 3: 差4点以上の役割入れ替え（対抗→連下最上位、単穴→対抗、連下最上位→単穴）
-  ↓
-Step 4: 連下3頭制限（連下最上位1頭 + 連下最大3頭）
-  ↓
-Step 5: 表示用印の割り当て（◎○▲△×-）
-```
-
-#### **元データ検証**
-
-```javascript
-// 南関競馬（船橋3R）
-元データ: 10番=本命（印1◎）、7番=対抗（印1 svg）、8番=単穴（印1○）
-↓
-処理後: 10番=本命、7番=対抗、8番=単穴 ✅ assignmentがそのまま保持
-
-// 中央競馬（京都11R）
-元データ: 6番=本命（印1◎）、2番=対抗（印1○）、8番=単穴（印1▲）
-↓
-処理後: 6番=本命、2番=対抗、8番=単穴 ✅ assignmentがそのまま保持
-```
-
----
-
-## 🔍 **結果判定ロジック** 🔍
-
-### **重要な違い：南関 vs 中央**
-
-**詳細は `RESULT_VERIFICATION_LOGIC.md` を参照してください。**
-
-#### **南関競馬（importResults.js）**
-
-- **会場**: 1〜2会場同時開催対応（大井・川崎・船橋・浦和）
-- **レース数**: 12〜24レース（会場数 × 12）
-- **マッチング**: `raceNumber` + `venue` の両方で一致判定
-- **会場名正規化**: normalizeVenue()関数で統一
-- **統合ファイル対応**: 会場別ファイル自動マージ
-
-```javascript
-// 南関のマッチングロジック
-const predRace = predictions.races.find(p => p.raceInfo.raceNumber === raceNumber);
-```
-
-#### **中央競馬（importResultsJra.js）**
-
-- **会場**: 2〜4会場（京都・小倉・東京など）
-- **レース数**: 24〜48レース（会場数 × 12）
-- **マッチング**: `raceNumber` + `venue` の両方で一致判定（必須！）
-- **複雑**: 会場名正規化、会場別統計が必要
-
-```javascript
-// ❌ 間違い（南関と同じロジック）
-const predRace = predictions.find(p => p.raceInfo.raceNumber === raceNumber);
-// → 京都1R、小倉1R、東京1Rが混在して誤マッチング（的中率25%など）
-
-// ✅ 正解（中央競馬専用ロジック）
-const predRace = predictions.find(p => {
-  const predRaceNum = p.raceInfo.raceNumber;
-  const predVenue = normalizeVenue(p.raceInfo.venue);
-  const raceVenue = normalizeVenue(race.venue);
-  return predRaceNum === raceNumber && predVenue === raceVenue;
-});
-```
-
-#### **会場名正規化（中央のみ）**
-
-```javascript
-function normalizeVenue(venue) {
-  const venueMap = {
-    '京都': 'KYO', 'KYO': 'KYO',
-    '小倉': 'KOK', 'KOK': 'KOK',
-    '東京': 'TOK', 'TOK': 'TOK',
-    '中山': 'NAK', 'NAK': 'NAK',
-    '阪神': 'HAN', 'HAN': 'HAN',
-    '新潟': 'NII', 'NII': 'NII',
-    '札幌': 'SAP', 'SAP': 'SAP',
-    '函館': 'HAK', 'HAK': 'HAK',
-    '福島': 'FUK', 'FUK': 'FUK',
-    '中京': 'CHU', 'CHU': 'CHU'
-  };
-  return venueMap[venue] || venue;
-}
-```
-
-#### **アーカイブデータ構造の違い**
-
-**南関（archiveResults.json）**:
-```json
-{
-  "date": "2026-02-14",
-  "venue": "大井",
-  "races": [
-    {
-      "raceNumber": 1,
-      "raceName": "3歳2組"
-      // venue フィールドなし
-    }
-  ]
-}
-```
-
-**中央（archiveResultsJra.json）**:
-```json
-{
-  "date": "2026-02-14",
-  "venue": "京都・小倉・東京",
-  "venues": ["京都", "小倉", "東京"],
-  "races": [
-    {
-      "raceNumber": 1,
-      "raceName": "3歳未勝利",
-      "venue": "京都" // 各レースに会場情報
-    }
-  ]
-}
-```
-
-### **共通ルール（南関・中央共通）**
-
-- **券種**: 馬単（1着-2着の組み合わせ）
-- **買い目**: 2段構成（本線 + 抑え）
-  - 例: `"9-16.13.2.3.8.11(抑え12.4.5.6.14.15.10)"`
-- **買い目点数**: 2段階調整方式（8点 or 12点/レース）
-  - 基本8点、回収率300%超なら12点で再計算
-  - 詳細: `BET_POINT_LOGIC.md` 参照
-- **的中判定**: 軸-相手が1着-2着 or 2着-1着に一致
-
----
-
-## 🎯 **長期運用設計** 🎯
-
-### **10年運用シミュレーション**
-
-**前提条件:**
-- 会員数: 100人（平均単価¥2,000/月）
-- 月間売上: ¥200,000
-- 月間コスト: ¥22,800
-- 月間利益: ¥177,200
-
-**10年間:**
-- 総売上: ¥24,000,000
-- 総コスト: ¥2,736,000
-- **総利益: ¥21,264,000**
-
-### **スケーラビリティ**
-
-| 項目 | 10年後 | 上限 | 余裕度 |
-|------|--------|------|--------|
-| Airtable Customers | 1,000人 | 250,000件 | 99.6% |
-| Airtable Predictions | 43,800件 | 250,000件 | 82.5% |
-| Netlify ビルド時間 | 5分 | 25時間/月 | 99.7% |
-| SendGrid 送信数 | 3,000通/月 | 100,000通/月 | 97% |
-
----
-
-## 💰 **買い目点数ロジック** 💰
-
-### **2段階調整方式（2026-02-08実装）**
-
-**目的:**
-- 回収率を適切に計算し、実際の投資額により近い数値を表示
-- 基本は8点で計算（収支改善）
-- 高配当的中時（回収率300%超）は12点で再計算（過度な回収率を抑制）
-
-**ロジック:**
-
-```
-第1段階: 基本8点で仮計算
-  投資額 = レース数 × 8点 × 100円
-  回収率（仮） = (払戻額 ÷ 投資額) × 100
-
-第2段階: 回収率判定・調整
-  IF 回収率（仮） > 300% THEN
-    買い目点数 = 12点/レース
-    投資額 = レース数 × 12点 × 100円
-    回収率（最終） = (払戻額 ÷ 投資額) × 100
-  ELSE
-    回収率（最終） = 回収率（仮）
-  END IF
-```
-
-**具体例:**
-- **通常日**: 12R × 8点 = 9,600円投資
-- **高配当日**: 12R × 12点 = 14,400円投資（回収率300%超の場合）
-
-**詳細:** `BET_POINT_LOGIC.md` 参照
-
-**実装ファイル:** `scripts/importResults.js` (Line 275-305)
-
----
-
-## 📖 **詳細設計書** 📖
-
-**DESIGN.md参照:**
-- プロジェクト概要
-- 価格設定
-- データベース設計（Airtable）
-- データ保存設計（JSON）
-- ThriveCart決済・Zapier自動化
-- 認証システム（マジックリンク）
-- SEO戦略
-- デザインシステム
-- 自動化フロー
-- プロジェクト実装計画（2週間）
-
-**NEWSLETTER_SYSTEM.md参照:**
-- メルマガ配信システム設計
-- 5層二重送信防止機構
-- Airtableスキーマ（Broadcasts, BroadcastRecipients）
-- Netlify Functions 5個の詳細
-- 管理画面UI設計
-- 送信フロー（draft → test → dry-run → confirm → send）
-
-**NEWSLETTER_MIGRATION.md参照:**
-- 配配メール→SendGrid移行計画（15,000件）
-- 8段階移行戦略（50→15,000）
-- 4条件フィルタリング（plan_type, status, unsubscribe, send_channel）
-- send_channelによるチャネル分離
-- Airtable View設計（SendGrid_Paid_Active）
-- 初回メール特別対応
-
-**AUTH_SYSTEM.md参照:**
-- マジックリンク認証フロー（4ステップ）
-- Netlify Functions 4個の詳細
-- トークン管理（15分有効期限、単回使用）
-- セッション管理（Netlify Blobs、7日間TTL）
-- セキュリティ対策（HttpOnly/Secure/SameSite Cookie）
-- ログインページUI設計
-
-**BET_POINT_LOGIC.md参照:**
-- 買い目点数ロジック仕様書（2段階調整方式）
-- 回収率300%超の自動調整機構
-- 8点 or 12点の動的切り替え
-- 具体例・計算式・実装詳細
-
-**ALERT_SYSTEM.md参照:**
-- 自動アラートシステム設計書
-- アーカイブ同期確認ワークフロー（verify-archive-sync.yml）
-- 2段階検知機構（予想あり・結果なし / 予想あり・結果あり・アーカイブなし）
-- アラートメール仕様（SendGrid使用）
-- 設定方法（GitHub Secrets: ALERT_EMAIL, SENDGRID_FROM_EMAIL）
-- 運用フロー・トラブルシューティング
-- 日次チェックワークフロー（南関・JRA）
-
----
-
-## 🔐 **環境変数（Netlify環境変数）** 🔐
-
-**Netlify管理画面で設定（Site settings → Environment variables）:**
-
-```bash
-# Airtable（必須）
-AIRTABLE_API_KEY=patxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-AIRTABLE_BASE_ID=appxxxxxxxxxxxxxxx
-
-# SendGrid（必須）
-# 用途: マジックリンク、ウェルカムメール、メルマガ配信、アラートメール
-SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-SENDGRID_FROM_EMAIL=your-verified-email@example.com  # SendGrid Verified Sender
-
-# アラートメール（必須 - アラートシステム用）
-# 用途: GitHub Actions失敗通知、異常値検知、予想データ欠損通知
-# 取得方法: 個人メールアドレス（SendGridに登録不要）
-ALERT_EMAIL=your-email@example.com  # 管理者のメールアドレス
-ADMIN_EMAIL=admin@keiba-intelligence.netlify.app  # 管理者メールアドレス（任意）
-
-# Gemini AI（必須 - Priority 2で実装済み）
-# 用途: AIチャットボット（全ページ右下ウィジェット）
-# 取得方法: Google AI Studio (https://aistudio.google.com/app/apikey)
-GEMINI_API_KEY=AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-# GitHub（Phase 3で必須 - prediction-converter.astro, results-manager.astro実装済み）
-# 用途: 管理画面からのGit自動コミット・自動デプロイ
-# 権限: repo（Contents: Read and Write）
-# 取得方法: GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
-GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-GITHUB_REPO_OWNER=apol0510
-GITHUB_REPO_NAME=keiba-intelligence
-GITHUB_BRANCH=main
-
-# GitHub（keiba-data-shared用）- オプション
-# 用途: results-manager.astroからkeiba-data-sharedリポジトリへの自動保存
-# 権限: repo（Contents: Read and Write）
-# 注意: GITHUB_TOKENが既にkeiba-data-sharedへのアクセス権を持つ場合は不要
-# 専用トークンを使用する場合のみ設定
-GITHUB_TOKEN_KEIBA_DATA_SHARED=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-# SendGrid Marketing Campaigns（必須 - メルマガ配信）
-# 用途: 無料会員登録・銀行振り込み申請時の自動読者登録
-# 取得方法: SendGrid管理画面 → Custom Fields作成後、IDを取得
-SENDGRID_CUSTOM_FIELD_INTELLIGENCE=e2_T  # カスタムフィールドID: registered_intelligence
-```
-
-**重要な注意事項:**
-- ✅ **決済**: 銀行振り込み自動化（PayPalアカウント停止対応）
-- ✅ **メルマガ**: SendGrid Marketing Campaigns API連携（自動読者登録）
-- ✅ **SendGrid**: マジックリンク・確認メール送信
-- ✅ **Netlify Blobs**: Pro版で自動有効化（セッション保存用）
-
-**Airtable必須テーブル:**
-1. Customers（顧客管理）
-2. ProcessedWebhookEvents（~~Webhook重複排除~~ 不要）
-3. Broadcasts（~~メルマガ配信管理~~ SendGrid Marketing Campaigns使用のため不要）
-4. BroadcastRecipients（~~配信履歴~~ SendGrid Marketing Campaigns使用のため不要）
-5. AuthTokens（認証トークン）
-
----
-
-## 🎊 **チェックリスト** 🎊
-
-### **Phase 1: 基盤構築（100%完了 ✅）**
-- [x] プロジェクト初期化
-- [x] GitHub連携
-- [x] デザインシステム構築
-- [x] BaseLayout.astro作成
-- [x] トップページ作成
-- [x] ビルド・動作確認
-
-### **Phase 2: コア機能実装（100%完了 ✅）**
-- [x] Netlify連携・自動デプロイ設定
-- [x] 料金プランページ作成（/pricing）
-- [x] 無料予想ページ作成（/free-prediction）
-- [x] ~~PayPal Webhook実装~~ → 銀行振り込み自動化に変更 ✅
-- [x] メルマガ配信システム実装（SendGrid Marketing Campaigns連携）
-- [x] 会員認証システム実装（マジックリンク）
-- [x] Gemini AIチャットボット実装（全ページ右下ウィジェット）
-- [x] 有料予想ページ作成（/prediction）✅
-- [x] 認証システム実装（多層防御）✅
-- [x] 銀行振り込み自動化実装 ✅
-- [x] Netlify環境変数設定完了 ✅
-- [ ] Airtableテーブルセットアップ（残タスク）
-
-### **Phase 3: 管理機能実装（95%完了 🚀）**
-- [x] 予想管理画面作成（prediction-converter）
-- [x] 結果管理画面作成（results-manager + 買い目シミュレーター）
-- [x] keiba-data-shared（競馬データ共有リポジトリ）作成 ✅
-- [x] 南関公式コピペ自動パース機能実装 ✅
-- [x] GitHub自動Push機能実装 ✅
-- [x] 有料予想ページ作成 ✅
-- [x] 月別アーカイブページ実装 ✅
-- [x] 自動的中判定システム実装（importResults.js）✅
-- [x] GitHub Actions自動連携（予想・結果）✅
-- [x] セキュリティ強化（多層防御アーキテクチャ）✅
-- [ ] SEOページ自動生成（残タスク）
-- [ ] 本番デプロイ（残タスク）
-
----
-
-**📅 最終更新日**: 2026-02-24
-**🏁 Project Phase**: Phase 4無料会員登録システム実装 🚀（Phase 3: 100%完了、Phase 4: 80%完了）
-**🎯 Next Priority**: SendGrid Marketing Campaigns設定 → 動作テスト → 本番デプロイ → 会員獲得
-**📊 進捗率**: 99.9%完了（Phase 1: 100%、Phase 2: 100%、Phase 3: 100%、Phase 4: 80%）
-**🌐 本番URL**: https://keiba-intelligence.netlify.app/
-
-**✨ 本日の成果（2026-02-24）**:
-  - **無料会員登録システム実装（Phase 4開始）** ✅
-    - **コンセプト**: Freemiumモデル実装（無料会員→有料会員の導線強化）
-    - **実装内容**:
-      1. **無料登録ページ（/register）** ✅
-         - メールアドレスのみ登録（パスワード不要）
-         - 無料会員特典表示（全頭予想・買い目一部・AI分析・メルマガ）
-         - 利用規約・プライバシーポリシー同意（登録=同意）
-         - 有料プランへのアップグレード誘導
-      2. **Netlify Function（register-free.js）** ✅
-         - 3段階処理:
-           - Airtable登録（plan: free-registered, status: pending, Source: keiba-intelligence）
-           - SendGrid Marketing Campaigns登録（custom_fields.registered_intelligence = 'true'）
-           - マジックリンク送信（HTML形式ウェルカムメール、15分有効期限）
-         - エラーハンドリング（Airtable/SendGrid失敗は警告のみ、メール送信は継続）
-      3. **AccessControl修正** ✅
-         - free-registered プラン追加（階層: 0=free, 1=free-registered, 2=pro, 3=pro-plus）
-         - 無料登録ユーザー対応（登録ユーザーなら誰でもアクセス可能）
-         - isFreeUserフラグをsessionStorageに保存（予想ページで使用）
-      4. **予想ページ修正（南関・JRA両対応）** ✅
-         - prediction.astro（南関）・prediction-jra.astro（JRA）
-         - 無料会員向け制限買い目表示:
-           - 本命・対抗・単穴・連下最上位の馬番号のみ表示
-           - 全頭AI分析は閲覧可能（Feature Importance Analysis含む）
-           - 有料プランへのアップグレード誘導
-         - プロ会員向け完全買い目表示（本線＋抑え）
-         - クライアントサイドでユーザータイプ判定・表示切替
-    - **ユーザー体験（3段階）**:
-      - 登録なし: トップページ・無料予想（上位5頭のみ）
-      - 無料会員: 全頭予想・買い目一部（本命/対抗/単穴/連下最上位）・AI分析・メルマガ
-      - プロ会員: 全買い目（本線＋抑え）・全機能・永久アクセス
-    - **残タスク**: SendGrid Marketing Campaignsカスタムフィールド設定、動作テスト
-    - **コミット**: 87bb347
-
-  - **SEOページ自動生成完了（35ページ）** ✅
-    - **日別実績ページ（19ページ）**: `/results/YYYY/MM/DD/`
-      - 全レース詳細、買い目、的中判定、統計サマリー
-      - JSON-LD構造化データ（SportsEventスキーマ）
-      - パンくずリスト
-    - **月別実績ページ（2ページ）**: `/results/YYYY/MM/`
-      - 月間統計、開催別統計、日別実績リスト
-    - **競馬場別統計ページ（14ページ）**: `/stats/[venue]/`
-      - 南関4場：大井・川崎・船橋・浦和
-      - 中央10場：東京・京都・阪神・小倉・中山・新潟・中京・福島・札幌・函館
-      - 累計統計（的中率・回収率）、直近20日実績
-    - **競馬場一覧ページ（1ページ）**: `/stats/`
-    - **メリット**: Google検索流入強化、過去実績による信頼性アピール、自動更新
-    - **デプロイ**: https://keiba-intelligence.netlify.app/
-    - **DEPLOYMENT_REPORT.md作成** ✅
-
-  - **SendGrid Web API v3移行（アラートシステム改善）** ✅
-    - **問題**: SendGrid SMTP認証失敗（535/401エラー）
-    - **解決策**: SMTP → Web API v3（HTTPS）に移行
-    - `.github/scripts/send-alert-email.js`作成
-    - verify-archive-sync.yml修正（4箇所のアラートメール送信）
-    - **メリット**: 認証が安定、SMTPポート不要
-
-**✨ 過去の成果（2026-02-21）**:
-  - **keiba.linkドメイン完全削除（netlify.appに統一）** ✅
-    - **問題**: keiba.linkは別プロジェクト、intelligenceで使用禁止
-    - **修正内容**:
-      - 全Netlify Functions（9ファイル）のkeiba.link参照削除
-      - 管理画面（2ファイル）のkeiba.link参照削除
-      - astro.config.mjs、sitemap.xml.js のドメイン変更
-      - FROM_EMAIL: 環境変数 SENDGRID_FROM_EMAIL 使用（フォールバック: noreply@keiba-intelligence.netlify.app）
-      - ADMIN_EMAIL: 環境変数 ADMIN_EMAIL 使用（フォールバック: admin@keiba-intelligence.netlify.app）
-      - allowedOrigins: keiba.link削除、netlify.appのみ許可
-    - **影響範囲**: 12ファイル修正
-    - **コミット**: aa01dc5
-
-  - **アラートシステム実装（予想あり・結果なし検知）** ✅
-    - **問題**: 2/21 JRA結果が反映されない（結果データ自体がkeiba-data-sharedに存在しない）
-    - **修正内容**:
-      - verify-archive-sync.yml 作成（毎日0:00 JSTチェック）
-      - 2段階検知機構:
-        1. 🚨🚨 予想あり + 結果なし（最優先アラート）
-        2. 🚨 予想あり + 結果あり + アーカイブなし
-      - import-results-jra-daily.yml 修正（失敗アラート追加）
-      - import-results-nankan-daily.yml 作成（南関用日次チェック）
-      - ALERT_SYSTEM.md 作成（設計書）
-    - **環境変数**: ALERT_EMAIL 設定完了（Yahoo認証済み）
-    - **SendGrid設定**: SENDGRID_FROM_EMAIL 環境変数化
-
-  - **Git競合自動解決ロジック実装（完全自動化達成）** ✅
-    - **問題**: 同時実行により同じファイルに対してrebase競合が発生
-      - 2026-02-22 JRA予想で5回リトライしても失敗
-      - concurrency設定だけでは不十分
-    - **修正内容**:
-      - 全5ワークフローに競合自動解決ロジック追加
-      - rebase中の競合を検出 → 自動abort
-      - 競合ファイルをチェック → ours戦略で自動解決
-      - rebase --continue → push試行
-      - 最大5回リトライ（指数バックオフ）
-    - **対象ワークフロー**:
-      1. import-prediction-jra.yml（中央予想）
-      2. import-on-dispatch.yml（南関予想）
-      3. import-results-on-dispatch.yml（南関結果）
-      4. import-results-jra.yml（中央結果）
-      5. import-prediction-daily.yml（定期予想）
-    - **期待効果**:
-      - 同時実行による競合を自動解決
-      - エラー率0%達成（完全自動化）
-      - 手動介入不要
-
-  - **JRA結果インポート完全自動化（定期チェック機構追加）** ✅
-    - **問題**: dispatch失敗時に結果が自動インポートされない（2/21で発生）
-    - **解決策**:
-      1. 定期実行ワークフロー追加（import-results-jra-daily.yml）
-         - 毎日23:30 JST実行
-         - keiba-data-sharedの結果データをチェック
-         - アーカイブに未処理データがあれば自動インポート
-         - Git競合自動解決機構搭載
-      2. Dispatchリトライ機構（keiba-data-shared側）
-         - nick-fields/retry@v3使用（最大3回・10秒間隔）
-         - デバッグログ強化
-         - 失敗時のアラート・手動実行手順表示
-    - **メリット**:
-      - dispatch失敗時の自動リカバリー
-      - 手動実行完全不要（真の自動化）
-      - 毎日定期チェックで取りこぼしゼロ
-
-  - **自動アラートシステム実装（目視確認不要の真の自動化）** ✅
-    - **問題**: 反映されているか目視確認が必要（自動化ではない）
-    - **解決策**:
-      1. アーカイブ同期確認ワークフロー（verify-archive-sync.yml）
-         - 毎日0時（JST）に過去7日間をチェック
-         - keiba-data-sharedとアーカイブの不一致を検出
-         - 未反映の日付があれば即座にアラートメール送信
-      2. 定期チェック失敗時アラート
-         - import-results-jra-daily.yml
-         - import-results-nankan-daily.yml
-         - ワークフロー失敗時にメール通知
-      3. 南関競馬定期チェック追加（import-results-nankan-daily.yml）
-         - 毎日23:30 JST実行
-         - 未処理データ自動インポート
-    - **アラートメール仕様**:
-      - SendGrid使用（既存APIキー活用）
-      - 送信先: ALERT_EMAIL（GitHub Secrets）
-      - 件名: 🚨 [JRA/南関]結果アーカイブ未反映検出
-      - 本文: 未反映日付、手動実行手順、GitHub Actionsログ
-    - **メリット**:
-      - 目視確認完全不要
-      - 異常時は即座にメール通知
-      - 手動実行手順をメールで案内
-      - 取りこぼしゼロ（過去7日間監視）
-    - **ドキュメント**: ALERT_SYSTEM.md作成
-
-  - **真の問題を検出：予想あり+結果なしアラート追加** ✅
-    - **問題発見**: 2/21の結果データがkeiba-data-sharedにない（既存アラートでは検出不可）
-    - **根本原因**: 予想データはあるのに結果データがない（真の問題）
-    - **解決策**:
-      - 予想データの存在チェック追加
-      - 予想あり + 結果なし → 🚨🚨 結果データ未登録アラート
-      - 予想あり + 結果あり + アーカイブなし → 🚨 アーカイブ未反映アラート
-    - **アラート優先度**:
-      1. 🚨🚨 結果データ未登録（最優先・keiba-data-sharedに登録必要）
-      2. 🚨 アーカイブ未反映（keiba-intelligence手動実行必要）
-    - **メリット**:
-      - 真の問題（結果データ未登録）を自動検出
-      - 2/21のような問題を即座に通知
-      - 目視確認完全不要（真の完全自動化）
-
-**✨ 過去の成果（2026-02-20）**:
-  - **馬券順序バグ修正（役割順ソート実装）** ✅
-    - 問題: PT値順ソートで連下最上位が本命より上に表示
-    - 修正: sortHorsesByRole()共通関数作成
-    - 影響: free-prediction-jra.astro, prediction-jra.astro
-    - ドキュメント: HORSE_SORT_FIX.md作成
-
-  - **最新ファイル表示修正（日付パース実装）** ✅
-    - 問題: 辞書順ソートで誤った順序の可能性
-    - 修正: 日付パース + タイムスタンプ比較
-    - 影響: 全予想ページ（4ファイル）
-    - ドキュメント: LATEST_FILE_FIX.md作成
-
-  - **再発防止策の実装** ✅
-    - 共通関数化（sortHorsesByRole.js）
-    - 日付パース統一（全予想ページ）
-    - 開発時チェックリスト作成
-    - ドキュメント2件作成
-
-**✨ 過去の成果（2026-02-15）**:
-  - **統一処理への完全移行（シンプル化）** ✅
-    - **問題発見**: 南関とJRAで処理を分離する理由がない
-    - **検証結果**:
-      - 元データで `assignment` と `印1` が既に完全一致
-      - 南関もJRAも同じデータ構造（assignment, 印1, PT）
-      - 分離処理は複雑でメンテナンスコストが高い
-    - **修正内容**（統一・シンプル化）:
-      - **adjustPrediction.js**: 印1ロジック完全削除、1つの関数に統一
-        - `adjustPrediction()`: 南関・JRA共通（assignmentそのまま保持）
-      - **normalizePrediction.js**: 分離関数削除、1つの関数に統一
-        - `normalizeAndAdjust()`: 南関・JRA共通
-      - **importPrediction.js**: `normalizeAndAdjust()` を呼び出し
-      - **importPredictionJra.js**: `normalizeAndAdjust()` を呼び出し
-    - **テスト結果**:
-      - 南関（2/13船橋3R）: ✅ assignment保持（10番=本命、7番=対抗、8番=単穴）
-      - JRA（2/15京都11R）: ✅ assignment保持（6番=本命、2番=対抗、8番=単穴）
-    - **メリット**:
-      - ✅ シンプル（1つのロジックのみ）
-      - ✅ 元データが既に正しい（assignment = 印1）
-      - ✅ メンテナンスが容易
-      - ✅ バグが入りにくい
-
-**✨ 過去の成果（2026-02-14）**:
-  - **中央競馬予想ページUI崩れ完全修正 + 再発防止策実装** ✅
-    - **問題発見**: 小倉11R「◎○が下部表示」「単穴が複数頭」「買い目デザイン消失」
-    - **根本原因特定**（2つ）:
-      1. adjustPrediction.jsが記者印（marks.印1）でroleを上書き
-         → JRAのassignment（本命・対抗・単穴）が消えた
-      2. importPredictionJra.jsで「連下最上位→単穴」に強制変換
-         → 15番トーラスシャインが誤って単穴になった
-    - **修正内容**:
-      - JRA用簡易調整関数追加（simpleAdjustForJRA）
-        - roleを一切変更せず保持
-        - displayScore計算とmark生成のみ
-        - 南関用の複雑な調整ロジックを完全スキップ
-      - adjustPrediction.js修正（skipMark1Overrideオプション追加）
-      - importPredictionJra.js修正（強制変換削除）
-      - metricsフィールドがない場合のフォールバック処理追加
-      - 買い目表示CSS修正（.betting-grid → .betting-formula）
-    - **再発防止策**（新規実装）:
-      - validatePrediction.js作成（自動データ検証）
-        - 本命1頭、対抗1頭、単穴0〜1頭、連下最上位0〜1頭チェック
-        - 役割名の許可リストチェック
-        - PT値の整合性チェック（警告のみ）
-      - importPredictionJra.jsに自動検証組み込み
-        - 不正データが保存される前にエラーで中断
-        - データ品質保護
-      - validatePrediction.test.js作成（自動テスト）
-        - 6テストケース（全テスト成功）
-        - 再発防止テスト（単穴2頭、連下最上位2頭など）
-      - DATA_VALIDATION.md作成（ドキュメント）
-    - **修正結果**:
-      - 小倉11R: 本命2番✅、対抗16番✅、単穴11番（1頭のみ）✅、連下最上位15番✅
-
-**✨ 過去の成果（2026-02-13）**:
-  - **中央競馬（JRA）会場別→統合ファイル完全自動化** ✅
-    - 問題: 2/14予想が更新されない（会場別ファイル形式に変更）
-    - merge-jra-predictions.yml作成（GitHub Actions）
-      - 会場別ファイル（-TKY.json等）検出時に自動統合
-      - merge-jra-predictions.js実行
-      - 統合ファイル（YYYY-MM-DD.json）自動生成・Push
-    - PAT（WORKFLOW_PAT）導入
-      - GitHub ActionsからのPushで他ワークフローをトリガー可能に
-      - GITHUB_TOKENの制限（ワークフロー連鎖不可）を回避
-    - dispatch-prediction-jra-intelligence.yml修正
-      - 統合形式（venues配列）対応
-      - 会場別ファイルは自動スキップ
-      - totalRacesフィールドでレース数判定
-    - 完全自動化達成
-      - 会場別Push → 統合生成 → keiba-intelligenceへdispatch → 自動インポート → デプロイ
-    - GITHUB_PAT_SETUP.md作成（PAT設定手順書）
-
-**✨ 過去の成果（2026-02-08）**:
-  - **買い目点数ロジック実装（2段階調整方式）** ✅
-    - importResults.js修正（8点 or 12点の動的切り替え）
-    - 基本8点で計算 → 回収率300%超なら12点で再計算
-    - betPointsPerRace フィールド追加（archiveResults.json）
-    - BET_POINT_LOGIC.md作成（詳細仕様書）
-    - CLAUDE.md更新（買い目ロジック説明追加）
-
-  - **中央競馬版（JRA）実装開始** ✅
-    - importPredictionJra.js作成（予想データ自動取り込み）
-    - importResultsJra.js作成（結果データ自動取り込み・的中判定）
-    - archiveResultsJra.json初期化（中央競馬専用アーカイブ）
-    - /prediction-jra作成（中央競馬予想ページ）
-    - 南関版と同じ馬単・2段階買い目調整ロジック
-    - CLAUDE.md更新（管理画面記述削除・keiba-data-shared完全自動化に修正）
-
-  - **料金プラン全面リニューアル（買い切り超強調型）** ✅
-    - 買い切りプラン: ¥88,000（永久アクセス、追加料金なし）
-    - 年払いプラン: ¥66,000/年（月額換算¥5,500）
-    - 月払いプラン: ¥12,000/月（割高・非推奨、年払いより2.2倍割高）
-    - 「365日競馬バナー」追加（平日南関＋週末中央）
-    - 「50年後も使える」売り文句（月払い720万円 vs 買い切り8万8千円）
-    - 「永久アクセス」超大きく強調（3.5rem、glowアニメーション）
-    - 「AIは毎日進化し続ける」訴求
-    - FAQ追加（50年後も本当に使えるの？）
-
-  - **中央競馬（JRA）無料予想ページ完成** ✅
-    - free-prediction-jra.astro作成（全12レース表示）
-    - Feature Importance Analysis完全実装（南関版と同一）
-    - 多会場対応（京都・小倉・東京のタブ切り替え）
-    - レース選択ボタン（1R-12R）
-
-**✨ 過去の成果（2026-02-05）**:
-  - **2/4結果自動反映問題の根本解決** ✅
-    - importResults.js修正（venue field抽出バグ修正）
-    - results.track（存在しない）→ results.venue || races[0].venue || デフォルト
-    - 予想データ読み込み失敗によるサイレント障害を解消
-    - 的中率0% → 75%（9/12R）に改善
-
-  - **3層防御の通知システム実装** 🚨
-    - Layer 1: GitHub Actions失敗通知（workflow failure）
-    - Layer 2: 異常値検知（的中率0%で10レース以上）
-    - Layer 3: サイレント障害検知（予想データ存在確認）
-    - send-alert.js作成（SendGrid連携・5種類のアラート）
-    - keiba-data-sharedとの二重チェック機構
-
-  - **レース名表示バグ修正** ✅
-    - importPrediction.js修正（ネスト構造対応）
-    - race.raceInfo?.raceName || race.raceName || デフォルト値
-    - keiba-data-sharedの標準フォーマットに完全対応
-    - 2/3、2/4、2/5予想データ再インポート完了
-    - 全日付でレース名が正常に表示
-
-  - **自動化の信頼性向上** 🔒
-    - サイレント障害の根絶（数日間続いた問題を解決）
-    - 手動確認不要の完全自動化達成
-    - 異常発生時の即座通知体制構築
-
-**✨ 過去の成果（2026-02-02）**:
-  - **有料予想ページ + 認証システム完全実装** ✅
-    - AccessControl.astro作成（クライアントサイド認証）
-    - /prediction作成（プロ会員限定・全レース馬単買い目表示）
-    - サーバーサイド認証追加（Netlify Blobsセッション）
-    - 多層防御アーキテクチャ構築
-
-  - **セキュリティ強化** 🔒
-    - CORS設定修正（特定ドメインのみ許可）
-    - プラン別リダイレクト実装（pro→/prediction）
-    - HttpOnly/Secure/SameSite Cookie設定
-    - セッション7日間TTL（Netlify Blobs）
-
-  - **銀行振り込み自動化システム実装** ✅
-    - bank-transfer-application.js作成
-    - nankan-analytics完全移植
-    - 管理者・申請者へ自動メール送信
-    - Airtable顧客登録自動化（Status: pending）
-    - SendGrid Marketing Campaigns読者登録自動化（メルマガ配信）
-
-  - **PayPal関連コード無効化** ✅
-    - paypal-webhook.js → paypal-webhook.js.disabled
-    - 銀行振り込みのみ対応（アカウント停止対応）
-
-  - **予想データ取得エラー修正** ✅
-    - importPrediction.js修正（404時正常終了）
-    - GitHub Actions自動実行でエラーにならない
-
-**✨ 過去の成果（2026-02-01）**:
-  - **importResults.js修正（予想データなしスキップ対応）** ✅
-    - 予想データがない結果でもエラーにならず正常終了
-    - keiba-data-sharedにSEO対策用の結果を自由に保存可能
-    - GitHub Actions成功（archiveResults.jsonは更新されない）
-
-  - **CLAUDE.md更新（予想・結果データ同期の詳細説明）** ✅
-    - 「予想データと結果データの同期（重要）」セクション追加
-    - keiba-data-sharedとkeiba-intelligenceの役割分担を明記
-    - 自動連携フロー・スキップケースを詳細図解
-    - 運用方法（SEO対策用・通常運用）を整理
-
-**✨ 過去の成果（2026-01-31）**:
-  - **adjustPrediction.js修正（対抗枠保持ロジック）** ✅
-    - 本命15点以下の場合、本命と対抗をスワップ
-    - 対抗枠を必ず保持する設計に変更
-    - 2段買い目が崩れない安定化
-
-  - **importResults.js修正（払戻金10倍バグ修正）** ✅
-    - `* 10` を削除（的中は1点のみ）
-    - 正しい払戻金・回収率計算
-    - 例: ¥153,300 → ¥15,330、1277.5% → 127.8%
-
-  - **月別アーカイブページ完成** ✅
-    - /archive/YYYY/MM/ 構造実装
-    - 月間サマリー統計表示（的中率・回収率・配当）
-    - 日別・レース別的中実績表示
-    - 買い目表示削除（シンプル1行表示）
-    - 長期運用対応（10年で120ページ）
-
-  - **的中実績リンク自動対応** ✅
-    - archiveResults.json から最新データの年月を取得
-    - 常に最新データがある月にリンク
-    - 2月になっても1月データ表示（データ追加まで）
-
-  - **GitHub Actions手動実行対応** ✅
-    - workflow_dispatch に inputs.date 追加
-    - 手動実行時の日付指定可能
-    - デフォルト: 今日の日付（JST）
-
-  - **デザイン調整** ✅
-    - ヒーローセクションタイトル色変更
-    - 極薄ブルー→ブルーグラデーション
-
-**✨ 過去の成果（2026-01-23）**:
-  - **keiba-data-shared（競馬データ共有リポジトリ）作成** ✅
-    - GitHub公開リポジトリ: https://github.com/apol0510/keiba-data-shared
-    - README.md、schema.json、CLAUDE.md、パーサー実装
-    - 南関・中央競馬対応の統一フォーマット
-    - 全プロジェクト共有の基盤完成
-    - ディレクトリ構造: nankan/predictions/, nankan/results/
-    - parser/parse-nankan-results.js（南関公式フォーマット自動パーサー）
-
-  - **keiba-data-shared完全自動化への移行** ✅
-    - 管理画面を廃止し、keiba-data-sharedからの自動取り込みに統一
-    - importPrediction.js / importResults.js による完全自動化
-    - GitHub Actions連携（予想・結果の自動インポート）
-    - 手動作業を完全排除
-
-  - **プロジェクト構成の整理** ✅
-    - /Users/apolon/Projects/ に移動（iCloud Drive同期問題解消）
-    - Gitリポジトリ再クローン・正常化
-
-**✨ 過去の成果（2026-01-18）**:
-  - Priority 1: 結果表示システム完全実装 ✅
-    - /results（買い目シミュレーター・Chart.js統合）
-    - リアルタイム的中率・回収率計算機能
-    - 全期間統計集計機能（的中率・回収率・払戻額）
-    - パフォーマンス推移グラフ（Chart.js v4.4.0）
-
-  - Priority 2: Gemini AIチャットボット完全実装 ✅
-    - gemini-chat.js（Netlify Function、Gemini 1.5 Flash統合）
-    - AIChat.astro（全ページ右下固定ウィジェット）
-    - 最新予想・結果データ自動参照機能
-    - 会話履歴保持機能
-    - レスポンシブデザイン（モバイル対応）
-
-**🎉 累積成果**:
-  - **共有リポジトリ**: keiba-data-shared（全プロジェクト共有・南関中央対応・GitHub自動Push対応）
-  - **Netlify Functions**: 11個実装（Newsletter 5個, Auth 4個, Gemini-Chat, Bank-Transfer, Register-Free）
-  - **設計書**: 6個作成（NEWSLETTER_SYSTEM.md, NEWSLETTER_MIGRATION.md, AUTH_SYSTEM.md, BET_POINT_LOGIC.md, ALERT_SYSTEM.md, DEPLOYMENT_REPORT.md）
-  - **管理画面**: 3ページ実装（/admin/newsletter/*）
-  - **公開ページ**:
-    - 南関競馬: トップ, 無料予想, 有料予想, 料金, 月別アーカイブ, ログイン, サイト概要
-    - 中央競馬: /free-prediction-jra, /prediction-jra, /archive-jra/（完成）
-    - SEOページ: 35ページ（日別19, 月別2, 競馬場別14, 一覧1）
-    - 無料登録: /register（メールアドレスのみ）
-  - **料金プラン**:
-    - 無料会員: ¥0（登録必要）全頭予想・買い目一部・AI分析・メルマガ
-    - 買い切りプラン: ¥88,000（永久アクセス、50年利用で月額換算¥147）
-    - 年払いプラン: ¥66,000/年（月額換算¥5,500）
-    - 月払いプラン: ¥12,000/月（割高・非推奨）
-  - **自動化システム**:
-    - 南関競馬: importPrediction.js, importResults.js, GitHub Actions自動連携
-    - 中央競馬: importPredictionJra.js, importResultsJra.js, GitHub Actions自動連携（完成）
-    - **会場別→統合ファイル自動生成**: merge-jra-predictions.yml, PAT（WORKFLOW_PAT）
-    - **Git競合自動解決**: 全5ワークフローに実装（同時実行対応）
-    - **定期チェック機構**: 毎日23:30 JST（未処理データ自動インポート）
-    - **Dispatchリトライ**: 最大3回・10秒間隔（失敗時自動リカバリー）
-    - **自動アラートシステム**: 毎日0時（JST）アーカイブ同期確認・異常時メール通知
-    - 2段階買い目調整ロジック（8点 or 12点）
-    - 自動的中判定システム
-    - 月別アーカイブ自動生成
-  - **Chart.js統合**: パフォーマンス可視化完了 ✅
-  - **データ共有基盤**: keiba-data-shared（競馬データ共有リポジトリ）完成 ✅
-  - **決済システム**: 銀行振り込み自動化（PayPalアカウント停止対応）
-  - **完全自動化**: keiba-data-shared → GitHub Actions → 自動インポート → 自動的中判定 🎉
-  - **コスト削減**: ThriveCart $690削減（買い切り費用）+ Zapier $73.50/月削減
+## 📅 最終更新情報 📅
+
+**最終更新日**: 2026-03-11
+**進捗率**: 99.9%完了（Phase 1-4: 完了）
+**次のステップ**: SendGrid Marketing Campaigns設定 → 動作テスト → 会員獲得
 
 ---
 
