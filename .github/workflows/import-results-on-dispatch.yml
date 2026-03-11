@@ -72,12 +72,6 @@ jobs:
             npm run import:results -- --date "$TODAY"
           fi
 
-      - name: Rebuild archive (auto-recovery)
-        if: always()
-        run: |
-          echo "🔄 Rebuilding archive to ensure consistency..."
-          npm run rebuild:archive
-
       - name: Validate archive format (MANDATORY)
         run: |
           echo "🔍 Validating archive format..."
