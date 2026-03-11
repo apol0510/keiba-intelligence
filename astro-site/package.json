@@ -9,6 +9,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "validate:archive": "node scripts/validateArchiveFormat.js",
+    "verify:sync": "node scripts/verifyArchiveSync.js",
     "import:prediction": "node scripts/importPrediction.js",
     "import:prediction:jra": "node scripts/importPredictionJra.js",
     "import:results": "node scripts/importResults.js",

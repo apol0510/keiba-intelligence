@@ -1,0 +1,283 @@
+name: Import Nankan Results Daily Check
+
+on:
+  schedule:
+    # 毎日 23:30 JST (14:30 UTC) に実行
+    - cron: '30 14 * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [nankan-results-updated]
+
+# 並行実行制御
+concurrency:
+  group: import-results-nankan-daily
+  cancel-in-progress: false
+
+jobs:
+  check-and-import:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: astro-site
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'astro-site/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get current date (JST)
+        id: date
+        env:
+          PAYLOAD_DATE: ${{ github.event.client_payload.date }}
+        run: |
+          # repository_dispatchで日付が指定されている場合はそれを使用
+          if [ -n "$PAYLOAD_DATE" ] && [ "$PAYLOAD_DATE" != "null" ]; then
+            DATE="$PAYLOAD_DATE"
+            echo "📅 Using date from repository_dispatch: $DATE"
+          else
+            DATE=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+            echo "📅 Current date (JST): $DATE"
+          fi
+          echo "date=$DATE" >> $GITHUB_OUTPUT
+
+      - name: Check for missing results
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE="${{ steps.date.outputs.date }}"
+          YEAR="${DATE:0:4}"
+          MONTH="${DATE:5:2}"
+
+          # 【修正】統合ファイルと会場別ファイルの両方をチェック
+          RESULT_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/$YEAR/$MONTH/${DATE}.json"
+          OOI_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/$YEAR/$MONTH/${DATE}-OOI.json"
+          FUN_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/$YEAR/$MONTH/${DATE}-FUN.json"
+          KAW_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/$YEAR/$MONTH/${DATE}-KAW.json"
+          URA_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/$YEAR/$MONTH/${DATE}-URA.json"
+
+          TOTAL_RACES=0
+          FOUND_VENUES=""
+
+          # 統合ファイルをチェック
+          echo "🔍 Checking for unified file: $RESULT_URL"
+          if curl -sf "$RESULT_URL" > /tmp/result-unified.json 2>/dev/null; then
+            RACE_COUNT=$(cat /tmp/result-unified.json | jq -r '.races | length')
+            TOTAL_RACES=$RACE_COUNT
+            FOUND_VENUES="unified"
+            echo "✅ Unified file found: $RACE_COUNT races"
+          else
+            echo "⏭️  No unified file, checking venue-specific files..."
+
+            # 会場別ファイルをチェック（大井）
+            if curl -sf "$OOI_URL" > /tmp/result-ooi.json 2>/dev/null; then
+              OOI_RACES=$(cat /tmp/result-ooi.json | jq -r '.races | length')
+              TOTAL_RACES=$((TOTAL_RACES + OOI_RACES))
+              FOUND_VENUES="${FOUND_VENUES} OOI($OOI_RACES)"
+              echo "✅ OOI file found: $OOI_RACES races"
+            fi
+
+            # 会場別ファイルをチェック（船橋）
+            if curl -sf "$FUN_URL" > /tmp/result-fun.json 2>/dev/null; then
+              FUN_RACES=$(cat /tmp/result-fun.json | jq -r '.races | length')
+              TOTAL_RACES=$((TOTAL_RACES + FUN_RACES))
+              FOUND_VENUES="${FOUND_VENUES} FUN($FUN_RACES)"
+              echo "✅ FUN file found: $FUN_RACES races"
+            fi
+
+            # 会場別ファイルをチェック（川崎）
+            if curl -sf "$KAW_URL" > /tmp/result-kaw.json 2>/dev/null; then
+              KAW_RACES=$(cat /tmp/result-kaw.json | jq -r '.races | length')
+              TOTAL_RACES=$((TOTAL_RACES + KAW_RACES))
+              FOUND_VENUES="${FOUND_VENUES} KAW($KAW_RACES)"
+              echo "✅ KAW file found: $KAW_RACES races"
+            fi
+
+            # 会場別ファイルをチェック（浦和）
+            if curl -sf "$URA_URL" > /tmp/result-ura.json 2>/dev/null; then
+              URA_RACES=$(cat /tmp/result-ura.json | jq -r '.races | length')
+              TOTAL_RACES=$((TOTAL_RACES + URA_RACES))
+              FOUND_VENUES="${FOUND_VENUES} URA($URA_RACES)"
+              echo "✅ URA file found: $URA_RACES races"
+            fi
+          fi
+
+          # 結果ファイルが見つかったかチェック
+          if [ $TOTAL_RACES -eq 0 ]; then
+            echo "⏭️  No results in keiba-data-shared yet"
+            echo "has_missing=false" >> $GITHUB_OUTPUT
+          else
+            echo "📊 Total races found: $TOTAL_RACES from:$FOUND_VENUES"
+
+            # 【修正】最低レース数を緩和（2会場日は24レース、1会場日は12レース想定）
+            if [ $TOTAL_RACES -ge 8 ]; then
+              # アーカイブに既に存在するかチェック
+              if grep -q "\"date\": \"$DATE\"" src/data/archiveResults.json; then
+                echo "⏭️  Already processed: $DATE"
+                echo "has_missing=false" >> $GITHUB_OUTPUT
+              else
+                echo "📥 Missing from archive: $DATE (races: $TOTAL_RACES)"
+                echo "has_missing=true" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "⏭️  Skipped: $TOTAL_RACES races (< 8, possibly incomplete)"
+              echo "has_missing=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Import missing results
+        if: steps.check.outputs.has_missing == 'true'
+        id: import-results
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE="${{ steps.date.outputs.date }}"
+          echo "📥 Importing Nankan results for: $DATE"
+          npm run import:results -- --date "$DATE"
+
+      - name: Rebuild archive (auto-recovery)
+        if: always() && steps.check.outputs.has_missing == 'true'
+        run: |
+          echo "🔄 Rebuilding archive to ensure consistency..."
+          npm run rebuild:archive
+
+      - name: Check for changes
+        id: git-check
+        if: always() && steps.check.outputs.has_missing == 'true'
+        run: |
+          git add src/data/archiveResults.json
+          git diff --staged --exit-code || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changes
+        if: always() && steps.git-check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          DATE="${{ steps.date.outputs.date }}"
+          git commit -m "Auto-verify: ${DATE} Nankan results (daily check)"
+
+          # Retry logic with conflict resolution
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+          SUCCESS=false
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" = false ]; do
+            echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Pulling latest changes..."
+
+            # rebase中の競合を検出してabort + クリーンアップ
+            if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
+              echo "⚠️  Detected ongoing rebase, aborting..."
+              git rebase --abort
+              # mainブランチに戻る（detached HEAD回避）
+              git checkout main
+              git reset  # インデックスをクリア
+              git reset --hard origin/main
+              git clean -fd
+            fi
+
+            # マージ競合状態をチェック
+            if git ls-files -u | grep -q .; then
+              echo "⚠️  Detected unmerged files, resetting..."
+              # mainブランチに戻る（detached HEAD回避）
+              git checkout main
+              git reset  # インデックスをクリア
+              git reset --hard origin/main
+              git clean -fd
+            fi
+
+            # mainブランチにいることを確認
+            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            if [ "$CURRENT_BRANCH" != "main" ]; then
+              echo "⚠️  Not on main branch (current: $CURRENT_BRANCH), checking out main..."
+              git checkout main
+            fi
+
+            if git pull --rebase origin main; then
+              echo "✅ Successfully pulled latest changes"
+
+              if git push; then
+                echo "✅ Successfully pushed changes"
+                SUCCESS=true
+              else
+                echo "⚠️  Push failed, retrying..."
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                sleep $((RETRY_COUNT * 2))
+              fi
+            else
+              echo "⚠️  Pull --rebase failed"
+
+              if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
+                echo "🔧 Attempting to resolve conflicts automatically..."
+
+                CONFLICT_FILES=$(git diff --name-only --diff-filter=U)
+
+                if [ -n "$CONFLICT_FILES" ]; then
+                  echo "   Conflicted files: $CONFLICT_FILES"
+
+                  for FILE in $CONFLICT_FILES; do
+                    if [[ "$FILE" == "src/data/archiveResults.json" ]]; then
+                      echo "   Resolving $FILE (using ours strategy)"
+                      git checkout --ours "$FILE"
+                      git add "$FILE"
+                    fi
+                  done
+
+                  if git rebase --continue; then
+                    echo "✅ Conflicts resolved, rebase continued"
+                    continue
+                  else
+                    echo "❌ Failed to continue rebase"
+                    git rebase --abort
+                    # mainブランチに戻る
+                    git checkout main
+                    git reset  # インデックスをクリア
+                    git reset --hard origin/main
+                  fi
+                else
+                  echo "❌ No conflict files found but rebase failed"
+                  git rebase --abort
+                  # mainブランチに戻る
+                  git checkout main
+                  git reset  # インデックスをクリア
+                  git reset --hard origin/main
+                fi
+              fi
+
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              sleep $((RETRY_COUNT * 2))
+            fi
+          done
+
+          if [ "$SUCCESS" = false ]; then
+            echo "❌ Failed to push after $MAX_RETRIES attempts"
+            exit 1
+          fi
+
+      - name: Success notification
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          echo "✅ Nankan results imported and pushed (daily check)"
+          echo "   Date: ${{ steps.date.outputs.date }}"
+          echo "   Trigger: scheduled (23:30 JST)"
+
+      - name: No changes notification
+        if: steps.check.outputs.has_missing != 'true'
+        run: |
+          echo "⏭️  No missing Nankan results to import"
+          echo "   Date: ${{ steps.date.outputs.date }}"
+          echo "   Archive is up-to-date"

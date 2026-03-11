@@ -672,6 +672,39 @@ async function main() {
       });
     }
 
+    // 7. Post-check: archiveResults.jsonに対象日が追加されたことを検証
+    console.log(`\n🔍 Post-check: archiveResults.jsonを検証中...`);
+    const archivePath = join(projectRoot, 'src', 'data', 'archiveResults.json');
+    const archiveContent = readFileSync(archivePath, 'utf-8');
+    const archive = JSON.parse(archiveContent);
+
+    const foundEntry = archive.find(entry => entry.date === date);
+
+    if (!foundEntry) {
+      console.error(`\n❌ Post-check失敗: archiveResults.jsonに${date}が追加されていません！`);
+      console.error(`   処理は完了したはずですが、何らかの理由でアーカイブに反映されていません。`);
+      console.error(`   これは重大なエラーです。手動で確認してください。`);
+
+      // CI環境の場合はアラート送信
+      if (process.env.CI === 'true') {
+        await sendAlert('archive-post-check-failed', date, {
+          message: `${date}の処理は完了したがarchiveResults.jsonに追加されていない`,
+          expectedDate: date,
+          archiveLatestDate: archive[0]?.date || 'N/A'
+        }, {
+          venue,
+          timestamp: new Date().toISOString(),
+          critical: true
+        });
+      }
+
+      process.exit(1);
+    }
+
+    console.log(`✅ Post-check成功: ${date}がarchiveResults.jsonに正常に追加されています`);
+    console.log(`   的中率: ${foundEntry.hitRate}%`);
+    console.log(`   回収率: ${foundEntry.returnRate}%`);
+
   } catch (error) {
     console.error(`\n❌ エラーが発生しました: ${error.message}`);
     console.error(error);
