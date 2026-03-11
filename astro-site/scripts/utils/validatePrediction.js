@@ -11,30 +11,32 @@
  * @param {Object} data - 変換後の予想データ
  * @throws {Error} 検証エラー
  */
-export function validateJRAPrediction(data) {
+export function validateJRAPrediction(data, checkVenueMix = false) {
   const errors = [];
 
   // venues配列がある場合
   if (data.venues && Array.isArray(data.venues)) {
     for (const venue of data.venues) {
       const predictions = venue.predictions || [];
+      const expectedVenue = checkVenueMix ? venue.venue : null;
 
       for (let i = 0; i < predictions.length; i++) {
         const race = predictions[i];
         const raceId = `${venue.venue}${race.raceInfo.raceNumber}R`;
 
-        validateRace(race, raceId, errors);
+        validateRace(race, raceId, errors, expectedVenue);
       }
     }
   } else {
     // 単一会場の場合
     const predictions = data.predictions || [];
+    const expectedVenue = checkVenueMix ? data.eventInfo?.venue : null;
 
     for (let i = 0; i < predictions.length; i++) {
       const race = predictions[i];
       const raceId = `${data.eventInfo?.venue || '不明'}${race.raceInfo.raceNumber}R`;
 
-      validateRace(race, raceId, errors);
+      validateRace(race, raceId, errors, expectedVenue);
     }
   }
 
@@ -49,8 +51,9 @@ export function validateJRAPrediction(data) {
  * @param {Object} race - レースデータ
  * @param {string} raceId - レース識別子
  * @param {Array} errors - エラー配列
+ * @param {string} expectedVenue - 期待される会場名（オプション）
  */
-function validateRace(race, raceId, errors) {
+function validateRace(race, raceId, errors, expectedVenue = null) {
   if (!race.horses || race.horses.length === 0) {
     return; // 馬データなしは許可
   }
@@ -103,6 +106,63 @@ function validateRace(race, raceId, errors) {
       errors.push(`❌ ${raceId}: ${horse.horseNumber}番 - 不正な役割 "${horse.role}"`);
     }
   }
+
+  // 【検証7】会場混入検出（南関のみ）
+  if (expectedVenue) {
+    validateVenueCrossMix(race, raceId, expectedVenue, errors);
+  }
+}
+
+/**
+ * 会場混入検出（南関競馬の2場開催日対応）
+ *
+ * trainer/jockey に他会場の記号が含まれていないかチェック
+ *
+ * @param {Object} race - レースデータ
+ * @param {string} raceId - レース識別子
+ * @param {string} expectedVenue - 期待される会場名
+ * @param {Array} errors - エラー配列
+ */
+function validateVenueCrossMix(race, raceId, expectedVenue, errors) {
+  // 南関4場の会場記号マップ
+  const venueMarkers = {
+    '大井': '(大)',
+    '船橋': '(船)',
+    '川崎': '(川)',
+    '浦和': '(浦)'
+  };
+
+  // 期待される会場記号
+  const expectedMarker = venueMarkers[expectedVenue];
+
+  if (!expectedMarker) {
+    return; // 南関4場以外はスキップ
+  }
+
+  // 他会場の記号リスト
+  const otherMarkers = Object.entries(venueMarkers)
+    .filter(([venue, marker]) => venue !== expectedVenue)
+    .map(([venue, marker]) => ({ venue, marker }));
+
+  // 全馬のtrainer/jockeyをチェック
+  for (const horse of race.horses) {
+    const trainer = horse.trainer || '';
+    const jockey = horse.jockey || '';
+
+    // 他会場の記号が含まれているかチェック
+    for (const { venue, marker } of otherMarkers) {
+      if (trainer.includes(marker)) {
+        errors.push(
+          `❌ ${raceId}: ${horse.horseNumber}番 - trainer "${trainer}" に ${venue} の記号 "${marker}" が混入（期待: ${expectedVenue}）`
+        );
+      }
+      if (jockey.includes(marker)) {
+        errors.push(
+          `❌ ${raceId}: ${horse.horseNumber}番 - jockey "${jockey}" に ${venue} の記号 "${marker}" が混入（期待: ${expectedVenue}）`
+        );
+      }
+    }
+  }
 }
 
 /**
@@ -112,6 +172,6 @@ function validateRace(race, raceId, errors) {
  * @throws {Error} 検証エラー
  */
 export function validateNankanPrediction(data) {
-  // 南関も同じ検証ロジック
-  validateJRAPrediction(data);
+  // 南関は会場混入チェックを有効化（2場開催日対応）
+  validateJRAPrediction(data, true);
 }
