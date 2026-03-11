@@ -118,6 +118,10 @@ function validateRace(race, raceId, errors, expectedVenue = null) {
  *
  * trainer/jockey に他会場の記号が含まれていないかチェック
  *
+ * 【重要】2026-03-12修正: 他場所属の調教師・騎手は警告のみで許容
+ * 南関競馬では他場所属の調教師が出走することは正常な動作
+ * （例: 船橋レースに浦和所属の調教師、川崎所属の調教師など）
+ *
  * @param {Object} race - レースデータ
  * @param {string} raceId - レース識別子
  * @param {string} expectedVenue - 期待される会場名
@@ -144,22 +148,24 @@ function validateVenueCrossMix(race, raceId, expectedVenue, errors) {
     .filter(([venue, marker]) => venue !== expectedVenue)
     .map(([venue, marker]) => ({ venue, marker }));
 
-  // 全馬のtrainer/jockeyをチェック
+  // 全馬のtrainer/jockeyをチェック（警告のみ、エラーではない）
   for (const horse of race.horses) {
     const trainer = horse.trainer || '';
     const jockey = horse.jockey || '';
 
-    // 他会場の記号が含まれているかチェック
+    // 他会場の記号が含まれている場合は警告ログ出力（エラーには追加しない）
     for (const { venue, marker } of otherMarkers) {
       if (trainer.includes(marker)) {
-        errors.push(
-          `❌ ${raceId}: ${horse.horseNumber}番 - trainer "${trainer}" に ${venue} の記号 "${marker}" が混入（期待: ${expectedVenue}）`
+        console.warn(
+          `⚠️  [Venue Mix WARNING] ${raceId}: ${horse.horseNumber}番 - trainer "${trainer}" に ${venue} の記号 "${marker}" 検出（期待: ${expectedVenue}）`
         );
+        // errors.push は削除（fail fastを無効化）
       }
       if (jockey.includes(marker)) {
-        errors.push(
-          `❌ ${raceId}: ${horse.horseNumber}番 - jockey "${jockey}" に ${venue} の記号 "${marker}" が混入（期待: ${expectedVenue}）`
+        console.warn(
+          `⚠️  [Venue Mix WARNING] ${raceId}: ${horse.horseNumber}番 - jockey "${jockey}" に ${venue} の記号 "${marker}" 検出（期待: ${expectedVenue}）`
         );
+        // errors.push は削除（fail fastを無効化）
       }
     }
   }
