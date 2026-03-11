@@ -235,6 +235,17 @@ git push origin main
 - ✅ commit前に停止（bad data push防止）
 - ✅ 会場別ファイルのみでも自動マージ（OOI+FUN等）
 
+**Concurrency 制御**:
+```yaml
+concurrency:
+  group: import-results-${{ github.ref }}
+  cancel-in-progress: false
+```
+- ✅ repository_dispatch の重複実行防止
+- ✅ 手動実行（workflow_dispatch）との競合防止
+- ✅ 同日データの二重処理防止
+- ✅ main ブランチでは順序実行（データ整合性保証）
+
 #### **SECONDARY: Import Nankan Results Daily Check**
 
 **ファイル**: `.github/workflows/import-results-nankan-daily.yml`
@@ -244,6 +255,15 @@ git push origin main
 - `repository_dispatch` (type: `nankan-results-updated`)
 
 **役割**: バックアップ監視、PRIMARY失敗時の補完
+
+**Concurrency 制御**:
+```yaml
+concurrency:
+  group: import-results-nankan-daily-${{ github.ref }}
+  cancel-in-progress: false
+```
+- ✅ 日次実行の重複防止
+- ✅ PRIMARY workflow との競合回避
 
 ---
 
