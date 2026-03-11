@@ -202,6 +202,69 @@ git push origin main
 
 ---
 
+## 🔄 GitHub Actions Workflows 🔄
+
+### **本命Workflows（必読）**
+
+#### **PRIMARY: Import Results (Dispatch)**
+
+**ファイル**: `.github/workflows/import-results-on-dispatch.yml`
+
+**トリガー**:
+- `repository_dispatch` (type: `results-updated`) ← **admin保存時に自動実行**
+- `workflow_dispatch` (手動実行)
+
+**フロー**:
+```
+1. importResults.js実行
+   ✅ 会場別ファイル自動マージ対応（統合ファイルなし時）
+   ✅ post-check検証（archive追加確認）
+
+2. validate:archive（MANDATORY）
+   ✅ 旧フォーマット検出 → exit 1
+
+3. verify:sync（MANDATORY）
+   ✅ keiba-data-sharedとarchive同期検証 → exit 1
+
+4. 検証成功時のみcommit/push
+   ✅ 検証失敗時はcommitされない（データ汚染防止）
+```
+
+**特徴**:
+- ✅ 検証失敗時は workflow status が **failure (red)**
+- ✅ commit前に停止（bad data push防止）
+- ✅ 会場別ファイルのみでも自動マージ（OOI+FUN等）
+
+#### **SECONDARY: Import Nankan Results Daily Check**
+
+**ファイル**: `.github/workflows/import-results-nankan-daily.yml`
+
+**トリガー**:
+- `schedule` (cron: `30 14 * * *` = 23:30 JST) ← 日次監視
+- `repository_dispatch` (type: `nankan-results-updated`)
+
+**役割**: バックアップ監視、PRIMARY失敗時の補完
+
+---
+
+### **⚠️ 重要な注意事項**
+
+1. **workflows の場所**
+   - ✅ **使用中**: `.github/workflows/` （親ディレクトリ）
+   - ❌ **未使用**: `astro-site/.github/workflows/` （混乱防止のためREADME追加済み）
+
+2. **rebuildArchive.jsは使用禁止**
+   - 旧フォーマットを生成するバグあり
+   - workflowから削除済み（2026-03-11）
+   - `importResults.js` 単体で完結
+
+3. **手動確認項目（最小限）**
+   - GitHub Actions画面でworkflow statusを確認
+   - ✅ = 成功（何もしなくてOK）
+   - ❌ = 失敗（ログ確認 → 対処）
+
+---
+
 ## 📊 プロジェクト概要 📊
 
 ### 基本情報
