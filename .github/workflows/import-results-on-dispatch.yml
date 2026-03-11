@@ -78,6 +78,18 @@ jobs:
           echo "🔄 Rebuilding archive to ensure consistency..."
           npm run rebuild:archive
 
+      - name: Validate archive format (MANDATORY)
+        if: always()
+        run: |
+          echo "🔍 Validating archive format..."
+          npm run validate:archive
+
+      - name: Verify archive sync (MANDATORY)
+        if: always()
+        run: |
+          echo "🔍 Verifying archive sync with keiba-data-shared..."
+          npm run verify:sync
+
       - name: Check for changes
         id: git-check
         if: always()
