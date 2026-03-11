@@ -106,26 +106,26 @@ jobs:
           npm run rebuild:archive
 
       - name: Validate archive format (MANDATORY)
-        if: always() && steps.check.outputs.has_missing == 'true'
+        if: steps.check.outputs.has_missing == 'true'
         run: |
           echo "🔍 Validating archive format..."
           npm run validate:archive
 
       - name: Verify archive sync (MANDATORY)
-        if: always() && steps.check.outputs.has_missing == 'true'
+        if: steps.check.outputs.has_missing == 'true'
         run: |
           echo "🔍 Verifying archive sync with keiba-data-shared..."
           npm run verify:sync
 
       - name: Check for changes
         id: git-check
-        if: always() && steps.check.outputs.has_missing == 'true'
+        if: steps.check.outputs.has_missing == 'true'
         run: |
           git add src/data/archiveResults.json
           git diff --staged --exit-code || echo "changed=true" >> $GITHUB_OUTPUT
 
       - name: Commit and push changes
-        if: always() && steps.git-check.outputs.changed == 'true'
+        if: steps.git-check.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
