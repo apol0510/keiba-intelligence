@@ -384,17 +384,26 @@ SENDGRID_CUSTOM_FIELD_INTELLIGENCE=e2_T
    - 南関結果系: `archive-nankan-update` に統一
 2. **JRAイベント誤配線を解消**
    - `import-results-on-dispatch.yml` から `jra-results-updated` を削除
+3. **git resetバグ修正**（2026-03-15補完）
+   - 予想系・南関結果系workflowの復旧ロジックバグ除去
+   - `git reset` → `git reset --hard origin/main` に修正
 
 ### Commit履歴
-- `44f8e9d` - Concurrency Group統一
-- `08d033d` - JRAイベント誤配線解消
+- `44f8e9d` - Concurrency Group統一（2026-03-14）
+- `08d033d` - JRAイベント誤配線解消（2026-03-14）
+- `b299506` - git resetバグ修正（2026-03-15）
 
-### ✅ Phase 1完了 - 明日以降は監視のみ
+### ✅ Phase 1完了 - 以後は監視フェーズ
+
+**位置づけ**：
+- 主要な競合要因と復旧失敗要因を除去
+- 以後は監視フェーズ（1週間）
 
 **監視項目**（2026-03-15〜）：
 1. JRA3会場が自動反映されるか
 2. 南関結果で競合失敗が出ないか
-3. rebase retry地獄が消えたか
+3. 予想系workflowで `you need to resolve your current index first` が消えたか
+4. rebase retry地獄が消えたか
 
 詳細: **[docs/WORKFLOW_PHASE1_COMPLETION.md](./docs/WORKFLOW_PHASE1_COMPLETION.md)**
 
@@ -402,9 +411,9 @@ SENDGRID_CUSTOM_FIELD_INTELLIGENCE=e2_T
 
 ## 📅 最終更新情報 📅
 
-**最終更新日**: 2026-03-14
+**最終更新日**: 2026-03-15
 **進捗率**: 99.9%完了（Phase 1-4: 完了）
-**次のステップ**: Workflow Phase 1監視 → SendGrid Marketing Campaigns設定
+**次のステップ**: Workflow Phase 1監視（1週間） → SendGrid Marketing Campaigns設定
 
 ---
 

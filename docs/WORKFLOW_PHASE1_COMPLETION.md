@@ -64,12 +64,61 @@ repository_dispatch:
 
 ---
 
+### 3. git resetバグ修正（復旧ロジックの残存バグ除去）
+
+#### 修正内容
+**実施日**: 2026-03-15（Phase 1完了後に発見）
+
+**問題**：
+- 予想系・南関結果系workflowでrebase競合時に`error: you need to resolve your current index first`が発生
+- JRA結果系は44f8e9dで修正済みだったが、他のworkflowに残存
+
+**対象workflow（3つ）**：
+
+| Workflow | 修正箇所 | 更新ファイル |
+|----------|---------|------------|
+| import-prediction-jra.yml | 4箇所 | predictions/jra/*.json |
+| import-prediction-daily.yml | 4箇所 | predictions/*.json |
+| import-results-nankan-daily.yml | 4箇所 | archiveResults.json |
+
+**修正内容**：
+```bash
+# 修正前（バグ）
+git reset  # インデックスをクリア
+git reset --hard origin/main
+
+# 修正後（正常）
+git reset --hard origin/main  # インデックスとワークツリーをクリア
+```
+
+**効果**：
+- ✅ rebase競合時のインデックスクリアが正常動作
+- ✅ unmerged files残留によるエラーを防止
+- ✅ 全自動化workflowで復旧ロジックのバグ除去完了
+
+---
+
 ## 📝 Commit履歴
 
-| Commit Hash | 内容 |
-|-------------|------|
-| `44f8e9d` | 🛡️ Phase 1: Concurrency Group統一で競合90%削減 |
-| `08d033d` | 🛡️ Phase 1追加修正: JRAイベント誤配線を解消 |
+| Commit Hash | 内容 | 実施日 |
+|-------------|------|--------|
+| `44f8e9d` | 🛡️ Phase 1: Concurrency Group統一で競合90%削減 | 2026-03-14 |
+| `08d033d` | 🛡️ Phase 1追加修正: JRAイベント誤配線を解消 | 2026-03-14 |
+| `b299506` | 🐛 予想系・南関結果系workflowのgit resetバグ修正 | 2026-03-15 |
+
+---
+
+## 📊 Phase 1完了時点の状況
+
+**位置づけ**：
+- ✅ 主要な競合要因を除去（Concurrency Group統一）
+- ✅ 復旧失敗要因を除去（git resetバグ修正）
+- ⏳ 以後は監視フェーズ（1週間）
+
+**次のアクション**：
+- 明日以降の動作を監視
+- 競合が完全に消えたことを確認
+- Phase 2（workflow統合）へ進むか判断
 
 ---
 
@@ -115,7 +164,32 @@ gh run list --workflow=import-results-on-dispatch.yml --limit 5
 
 ---
 
-### 3. rebase retry 地獄が消えたか
+### 3. 予想系workflowで `you need to resolve your current index first` が消えたか
+**監視対象**: 予想データインポートworkflow実行ログ
+
+**確認方法**：
+```bash
+# 最新5回のworkflow実行状況を確認
+gh run list --workflow=import-prediction-jra.yml --limit 5
+gh run list --workflow=import-prediction-daily.yml --limit 5
+```
+
+**期待値**：
+- ✅ 全て success (緑チェック)
+- ✅ `error: you need to resolve your current index first` が出ない
+- ✅ `astro-site/src/data/predictions/jra/.../....json: needs merge` が出ない
+
+**失敗パターン（Phase 1前・b299506前）**：
+```
+⚠️  Detected unmerged files, resetting...
+error: you need to resolve your current index first
+astro-site/src/data/predictions/jra/2026/03/2026-03-15.json: needs merge
+Error: Process completed with exit code 1.
+```
+
+---
+
+### 4. rebase retry 地獄が消えたか
 **監視対象**: workflow実行ログ
 
 **確認方法**：
