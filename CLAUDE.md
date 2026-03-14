@@ -136,6 +136,12 @@ cd "/Users/apolon/Projects/keiba-intelligence/astro-site"
 | **[docs/MULTI_VENUE_CHECK.md](./docs/MULTI_VENUE_CHECK.md)** | 複数会場同日開催の注意点、過去の不具合事例 | **結果システム変更時** |
 | **[docs/ARCHIVE_OPERATIONS.md](./docs/ARCHIVE_OPERATIONS.md)** | アーカイブ再生成手順、検証方法 | **アーカイブ再生成時** |
 
+### Workflow自動化（GitHub Actions）
+
+| ドキュメント | 内容 | 参照タイミング |
+|------------|------|---------------|
+| **[docs/WORKFLOW_PHASE1_COMPLETION.md](./docs/WORKFLOW_PHASE1_COMPLETION.md)** | Workflow Phase 1完了記録、監視項目 | **Workflow変更時** |
+
 ### プロジェクト情報
 
 | ドキュメント | 内容 |
@@ -370,11 +376,35 @@ SENDGRID_CUSTOM_FIELD_INTELLIGENCE=e2_T
 
 ---
 
+## 🛡️ Workflow自動化 Phase 1完了（2026-03-14） 🛡️
+
+### 実施内容
+1. **Concurrency Group統一**（競合90%削減）
+   - JRA結果系: `archive-jra-update` に統一
+   - 南関結果系: `archive-nankan-update` に統一
+2. **JRAイベント誤配線を解消**
+   - `import-results-on-dispatch.yml` から `jra-results-updated` を削除
+
+### Commit履歴
+- `44f8e9d` - Concurrency Group統一
+- `08d033d` - JRAイベント誤配線解消
+
+### ✅ Phase 1完了 - 明日以降は監視のみ
+
+**監視項目**（2026-03-15〜）：
+1. JRA3会場が自動反映されるか
+2. 南関結果で競合失敗が出ないか
+3. rebase retry地獄が消えたか
+
+詳細: **[docs/WORKFLOW_PHASE1_COMPLETION.md](./docs/WORKFLOW_PHASE1_COMPLETION.md)**
+
+---
+
 ## 📅 最終更新情報 📅
 
-**最終更新日**: 2026-03-11
+**最終更新日**: 2026-03-14
 **進捗率**: 99.9%完了（Phase 1-4: 完了）
-**次のステップ**: SendGrid Marketing Campaigns設定 → 動作テスト → 会員獲得
+**次のステップ**: Workflow Phase 1監視 → SendGrid Marketing Campaigns設定
 
 ---
 
