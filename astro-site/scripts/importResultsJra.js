@@ -552,9 +552,17 @@ async function main() {
       // 予想データがない場合、keiba-data-sharedに本当に存在しないか二重確認
       console.log(`⏭️  予想データが見つかりません: ${date}`);
 
-      // keiba-data-sharedに予想データが存在するか確認
+      // JRA会場コードマップ（venue日本語名 → 会場コード3文字）
+      const venueCodeMap = {
+        '東京': 'TOK', '中山': 'NAK', '京都': 'KYO', '阪神': 'HAN',
+        '中京': 'CHU', '小倉': 'KOK', '新潟': 'NII', '福島': 'FKS',
+        '札幌': 'SAP', '函館': 'HKD'
+      };
+      const venueCode = venueCodeMap[venue] || venue;
+
+      // keiba-data-sharedに予想データが存在するか確認（会場別ファイル）
       const [year, month] = date.split('-');
-      const sharedPredictionPath = `nankan/predictions/${year}/${month}/${date}.json`;
+      const sharedPredictionPath = `jra/predictions/${year}/${month}/${date}-${venueCode}.json`;
       const checkUrl = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/${sharedPredictionPath}`;
 
       try {

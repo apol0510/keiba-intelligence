@@ -561,7 +561,7 @@ async function main() {
       for (const { venue: venueName, error: errMsg } of loadErrors) {
         const venueMap = { '大井': 'OOI', '船橋': 'FUN', '川崎': 'KAW', '浦和': 'URA' };
         const venueCode = venueMap[venueName] || venueName;
-        const sharedPredictionPath = `nankan/predictions/${year}/${month}/${date}.json`;
+        const sharedPredictionPath = `nankan/predictions/${year}/${month}/${date}-${venueCode}.json`;
         const checkUrl = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/${sharedPredictionPath}`;
 
         try {
