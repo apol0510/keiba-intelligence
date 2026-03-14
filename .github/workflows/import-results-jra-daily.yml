@@ -8,9 +8,9 @@ on:
   repository_dispatch:
     types: [jra-results-updated]
 
-# 並行実行制御：リポジトリ全体で1つのワークフローのみ実行（同じファイルへの同時コミット防止）
+# 並行実行制御：archiveResultsJra.json更新系workflowで統一（同じファイルへの同時コミット防止）
 concurrency:
-  group: import-results-jra-daily
+  group: archive-jra-update
   cancel-in-progress: false
 
 jobs:

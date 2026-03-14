@@ -10,9 +10,9 @@ on:
         required: false
         default: ''
 
-# 並行実行制御：リポジトリ全体で1つのワークフローのみ実行（同じファイルへの同時コミット防止）
+# 並行実行制御：archiveResults.json更新系workflowで統一（同じファイルへの同時コミット防止）
 concurrency:
-  group: import-results-${{ github.ref }}
+  group: archive-nankan-update
   cancel-in-progress: false  # 実行中のジョブをキャンセルせず待機（順番に実行）
 
 jobs:
