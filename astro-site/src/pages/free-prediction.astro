@@ -7,8 +7,8 @@ export const prerender = false;
 
 // 最新の予想JSONファイルを取得（複数会場対応）
 const predictionsDir = join(process.cwd(), 'src', 'data', 'predictions');
-console.log('🔍 [free-prediction] process.cwd():', process.cwd());
-console.log('🔍 [free-prediction] predictionsDir:', predictionsDir);
+console.log('🔍 [PAGE] process.cwd():', process.cwd());
+console.log('🔍 [PAGE] predictionsDir:', predictionsDir);
 
 let predictionsByVenue = {};
 let venues = [];
@@ -16,11 +16,11 @@ let latestDate = null;
 let error = null;
 
 try {
-  console.log('🔍 [free-prediction] existsSync(predictionsDir):', existsSync(predictionsDir));
+  console.log('🔍 [PAGE] existsSync(predictionsDir):', existsSync(predictionsDir));
   if (existsSync(predictionsDir)) {
     // ファイル名から日付と会場を抽出して日付順にソート
     const allFiles = readdirSync(predictionsDir);
-    console.log('📂 [free-prediction] 全ファイル一覧:', allFiles);
+    console.log('📂 [PAGE] 全ファイル一覧:', allFiles);
 
     const files = allFiles
       .filter(file => file.endsWith('.json') && /^\d{4}-\d{2}-\d{2}-[a-z]+\.json$/.test(file))
@@ -40,14 +40,14 @@ try {
       .filter(item => item !== null)
       .sort((a, b) => b.timestamp - a.timestamp);
 
-    console.log('📋 [free-prediction] マッチしたファイル:', files.map(f => f.file));
+    console.log('📋 [PAGE] マッチしたファイル:', files.map(f => f.file));
 
     if (files.length > 0) {
       latestDate = files[0].date;
       const latestFiles = files.filter(f => f.date === latestDate);
 
-      console.log('📅 [free-prediction] 最新日付:', latestDate);
-      console.log('📍 [free-prediction] 最新日付のファイル:', latestFiles.map(f => f.file));
+      console.log('📅 [PAGE] 最新日付:', latestDate);
+      console.log('📍 [PAGE] 最新日付のファイル:', latestFiles.map(f => f.file));
 
       for (const fileInfo of latestFiles) {
         const fileContent = readFileSync(join(predictionsDir, fileInfo.file), 'utf-8');
@@ -65,8 +65,8 @@ try {
         venues.push(venueName);
       }
 
-      console.log('🏇 [free-prediction] venues配列:', venues);
-      console.log('🏇 [free-prediction] venues.length:', venues.length);
+      console.log('🏇 [PAGE] 表示会場一覧:', venues);
+      console.log('🏇 [PAGE] venues.length:', venues.length);
     } else {
       throw new Error('予想データがありません');
     }
@@ -87,8 +87,9 @@ const selectedVenue = selectedVenueParam && predictionsByVenue[selectedVenuePara
 const predictionData = venues.length > 0 ? predictionsByVenue[selectedVenue] : null;
 const isMultiVenue = venues.length > 1;
 
-console.log('🎯 [free-prediction] selectedVenue:', selectedVenue);
-console.log('🎯 [free-prediction] isMultiVenue:', isMultiVenue);
+console.log('🎯 [PAGE] selectedVenue:', selectedVenue);
+console.log('🎯 [PAGE] isMultiVenue:', isMultiVenue);
+console.log('🎯 [PAGE] predictionDataがある会場:', Object.keys(predictionsByVenue));
 
 // デバッグ情報をHTMLコメントとして出力
 const debugInfo = {

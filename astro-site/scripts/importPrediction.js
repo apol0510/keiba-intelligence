@@ -50,20 +50,23 @@ function getTodayJST() {
 }
 
 /**
- * computer/ディレクトリから会場別ファイルを取得してvenues形式に変換
+ * 会場別ファイル一覧を取得してvenues形式に変換（正規形式）
  *
  * @param {string} date - 日付（YYYY-MM-DD）
  * @param {string} venue - 競馬場カテゴリ（デフォルト: 'nankan'）
+ * @param {string} subDir - サブディレクトリ（'computer' または ''）
  * @returns {Promise<Object|null>} venues配列を持つ統合JSON、またはnull
  */
-async function fetchComputerPredictions(date, venue = 'nankan') {
+async function fetchVenuePredictions(date, venue = 'nankan', subDir = '') {
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
   const [year, month, day] = date.split('-');
-  const dirPath = `${venue}/predictions/computer/${year}/${month}`;
+  const dirPath = subDir
+    ? `${venue}/predictions/${subDir}/${year}/${month}`
+    : `${venue}/predictions/${year}/${month}`;
   const owner = 'apol0510';
   const repo = 'keiba-data-shared';
 
-  console.log(`📡 computer/ディレクトリから会場別ファイル取得中: ${dirPath}`);
+  console.log(`📡 [IMPORT] 会場別ファイル取得中: ${dirPath}`);
 
   // ディレクトリ内のファイル一覧を取得
   const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
@@ -80,7 +83,7 @@ async function fetchComputerPredictions(date, venue = 'nankan') {
 
   if (!dirResponse.ok) {
     if (dirResponse.status === 404) {
-      console.log(`⏭️  computer/ディレクトリが見つかりません`);
+      console.log(`⏭️  [IMPORT] ディレクトリが見つかりません: ${dirPath}`);
       return null;
     }
     throw new Error(`GitHub API Error: ${dirResponse.status}`);
@@ -94,11 +97,11 @@ async function fetchComputerPredictions(date, venue = 'nankan') {
   );
 
   if (dateFiles.length === 0) {
-    console.log(`⏭️  ${date}の会場別ファイルが見つかりません`);
+    console.log(`⏭️  [IMPORT] ${date}の会場別ファイルが見つかりません: ${dirPath}`);
     return null;
   }
 
-  console.log(`✅ ${dateFiles.length}会場のファイルを検出:`, dateFiles.map(f => f.name).join(', '));
+  console.log(`✅ [IMPORT] ${dateFiles.length}会場のファイルを検出:`, dateFiles.map(f => f.name).join(', '));
 
   // 各ファイルを取得
   const venues = [];
@@ -110,9 +113,9 @@ async function fetchComputerPredictions(date, venue = 'nankan') {
       const content = await response.text();
       const venueData = JSON.parse(content);
       venues.push(venueData);
-      console.log(`   ✅ ${file.name} 取得完了`);
+      console.log(`   ✅ [IMPORT] ${file.name} 取得完了`);
     } else {
-      console.log(`   ⚠️  ${file.name} 取得失敗: ${response.status}`);
+      console.log(`   ⚠️  [IMPORT] ${file.name} 取得失敗: ${response.status}`);
     }
   }
 
@@ -121,11 +124,20 @@ async function fetchComputerPredictions(date, venue = 'nankan') {
   }
 
   // venues配列形式に統合
+  console.log(`✅ [IMPORT] venues配列形式に統合完了: ${venues.length}会場`);
   return {
     date: date,
     venues: venues,
     totalVenues: venues.length
   };
+}
+
+/**
+ * computer/ディレクトリから会場別ファイルを取得（後方互換のため残す）
+ * @deprecated 内部でfetchVenuePredictionsを呼び出す
+ */
+async function fetchComputerPredictions(date, venue = 'nankan') {
+  return await fetchVenuePredictions(date, venue, 'computer');
 }
 
 /**
@@ -214,25 +226,34 @@ async function fetchSharedPrediction(date, venue = 'nankan') {
 async function importPrediction(date, venue = 'nankan') {
   console.log(`\n━━━ ${date} 予想データ取り込み開始 ━━━`);
 
-  // まずcomputer/ディレクトリから会場別ファイルを取得
-  let sharedJSON = await fetchComputerPredictions(date, venue);
+  // 優先順位1: 正規形式の会場別ファイル（nankan/predictions/YYYY/MM/YYYY-MM-DD-{VENUE}.json）
+  let sharedJSON = await fetchVenuePredictions(date, venue, '');
 
-  // computer/になければ、従来の統合ファイルを取得
+  // 優先順位2: computer/ディレクトリから会場別ファイル（コンピ指数）
   if (!sharedJSON) {
-    console.log(`📡 従来の統合ファイルを取得します`);
+    console.log(`📡 [IMPORT] computer/配下をチェック`);
+    sharedJSON = await fetchComputerPredictions(date, venue);
+  }
+
+  // 優先順位3（非推奨）: 従来の統合ファイル（YYYY-MM-DD.json）
+  if (!sharedJSON) {
+    console.log(`⚠️  [IMPORT] 【非推奨】従来の単一ファイルを取得します`);
     sharedJSON = await fetchSharedPrediction(date, venue);
+    if (sharedJSON) {
+      console.log(`⚠️  [IMPORT] 警告: 単一ファイル形式は将来廃止されます。会場別ファイルに移行してください。`);
+    }
   }
 
   // 予想データがない場合はスキップ
   if (!sharedJSON) {
-    console.log(`⏭️  予想データがないため、スキップします`);
+    console.log(`⏭️  [IMPORT] 予想データがないため、スキップします`);
     return null;
   }
 
   // 【複数会場対応】venues配列があるか確認
   if (sharedJSON.venues && Array.isArray(sharedJSON.venues) && sharedJSON.venues.length > 0) {
     // 複数会場形式（venues配列）
-    console.log(`📍 複数会場形式を検出: ${sharedJSON.venues.length}会場`);
+    console.log(`📍 [IMPORT] 複数会場形式を検出: ${sharedJSON.venues.length}会場`);
 
     const results = [];
 
@@ -268,8 +289,8 @@ async function importPrediction(date, venue = 'nankan') {
 
     return results;
   } else {
-    // 単一会場形式（従来の形式）
-    console.log(`📍 単一会場形式`);
+    // 単一会場形式（従来の形式・非推奨）
+    console.log(`⚠️  [IMPORT] 【非推奨】単一会場形式`);
 
     // 正規化 + 調整ルール適用
     console.log(`⚙️  正規化 + 調整ルール適用中...`);
@@ -400,7 +421,7 @@ function convertToLegacyFormat(data, date) {
  * @returns {boolean} 保存したかどうか（true: 保存, false: no-op）
  */
 function savePrediction(date, normalizedAndAdjusted) {
-  console.log(`\n💾 保存処理開始...`);
+  console.log(`\n💾 [SAVE] 保存処理開始...`);
 
   // 保存先パス構築（フラット構造：YYYY-MM-DD-venue.json）
   const venue = normalizedAndAdjusted.venue || '大井'; // デフォルト
@@ -415,6 +436,8 @@ function savePrediction(date, normalizedAndAdjusted) {
 
   const dirPath = join(projectRoot, 'src', 'data', 'predictions');
   const filePath = join(dirPath, fileName);
+
+  console.log(`📁 [SAVE] 保存先: ${filePath}`);
 
   // ディレクトリ作成（存在しない場合）
   if (!existsSync(dirPath)) {
@@ -448,19 +471,18 @@ function savePrediction(date, normalizedAndAdjusted) {
     const newHash = crypto.createHash('sha256').update(newContent).digest('hex');
 
     if (existingHash === newHash) {
-      console.log(`⏭️  スキップ: 既存データと同一です`);
-      console.log(`   ファイル: ${filePath}`);
+      console.log(`⏭️  [SAVE] スキップ: 既存データと同一です`);
       return false; // no-op
     } else {
-      console.log(`🔄 更新: 既存データと差分があります`);
+      console.log(`🔄 [SAVE] 更新: 既存データと差分があります`);
     }
   } else {
-    console.log(`🆕 新規作成`);
+    console.log(`🆕 [SAVE] 新規作成`);
   }
 
   // ファイル書き込み
   writeFileSync(filePath, newContent, 'utf-8');
-  console.log(`✅ 保存完了: ${filePath}`);
+  console.log(`✅ [SAVE] 保存完了: ${filePath}`);
   console.log(`   会場: ${venue} (${venueSlug})`);
 
   return true; // 保存した
@@ -517,18 +539,25 @@ async function main() {
     }
 
     // 【複数会場対応】各会場のデータを保存
-    console.log(`\n📦 保存対象: ${results.length}会場`);
+    console.log(`\n📦 [BUILD] 保存対象: ${results.length}会場`);
+    const savedFiles = [];
     let totalSaved = 0;
 
     for (const normalizedAndAdjusted of results) {
       const saved = savePrediction(date, normalizedAndAdjusted);
       if (saved) {
         totalSaved++;
+        const venue = normalizedAndAdjusted.venue || '大井';
+        const venueMap = { '大井': 'ooi', '船橋': 'funabashi', '川崎': 'kawasaki', '浦和': 'urawa' };
+        const venueSlug = venueMap[venue] || 'ooi';
+        savedFiles.push(`${date}-${venueSlug}.json`);
       }
     }
 
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     if (totalSaved > 0) {
+      console.log(`✅ [BUILD] 生成ファイル一覧:`);
+      savedFiles.forEach(f => console.log(`   - ${f}`));
       console.log(`✅ 取り込み完了！（${totalSaved}/${results.length}会場）`);
     } else {
       console.log('⏭️  変更なし（既存データと同一）');
