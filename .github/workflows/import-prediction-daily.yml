@@ -86,7 +86,7 @@ jobs:
               git rebase --abort
               # mainブランチに戻る（detached HEAD回避）
               git checkout main
-              git reset  # インデックスをクリア
+              git reset --hard origin/main  # インデックスとワークツリーをクリア
               git reset --hard origin/main
               git clean -fd
             fi
@@ -96,7 +96,7 @@ jobs:
               echo "⚠️  Detected unmerged files, resetting..."
               # mainブランチに戻る（detached HEAD回避）
               git checkout main
-              git reset  # インデックスをクリア
+              git reset --hard origin/main  # インデックスとワークツリーをクリア
               git reset --hard origin/main
               git clean -fd
             fi
@@ -152,17 +152,17 @@ jobs:
                   else
                     echo "❌ Failed to continue rebase"
                     git rebase --abort
-                    # mainブランチに戻る（2段階リセット）
+                    # mainブランチに戻る
                     git checkout main
-                    git reset  # インデックスをクリア
+                    git reset --hard origin/main  # インデックスとワークツリーをクリア
                     git reset --hard origin/main
                   fi
                 else
                   echo "❌ No conflict files found but rebase failed"
                   git rebase --abort
-                  # mainブランチに戻る（2段階リセット）
+                  # mainブランチに戻る
                   git checkout main
-                  git reset  # インデックスをクリア
+                  git reset --hard origin/main  # インデックスとワークツリーをクリア
                   git reset --hard origin/main
                 fi
               fi
