@@ -2,7 +2,7 @@ name: Import Results (Dispatch)
 
 on:
   repository_dispatch:
-    types: [results-updated, nankan-results-updated, jra-results-updated]
+    types: [results-updated, nankan-results-updated]
   workflow_dispatch:
     inputs:
       date:
