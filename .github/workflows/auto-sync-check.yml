@@ -144,14 +144,17 @@ jobs:
 
           MISSING_DATES="${{ steps.detect-missing.outputs.missing_dates }}"
 
-          git commit -m "🔧 Auto-sync fallback: ${MISSING_DATES}
+          git commit -m "$(cat <<'EOF'
+          🔧 Auto-sync fallback: ${MISSING_DATES}
 
-【自動修復】
-sync check で不足日を検出し、自動インポートを実行しました。
+          【自動修復】
+          sync check で不足日を検出し、自動インポートを実行しました。
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
+          🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-Co-Authored-By: Claude <noreply@anthropic.com>"
+          Co-Authored-By: Claude <noreply@anthropic.com>
+          EOF
+          )"
 
           git push
 
