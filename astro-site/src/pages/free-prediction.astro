@@ -221,6 +221,61 @@ function generateAdvancedMetrics(horse, allHorses) {
             </div>
           )}
 
+          <!-- 無料会員登録CTA -->
+          <div class="upgrade-cta-box">
+            <div class="upgrade-icon">🎁</div>
+            <h3>無料会員登録で全頭予想が見られます</h3>
+            <p>メールアドレスのみで登録完了。全出走馬のPT値・AI分析データ・買い目（一部）が閲覧可能になります。</p>
+            <div class="upgrade-benefits-mini">
+              <span>✅ 全頭予想</span>
+              <span>✅ 買い目（馬番のみ）</span>
+              <span>✅ AI分析データ</span>
+              <span>✅ メールマガジン</span>
+            </div>
+            <a href="/register" class="btn btn-success btn-lg">今すぐ無料登録 →</a>
+          </div>
+
+          <!-- プロ会員CTA（ブラーマスク付きプレビュー） -->
+          <div class="locked-section blurred-preview">
+            <!-- ブラーされた買い目プレビュー -->
+            <div class="blurred-content">
+              <div class="betting-preview-card">
+                <h4>🎯 馬単買い目</h4>
+                <div class="betting-formula-preview">
+                  <div class="main-line">
+                    <span class="label">本線</span>
+                    <span class="formula">3-8.12.5.10.7.2</span>
+                  </div>
+                  <div class="backup-line">
+                    <span class="label">抑え</span>
+                    <span class="formula">8-3.12.5.10.7.2</span>
+                  </div>
+                </div>
+                <div class="betting-info-preview">
+                  <div class="info-item">
+                    <span class="label">買い目点数</span>
+                    <span class="value">8点 or 12点</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">推奨投資額</span>
+                    <span class="value">¥1,200</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ガラスモーフィズムオーバーレイ -->
+            <div class="lock-overlay">
+              <div class="lock-icon">🔒</div>
+              <h3>プロ会員で全て表示</h3>
+              <p>馬単買い目（本線+抑え）・期待値分析・的中実績をご提供</p>
+              <div class="lock-buttons">
+                <a href="/pricing" class="btn btn-primary">料金プランを見る</a>
+                <a href="/register" class="btn btn-success">無料会員登録</a>
+              </div>
+            </div>
+          </div>
+
           <!-- 無料予想について -->
           <div class="free-info-card">
             <div class="free-info-header">
@@ -511,61 +566,6 @@ function generateAdvancedMetrics(horse, allHorses) {
               </div>
             );
           })}
-          </div>
-
-          <!-- 無料会員登録誘導（全レース共通）-->
-          <div class="upgrade-cta-box">
-            <div class="upgrade-icon">🎁</div>
-            <h3>無料会員登録で全頭予想が見られます</h3>
-            <p>メールアドレスのみで登録完了。全出走馬のPT値・AI分析データ・買い目（一部）が閲覧可能になります。</p>
-            <div class="upgrade-benefits-mini">
-              <span>✅ 全頭予想</span>
-              <span>✅ 買い目（馬番のみ）</span>
-              <span>✅ AI分析データ</span>
-              <span>✅ メールマガジン</span>
-            </div>
-            <a href="/register" class="btn btn-success btn-lg">今すぐ無料登録 →</a>
-          </div>
-
-          <!-- 買い目セクション（ブラーマスク付きプレビュー） -->
-          <div class="locked-section blurred-preview">
-            <!-- ブラーされた買い目プレビュー -->
-            <div class="blurred-content">
-              <div class="betting-preview-card">
-                <h4>🎯 馬単買い目</h4>
-                <div class="betting-formula-preview">
-                  <div class="main-line">
-                    <span class="label">本線</span>
-                    <span class="formula">3-8.12.5.10.7.2</span>
-                  </div>
-                  <div class="backup-line">
-                    <span class="label">抑え</span>
-                    <span class="formula">8-3.12.5.10.7.2</span>
-                  </div>
-                </div>
-                <div class="betting-info-preview">
-                  <div class="info-item">
-                    <span class="label">買い目点数</span>
-                    <span class="value">8点 or 12点</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="label">推奨投資額</span>
-                    <span class="value">¥1,200</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- ガラスモーフィズムオーバーレイ -->
-            <div class="lock-overlay">
-              <div class="lock-icon">🔒</div>
-              <h3>プロ会員で全て表示</h3>
-              <p>馬単買い目（本線+抑え）・期待値分析・的中実績をご提供</p>
-              <div class="lock-buttons">
-                <a href="/pricing" class="btn btn-primary">料金プランを見る</a>
-                <a href="/register" class="btn btn-success">無料会員登録</a>
-              </div>
-            </div>
           </div>
 
           <!-- Technical Notes -->
