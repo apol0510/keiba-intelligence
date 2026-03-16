@@ -118,7 +118,7 @@ async function main() {
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`🔍 同期状態チェック`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`   最新結果: ${latestResultDate}`);
+    console.log(`   最新結果: ${latestResultDate} (${latestResult.source === 'unified' ? '統合ファイル' : `会場別: ${latestResult.venues.join(', ')}`})`);
     console.log(`   最新アーカイブ: ${latestArchiveDate}`);
     console.log(`   差分: ${diffDays}日`);
     console.log();
@@ -128,13 +128,32 @@ async function main() {
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
       process.exit(0);
     } else if (diffDays > 0) {
+      // 不足日を列挙
+      const missingDates = [];
+      const archiveDate = new Date(latestArchiveDate);
+      const resultDate = new Date(latestResultDate);
+
+      for (let d = new Date(archiveDate); d < resultDate; d.setDate(d.getDate() + 1)) {
+        missingDates.push(new Date(d).toISOString().split('T')[0]);
+      }
+
       console.error(`❌ 同期ズレ検出: ${latestResultDate}の結果がアーカイブに反映されていません`);
       console.error(`   keiba-data-sharedには結果が存在しますが、archiveResults.jsonに追加されていません。`);
       console.error(`   自動インポートが失敗している可能性があります。`);
       console.error();
+      console.error(`【不足している日付】`);
+      missingDates.forEach(date => {
+        console.error(`   - ${date}`);
+      });
+      console.error();
       console.error(`【対処方法】`);
       console.error(`   以下のコマンドで手動インポートを実行してください:`);
       console.error(`   node scripts/importResults.js --date ${latestResultDate}`);
+      console.error();
+      console.error(`【再発防止のために確認すること】`);
+      console.error(`   1. GitHub Actions の Import Results (Dispatch) が実行されたか確認`);
+      console.error(`   2. repository_dispatch イベントが送信されたか確認`);
+      console.error(`   3. keiba-data-shared の dispatch-results-intelligence.yml を確認`);
       console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
       process.exit(1);
     } else {
