@@ -1,5 +1,403 @@
 [
   {
+    "date": "2026-03-15",
+    "venue": "中京",
+    "venues": [
+      "中京"
+    ],
+    "totalRaces": 12,
+    "hitRaces": 9,
+    "missRaces": 3,
+    "hitRate": 75,
+    "betAmount": 9600,
+    "betPointsPerRace": 8,
+    "totalPayout": 23040,
+    "returnRate": 240,
+    "races": [
+      {
+        "raceNumber": 1,
+        "raceName": "3歳未勝利",
+        "venue": "中京",
+        "result": {
+          "first": {
+            "number": 14,
+            "name": "タイセイモノリス"
+          },
+          "second": {
+            "number": 3,
+            "name": "ラインジーク"
+          },
+          "third": {
+            "number": 16,
+            "name": "シャンパンスター"
+          }
+        },
+        "bettingLines": [
+          "3-5.6.14.2.9.10(抑え1.12.4.13)",
+          "5-3.6.14.2.9.10(抑え1.12.4.13)"
+        ],
+        "bettingPoints": 20,
+        "isHit": true,
+        "hitLines": [
+          "3-5.6.14.2.9.10(抑え1.12.4.13)"
+        ],
+        "umatan": {
+          "combination": "14-3",
+          "payout": 1370
+        }
+      },
+      {
+        "raceNumber": 2,
+        "raceName": "3歳未勝利",
+        "venue": "中京",
+        "result": {
+          "first": {
+            "number": 1,
+            "name": "オオツカ"
+          },
+          "second": {
+            "number": 13,
+            "name": "ガイストライヒ"
+          },
+          "third": {
+            "number": 11,
+            "name": "ハオカノア"
+          }
+        },
+        "bettingLines": [
+          "1-13.7.5.6.11.2(抑え10.8)",
+          "13-1.7.5.6.11.2(抑え10.8)"
+        ],
+        "bettingPoints": 16,
+        "isHit": true,
+        "hitLines": [
+          "1-13.7.5.6.11.2(抑え10.8)",
+          "13-1.7.5.6.11.2(抑え10.8)"
+        ],
+        "umatan": {
+          "combination": "1-13",
+          "payout": 420
+        }
+      },
+      {
+        "raceNumber": 3,
+        "raceName": "3歳未勝利",
+        "venue": "中京",
+        "result": {
+          "first": {
+            "number": 1,
+            "name": "スリラーナイト"
+          },
+          "second": {
+            "number": 11,
+            "name": "フォルストランキル"
+          },
+          "third": {
+            "number": 12,
+            "name": "フレッチャアズーラ"
+          }
+        },
+        "bettingLines": [
+          "12-1.8.4.2.14.10(抑え16.5.6.13.9)",
+          "1-12.8.4.2.14.10(抑え16.5.6.13.9)"
+        ],
+        "bettingPoints": 22,
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "1-11",
+          "payout": 23220
+        }
+      },
+      {
+        "raceNumber": 4,
+        "raceName": "3歳未勝利",
+        "venue": "中京",
+        "result": {
+          "first": {
+            "number": 17,
+            "name": "タイキプレジール"
+          },
+          "second": {
+            "number": 2,
+            "name": "ワディアルリヤハ"
+          },
+          "third": {
+            "number": 5,
+            "name": "デンプシー"
+          }
+        },
+        "bettingLines": [
+          "15-17.2.16.5.9.3(抑え6.12.13.7.11)",
+          "17-15.2.16.5.9.3(抑え6.12.13.7.11)"
+        ],
+        "bettingPoints": 22,
+        "isHit": true,
+        "hitLines": [
+          "17-15.2.16.5.9.3(抑え6.12.13.7.11)"
+        ],
+        "umatan": {
+          "combination": "17-2",
+          "payout": 3040
+        }
+      },
+      {
+        "raceNumber": 5,
+        "raceName": "3歳未勝利",
+        "venue": "中京",
+        "result": {
+          "first": {
+            "number": 1,
+            "name": "メイショウナルカミ"
+          },
+          "second": {
+            "number": 7,
+            "name": "ヘイジュード"
+          },
+          "third": {
+            "number": 15,
+            "name": "レッドブライトン"
+          }
+        },
+        "bettingLines": [
+          "1-7.8.14.13.10.15(抑え2.3)",
+          "7-1.8.14.13.10.15(抑え2.3)"
+        ],
+        "bettingPoints": 16,
+        "isHit": true,
+        "hitLines": [
+          "1-7.8.14.13.10.15(抑え2.3)",
+          "7-1.8.14.13.10.15(抑え2.3)"
+        ],
+        "umatan": {
+          "combination": "1-7",
+          "payout": 460
+        }
+      },
+      {
+        "raceNumber": 6,
+        "raceName": "4歳以上1勝クラス",
+        "venue": "中京",
+        "result": {
+          "first": {
+            "number": 2,
+            "name": "アクアマリーナ"
+          },
+          "second": {
+            "number": 5,
+            "name": "ララバッカナール"
+          },
+          "third": {
+            "number": 6,
+            "name": "ヒミノエトワール"
+          }
+        },
+        "bettingLines": [
+          "6-5.15.3.2.14.8(抑え4.7)",
+          "5-6.15.3.2.14.8(抑え4.7)"
+        ],
+        "bettingPoints": 16,
+        "isHit": true,
+        "hitLines": [
+          "5-6.15.3.2.14.8(抑え4.7)"
+        ],
+        "umatan": {
+          "combination": "2-5",
+          "payout": 3400
+        }
+      },
+      {
+        "raceNumber": 7,
+        "raceName": "4歳以上1勝クラス",
+        "venue": "中京",
+        "result": {
+          "first": {
+            "number": 1,
+            "name": "オリーブグリーン"
+          },
+          "second": {
+            "number": 15,
+            "name": "マルガイアークドール"
+          },
+          "third": {
+            "number": 6,
+            "name": "レッドエウロス"
+          }
+        },
+        "bettingLines": [
+          "6-1.15.9.12.14.13(抑え3.2.8.11.7)",
+          "1-6.15.9.12.14.13(抑え3.2.8.11.7)"
+        ],
+        "bettingPoints": 22,
+        "isHit": true,
+        "hitLines": [
+          "1-6.15.9.12.14.13(抑え3.2.8.11.7)"
+        ],
+        "umatan": {
+          "combination": "1-15",
+          "payout": 2040
+        }
+      },
+      {
+        "raceNumber": 8,
+        "raceName": "4歳以上1勝クラス",
+        "venue": "中京",
+        "result": {
+          "first": {
+            "number": 10,
+            "name": "エリーナストーム"
+          },
+          "second": {
+            "number": 7,
+            "name": "マドモアゼルアスク"
+          },
+          "third": {
+            "number": 9,
+            "name": "マイネルアレス"
+          }
+        },
+        "bettingLines": [
+          "10-4.9.7.1.3.2(抑え8.12)",
+          "4-10.9.7.1.3.2(抑え8.12)"
+        ],
+        "bettingPoints": 16,
+        "isHit": true,
+        "hitLines": [
+          "10-4.9.7.1.3.2(抑え8.12)"
+        ],
+        "umatan": {
+          "combination": "10-7",
+          "payout": 1530
+        }
+      },
+      {
+        "raceNumber": 9,
+        "raceName": "伊良湖特別",
+        "venue": "中京",
+        "result": {
+          "first": {
+            "number": 16,
+            "name": "ランウインディ"
+          },
+          "second": {
+            "number": 7,
+            "name": "ミッキーマカパ"
+          },
+          "third": {
+            "number": 15,
+            "name": "エイプリルインパリ"
+          }
+        },
+        "bettingLines": [
+          "8-14.15.9.13.3.16(抑え5.7.6.12)",
+          "14-8.15.9.13.3.16(抑え5.7.6.12)"
+        ],
+        "bettingPoints": 20,
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "16-7",
+          "payout": 15980
+        }
+      },
+      {
+        "raceNumber": 10,
+        "raceName": "昇竜ステークス",
+        "venue": "中京",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "スマートジュリアス"
+          },
+          "second": {
+            "number": 1,
+            "name": "テーオーグレーザー"
+          },
+          "third": {
+            "number": 6,
+            "name": "ルクスレイモンド"
+          }
+        },
+        "bettingLines": [
+          "4-9.10.11.1.7.5(抑え12.3)",
+          "9-4.10.11.1.7.5(抑え12.3)"
+        ],
+        "bettingPoints": 16,
+        "isHit": true,
+        "hitLines": [
+          "4-9.10.11.1.7.5(抑え12.3)"
+        ],
+        "umatan": {
+          "combination": "4-1",
+          "payout": 5140
+        }
+      },
+      {
+        "raceNumber": 11,
+        "raceName": "第62回東海テレビ杯金鯱賞GⅡ",
+        "venue": "中京",
+        "result": {
+          "first": {
+            "number": 9,
+            "name": "シェイクユアハート"
+          },
+          "second": {
+            "number": 3,
+            "name": "ジョバンニ"
+          },
+          "third": {
+            "number": 12,
+            "name": "クイーンズウォーク"
+          }
+        },
+        "bettingLines": [
+          "2-12.1.9.3.13.4(抑え10.6.7.14)",
+          "12-2.1.9.3.13.4(抑え10.6.7.14)"
+        ],
+        "bettingPoints": 20,
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "9-3",
+          "payout": 12480
+        }
+      },
+      {
+        "raceNumber": 12,
+        "raceName": "4歳以上1勝クラス",
+        "venue": "中京",
+        "result": {
+          "first": {
+            "number": 13,
+            "name": "ヴェントゥーラ"
+          },
+          "second": {
+            "number": 2,
+            "name": "マルガイサディーク"
+          },
+          "third": {
+            "number": 1,
+            "name": "アンバーニードル"
+          }
+        },
+        "bettingLines": [
+          "6-13.17.3.2.11.12(抑え16.15.9.1.5.7)",
+          "13-6.17.3.2.11.12(抑え16.15.9.1.5.7)"
+        ],
+        "bettingPoints": 24,
+        "isHit": true,
+        "hitLines": [
+          "13-6.17.3.2.11.12(抑え16.15.9.1.5.7)"
+        ],
+        "umatan": {
+          "combination": "13-2",
+          "payout": 5640
+        }
+      }
+    ],
+    "verifiedAt": "2026-03-16T07:11:58.433Z"
+  },
+  {
     "date": "2026-03-14",
     "venue": "中京・中山・阪神",
     "venues": [
