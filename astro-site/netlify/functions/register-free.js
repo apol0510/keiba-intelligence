@@ -223,7 +223,7 @@ async function saveAuthToken(email, token) {
   }
 
   try {
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15分後
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 60分後
     const createUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/AuthTokens`;
     const createPayload = {
       records: [{
@@ -329,7 +329,7 @@ async function sendMagicLink(email) {
     <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; margin: 24px 0; border-radius: 4px;">
       <p style="color: #991b1b; font-size: 14px; margin: 0; line-height: 1.6;">
         このメールに心当たりがない場合は、このメールを無視してください。<br>
-        リンクの有効期限は15分です。
+        リンクの有効期限は60分です。
       </p>
     </div>
 
