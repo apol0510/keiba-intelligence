@@ -162,8 +162,8 @@ exports.handler = async (event) => {
     let redirectTo = '/free-prediction'; // デフォルト: 無料予想ページ
 
     const planType = customer.PlanType?.toLowerCase();
-    if (planType === 'pro' || planType === 'pro-plus') {
-      redirectTo = '/prediction'; // プロ会員は有料予想ページへ
+    if (planType === 'pro' || planType === 'pro-plus' || planType === 'light') {
+      redirectTo = '/prediction'; // 有料会員は予想ページへ
     }
 
     // セッションデータをBase64エンコードしてCookieに保存

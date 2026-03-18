@@ -56,6 +56,23 @@ const description = 'KEIBA Intelligence プロプラン（買い切り・年払�
             <button class="btn btn-select" onclick="selectPlan('年払いプラン', 66000, 'yearly')">このプランを選択</button>
           </div>
 
+          <!-- ライトプラン -->
+          <div class="plan-card" data-plan="light" data-price="6600">
+            <div class="badge badge-light">お試し</div>
+            <div class="plan-name">ライトプラン</div>
+            <div class="plan-price">
+              <span class="price">¥6,600</span>
+              <span class="period">/月</span>
+            </div>
+            <ul class="plan-features">
+              <li>✅ 南関4場＋JRA全10場 全レース予想</li>
+              <li>✅ メインレースの馬単買い目</li>
+              <li>✅ 全期間の的中実績</li>
+              <li>⚠️ メインレース以外の買い目は非表示</li>
+            </ul>
+            <button class="btn btn-select" onclick="selectPlan('ライトプラン', 6600, 'light')">このプランを選択</button>
+          </div>
+
           <!-- 月払い南関プラン -->
           <div class="plan-card" data-plan="monthly-nankan" data-price="12000">
             <div class="plan-name">月払い南関プラン</div>
@@ -284,6 +301,11 @@ const description = 'KEIBA Intelligence プロプラン（買い切り・年払�
 
     .badge-success {
       background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+
+    .badge-light {
+      background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
       color: white;
     }
 

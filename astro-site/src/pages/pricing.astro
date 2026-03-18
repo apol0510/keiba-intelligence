@@ -50,6 +50,26 @@ const recommendedPlans = [
   },
 ];
 
+const lightPlan = {
+  id: 'light',
+  name: 'ライトプラン',
+  price: 6600,
+  period: '/月',
+  description: 'まずはお試しで始めたい方に',
+  features: [
+    { text: '南関4場＋JRA全10場 全レース予想', included: true },
+    { text: 'メインレース馬単買い目', included: true, highlight: true },
+    { text: '的中実績閲覧', included: true },
+    { text: 'データ可視化', included: true },
+    { text: '全レース馬単買い目', included: false },
+  ],
+  cta: '銀行振込で申し込む',
+  ctaLink: '/apply',
+  highlighted: false,
+  badge: 'お試し',
+  dailyPrice: 220,
+};
+
 const monthlyPlans = [
   {
     id: 'monthly-nankan',
@@ -226,6 +246,55 @@ const monthlyPlans = [
             </button>
           </div>
         ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ライトプラン（お試し） -->
+  <section class="light-plan-section">
+    <div class="container">
+      <h2 class="section-title text-center">まずはお試し</h2>
+      <p class="text-center mb-3" style="color: var(--text-secondary);">
+        全レース予想を閲覧可能。メインレースの買い目付き。
+      </p>
+
+      <div style="max-width: 450px; margin: 0 auto;">
+        <div class="pricing-card card light-card">
+          <div class="badge badge-light">{lightPlan.badge}</div>
+
+          <div class="plan-header">
+            <div class="plan-name">{lightPlan.name}</div>
+            <div class="plan-price">
+              <span class="price">¥{lightPlan.price.toLocaleString()}</span>
+              <span class="period">{lightPlan.period}</span>
+            </div>
+            {lightPlan.dailyPrice && (
+              <div class="daily-price">1日あたり¥{lightPlan.dailyPrice}</div>
+            )}
+            <div class="plan-description">{lightPlan.description}</div>
+          </div>
+
+          <ul class="plan-features">
+            {lightPlan.features.map((feature) => (
+              <li class={`${feature.included ? 'included' : 'excluded'} ${feature.highlight ? 'highlight' : ''}`}>
+                {feature.included ? '✅' : '❌'} {feature.text}
+              </li>
+            ))}
+          </ul>
+
+          <div class="light-upgrade-hint">
+            <p>気に入ったらプロプランへアップグレード可能</p>
+          </div>
+
+          <button
+            class="btn btn-light w-full open-apply-modal"
+            data-plan={lightPlan.id}
+            data-price={lightPlan.price}
+            data-name={lightPlan.name}
+          >
+            {lightPlan.cta}
+          </button>
+        </div>
       </div>
     </div>
   </section>
@@ -795,8 +864,51 @@ const monthlyPlans = [
     }
 
     /* プランセクション */
-    .pricing-plans, .monthly-plans, .price-comparison, .plan-comparison, .faq {
+    .pricing-plans, .light-plan-section, .monthly-plans, .price-comparison, .plan-comparison, .faq {
       padding: var(--spacing-2xl) 0;
+    }
+
+    .light-plan-section {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(109, 40, 217, 0.05) 100%);
+    }
+
+    .light-card {
+      border: 2px solid rgba(139, 92, 246, 0.4);
+    }
+
+    .light-card:hover {
+      border-color: rgba(139, 92, 246, 0.7);
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+    }
+
+    .badge-light {
+      background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+      color: white;
+    }
+
+    .btn-light {
+      background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+      color: white;
+      border: none;
+      padding: var(--spacing-md) var(--spacing-xl);
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-light:hover {
+      background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(139, 92, 246, 0.4);
+    }
+
+    .light-upgrade-hint {
+      text-align: center;
+      padding: var(--spacing-sm) var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+      color: var(--text-secondary);
+      font-size: 0.85rem;
     }
 
     .monthly-plans {

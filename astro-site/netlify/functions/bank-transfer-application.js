@@ -332,9 +332,10 @@ exports.handler = async (event, context) => {
         console.warn('⚠️ Airtable credentials not configured, skipping registration');
       } else {
         // プラン名から料金部分を削除（Airtable Single select用）
-        // 例: "プロプラン (¥4,980/月)" → "pro"
         let planName = 'pro';
-        if (productName.includes('年')) {
+        if (productName.includes('ライト')) {
+          planName = 'light';
+        } else if (productName.includes('年')) {
           planName = 'pro';
         }
 

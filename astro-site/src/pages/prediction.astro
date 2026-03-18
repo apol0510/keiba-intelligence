@@ -408,11 +408,22 @@ function generateUmatanBets(horses) {
 
                   <!-- 買い目セクション（プロ会員限定）-->
                   {umatanBets && (
-                    <div class="betting-section pro-exclusive" id={`betting-section-${index}`}>
+                    <div class="betting-section pro-exclusive" id={`betting-section-${index}`} data-race-number={race.raceInfo.raceNumber} data-total-races={venueData.predictions.length}>
                       <div class="section-header">
                         <div class="header-icon">💰</div>
                         <h2>AI Recommended Betting Strategy / AI推奨馬単買い目</h2>
                         <span class="pro-tag pro-only">PRO限定</span>
+                      </div>
+
+                      <!-- ライトプラン向け制限メッセージ（メインレース以外）-->
+                      <div class="light-user-restricted hidden" data-race-index={index}>
+                        <div class="limited-betting-info">
+                          <p>🔒 <strong>ライトプラン：</strong>買い目はメインレース（最終レース）のみ閲覧可能です</p>
+                          <div class="upgrade-notice">
+                            <p>💎 <strong>プロプランにアップグレードで全レースの買い目が見られます</strong></p>
+                            <a href="/pricing" class="btn btn-upgrade">料金プランを見る →</a>
+                          </div>
+                        </div>
                       </div>
 
                       <!-- 無料会員向け制限買い目 -->
@@ -1934,9 +1945,10 @@ function generateUmatanBets(horses) {
         });
       }
 
-      // 無料ユーザーチェック
+      // ユーザータイプチェック
       const isFreeUser = sessionStorage.getItem('isFreeUser') === 'true';
-      console.log('🔍 ユーザータイプ:', isFreeUser ? '無料会員' : 'プロ会員');
+      const isLightUser = sessionStorage.getItem('isLightUser') === 'true';
+      console.log('🔍 ユーザータイプ:', isFreeUser ? '無料会員' : isLightUser ? 'ライト会員' : 'プロ会員');
 
       if (isFreeUser) {
         // 無料ユーザー向け表示
@@ -1946,13 +1958,42 @@ function generateUmatanBets(horses) {
         document.querySelectorAll('.betting-formula.pro-user-only').forEach(el => {
           el.classList.add('hidden');
         });
+        document.querySelectorAll('.light-user-restricted').forEach(el => {
+          el.classList.add('hidden');
+        });
         document.querySelectorAll('.pro-tag.pro-only').forEach(el => {
           el.textContent = '無料会員';
           el.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
         });
+      } else if (isLightUser) {
+        // ライトユーザー向け表示（メインレースのみ買い目表示）
+        document.querySelectorAll('.betting-section.pro-exclusive').forEach(section => {
+          const raceNumber = parseInt(section.dataset.raceNumber);
+          const totalRaces = parseInt(section.dataset.totalRaces);
+          const isMainRace = raceNumber === totalRaces; // 最終レースがメイン
+
+          if (isMainRace) {
+            // メインレース：プロと同じ買い目を表示
+            section.querySelector('.betting-formula.pro-user-only')?.classList.remove('hidden');
+            section.querySelector('.free-user-betting')?.classList.add('hidden');
+            section.querySelector('.light-user-restricted')?.classList.add('hidden');
+          } else {
+            // メインレース以外：制限メッセージを表示
+            section.querySelector('.betting-formula.pro-user-only')?.classList.add('hidden');
+            section.querySelector('.free-user-betting')?.classList.add('hidden');
+            section.querySelector('.light-user-restricted')?.classList.remove('hidden');
+          }
+        });
+        document.querySelectorAll('.pro-tag.pro-only').forEach(el => {
+          el.textContent = 'LIGHT';
+          el.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)';
+        });
       } else {
         // プロユーザー向け表示
         document.querySelectorAll('.free-user-betting').forEach(el => {
+          el.classList.add('hidden');
+        });
+        document.querySelectorAll('.light-user-restricted').forEach(el => {
           el.classList.add('hidden');
         });
         document.querySelectorAll('.betting-formula.pro-user-only').forEach(el => {

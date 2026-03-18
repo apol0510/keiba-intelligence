@@ -1,7 +1,7 @@
 ---
 // アクセス制御コンポーネント（KEIBA Intelligence用）
 export interface Props {
-    requiredPlan: 'free' | 'free-registered' | 'pro' | 'pro-plus';
+    requiredPlan: 'free' | 'free-registered' | 'light' | 'pro' | 'pro-plus';
     showUpgrade?: boolean;
 }
 
@@ -228,8 +228,9 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
         const planHierarchy = {
             'free': 0,
             'free-registered': 1,
-            'pro': 2,
-            'pro-plus': 3
+            'light': 2,
+            'pro': 3,
+            'pro-plus': 4
         };
 
         const userLevel = planHierarchy[userPlan] || 0;
@@ -266,6 +267,7 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
         const displayNames = {
             'free': 'フリープラン',
             'free-registered': '無料会員',
+            'light': 'ライトプラン',
             'pro': 'プロプラン',
             'pro-plus': 'プロプラスプラン'
         };
@@ -306,10 +308,12 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
                 // アクセス許可
                 console.log(`✅ アクセス許可: ${getPlanDisplayName(plan)} → ${requiredPlan}コンテンツ`);
 
-                // 無料登録ユーザーかどうかをsessionStorageに保存
+                // ユーザープランをsessionStorageに保存
                 const isFreeUser = plan === 'free-registered';
+                const isLightUser = plan === 'light';
                 sessionStorage.setItem('isFreeUser', isFreeUser ? 'true' : 'false');
-                console.log('💾 無料ユーザーフラグ保存:', isFreeUser);
+                sessionStorage.setItem('isLightUser', isLightUser ? 'true' : 'false');
+                console.log('💾 ユーザーフラグ保存:', { isFreeUser, isLightUser });
 
                 if (loadingState) {
                     loadingState.style.display = 'none';
