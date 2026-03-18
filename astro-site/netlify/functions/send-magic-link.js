@@ -96,7 +96,7 @@ exports.handler = async (event) => {
 
     // 2. トークン生成
     const token = uuidv4();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 60分後
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15分後
 
     // 3. AuthTokensテーブルに挿入
     await authTokensTable.create([
@@ -148,7 +148,7 @@ exports.handler = async (event) => {
 
     <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; margin: 24px 0; border-radius: 4px;">
       <p style="color: #991b1b; font-size: 14px; margin: 0; line-height: 1.6;">
-        ⚠️ このリンクは60分間有効です。<br>
+        ⚠️ このリンクは15分間有効です。<br>
         心当たりがない場合は、このメールを無視してください。
       </p>
     </div>
