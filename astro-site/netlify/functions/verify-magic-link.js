@@ -131,19 +131,26 @@ exports.handler = async (event) => {
 
     const customer = customers[0].fields;
 
-    // 3.5. 顧客ステータスを更新（pending → active, AccessEnabled → true, PlanType → free）
+    // 3.5. 顧客ステータスを更新（pending → active, AccessEnabled → true）
+    // ※ PlanTypeは上書きしない（有料プランが消えるバグ防止）
+    const currentPlanType = customer.PlanType || 'free-registered';
+    const updateFields = {
+      Status: 'active',
+      AccessEnabled: true,
+    };
+    // PlanTypeが未設定の場合のみ free-registered をセット
+    if (!customer.PlanType) {
+      updateFields.PlanType = 'free-registered';
+    }
+
     await customersTable.update([
       {
         id: customers[0].id,
-        fields: {
-          Status: 'active',
-          AccessEnabled: true,
-          PlanType: 'free',
-        },
+        fields: updateFields,
       },
     ]);
 
-    console.log('✅ Customer status updated to active:', customer.Email);
+    console.log('✅ Customer status updated to active:', customer.Email, 'PlanType:', currentPlanType);
 
     // 4. セッション作成（簡易実装: Cookieのみ、Blobsは不使用）
     const sessionId = uuidv4();
@@ -151,7 +158,7 @@ exports.handler = async (event) => {
     // セッションデータをJSON化してCookieに保存
     const sessionData = {
       email: customer.Email,
-      plan_type: customer.PlanType || 'free',
+      plan_type: currentPlanType,
       created_at: new Date().toISOString(),
     };
 
@@ -161,7 +168,7 @@ exports.handler = async (event) => {
     // プラン別リダイレクト先
     let redirectTo = '/free-prediction'; // デフォルト: 無料予想ページ
 
-    const planType = customer.PlanType?.toLowerCase();
+    const planType = currentPlanType.toLowerCase();
     if (planType === 'pro' || planType === 'pro-plus' || planType === 'light') {
       redirectTo = '/prediction'; // 有料会員は予想ページへ
     }
