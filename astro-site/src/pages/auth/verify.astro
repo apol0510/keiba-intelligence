@@ -142,22 +142,23 @@ export const prerender = false;
 
     try {
       const response = await fetch(`/.netlify/functions/verify-magic-link?token=${token}`);
-
-      if (response.redirected) {
-        // リダイレクトされた場合（成功）
-        showSuccess('認証成功！', 'ダッシュボードへリダイレクトしています...');
-        window.location.href = response.url;
-        return;
-      }
-
       const data = await response.json();
 
-      if (response.ok) {
-        showSuccess('認証成功！', 'ダッシュボードへリダイレクトしています...');
-        // 念のため手動リダイレクト
+      if (response.ok && data.success) {
+        // セッション情報をsessionStorageに保存
+        sessionStorage.setItem('keiba_session', JSON.stringify(data.session));
+
+        // プラン別フラグを保存
+        const plan = data.session.plan?.toLowerCase();
+        sessionStorage.setItem('isFreeUser', plan === 'free-registered' ? 'true' : 'false');
+        sessionStorage.setItem('isLightUser', plan === 'light' ? 'true' : 'false');
+
+        console.log('✅ 認証成功 - プラン:', data.session.plan);
+
+        showSuccess('認証成功！', 'リダイレクトしています...');
         setTimeout(() => {
-          window.location.href = '/admin/newsletter';
-        }, 1000);
+          window.location.href = data.redirectTo || '/free-prediction';
+        }, 500);
       } else {
         const errorMessage =
           response.status === 404

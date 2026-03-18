@@ -164,25 +164,25 @@ exports.handler = async (event) => {
 
     console.log('✅ Session created:', sessionId, 'for:', customer.Email);
 
-    // 5. セッションデータをCookieに設定してリダイレクト
-    // プラン別リダイレクト先
-    let redirectTo = '/free-prediction'; // デフォルト: 無料予想ページ
-
+    // 5. JSONレスポンスでセッション情報を返す（クライアント側でsessionStorageに保存）
     const planType = currentPlanType.toLowerCase();
+    let redirectTo = '/free-prediction'; // デフォルト: 無料予想ページ
     if (planType === 'pro' || planType === 'pro-plus' || planType === 'light') {
       redirectTo = '/prediction'; // 有料会員は予想ページへ
     }
 
-    // セッションデータをBase64エンコードしてCookieに保存
-    const sessionCookie = Buffer.from(JSON.stringify(sessionData)).toString('base64');
-
     return {
-      statusCode: 302,
-      headers: {
-        'Set-Cookie': `session=${sessionCookie}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}`,
-        'Location': redirectTo,
-      },
-      body: '',
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        redirectTo,
+        session: {
+          user: { email: customer.Email, name: customer.Name || '' },
+          plan: currentPlanType,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+      }),
     };
   } catch (error) {
     console.error('❌ Verify magic link error:', error);
