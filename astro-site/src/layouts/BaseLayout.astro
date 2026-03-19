@@ -489,50 +489,38 @@ const archiveUrl = '/archive/';
     }
 
     // 認証状態チェック（ナビゲーションボタン更新）
-    async function updateAuthButton() {
+    function updateAuthButton() {
       const authButton = document.getElementById('auth-nav-button');
       if (!authButton) return;
 
-      try {
-        const response = await fetch('/.netlify/functions/get-session', {
-          method: 'GET',
-          credentials: 'include',
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.user) {
-            // ログイン済み → ログアウトリンク表示
+      // sessionStorageからセッション情報を確認
+      const sessionAuth = sessionStorage.getItem('keiba_session');
+      if (sessionAuth) {
+        try {
+          const { user, plan, expiresAt } = JSON.parse(sessionAuth);
+          if (expiresAt && new Date() < new Date(expiresAt) && user) {
+            // ログイン済み → ログイン中表示
             authButton.innerHTML = `
-              <a href="/admin/newsletter">管理画面</a>
-              <form id="logout-form" style="display: inline;">
-                <button type="submit" style="background: none; border: none; color: var(--text-secondary); font-weight: 500; cursor: pointer; font-size: inherit; font-family: inherit; transition: color var(--transition-fast);" onmouseover="this.style.color='var(--primary-end)'" onmouseout="this.style.color='var(--text-secondary)'">ログアウト</button>
-              </form>
+              <span style="color: var(--text-secondary); font-weight: 500;">ログイン中</span>
+              <button id="logout-btn" style="background: none; border: none; color: var(--text-secondary); font-weight: 500; cursor: pointer; font-size: inherit; font-family: inherit; transition: color var(--transition-fast); margin-left: 8px;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-secondary)'">ログアウト</button>
             `;
 
-            // ログアウトフォームのイベントリスナー
-            const logoutForm = document.getElementById('logout-form');
-            if (logoutForm) {
-              logoutForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                try {
-                  await fetch('/.netlify/functions/logout', {
-                    method: 'POST',
-                    credentials: 'include',
-                  });
-                  window.location.href = '/login';
-                } catch (error) {
-                  console.error('Logout error:', error);
-                  window.location.href = '/login';
-                }
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+              logoutBtn.addEventListener('click', () => {
+                sessionStorage.removeItem('keiba_session');
+                sessionStorage.removeItem('isFreeUser');
+                sessionStorage.removeItem('isLightUser');
+                window.location.href = '/login';
               });
             }
+            return;
           }
+        } catch (error) {
+          console.error('Session parse error:', error);
         }
-      } catch (error) {
-        // エラー時はログインボタンのまま（デフォルト）
-        console.log('Not authenticated');
       }
+      // 未ログイン → デフォルトのログインリンクのまま
     }
 
     // ページ読み込み時に実行
