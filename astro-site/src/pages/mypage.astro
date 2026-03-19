@@ -1,0 +1,437 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+export const prerender = true;
+---
+
+<BaseLayout
+  title="マイページ - KEIBA Intelligence"
+  description="KEIBA Intelligence マイページ。プラン確認・アカウント管理。"
+>
+  <section class="mypage-section">
+    <div class="container">
+      <div class="mypage-card" id="mypage-content" style="display: none;">
+        <h1>マイページ</h1>
+
+        <!-- アカウント情報 -->
+        <div class="info-block">
+          <h2>アカウント情報</h2>
+          <div class="info-row">
+            <span class="info-label">メールアドレス</span>
+            <span class="info-value" id="user-email">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">現在のプラン</span>
+            <span class="info-value" id="user-plan-display">-</span>
+          </div>
+        </div>
+
+        <!-- プラン別の機能説明 -->
+        <div class="plan-detail-block" id="plan-detail">
+          <!-- JSで動的に表示 -->
+        </div>
+
+        <!-- アップグレードCTA（プロ以外に表示） -->
+        <div class="upgrade-block" id="upgrade-cta" style="display: none;">
+          <h2>プランアップグレード</h2>
+          <div id="upgrade-content"></div>
+        </div>
+
+        <!-- ログアウト -->
+        <div class="logout-block">
+          <button class="btn-logout" id="logout-btn">ログアウト</button>
+        </div>
+      </div>
+
+      <!-- 未ログイン時 -->
+      <div class="mypage-card" id="not-logged-in" style="display: none;">
+        <div class="not-logged-icon">🔒</div>
+        <h1>ログインが必要です</h1>
+        <p>マイページを表示するにはログインしてください。</p>
+        <div class="not-logged-actions">
+          <a href="/login" class="btn-primary">ログイン</a>
+          <a href="/register" class="btn-secondary">無料会員登録</a>
+        </div>
+      </div>
+
+      <!-- ローディング -->
+      <div class="mypage-loading" id="mypage-loading">
+        <div class="spinner"></div>
+        <p>読み込み中...</p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .mypage-section {
+    padding: 80px 0;
+    min-height: calc(100vh - 200px);
+  }
+
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md);
+  }
+
+  .mypage-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-2xl);
+  }
+
+  .mypage-card h1 {
+    font-size: 1.8rem;
+    margin-bottom: var(--spacing-xl);
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .info-block, .plan-detail-block, .upgrade-block, .logout-block {
+    margin-bottom: var(--spacing-xl);
+  }
+
+  .info-block h2, .upgrade-block h2 {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md) 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .info-row:last-child {
+    border-bottom: none;
+  }
+
+  .info-label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+
+  .info-value {
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  /* プランバッジ */
+  .plan-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .plan-badge.free-registered {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+  }
+
+  .plan-badge.light {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    color: white;
+  }
+
+  .plan-badge.pro {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: #1e293b;
+  }
+
+  .plan-badge.pro-plus {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+  }
+
+  /* プラン詳細 */
+  .plan-features-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .plan-features-list li {
+    padding: var(--spacing-sm) 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+
+  /* アップグレード */
+  .upgrade-card {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .upgrade-card h3 {
+    font-size: 1rem;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .upgrade-card p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .upgrade-card .price {
+    font-size: 1.3rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .btn-upgrade {
+    display: inline-block;
+    padding: 10px 24px;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    color: white;
+  }
+
+  .btn-upgrade:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+  }
+
+  /* ログアウト */
+  .logout-block {
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+  }
+
+  .btn-logout {
+    width: 100%;
+    padding: var(--spacing-md);
+    background: transparent;
+    border: 2px solid rgba(239, 68, 68, 0.5);
+    border-radius: var(--radius-md);
+    color: #ef4444;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .btn-logout:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+  }
+
+  /* 未ログイン */
+  .not-logged-icon {
+    font-size: 48px;
+    text-align: center;
+    margin-bottom: var(--spacing-md);
+  }
+
+  #not-logged-in {
+    text-align: center;
+  }
+
+  #not-logged-in h1 {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    -webkit-text-fill-color: unset;
+    background: none;
+  }
+
+  #not-logged-in p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xl);
+  }
+
+  .not-logged-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+  }
+
+  .btn-primary, .btn-secondary {
+    padding: 12px 28px;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-weight: 700;
+    transition: all 0.3s;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border: 2px solid rgba(59, 130, 246, 0.5);
+    color: #3b82f6;
+  }
+
+  .btn-secondary:hover {
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  /* ローディング */
+  .mypage-loading {
+    text-align: center;
+    padding: 80px 0;
+    color: var(--text-secondary);
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto var(--spacing-md);
+    border: 3px solid rgba(59, 130, 246, 0.2);
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @media (max-width: 640px) {
+    .mypage-card {
+      padding: var(--spacing-xl);
+    }
+
+    .info-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
+    .not-logged-actions {
+      flex-direction: column;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const loading = document.getElementById('mypage-loading');
+    const content = document.getElementById('mypage-content');
+    const notLoggedIn = document.getElementById('not-logged-in');
+
+    // セッション確認
+    const sessionAuth = sessionStorage.getItem('keiba_session');
+    if (!sessionAuth) {
+      loading.style.display = 'none';
+      notLoggedIn.style.display = 'block';
+      return;
+    }
+
+    let session;
+    try {
+      session = JSON.parse(sessionAuth);
+      if (!session.user || (session.expiresAt && new Date() > new Date(session.expiresAt))) {
+        sessionStorage.removeItem('keiba_session');
+        loading.style.display = 'none';
+        notLoggedIn.style.display = 'block';
+        return;
+      }
+    } catch {
+      loading.style.display = 'none';
+      notLoggedIn.style.display = 'block';
+      return;
+    }
+
+    // ログイン済み表示
+    const plan = (session.plan || 'free-registered').toLowerCase();
+    const email = session.user.email || '-';
+
+    document.getElementById('user-email').textContent = email;
+
+    // プラン表示
+    const planConfig = {
+      'free-registered': { label: '無料会員', badge: 'free-registered', features: ['全レース予想閲覧', '本命・対抗・単穴・連下最上位の馬番号', 'AI分析データ', 'メールマガジン'] },
+      'light': { label: 'ライトプラン', badge: 'light', features: ['全レース予想閲覧', 'メインレースの馬単買い目', '的中実績閲覧', 'データ可視化'] },
+      'pro': { label: 'プロプラン', badge: 'pro', features: ['全レース予想閲覧', '全レースの馬単買い目（本線＋抑え）', '的中実績閲覧', 'データ可視化', 'Feature Importance Analysis'] },
+      'pro-plus': { label: 'プロプラスプラン', badge: 'pro-plus', features: ['プロプランの全機能', '優先サポート'] },
+    };
+
+    const cfg = planConfig[plan] || planConfig['free-registered'];
+    document.getElementById('user-plan-display').innerHTML = `<span class="plan-badge ${cfg.badge}">${cfg.label}</span>`;
+
+    // プラン詳細
+    const planDetail = document.getElementById('plan-detail');
+    planDetail.innerHTML = `
+      <ul class="plan-features-list">
+        ${cfg.features.map(f => `<li>✅ ${f}</li>`).join('')}
+      </ul>
+    `;
+
+    // アップグレードCTA
+    const upgradeCta = document.getElementById('upgrade-cta');
+    const upgradeContent = document.getElementById('upgrade-content');
+
+    if (plan === 'free-registered') {
+      upgradeCta.style.display = 'block';
+      upgradeContent.innerHTML = `
+        <div class="upgrade-card">
+          <h3>ライトプラン</h3>
+          <p>メインレースの馬単買い目が見られます</p>
+          <div><span class="price">¥6,600</span><span style="color:var(--text-secondary)">/月</span></div>
+          <br>
+          <a href="/apply" class="btn-upgrade">申し込む</a>
+        </div>
+        <div class="upgrade-card">
+          <h3>プロプラン（買い切り）</h3>
+          <p>全レースの馬単買い目＋永久アクセス</p>
+          <div><span class="price">¥88,000</span></div>
+          <br>
+          <a href="/apply" class="btn-upgrade">申し込む</a>
+        </div>
+      `;
+    } else if (plan === 'light') {
+      upgradeCta.style.display = 'block';
+      upgradeContent.innerHTML = `
+        <div class="upgrade-card">
+          <h3>プロプランにアップグレード</h3>
+          <p>全レースの馬単買い目が見られるようになります</p>
+          <div><span class="price">¥88,000</span><span style="color:var(--text-secondary)">（買い切り・永久アクセス）</span></div>
+          <br>
+          <a href="/apply" class="btn-upgrade">アップグレード</a>
+        </div>
+      `;
+    }
+
+    // ログアウト
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      sessionStorage.removeItem('keiba_session');
+      sessionStorage.removeItem('isFreeUser');
+      sessionStorage.removeItem('isLightUser');
+      window.location.href = '/';
+    });
+
+    // 表示切り替え
+    loading.style.display = 'none';
+    content.style.display = 'block';
+  });
+</script>

@@ -499,21 +499,10 @@ const archiveUrl = '/archive/';
         try {
           const { user, plan, expiresAt } = JSON.parse(sessionAuth);
           if (expiresAt && new Date() < new Date(expiresAt) && user) {
-            // ログイン済み → ログイン中表示
+            // ログイン済み → マイページリンク表示
             authButton.innerHTML = `
-              <span style="color: var(--text-secondary); font-weight: 500;">ログイン中</span>
-              <button id="logout-btn" style="background: none; border: none; color: var(--text-secondary); font-weight: 500; cursor: pointer; font-size: inherit; font-family: inherit; transition: color var(--transition-fast); margin-left: 8px;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-secondary)'">ログアウト</button>
+              <a href="/mypage" style="font-weight: 600;">マイページ</a>
             `;
-
-            const logoutBtn = document.getElementById('logout-btn');
-            if (logoutBtn) {
-              logoutBtn.addEventListener('click', () => {
-                sessionStorage.removeItem('keiba_session');
-                sessionStorage.removeItem('isFreeUser');
-                sessionStorage.removeItem('isLightUser');
-                window.location.href = '/login';
-              });
-            }
             return;
           }
         } catch (error) {
