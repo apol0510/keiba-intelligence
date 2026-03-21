@@ -119,100 +119,46 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           DATE="${{ steps.date.outputs.date }}"
-          git commit -m "Auto-verify: ${DATE} JRA results (daily check)"
+          COMMIT_MSG="Auto-verify: ${DATE} JRA results (daily check)"
 
-          # Retry logic with conflict resolution
+          # 変更ファイルを退避
+          cp src/data/archiveResultsJra.json /tmp/archiveResultsJra.json.backup
+          echo "📦 Backed up archiveResultsJra.json"
+
+          # Retry logic: reset → restore → commit → push（最大5回リトライ）
           MAX_RETRIES=5
           RETRY_COUNT=0
           SUCCESS=false
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" = false ]; do
-            echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Pulling latest changes..."
+            echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES"
 
-            # rebase中の競合を検出してabort + クリーンアップ
-            if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
-              echo "⚠️  Detected ongoing rebase, aborting..."
-              git rebase --abort
-              # mainブランチに戻る（detached HEAD回避）
-              git checkout main
-              git reset --hard origin/main  # インデックスとワークツリーをクリア
-              git clean -fd
+            # 1. 完全同期：origin/mainの最新状態にリセット
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            echo "✅ Synced to origin/main ($(git rev-parse --short HEAD))"
+
+            # 2. 退避ファイルを復元
+            cp /tmp/archiveResultsJra.json.backup src/data/archiveResultsJra.json
+
+            # 3. ステージング＆コミット
+            git add src/data/archiveResultsJra.json
+            if git diff --staged --quiet; then
+              echo "⏭️  No changes after sync (remote already has latest)"
+              SUCCESS=true
+              break
             fi
+            git commit -m "$COMMIT_MSG"
 
-            # マージ競合状態をチェック
-            if git ls-files -u | grep -q .; then
-              echo "⚠️  Detected unmerged files, resetting..."
-              # mainブランチに戻る（detached HEAD回避）
-              git checkout main
-              git reset --hard origin/main  # インデックスとワークツリーをクリア
-              git clean -fd
-            fi
-
-            # mainブランチにいることを確認
-            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-            if [ "$CURRENT_BRANCH" != "main" ]; then
-              echo "⚠️  Not on main branch (current: $CURRENT_BRANCH), checking out main..."
-              git checkout main
-            fi
-
-            # 最新状態を取得（rebase）
-            if git pull --rebase origin main; then
-              echo "✅ Successfully pulled latest changes"
-
-              # プッシュ試行
-              if git push; then
-                echo "✅ Successfully pushed changes"
-                SUCCESS=true
-              else
-                echo "⚠️  Push failed, retrying..."
-                RETRY_COUNT=$((RETRY_COUNT + 1))
-                sleep $((RETRY_COUNT * 2))
-              fi
+            # 4. プッシュ
+            if git push origin main; then
+              echo "✅ Successfully pushed changes"
+              SUCCESS=true
             else
-              # rebase失敗時の処理
-              echo "⚠️  Pull --rebase failed"
-
-              # 競合が発生している場合は自動解決を試みる
-              if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
-                echo "🔧 Attempting to resolve conflicts automatically..."
-
-                # 競合ファイルをチェック
-                CONFLICT_FILES=$(git diff --name-only --diff-filter=U)
-
-                if [ -n "$CONFLICT_FILES" ]; then
-                  echo "   Conflicted files: $CONFLICT_FILES"
-
-                  # 結果データファイルの競合のみ自動解決（ours戦略: 自分の変更を優先）
-                  for FILE in $CONFLICT_FILES; do
-                    if [[ "$FILE" == astro-site/src/data/archiveResultsJra.json ]]; then
-                      echo "   Resolving $FILE (using ours strategy)"
-                      git checkout --ours "$FILE"
-                      git add "$FILE"
-                    fi
-                  done
-
-                  # rebase続行
-                  if git rebase --continue; then
-                    echo "✅ Conflicts resolved, rebase continued"
-                    continue
-                  else
-                    echo "❌ Failed to continue rebase"
-                    git rebase --abort
-                    # mainブランチに戻る
-                    git checkout main
-                    git reset --hard origin/main  # インデックスとワークツリーをクリア
-                  fi
-                else
-                  echo "❌ No conflict files found but rebase failed"
-                  git rebase --abort
-                  # mainブランチに戻る
-                  git checkout main
-                  git reset --hard origin/main  # インデックスとワークツリーをクリア
-                fi
-              fi
-
+              echo "⚠️  Push failed (remote updated during attempt)"
               RETRY_COUNT=$((RETRY_COUNT + 1))
-              sleep $((RETRY_COUNT * 2))
+              sleep 2
             fi
           done
 
