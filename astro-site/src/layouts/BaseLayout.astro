@@ -56,6 +56,15 @@ const archiveUrl = '/archive/';
   <style is:global>
     @import '../styles/global.scss';
   </style>
+
+  <!-- Google Analytics (GA4) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-LRX40ZYJB6"></script>
+  <script is:inline>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-LRX40ZYJB6');
+  </script>
 </head>
 <body>
   <!-- ナビゲーション -->
