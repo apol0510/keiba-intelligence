@@ -71,12 +71,13 @@ jobs:
           DATE="${{ steps.date.outputs.date }}"
           COMMIT_MSG="Daily auto-import: ${DATE} prediction [scheduled 23:00 JST]"
 
-          # 変更ファイルを退避
+          # 変更ファイルを退避（git pathはrepo root基準、working-directoryはastro-site）
+          REPO_ROOT=$(git rev-parse --show-toplevel)
           CHANGED_FILES=$(git diff --staged --name-only)
           mkdir -p /tmp/staged-backup
           for FILE in $CHANGED_FILES; do
             mkdir -p "/tmp/staged-backup/$(dirname "$FILE")"
-            cp "$FILE" "/tmp/staged-backup/$FILE"
+            cp "$REPO_ROOT/$FILE" "/tmp/staged-backup/$FILE"
           done
           echo "📦 Backed up $CHANGED_FILES"
 
@@ -96,8 +97,8 @@ jobs:
 
             # 2. 退避ファイルを復元
             for FILE in $CHANGED_FILES; do
-              mkdir -p "$(dirname "$FILE")"
-              cp "/tmp/staged-backup/$FILE" "$FILE"
+              mkdir -p "$REPO_ROOT/$(dirname "$FILE")"
+              cp "/tmp/staged-backup/$FILE" "$REPO_ROOT/$FILE"
             done
 
             # 3. ステージング＆コミット
