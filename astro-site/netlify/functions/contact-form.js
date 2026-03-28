@@ -110,8 +110,66 @@ exports.handler = async (event, context) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('SendGrid error:', errorText);
+      console.error('SendGrid admin email error:', errorText);
       throw new Error(`SendGrid error: ${response.status}`);
+    }
+
+    // ユーザー向け控えメール
+    const userEmailData = {
+      personalizations: [{
+        to: [{ email: email }],
+        subject: `【お問い合わせ受付】KEIBA Intelligence`
+      }],
+      from: { email: FROM_EMAIL, name: 'KEIBA Intelligence' },
+      content: [{
+        type: 'text/html',
+        value: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="font-family: 'Hiragino Sans', sans-serif; line-height: 1.8; color: #333;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+      <h2 style="margin: 0;">お問い合わせを受け付けました</h2>
+    </div>
+    <p>${name} 様</p>
+    <p>この度はお問い合わせいただき、ありがとうございます。<br>以下の内容で受け付けいたしました。内容を確認のうえ、折り返しご連絡いたします。</p>
+    <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #10b981; margin: 20px 0;">
+      <div style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">
+        <strong>受付日時:</strong> ${japanTime}
+      </div>
+      <div style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">
+        <strong>お問い合わせ種別:</strong> ${category}
+      </div>
+      <div style="padding: 10px 0;">
+        <strong>お問い合わせ内容:</strong>
+        <div style="margin-top: 10px; white-space: pre-wrap; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">${message}</div>
+      </div>
+    </div>
+    <p style="color: #64748b; font-size: 0.9rem;">※このメールは自動送信です。本メールに返信いただいてもお応えできない場合がございます。</p>
+    <div style="text-align: center; color: #64748b; font-size: 0.9rem; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+      <p><strong>KEIBA Intelligence</strong></p>
+      <p><a href="https://keiba-intelligence.jp" style="color: #3b82f6; text-decoration: none;">https://keiba-intelligence.jp</a></p>
+    </div>
+  </div>
+</body>
+</html>`
+      }],
+      tracking_settings: { click_tracking: { enable: false }, open_tracking: { enable: false } }
+    };
+
+    const userResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SENDGRID_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(userEmailData)
+    });
+
+    if (!userResponse.ok) {
+      console.error('SendGrid user email error:', await userResponse.text());
+      // ユーザー控えメール失敗は致命的ではないので続行
     }
 
     console.log('✅ Contact form submitted:', { name, email, category });
