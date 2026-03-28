@@ -7,7 +7,7 @@ exports.handler = async (event, context) => {
   // CORS設定（セキュリティ強化：特定ドメインのみ許可）
   const allowedOrigins = [
     'https://keiba-intelligence.netlify.app',
-    'https://keiba-intelligence.netlify.app',
+    'https://keiba-intelligence.jp',
     'http://localhost:4321',
     'http://localhost:3000'
   ];
@@ -54,7 +54,7 @@ exports.handler = async (event, context) => {
     } = formData;
 
     // 必須項目チェック
-    if (!fullName || !email || !transferDate || !transferTime || !transferAmount || !transferName) {
+    if (!fullName || !email || !transferDate || !transferAmount) {
       return {
         statusCode: 400,
         headers,
