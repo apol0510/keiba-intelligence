@@ -28,9 +28,17 @@
         <div class="message-avatar">🤖</div>
         <div class="message-content">
           <p>こんにちは！KEIBA Intelligenceのサポート担当AIです。</p>
-          <p>サービスや料金プラン、最新の予想・結果について、お気軽にご質問ください。</p>
+          <p>サービスや料金プラン、予想・結果について、お気軽にご質問ください。</p>
         </div>
       </div>
+    </div>
+
+    <!-- クイック質問ボタン -->
+    <div id="quick-questions" class="quick-questions">
+      <button class="quick-btn" data-question="料金プランを教えてください">料金プラン</button>
+      <button class="quick-btn" data-question="無料会員でできることは？">無料会員の特典</button>
+      <button class="quick-btn" data-question="的中率はどのくらいですか？">的中率について</button>
+      <button class="quick-btn" data-question="どうやって登録しますか？">登録方法</button>
     </div>
 
     <div class="chat-input-container">
@@ -46,12 +54,6 @@
           <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor"/>
         </svg>
       </button>
-    </div>
-
-    <div class="chat-loading" id="chat-loading" style="display: none;">
-      <div class="loading-dots">
-        <span></span><span></span><span></span>
-      </div>
     </div>
   </div>
 </div>
@@ -70,7 +72,7 @@
     color: white;
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-    transition: all var(--transition-normal);
+    transition: all 0.3s ease;
     z-index: 9999;
     display: flex;
     align-items: center;
@@ -82,17 +84,9 @@
     box-shadow: 0 6px 16px rgba(59, 130, 246, 0.6);
   }
 
-  .chat-toggle-btn .icon-close {
-    display: none;
-  }
-
-  .chat-toggle-btn.active .icon-chat {
-    display: none;
-  }
-
-  .chat-toggle-btn.active .icon-close {
-    display: block;
-  }
+  .chat-toggle-btn .icon-close { display: none; }
+  .chat-toggle-btn.active .icon-chat { display: none; }
+  .chat-toggle-btn.active .icon-close { display: block; }
 
   /* チャットウィンドウ */
   .chat-window {
@@ -100,23 +94,19 @@
     bottom: 100px;
     right: 24px;
     width: 380px;
-    height: 600px;
+    height: 550px;
     background: var(--bg-secondary);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-2xl);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     display: none;
     flex-direction: column;
     z-index: 9998;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity var(--transition-normal), transform var(--transition-normal);
+    overflow: hidden;
   }
 
   .chat-window.active {
     display: flex;
-    opacity: 1;
-    transform: translateY(0);
   }
 
   /* チャットヘッダー */
@@ -124,10 +114,10 @@
     padding: var(--spacing-md);
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
     border-bottom: 1px solid var(--border-color);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
   }
 
   .chat-title {
@@ -136,6 +126,7 @@
     gap: var(--spacing-sm);
     font-weight: 700;
     color: var(--text-primary);
+    font-size: 0.9rem;
   }
 
   .ai-badge {
@@ -154,7 +145,7 @@
     cursor: pointer;
     padding: 4px;
     line-height: 1;
-    transition: color var(--transition-fast);
+    transition: color 0.2s ease;
   }
 
   .chat-header-close:hover {
@@ -178,14 +169,8 @@
   }
 
   @keyframes messageSlideIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   .message-avatar {
@@ -207,13 +192,8 @@
     line-height: 1.6;
   }
 
-  .message-content p {
-    margin-bottom: var(--spacing-xs);
-  }
-
-  .message-content p:last-child {
-    margin-bottom: 0;
-  }
+  .message-content p { margin-bottom: var(--spacing-xs); }
+  .message-content p:last-child { margin-bottom: 0; }
 
   .bot-message .message-content {
     background: rgba(59, 130, 246, 0.1);
@@ -231,12 +211,101 @@
     color: var(--text-primary);
   }
 
+  /* エラーメッセージ */
+  .error-message .message-content {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  /* お問い合わせリンク */
+  .contact-link {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white !important;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .contact-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  }
+
+  /* クイック質問ボタン */
+  .quick-questions {
+    padding: 8px var(--spacing-md);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+
+  .quick-questions.hidden {
+    display: none;
+  }
+
+  .quick-btn {
+    padding: 5px 10px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 16px;
+    color: #60a5fa;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .quick-btn:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+  }
+
+  /* ローディング */
+  .typing-indicator {
+    display: flex;
+    gap: var(--spacing-sm);
+    animation: messageSlideIn 0.3s ease-out;
+  }
+
+  .loading-dots {
+    display: inline-flex;
+    gap: 4px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: var(--radius-md);
+  }
+
+  .loading-dots span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3b82f6;
+    animation: loadingDot 1.4s infinite ease-in-out both;
+  }
+
+  .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+  .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+  @keyframes loadingDot {
+    0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
   /* 入力エリア */
   .chat-input-container {
     padding: var(--spacing-md);
     border-top: 1px solid var(--border-color);
     display: flex;
     gap: var(--spacing-sm);
+    flex-shrink: 0;
   }
 
   .chat-input {
@@ -266,7 +335,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--transition-fast);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
   }
 
   .chat-send-btn:hover {
@@ -280,52 +350,14 @@
     transform: none;
   }
 
-  /* ローディング */
-  .chat-loading {
-    padding: var(--spacing-sm);
-    text-align: center;
-  }
-
-  .loading-dots {
-    display: inline-flex;
-    gap: 4px;
-  }
-
-  .loading-dots span {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #3b82f6;
-    animation: loadingDot 1.4s infinite ease-in-out both;
-  }
-
-  .loading-dots span:nth-child(1) {
-    animation-delay: -0.32s;
-  }
-
-  .loading-dots span:nth-child(2) {
-    animation-delay: -0.16s;
-  }
-
-  @keyframes loadingDot {
-    0%, 80%, 100% {
-      transform: scale(0);
-      opacity: 0.5;
-    }
-    40% {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
-
   /* レスポンシブ */
   @media (max-width: 768px) {
     .chat-window {
-      width: calc(100% - 48px);
-      height: calc(100vh - 150px);
+      width: calc(100% - 32px);
+      height: calc(100vh - 140px);
       bottom: 90px;
-      right: 24px;
-      left: 24px;
+      right: 16px;
+      left: 16px;
     }
 
     .chat-toggle-btn {
@@ -336,81 +368,105 @@
 </style>
 
 <script is:inline>
-  // チャットの状態管理
   let conversationHistory = [];
   let isOpen = false;
+  let isSending = false;
 
-  // DOM要素取得
   const toggleBtn = document.getElementById('chat-toggle-btn');
   const closeBtn = document.getElementById('chat-close-btn');
   const chatWindow = document.getElementById('chat-window');
   const chatInput = document.getElementById('chat-input');
   const sendBtn = document.getElementById('chat-send-btn');
   const messagesContainer = document.getElementById('chat-messages');
-  const loadingIndicator = document.getElementById('chat-loading');
+  const quickQuestions = document.getElementById('quick-questions');
 
   // チャットウィンドウの開閉
   function toggleChat() {
     isOpen = !isOpen;
     toggleBtn.classList.toggle('active');
     chatWindow.classList.toggle('active');
+    if (isOpen) chatInput.focus();
   }
 
   toggleBtn.addEventListener('click', toggleChat);
   closeBtn.addEventListener('click', toggleChat);
 
+  // クイック質問ボタン
+  document.querySelectorAll('.quick-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const question = btn.getAttribute('data-question');
+      chatInput.value = question;
+      sendMessage();
+    });
+  });
+
   // メッセージ送信
   async function sendMessage() {
     const message = chatInput.value.trim();
-    if (!message) return;
+    if (!message || isSending) return;
 
-    // ユーザーメッセージを表示
+    isSending = true;
     addMessage(message, 'user');
     chatInput.value = '';
     sendBtn.disabled = true;
 
-    // 会話履歴に追加
+    // クイック質問を非表示
+    quickQuestions.classList.add('hidden');
+
     conversationHistory.push({ role: 'user', content: message });
 
     // ローディング表示
-    loadingIndicator.style.display = 'block';
+    const loadingEl = showTypingIndicator();
 
     try {
-      // Gemini APIにリクエスト
       const response = await fetch('/.netlify/functions/gemini-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message,
-          conversationHistory
-        })
+        body: JSON.stringify({ message, conversationHistory })
       });
 
       const data = await response.json();
 
-      if (response.ok && data.success) {
-        // AIメッセージを表示
-        addMessage(data.message, 'bot');
+      // ローディング削除
+      loadingEl.remove();
 
-        // 会話履歴に追加
+      if (data.success && data.message) {
+        addMessage(data.message, 'bot');
         conversationHistory.push({ role: 'assistant', content: data.message });
+      } else if (data.message) {
+        // エラーだがメッセージがある場合（フォールバック）
+        addMessage(data.message, 'bot', true);
       } else {
-        throw new Error(data.error || 'リクエストに失敗しました');
+        throw new Error(data.error || 'エラーが発生しました');
       }
     } catch (error) {
       console.error('Chat Error:', error);
-      addMessage('申し訳ございません。エラーが発生しました。もう一度お試しください。', 'bot');
+      if (loadingEl.parentNode) loadingEl.remove();
+      addMessage('申し訳ございません。一時的にエラーが発生しています。\nお手数ですが、お問い合わせフォームよりご連絡ください。', 'bot', true);
     } finally {
-      loadingIndicator.style.display = 'none';
+      isSending = false;
       sendBtn.disabled = false;
       chatInput.focus();
     }
   }
 
+  // タイピングインジケーター
+  function showTypingIndicator() {
+    const div = document.createElement('div');
+    div.className = 'typing-indicator';
+    div.innerHTML = `
+      <div class="message-avatar">🤖</div>
+      <div class="loading-dots"><span></span><span></span><span></span></div>
+    `;
+    messagesContainer.appendChild(div);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    return div;
+  }
+
   // メッセージを追加
-  function addMessage(text, type) {
+  function addMessage(text, type, isError) {
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${type}-message`;
+    messageDiv.className = `message ${type}-message${isError ? ' error-message' : ''}`;
 
     const avatar = document.createElement('div');
     avatar.className = 'message-avatar';
@@ -419,7 +475,6 @@
     const content = document.createElement('div');
     content.className = 'message-content';
 
-    // 改行を<p>タグに変換
     const paragraphs = text.split('\n').filter(p => p.trim());
     paragraphs.forEach(p => {
       const pElement = document.createElement('p');
@@ -427,11 +482,18 @@
       content.appendChild(pElement);
     });
 
+    // エラー時はお問い合わせリンクを追加
+    if (isError) {
+      const link = document.createElement('a');
+      link.href = '/contact';
+      link.className = 'contact-link';
+      link.textContent = 'お問い合わせフォームへ';
+      content.appendChild(link);
+    }
+
     messageDiv.appendChild(avatar);
     messageDiv.appendChild(content);
     messagesContainer.appendChild(messageDiv);
-
-    // スクロールを最下部へ
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
 
