@@ -1,0 +1,353 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const title = 'お問い合わせ - KEIBA Intelligence';
+const description = 'KEIBA Intelligenceへのお問い合わせフォームです。ご質問・ご要望・不具合報告など、お気軽にお問い合わせください。';
+---
+
+<BaseLayout title={title} description={description}>
+  <main class="container">
+    <div class="contact-page">
+      <div class="contact-header">
+        <h1>お問い合わせ</h1>
+        <p class="subtitle">ご質問・ご要望・不具合報告など、お気軽にお問い合わせください</p>
+      </div>
+
+      <section class="contact-form-section">
+        <div class="form-container">
+          <form id="contactForm" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" class="contact-form">
+            <input type="hidden" name="form-name" value="contact" />
+            <p class="hidden-field">
+              <label>Don't fill this out: <input name="bot-field" /></label>
+            </p>
+
+            <div class="form-group">
+              <label for="name">お名前<span class="required">*</span></label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                placeholder="山田 太郎"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="email">メールアドレス<span class="required">*</span></label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="your-email@example.com"
+                required
+                autocomplete="email"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="category">お問い合わせ種別<span class="required">*</span></label>
+              <select id="category" name="category" required>
+                <option value="" disabled selected>選択してください</option>
+                <option value="サービスについて">サービスについて</option>
+                <option value="料金・プランについて">料金・プランについて</option>
+                <option value="アカウントについて">アカウントについて</option>
+                <option value="不具合報告">不具合報告</option>
+                <option value="ご要望・改善提案">ご要望・改善提案</option>
+                <option value="その他">その他</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="message">お問い合わせ内容<span class="required">*</span></label>
+              <textarea
+                id="message"
+                name="message"
+                rows="6"
+                placeholder="お問い合わせ内容をご記入ください"
+                required
+              ></textarea>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn">
+              送信する
+            </button>
+
+            <div id="formMessage" class="message"></div>
+          </form>
+        </div>
+      </section>
+
+      <section class="faq-section">
+        <h2>よくある質問</h2>
+        <div class="faq-list">
+          <div class="faq-item">
+            <div class="faq-question">無料会員と有料会員の違いは？</div>
+            <div class="faq-answer">無料会員は全頭予想と一部買い目が閲覧可能です。有料会員は全買い目（本線+抑え）と全期間の的中実績がご覧いただけます。詳しくは<a href="/pricing">料金プラン</a>をご確認ください。</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-question">返金はできますか？</div>
+            <div class="faq-answer">サービスの性質上、原則として返金には対応しておりません。ご購入前に無料会員でサービス内容をご確認ください。</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-question">メールが届きません</div>
+            <div class="faq-answer">迷惑メールフォルダをご確認ください。それでも届かない場合は、上記フォームよりお問い合わせください。</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</BaseLayout>
+
+<script>
+  const form = document.getElementById('contactForm') as HTMLFormElement;
+  const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
+  const messageDiv = document.getElementById('formMessage') as HTMLDivElement;
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '送信中...';
+    messageDiv.textContent = '';
+    messageDiv.className = 'message';
+
+    try {
+      const formData = new FormData(form);
+      const response = await fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(formData as any).toString(),
+      });
+
+      if (response.ok) {
+        messageDiv.textContent = '送信が完了しました。内容を確認のうえ、ご登録のメールアドレスへ返信いたします。';
+        messageDiv.className = 'message success';
+        form.reset();
+      } else {
+        messageDiv.textContent = '送信に失敗しました。時間をおいて再度お試しください。';
+        messageDiv.className = 'message error';
+      }
+    } catch (error) {
+      messageDiv.textContent = 'ネットワークエラーが発生しました。接続をご確認ください。';
+      messageDiv.className = 'message error';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '送信する';
+    }
+  });
+</script>
+
+<style>
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.contact-page {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+/* ヘッダー */
+.contact-header {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.contact-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+}
+
+/* フォームセクション */
+.contact-form-section {
+  background: var(--bg-secondary);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.form-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.hidden-field {
+  display: none;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.required {
+  color: #ef4444;
+  margin-left: 4px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 1rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
+.form-group select {
+  cursor: pointer;
+  appearance: auto;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.btn-submit {
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #9333ea 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* メッセージ */
+.message {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.message:empty {
+  display: none;
+}
+
+.message.success {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid #22c55e;
+}
+
+.message.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+/* FAQ セクション */
+.faq-section {
+  background: var(--bg-secondary);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.faq-section h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.faq-item {
+  padding: 1.25rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.faq-question {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.faq-answer {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.faq-answer a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.faq-answer a:hover {
+  text-decoration: underline;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .contact-header h1 {
+    font-size: 2rem;
+  }
+
+  .contact-form-section,
+  .faq-section {
+    padding: 1.5rem;
+  }
+}
+</style>
