@@ -158,13 +158,13 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error('Gemini Chat Error:', error);
+    console.error('Gemini Chat Error:', error.message, error.stack);
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: false,
-        error: 'AIの応答でエラーが発生しました',
+        error: error.message,
         message: '申し訳ございません。一時的にエラーが発生しています。お問い合わせフォーム（/contact）よりご連絡ください。'
       })
     };
