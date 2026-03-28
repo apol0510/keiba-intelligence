@@ -10,7 +10,7 @@
  * - GEMINI_API_KEY: Google AI Studio API Key
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const SYSTEM_PROMPT = `あなたはKEIBA Intelligenceのカスタマーサポート担当AIアシスタントです。
 
@@ -83,7 +83,7 @@ A: 機械学習（AI）を活用し、過去のレースデータから予測モ
 - 個人情報の要求
 - マークダウン記法は使わない（**太字**や#見出しなど）。プレーンテキストで回答する`;
 
-export default async (req, context) => {
+exports.handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -91,34 +91,36 @@ export default async (req, context) => {
     'Content-Type': 'application/json'
   };
 
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers });
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers, body: '' };
   }
 
-  if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Method Not Allowed' }),
-      { status: 405, headers }
-    );
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({ error: 'Method Not Allowed' })
+    };
   }
 
   try {
-    const body = await req.json();
-    const { message, conversationHistory = [] } = body;
+    const { message, conversationHistory = [] } = JSON.parse(event.body);
 
     if (!message) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required field: message' }),
-        { status: 400, headers }
-      );
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Missing required field: message' })
+      };
     }
 
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: 'GEMINI_API_KEY not configured' }),
-        { status: 500, headers }
-      );
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'GEMINI_API_KEY not configured' })
+      };
     }
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -149,23 +151,22 @@ export default async (req, context) => {
     const response = result.response;
     const aiMessage = response.text();
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: aiMessage
-      }),
-      { status: 200, headers }
-    );
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ success: true, message: aiMessage })
+    };
 
   } catch (error) {
     console.error('Gemini Chat Error:', error);
-    return new Response(
-      JSON.stringify({
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
         success: false,
         error: 'AIの応答でエラーが発生しました',
         message: '申し訳ございません。一時的にエラーが発生しています。お問い合わせフォーム（/contact）よりご連絡ください。'
-      }),
-      { status: 200, headers }  // エラーでも200を返してフロントで表示
-    );
+      })
+    };
   }
 };
