@@ -124,7 +124,7 @@ exports.handler = async (event, context) => {
     }
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-05-20' });
 
     // 会話履歴を構築
     const chatHistory = conversationHistory.map(msg => ({
