@@ -147,36 +147,41 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
 </style>
 
 <script is:inline>
-  // AI解説のキャッシュ
-  const aiCommentCache = {};
+  // イベント委譲で全AIコメントセクションに対応（1回だけ登録）
+  if (!window._aiCommentInitialized) {
+    window._aiCommentInitialized = true;
+    window._aiCommentCache = {};
+    window._aiCommentLoaded = new Set();
 
-  document.querySelectorAll('.ai-comment-section').forEach(section => {
-    const header = section.querySelector('.ai-comment-header');
-    const body = section.querySelector('.ai-comment-body');
-    const toggle = section.querySelector('.ai-comment-toggle');
-    const toggleText = toggle.querySelector('.toggle-text');
-    const loading = section.querySelector('.ai-comment-loading');
-    const textEl = section.querySelector('.ai-comment-text');
-    const type = section.dataset.type;
-    let raceData;
-    try { raceData = JSON.parse(section.dataset.race); } catch(e) { return; }
-    let loaded = false;
-    let isOpen = false;
+    document.addEventListener('click', async (e) => {
+      const header = e.target.closest('.ai-comment-header');
+      if (!header) return;
 
-    // キャッシュキー
-    const cacheKey = `${type}-${raceData.date}-${raceData.venue}-${raceData.raceNumber}`;
+      const section = header.closest('.ai-comment-section');
+      if (!section) return;
 
-    header.addEventListener('click', async () => {
-      isOpen = !isOpen;
+      const body = section.querySelector('.ai-comment-body');
+      const toggle = section.querySelector('.ai-comment-toggle');
+      const toggleText = toggle.querySelector('.toggle-text');
+      const loading = section.querySelector('.ai-comment-loading');
+      const textEl = section.querySelector('.ai-comment-text');
+      const type = section.dataset.type;
+
+      let raceData;
+      try { raceData = JSON.parse(section.dataset.race); } catch(ex) { return; }
+
+      const cacheKey = `${type}-${raceData.date}-${raceData.venue}-${raceData.raceNumber}`;
+      const isOpen = body.style.display !== 'block';
+
       body.style.display = isOpen ? 'block' : 'none';
       toggle.classList.toggle('open', isOpen);
       toggleText.textContent = isOpen ? '閉じる' : '解説を見る';
 
-      if (isOpen && !loaded) {
+      if (isOpen && !window._aiCommentLoaded.has(cacheKey)) {
         // キャッシュチェック
-        if (aiCommentCache[cacheKey]) {
-          renderComment(aiCommentCache[cacheKey]);
-          loaded = true;
+        if (window._aiCommentCache[cacheKey]) {
+          renderAIComment(textEl, window._aiCommentCache[cacheKey]);
+          window._aiCommentLoaded.add(cacheKey);
           return;
         }
 
@@ -193,8 +198,8 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
           loading.style.display = 'none';
 
           if (data.success && data.comment) {
-            aiCommentCache[cacheKey] = data.comment;
-            renderComment(data.comment);
+            window._aiCommentCache[cacheKey] = data.comment;
+            renderAIComment(textEl, data.comment);
           } else {
             textEl.textContent = 'AI解説を取得できませんでした。';
             textEl.classList.add('error');
@@ -204,17 +209,17 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
           textEl.textContent = 'AI解説を取得できませんでした。';
           textEl.classList.add('error');
         }
-        loaded = true;
+        window._aiCommentLoaded.add(cacheKey);
       }
     });
 
-    function renderComment(comment) {
-      textEl.innerHTML = '';
+    function renderAIComment(el, comment) {
+      el.innerHTML = '';
       comment.split('\n').filter(l => l.trim()).forEach(line => {
         const p = document.createElement('p');
         p.textContent = line;
-        textEl.appendChild(p);
+        el.appendChild(p);
       });
     }
-  });
+  }
 </script>
