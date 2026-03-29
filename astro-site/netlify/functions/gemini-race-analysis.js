@@ -22,9 +22,11 @@ const PREDICTION_PROMPT = `あなたはKEIBA Intelligenceの競馬AI予想解説
 【解説の書き方】
 - 3〜5文程度で簡潔にまとめる
 - PT値（予測スコア）と直近走の着順を組み合わせて解説する
-- 例：「本命14番コパノハワードはPT90と高スコア。前走大井1600mで2着と好走しており安定感がある」
+- 例：「本命14番コパノハワードはPT90と高スコア。前走大井1600mで2着と好走しており安定感がある。逃げ脚質で展開も向きそうだ」
 - 直近走で1着があれば「勢いがある」、着順上昇傾向なら「上昇傾向」と表現してよい
 - 直近走で着外続きなら「近走は苦戦しているが、AIスコアは高く評価」と表現してよい
+- 脚質データ（逃げ・先行・差し・追込）がある場合はレース展開予想に活用する
+- 逃げ馬が複数いれば「ハイペース予想」、逃げ馬不在なら「スロー予想」と触れてよい
 - マークダウン記法は使わない。プレーンテキストのみ
 - 的中を保証する表現は禁止
 - 自然な日本語で、競馬ファンに向けた解説口調`;
@@ -118,6 +120,34 @@ exports.handler = async (event, context) => {
   }
 };
 
+/**
+ * 通過順から脚質を判定
+ */
+function judgeRunningStyle(recentRaces) {
+  if (!recentRaces || recentRaces.length === 0) return null;
+
+  const styles = recentRaces
+    .filter(r => r.passingOrder && r.rank)
+    .map(r => {
+      const positions = r.passingOrder.split('-').map(Number);
+      const firstPos = positions[0];
+      const headCount = r.headCount || 12;
+      const ratio = firstPos / headCount;
+
+      if (firstPos <= 1) return '逃げ';
+      if (ratio <= 0.25) return '先行';
+      if (ratio <= 0.6) return '差し';
+      return '追込';
+    });
+
+  if (styles.length === 0) return null;
+
+  // 最頻出の脚質を返す
+  const counts = {};
+  styles.forEach(s => { counts[s] = (counts[s] || 0) + 1; });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+}
+
 function formatPredictionData(data) {
   const { venue, date, raceNumber, raceName, distance, horseCount, topHorses } = data;
   let text = `【レース情報】\n`;
@@ -126,7 +156,9 @@ function formatPredictionData(data) {
   if (horseCount) text += `出走頭数: ${horseCount}頭\n`;
   text += `\n【予想上位馬】\n`;
   topHorses.forEach((h, i) => {
-    text += `${i + 1}. ${h.role} ${h.horseNumber}番 ${h.horseName} (PT: ${h.pt}) 騎手: ${h.jockey || '不明'}\n`;
+    const style = judgeRunningStyle(h.recentRaces);
+    const styleText = style ? ` 脚質:${style}` : '';
+    text += `${i + 1}. ${h.role} ${h.horseNumber}番 ${h.horseName} (PT: ${h.pt}) 騎手: ${h.jockey || '不明'}${styleText}\n`;
     // 直近走データがあれば追加
     if (h.recentRaces && h.recentRaces.length > 0) {
       text += `   直近走: `;
@@ -137,6 +169,15 @@ function formatPredictionData(data) {
       text += '\n';
     }
   });
+
+  // 展開予想用の脚質分布
+  const styles = topHorses.map(h => judgeRunningStyle(h.recentRaces)).filter(Boolean);
+  if (styles.length > 0) {
+    const escapeCount = styles.filter(s => s === '逃げ').length;
+    const frontCount = styles.filter(s => s === '先行').length;
+    text += `\n【上位馬の脚質分布】逃げ:${escapeCount}頭 先行:${frontCount}頭 差し:${styles.filter(s => s === '差し').length}頭 追込:${styles.filter(s => s === '追込').length}頭\n`;
+  }
+
   return text;
 }
 

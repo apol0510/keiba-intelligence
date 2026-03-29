@@ -290,7 +290,7 @@ async function importPrediction(date, venue = 'nankan') {
       results.push(normalizedAndAdjusted);
     }
 
-    return results;
+    return { results, horseDataMap };
   } else {
     // 単一会場形式（従来の形式・非推奨）
     console.log(`⚠️  [IMPORT] 【非推奨】単一会場形式`);
@@ -320,7 +320,7 @@ async function importPrediction(date, venue = 'nankan') {
       }
     }
 
-    return [normalizedAndAdjusted]; // 配列で返す
+    return { results: [normalizedAndAdjusted], horseDataMap }; // オブジェクトで返す
   }
 }
 
@@ -392,7 +392,9 @@ async function fetchEntriesData(date, venue = 'nankan') {
               finishStatus: r.finishStatus || null,
               headCount: r.headCount,
               raceName: r.raceName,
-              popularity: r.popularity
+              popularity: r.popularity,
+              passingOrder: r.passingOrder || null,
+              last3f: r.last3f || null
             }));
             horseDataMap.set(horse.name, recent);
           }
@@ -620,15 +622,17 @@ async function main() {
     }
 
     // 取り込み実行
-    const results = await importPrediction(date);
+    const importResult = await importPrediction(date);
 
     // 予想データがない場合は正常終了
-    if (!results || results.length === 0) {
+    if (!importResult || !importResult.results || importResult.results.length === 0) {
       console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('⏭️  予想データがないため、処理を終了します');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       return; // 正常終了
     }
+
+    const { results, horseDataMap } = importResult;
 
     // 【複数会場対応】各会場のデータを保存
     console.log(`\n📦 [BUILD] 保存対象: ${results.length}会場`);
