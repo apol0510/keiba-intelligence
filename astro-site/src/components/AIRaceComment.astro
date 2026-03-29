@@ -50,7 +50,7 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
     border-radius: 12px;
     border: 2px solid rgba(59, 130, 246, 0.4);
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
-    overflow: hidden;
+    overflow: visible;
     box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     position: relative;
   }
@@ -65,6 +65,8 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
     background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #8b5cf6, #3b82f6);
     background-size: 200% 100%;
     animation: gradientSlide 3s linear infinite;
+    overflow: hidden;
+    border-radius: 12px 12px 0 0;
   }
 
   @keyframes gradientSlide {
@@ -336,6 +338,8 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
           loading.style.display = 'none';
 
           if (data.success && data.comment) {
+            console.log('[AI Comment] API response length:', data.comment.length, 'chars');
+            console.log('[AI Comment] Full text:', data.comment);
             window._aiCommentCache[cacheKey] = data.comment;
             renderAIComment(textEl, data.comment);
           } else {
@@ -353,11 +357,14 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
 
     function renderAIComment(el, comment) {
       el.innerHTML = '';
-      comment.split('\n').filter(l => l.trim()).forEach(line => {
+      const lines = comment.split('\n').filter(l => l.trim());
+      console.log('[AI Comment] Rendering lines:', lines.length, 'from', comment.length, 'chars');
+      lines.forEach(line => {
         const p = document.createElement('p');
         p.textContent = line;
         el.appendChild(p);
       });
+      console.log('[AI Comment] DOM textContent length:', el.textContent.length);
     }
   }
 </script>
