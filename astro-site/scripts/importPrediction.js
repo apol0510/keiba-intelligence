@@ -250,6 +250,9 @@ async function importPrediction(date, venue = 'nankan') {
     return null;
   }
 
+  // 出馬表データ（recentRaces）を取得
+  const horseDataMap = await fetchEntriesData(date, venue);
+
   // 【複数会場対応】venues配列があるか確認
   if (sharedJSON.venues && Array.isArray(sharedJSON.venues) && sharedJSON.venues.length > 0) {
     // 複数会場形式（venues配列）
@@ -322,13 +325,95 @@ async function importPrediction(date, venue = 'nankan') {
 }
 
 /**
+ * keiba-data-sharedから出馬表（entries）JSONを取得
+ * 各馬のrecentRaces（直近5走成績）を含む
+ *
+ * @param {string} date - 日付（YYYY-MM-DD）
+ * @param {string} venue - 競馬場カテゴリ（デフォルト: 'nankan'）
+ * @returns {Promise<Map|null>} 馬名→recentRacesのMap
+ */
+async function fetchEntriesData(date, venue = 'nankan') {
+  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+  const [year, month] = date.split('-');
+  const owner = 'apol0510';
+  const repo = 'keiba-data-shared';
+
+  // entriesディレクトリのファイル一覧を取得
+  const dirPath = `${venue}/entries/${year}/${month}`;
+  const headers = GITHUB_TOKEN ? {
+    'Authorization': `token ${GITHUB_TOKEN}`,
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'keiba-intelligence-import'
+  } : {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'keiba-intelligence-import'
+  };
+
+  console.log(`📡 [ENTRIES] 出馬表データ取得中: ${dirPath}`);
+
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
+  const dirResponse = await fetch(apiUrl, { headers });
+
+  if (!dirResponse.ok) {
+    console.log(`⏭️  [ENTRIES] 出馬表ディレクトリが見つかりません: ${dirPath}`);
+    return null;
+  }
+
+  const files = await dirResponse.json();
+  const dateFiles = files.filter(f => f.name.startsWith(`${date}-`) && f.name.endsWith('.json'));
+
+  if (dateFiles.length === 0) {
+    console.log(`⏭️  [ENTRIES] ${date}の出馬表が見つかりません`);
+    return null;
+  }
+
+  // 馬名→recentRacesのMap（全会場分統合）
+  const horseDataMap = new Map();
+
+  for (const file of dateFiles) {
+    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${file.name}`;
+    const response = await fetch(rawUrl, GITHUB_TOKEN ? { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } } : {});
+
+    if (!response.ok) continue;
+
+    const entryData = JSON.parse(await response.text());
+    console.log(`   ✅ [ENTRIES] ${file.name} 取得完了`);
+
+    if (entryData.races) {
+      for (const race of entryData.races) {
+        for (const horse of (race.horses || [])) {
+          if (horse.name && horse.recentRaces && horse.recentRaces.length > 0) {
+            // 直近3走に絞って必要なフィールドだけ保持
+            const recent = horse.recentRaces.slice(0, 3).map(r => ({
+              date: r.date,
+              venue: r.venue,
+              distance: r.distance,
+              rank: r.finish,
+              finishStatus: r.finishStatus || null,
+              headCount: r.headCount,
+              raceName: r.raceName,
+              popularity: r.popularity
+            }));
+            horseDataMap.set(horse.name, recent);
+          }
+        }
+      }
+    }
+  }
+
+  console.log(`✅ [ENTRIES] ${horseDataMap.size}頭の過去走データを取得`);
+  return horseDataMap;
+}
+
+/**
  * keiba-data-shared標準フォーマットを既存の予想ページフォーマットに変換
  *
  * @param {Object} data - 正規化・調整済みデータ
  * @param {string} date - 日付
+ * @param {Map|null} horseDataMap - 馬名→recentRacesのMap
  * @returns {Object} 既存フォーマット
  */
-function convertToLegacyFormat(data, date) {
+function convertToLegacyFormat(data, date, horseDataMap = null) {
   const predictions = data.races.map((race) => {
     // 役割別に馬を抽出
     const honmei = race.horses.find(h => h.role === '本命');
@@ -375,16 +460,23 @@ function convertToLegacyFormat(data, date) {
         horseCount: race.horses?.length || 0 // 頭数
       },
       horses: race.horses
-        .map(h => ({
-          horseNumber: h.number,
-          horseName: h.name,
-          pt: h.displayScore || h.rawScore || 70, // ptフィールド
-          role: h.role, // 印1システムではroleをそのまま保持
-          jockey: h.jockey || h.kisyu || '', // 騎手
-          trainer: h.trainer || h.kyusya || '', // 厩舎
-          age: h.age || h.seirei || '', // 馬齢
-          weight: h.weight || h.kinryo || '' // 斤量
-        }))
+        .map(h => {
+          const horseObj = {
+            horseNumber: h.number,
+            horseName: h.name,
+            pt: h.displayScore || h.rawScore || 70, // ptフィールド
+            role: h.role, // 印1システムではroleをそのまま保持
+            jockey: h.jockey || h.kisyu || '', // 騎手
+            trainer: h.trainer || h.kyusya || '', // 厩舎
+            age: h.age || h.seirei || '', // 馬齢
+            weight: h.weight || h.kinryo || '' // 斤量
+          };
+          // 過去走データがあれば追加
+          if (horseDataMap && horseDataMap.has(h.name)) {
+            horseObj.recentRaces = horseDataMap.get(h.name);
+          }
+          return horseObj;
+        })
         .sort((a, b) => {
           // 役割の優先順位（印1システム）
           const roleOrder = { '本命': 1, '対抗': 2, '単穴': 3, '連下最上位': 4, '連下': 5, '補欠': 6, '抑え': 7, '無': 8 };
@@ -420,7 +512,7 @@ function convertToLegacyFormat(data, date) {
  * @param {Object} normalizedAndAdjusted - 調整済みNormalizedPrediction
  * @returns {boolean} 保存したかどうか（true: 保存, false: no-op）
  */
-function savePrediction(date, normalizedAndAdjusted) {
+function savePrediction(date, normalizedAndAdjusted, horseDataMap = null) {
   console.log(`\n💾 [SAVE] 保存処理開始...`);
 
   // 保存先パス構築（フラット構造：YYYY-MM-DD-venue.json）
@@ -446,7 +538,7 @@ function savePrediction(date, normalizedAndAdjusted) {
   }
 
   // 既存フォーマットに変換
-  const convertedData = convertToLegacyFormat(normalizedAndAdjusted, date);
+  const convertedData = convertToLegacyFormat(normalizedAndAdjusted, date, horseDataMap);
 
   // 【再発防止】データ検証を実行
   console.log(`🔍 データ検証中...`);
@@ -544,7 +636,7 @@ async function main() {
     let totalSaved = 0;
 
     for (const normalizedAndAdjusted of results) {
-      const saved = savePrediction(date, normalizedAndAdjusted);
+      const saved = savePrediction(date, normalizedAndAdjusted, horseDataMap);
       if (saved) {
         totalSaved++;
         const venue = normalizedAndAdjusted.venue || '大井';
