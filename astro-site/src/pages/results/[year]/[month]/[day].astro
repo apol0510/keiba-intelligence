@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import AIRaceComment from '../../../../components/AIRaceComment.astro';
 import archiveResults from '../../../../data/archiveResults.json';
 import archiveResultsJra from '../../../../data/archiveResultsJra.json';
 
@@ -203,6 +204,25 @@ const jsonLd = {
                 )}
               </div>
             )}
+
+            {/* AI振り返り */}
+            <AIRaceComment
+              type="result"
+              raceData={JSON.stringify({
+                venue: race.venue || entry.venue,
+                date: entry.date,
+                raceNumber: race.raceNumber,
+                raceName: race.raceName,
+                isHit: race.isHit || race.honmeiHit || false,
+                result: race.result || {
+                  first: { number: race.winner || '?', name: '' },
+                  second: { number: race.second || '?', name: '' },
+                  third: { number: race.third || '?', name: '' }
+                },
+                bettingLines: race.bettingLines || [],
+                payout: race.umatan?.payout || race.payouts?.umatan?.[0]?.payout || 0
+              })}
+            />
           </div>
         </div>
       ))}

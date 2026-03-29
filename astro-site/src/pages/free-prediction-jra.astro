@@ -1,6 +1,7 @@
 ---
 // Force rebuild: 2026-02-27
 import BaseLayout from '../layouts/BaseLayout.astro';
+import AIRaceComment from '../components/AIRaceComment.astro';
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { sortHorsesByRole } from '../utils/sortHorsesByRole.js';
@@ -329,6 +330,26 @@ function generateAdvancedMetrics(horse, allHorses) {
                             {race.raceInfo.horseCount && <span class="race-detail-item">🐴 {race.raceInfo.horseCount}頭</span>}
                           </div>
                         </div>
+
+                        {/* AI予想解説 */}
+                        <AIRaceComment
+                          type="prediction"
+                          raceData={JSON.stringify({
+                            venue: venueData.venue,
+                            date: venueData.eventInfo.date,
+                            raceNumber: race.raceInfo.raceNumber,
+                            raceName: race.raceInfo.raceName,
+                            distance: race.raceInfo.distance,
+                            horseCount: race.raceInfo.horseCount,
+                            topHorses: allHorses.sort((a, b) => b.pt - a.pt).slice(0, 5).map(h => ({
+                              horseNumber: h.horseNumber,
+                              horseName: h.horseName,
+                              pt: h.pt,
+                              role: h.role,
+                              jockey: h.jockey
+                            }))
+                          })}
+                        />
 
                         {/* 詳細分析テーブル（上位5頭）*/}
                         <div class="analysis-section">

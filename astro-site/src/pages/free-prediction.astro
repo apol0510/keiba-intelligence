@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import AIRaceComment from '../components/AIRaceComment.astro';
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
@@ -335,6 +336,26 @@ function generateAdvancedMetrics(horse, allHorses) {
                     </div>
                   </div>
                 )}
+
+                <!-- AI予想解説 -->
+                <AIRaceComment
+                  type="prediction"
+                  raceData={JSON.stringify({
+                    venue: predictionData.eventInfo.venue,
+                    date: predictionData.eventInfo.date,
+                    raceNumber: race.raceInfo.raceNumber,
+                    raceName: race.raceInfo.raceName,
+                    distance: race.raceInfo.distance,
+                    horseCount: race.raceInfo.horseCount,
+                    topHorses: allHorses.sort((a, b) => b.pt - a.pt).slice(0, 5).map(h => ({
+                      horseNumber: h.horseNumber,
+                      horseName: h.horseName,
+                      pt: h.pt,
+                      role: h.role,
+                      jockey: h.jockey
+                    }))
+                  })}
+                />
 
                 <!-- AIモデル情報カード -->
                 <div class="ai-model-card">
