@@ -189,21 +189,28 @@ const jsonLd = {
               </div>
             </div>
 
-            {/* 買い目表示（データがある場合のみ） */}
-            {race.bettingLines && (
-              <div class="betting-box">
-                <h4>AI予想買い目</h4>
-                {race.bettingLines.map((line, index) => (
-                  <div class={`betting-line ${race.hitLines?.includes(line) ? 'hit-line' : ''}`}>
-                    {line}
-                    {race.hitLines?.includes(line) && <span class="hit-badge">的中</span>}
-                  </div>
-                ))}
-                {race.bettingPoints && (
-                  <div class="betting-points">買い目点数: {race.bettingPoints}点</div>
-                )}
+            {/* 予想サマリー（買い目は非表示） */}
+            <div class="prediction-summary-box">
+              <h4>AI予想サマリー</h4>
+              {race.bettingPoints && (
+                <div class="summary-item">
+                  <span class="summary-label">買い目点数</span>
+                  <span class="summary-value">{race.bettingPoints}点</span>
+                </div>
+              )}
+              <div class="summary-item">
+                <span class="summary-label">判定</span>
+                <span class={`summary-value ${(race.isHit || race.honmeiHit) ? 'hit' : 'miss'}`}>
+                  {(race.isHit || race.honmeiHit) ? '的中' : '不的中'}
+                </span>
               </div>
-            )}
+              {(race.isHit || race.honmeiHit) && (race.umatan?.payout || race.payouts?.umatan?.[0]?.payout) && (
+                <div class="summary-item">
+                  <span class="summary-label">回収額</span>
+                  <span class="summary-value hit">¥{(race.umatan?.payout || race.payouts?.umatan?.[0]?.payout || 0).toLocaleString()}</span>
+                </div>
+              )}
+            </div>
 
           </div>
 
@@ -221,7 +228,7 @@ const jsonLd = {
                 second: { number: race.second || '?', name: '' },
                 third: { number: race.third || '?', name: '' }
               },
-              bettingLines: race.bettingLines || [],
+              bettingLines: [],
               payout: race.umatan?.payout || race.payouts?.umatan?.[0]?.payout || 0
             })}
           />
@@ -488,6 +495,49 @@ const jsonLd = {
   font-size: 0.85rem;
   color: var(--text-muted);
   text-align: right;
+}
+
+/* 予想サマリー */
+.prediction-summary-box {
+  background: var(--background);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.prediction-summary-box h4 {
+  margin-bottom: 0.75rem;
+  color: var(--heading-color);
+  font-size: 0.95rem;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+}
+
+.summary-label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.summary-value {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.summary-value.hit {
+  color: #22c55e;
+}
+
+.summary-value.miss {
+  color: #ef4444;
 }
 
 /* 関連リンク */
