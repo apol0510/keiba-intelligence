@@ -236,6 +236,103 @@
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
   }
 
+  /* フォローアップUI */
+  .followup-container {
+    animation: messageSlideIn 0.3s ease-out;
+    padding: 10px 0 4px;
+  }
+
+  .followup-question {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .followup-buttons {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .followup-btn {
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+  }
+
+  .followup-btn.yes {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #34d399;
+  }
+
+  .followup-btn.yes:hover {
+    background: rgba(16, 185, 129, 0.25);
+  }
+
+  .followup-btn.no {
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    color: #fbbf24;
+  }
+
+  .followup-btn.no:hover {
+    background: rgba(251, 191, 36, 0.25);
+  }
+
+  .followup-btn.contact {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .followup-btn.contact:hover {
+    background: rgba(239, 68, 68, 0.2);
+  }
+
+  /* ページリンクボタン */
+  .page-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .page-link-btn {
+    display: inline-block;
+    padding: 5px 10px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 6px;
+    color: #60a5fa;
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .page-link-btn:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+  }
+
+  /* 解決済みメッセージ */
+  .resolved-msg {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #34d399;
+    padding: 6px;
+    animation: messageSlideIn 0.3s ease-out;
+  }
+
   /* クイック質問ボタン */
   .quick-questions {
     padding: 8px var(--spacing-md);
@@ -433,6 +530,7 @@
       if (data.success && data.message) {
         addMessage(data.message, 'bot');
         conversationHistory.push({ role: 'assistant', content: data.message });
+        showFollowup(data.message);
       } else if (data.message) {
         // エラーだがメッセージがある場合（フォールバック）
         addMessage(data.message, 'bot', true);
@@ -494,6 +592,97 @@
     messageDiv.appendChild(avatar);
     messageDiv.appendChild(content);
     messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  // 回答内容からページリンクを判定
+  function getRelatedLinks(aiMessage) {
+    const links = [];
+    const msg = aiMessage.toLowerCase();
+    if (msg.includes('料金') || msg.includes('プラン') || msg.includes('価格')) {
+      links.push({ text: '料金プランを見る', href: '/pricing' });
+    }
+    if (msg.includes('無料会員') || msg.includes('登録')) {
+      links.push({ text: '無料会員登録', href: '/register' });
+    }
+    if (msg.includes('的中') || msg.includes('実績') || msg.includes('回収率')) {
+      links.push({ text: '的中実績を見る', href: '/archive/' });
+    }
+    if (msg.includes('予想') || msg.includes('買い目')) {
+      links.push({ text: '無料予想を見る', href: '/free-prediction' });
+    }
+    if (msg.includes('ログイン') || msg.includes('マイページ')) {
+      links.push({ text: 'ログイン', href: '/login' });
+    }
+    return links;
+  }
+
+  // フォローアップUI表示
+  function showFollowup(aiMessage) {
+    // 既存のフォローアップを削除
+    const existing = messagesContainer.querySelectorAll('.followup-container');
+    existing.forEach(el => el.remove());
+
+    const container = document.createElement('div');
+    container.className = 'followup-container';
+
+    // 関連ページリンク
+    const links = getRelatedLinks(aiMessage);
+    if (links.length > 0) {
+      const linksDiv = document.createElement('div');
+      linksDiv.className = 'page-links';
+      links.forEach(link => {
+        const a = document.createElement('a');
+        a.href = link.href;
+        a.className = 'page-link-btn';
+        a.textContent = link.text;
+        linksDiv.appendChild(a);
+      });
+      container.appendChild(linksDiv);
+    }
+
+    // 「解決しましたか？」
+    const questionDiv = document.createElement('div');
+    questionDiv.className = 'followup-question';
+    questionDiv.textContent = 'この回答で解決しましたか？';
+    container.appendChild(questionDiv);
+
+    const buttonsDiv = document.createElement('div');
+    buttonsDiv.className = 'followup-buttons';
+
+    const yesBtn = document.createElement('button');
+    yesBtn.className = 'followup-btn yes';
+    yesBtn.textContent = '解決した';
+    yesBtn.addEventListener('click', () => {
+      container.remove();
+      const resolved = document.createElement('div');
+      resolved.className = 'resolved-msg';
+      resolved.textContent = 'ご利用ありがとうございます！他にご質問があればお気軽にどうぞ。';
+      messagesContainer.appendChild(resolved);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      // クイック質問を再表示
+      quickQuestions.classList.remove('hidden');
+    });
+
+    const moreBtn = document.createElement('button');
+    moreBtn.className = 'followup-btn no';
+    moreBtn.textContent = '続けて質問する';
+    moreBtn.addEventListener('click', () => {
+      container.remove();
+      chatInput.focus();
+    });
+
+    const contactLink = document.createElement('a');
+    contactLink.href = '/contact';
+    contactLink.className = 'followup-btn contact';
+    contactLink.textContent = 'お問い合わせフォームへ';
+
+    buttonsDiv.appendChild(yesBtn);
+    buttonsDiv.appendChild(moreBtn);
+    buttonsDiv.appendChild(contactLink);
+    container.appendChild(buttonsDiv);
+
+    messagesContainer.appendChild(container);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
 
