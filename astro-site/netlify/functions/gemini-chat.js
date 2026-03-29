@@ -124,7 +124,10 @@ exports.handler = async (event, context) => {
     }
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      systemInstruction: SYSTEM_PROMPT,
+    });
 
     // 会話履歴を構築
     const chatHistory = conversationHistory.map(msg => ({
@@ -142,12 +145,7 @@ exports.handler = async (event, context) => {
       },
     });
 
-    // 最初のメッセージにはシステムプロンプトを含める
-    const fullMessage = conversationHistory.length === 0
-      ? `${SYSTEM_PROMPT}\n\nユーザーの質問: ${message}`
-      : message;
-
-    const result = await chat.sendMessage(fullMessage);
+    const result = await chat.sendMessage(message);
     const response = result.response;
     const aiMessage = response.text();
 
