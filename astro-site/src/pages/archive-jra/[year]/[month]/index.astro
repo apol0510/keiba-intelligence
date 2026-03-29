@@ -109,10 +109,12 @@ const pageDescription = monthData.length > 0
 
             return (
               <section class="day-section">
+                <a href={`/results/${year}/${month}/${day}`} class="day-header-link">
                 <div class="day-header">
                   <h2>
                     <span class="day-date">{month}月{day}日</span>
                     <span class="day-venue">{dayData.venue}</span>
+                    <span class="day-detail-link">詳細を見る →</span>
                   </h2>
                   <div class="day-stats">
                     <span class="stat">的中 {dayData.hitRaces}/{dayData.totalRaces}レース</span>
@@ -128,6 +130,7 @@ const pageDescription = monthData.length > 0
                     </span>
                   </div>
                 </div>
+                </a>
 
                 <div class="races-list">
                   {(() => {
@@ -278,6 +281,21 @@ const pageDescription = monthData.length > 0
     overflow: hidden;
   }
 
+  .day-header-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: background 0.2s ease;
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.05);
+
+      .day-detail-link {
+        opacity: 1;
+      }
+    }
+  }
+
   .day-header {
     padding: var(--spacing-lg);
     background: rgba(0, 0, 0, 0.2);
@@ -289,6 +307,7 @@ const pageDescription = monthData.length > 0
       display: flex;
       align-items: baseline;
       gap: var(--spacing-md);
+      flex-wrap: wrap;
 
       .day-date {
         font-weight: 800;
@@ -299,6 +318,15 @@ const pageDescription = monthData.length > 0
         font-weight: 600;
         font-size: 1.125rem;
         color: var(--text-secondary);
+      }
+
+      .day-detail-link {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #60a5fa;
+        margin-left: auto;
+        opacity: 0.6;
+        transition: opacity 0.2s ease;
       }
     }
   }
