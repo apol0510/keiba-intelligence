@@ -29,7 +29,9 @@ const PREDICTION_PROMPT = `あなたはKEIBA Intelligenceの競馬AI予想解説
 - 逃げ馬が複数いれば「ハイペース予想」、逃げ馬不在なら「スロー予想」と触れてよい
 - マークダウン記法は使わない。プレーンテキストのみ
 - 的中を保証する表現は禁止
-- 自然な日本語で、競馬ファンに向けた解説口調`;
+- 自然な日本語で、競馬ファンに向けた解説口調
+- 「KEIBA Intelligenceがお届けする」等の前置き・自己紹介は一切不要。いきなり解説本文から始める
+- 箇条書きや番号リストは使わない。文章で書く`;
 
 const RESULT_PROMPT = `あなたはKEIBA Intelligenceの競馬AI結果解説者です。
 
@@ -49,7 +51,9 @@ const RESULT_PROMPT = `あなたはKEIBA Intelligenceの競馬AI結果解説者�
 - 払戻額がある場合はその金額に触れてよい
 - マークダウン記法は使わない。プレーンテキストのみ
 - 言い訳はせず客観的に事実のみ述べる
-- 自然な日本語で簡潔に`;
+- 自然な日本語で簡潔に
+- 「KEIBA Intelligenceがお届けする」等の前置き・自己紹介は一切不要。いきなり解説本文から始める
+- 箇条書きや番号リストは使わない。文章で書く`;
 
 exports.handler = async (event, context) => {
   const headers = {
