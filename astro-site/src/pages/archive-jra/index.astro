@@ -148,6 +148,13 @@ const pageDescription = `中央競馬（JRA）の全的中実績アーカイブ�
       <footer class="page-footer">
         <a href="/" class="btn-back">← トップページへ戻る</a>
       </footer>
+
+      {/* 注意事項 */}
+      <div class="results-notice">
+        <p>※ 掲載されている的中率・収支データは、AIモデルが算出した買い目パターンに基づく理論値です。実際の収支はお客様の購入点数・金額配分により異なります。</p>
+        <p>※ 本サービスで提示する買い目は複数パターンの候補を含むため、表示点数と集計上の基準点数が異なる場合があります。</p>
+        <p>※ 過去の実績は将来の結果を保証するものではありません。馬券購入は自己責任でお願いいたします。</p>
+      </div>
     </div>
   </main>
 </BaseLayout>
@@ -382,6 +389,19 @@ const pageDescription = `中央競馬（JRA）の全的中実績アーカイブ�
 
     .stat-item .stat-value {
       font-size: 1.25rem;
+    }
+  }
+
+  .results-notice {
+    margin-top: 2rem;
+    padding: 1rem 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+
+    p {
+      font-size: 0.75rem;
+      color: rgba(148, 163, 184, 0.6);
+      line-height: 1.7;
+      margin: 0;
     }
   }
 </style>
