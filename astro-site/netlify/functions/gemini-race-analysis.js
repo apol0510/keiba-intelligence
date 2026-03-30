@@ -166,14 +166,13 @@ function formatPredictionData(data) {
     const style = judgeRunningStyle(h.recentRaces);
     const styleText = style ? ` 脚質:${style}` : '';
     text += `${i + 1}. ${h.role} ${h.horseNumber}番 ${h.horseName} (PT: ${h.pt}) 騎手: ${h.jockey || '不明'}${styleText}\n`;
-    // 直近走データがあれば追加
+    // 直近走データがあれば追加（1走目=前走、2走目=前々走の順）
     if (h.recentRaces && h.recentRaces.length > 0) {
-      text += `   直近走: `;
-      text += h.recentRaces.map(r => {
+      h.recentRaces.forEach((r, idx) => {
+        const label = idx === 0 ? '前走' : idx === 1 ? '2走前' : '3走前';
         const rankText = r.finishStatus ? r.finishStatus : `${r.rank}着`;
-        return `${r.venue}${r.distance}m${rankText}(${r.headCount}頭中)`;
-      }).join(' → ');
-      text += '\n';
+        text += `   ${label}: ${r.date} ${r.venue}${r.distance}m ${rankText}(${r.headCount}頭中)\n`;
+      });
     }
   });
 
