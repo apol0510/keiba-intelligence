@@ -130,6 +130,7 @@ exports.handler = async (event) => {
     }
 
     const customer = customers[0].fields;
+    const venueAccess = customer.VenueAccess || 'all';
 
     // 3.5. 顧客ステータスを更新（pending → active, AccessEnabled → true）
     // ※ PlanTypeは上書きしない（有料プランが消えるバグ防止）
@@ -168,7 +169,12 @@ exports.handler = async (event) => {
     const planType = currentPlanType.toLowerCase();
     let redirectTo = '/free-prediction'; // デフォルト: 無料予想ページ
     if (planType === 'pro' || planType === 'pro-plus' || planType === 'light') {
-      redirectTo = '/prediction'; // 有料会員は予想ページへ
+      // 会場別リダイレクト: JRAのみユーザーはJRA予想ページへ
+      if (venueAccess === 'jra') {
+        redirectTo = '/prediction-jra';
+      } else {
+        redirectTo = '/prediction';
+      }
     }
 
     return {
@@ -180,6 +186,7 @@ exports.handler = async (event) => {
         session: {
           user: { email: customer.Email, name: customer.Name || '' },
           plan: currentPlanType,
+          venueAccess: venueAccess,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         },
       }),

@@ -2,13 +2,14 @@
 // アクセス制御コンポーネント（KEIBA Intelligence用）
 export interface Props {
     requiredPlan: 'free' | 'free-registered' | 'light' | 'pro' | 'pro-plus';
+    venue?: 'nankan' | 'jra';
     showUpgrade?: boolean;
 }
 
-const { requiredPlan, showUpgrade = true } = Astro.props;
+const { requiredPlan, venue, showUpgrade = true } = Astro.props;
 ---
 
-<div id="access-control" data-required-plan={requiredPlan}>
+<div id="access-control" data-required-plan={requiredPlan} data-venue={venue || ''}>
     <!-- 読み込み中表示 -->
     <div id="loading-state" class="access-loading">
         <div class="spinner"></div>
@@ -166,12 +167,12 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
         const sessionAuth = sessionStorage.getItem('keiba_session');
         if (sessionAuth) {
             try {
-                const { user, plan, expiresAt } = JSON.parse(sessionAuth);
+                const { user, plan, venueAccess, expiresAt } = JSON.parse(sessionAuth);
 
                 // 有効期限チェック
                 if (expiresAt && new Date() < new Date(expiresAt)) {
-                    console.log('✅ セッション認証:', { user, plan });
-                    return { user, plan: plan || 'free' };
+                    console.log('✅ セッション認証:', { user, plan, venueAccess });
+                    return { user, plan: plan || 'free', venueAccess: venueAccess || 'all' };
                 } else {
                     console.log('⚠️ セッション有効期限切れ');
                     sessionStorage.removeItem('keiba_session');
@@ -190,7 +191,8 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
                 console.log('✅ user-plan認証:', userData);
                 return {
                     user: { email: userData.email },
-                    plan: userData.plan || 'free'
+                    plan: userData.plan || 'free',
+                    venueAccess: userData.venueAccess || 'all'
                 };
             } catch (error) {
                 console.error('user-plan解析エラー:', error);
@@ -201,17 +203,17 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
         const authData = localStorage.getItem('auth_data');
         if (authData) {
             try {
-                const { user, plan, expiresAt } = JSON.parse(authData);
+                const { user, plan, venueAccess, expiresAt } = JSON.parse(authData);
 
                 // 有効期限チェック
                 if (expiresAt && new Date() > new Date(expiresAt)) {
                     console.log('⚠️ auth_data有効期限切れ');
                     localStorage.removeItem('auth_data');
-                    return { user: null, plan: null };
+                    return { user: null, plan: null, venueAccess: 'all' };
                 }
 
-                console.log('✅ auth_data認証:', { user, plan });
-                return { user, plan: plan || 'free' };
+                console.log('✅ auth_data認証:', { user, plan, venueAccess });
+                return { user, plan: plan || 'free', venueAccess: venueAccess || 'all' };
             } catch (error) {
                 console.error('auth_data解析エラー:', error);
                 localStorage.removeItem('auth_data');
@@ -220,7 +222,7 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
 
         // 4. デフォルトは未登録
         console.log('❌ 認証データなし - 未登録状態');
-        return { user: null, plan: null };
+        return { user: null, plan: null, venueAccess: 'all' };
     }
 
     // プラン階層チェック
@@ -284,8 +286,9 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
 
         try {
             // 認証状態の取得
-            const { user, plan } = getCurrentUserPlan();
-            console.log('🔒 認証チェック - ユーザー:', user, 'プラン:', plan, '必要プラン:', requiredPlan);
+            const { user, plan, venueAccess } = getCurrentUserPlan();
+            const venue = accessControl.dataset.venue;
+            console.log('🔒 認証チェック - ユーザー:', user, 'プラン:', plan, '会場アクセス:', venueAccess, '必要プラン:', requiredPlan, '対象会場:', venue);
 
             // 開発モードでの優先表示（デバッグ用）
             if (isDevelopmentMode()) {
@@ -303,8 +306,14 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
                 }, 10000);
             }
 
+            // 会場別アクセスチェック
+            let venueBlocked = false;
+            if (venue && venueAccess !== 'all' && venue !== venueAccess) {
+                venueBlocked = true;
+            }
+
             // アクセス権限チェック
-            if (canAccessContent(plan, requiredPlan, user)) {
+            if (canAccessContent(plan, requiredPlan, user) && !venueBlocked) {
                 // アクセス許可
                 console.log(`✅ アクセス許可: ${getPlanDisplayName(plan)} → ${requiredPlan}コンテンツ`);
 
@@ -338,8 +347,19 @@ const { requiredPlan, showUpgrade = true } = Astro.props;
 
                 // メッセージをカスタマイズ
                 const deniedMessage = accessDenied.querySelector('.denied-message');
+                const deniedTitle = accessDenied.querySelector('h2');
 
-                if (!user) {
+                if (venueBlocked) {
+                    // 会場制限による拒否
+                    const venueNames = { 'nankan': '南関競馬（大井・川崎・船橋・浦和）', 'jra': '中央競馬（JRA）' };
+                    const currentVenueName = venueNames[venueAccess] || venueAccess;
+                    const targetVenueName = venueNames[venue] || venue;
+
+                    if (deniedTitle) {
+                        deniedTitle.textContent = 'このコンテンツはご契約プランの対象外です';
+                    }
+                    deniedMessage.textContent = `現在のプランでは「${currentVenueName}」のみご利用いただけます。\n「${targetVenueName}」の予想をご覧になるには、年払いプランまたは買い切りプランへのアップグレードが必要です。`;
+                } else if (!user) {
                     deniedMessage.textContent = '詳細な予想と買い目をご覧いただくには、会員登録とプランのアップグレードが必要です。';
                 } else {
                     const currentPlanName = getPlanDisplayName(plan);

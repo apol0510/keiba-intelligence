@@ -339,6 +339,15 @@ exports.handler = async (event, context) => {
           planName = 'pro';
         }
 
+        // planType → PlanType マッピング（セッション用）
+        let planTypeMapped = 'pro';
+        if (planType === 'light') planTypeMapped = 'light';
+
+        // planType → VenueAccess マッピング（会場別アクセス制御）
+        let venueAccess = 'all';
+        if (planType === 'monthly-nankan') venueAccess = 'nankan';
+        if (planType === 'monthly-jra') venueAccess = 'jra';
+
         // 既存顧客チェック
         const searchFormula = `{Email} = "${email}"`;
         const searchUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Customers?filterByFormula=${encodeURIComponent(searchFormula)}`;
@@ -367,9 +376,12 @@ exports.handler = async (event, context) => {
             fields: {
               'Name': fullName,
               'Plan': planName,
+              'PlanType': planTypeMapped,
               'plan_type': planType,
+              'VenueAccess': venueAccess,
               'Status': 'pending',
               'PaymentMethod': 'Bank Transfer',
+              'PaymentEmailSent': false,
               'Source': 'keiba-intelligence'
             }
           };
@@ -399,9 +411,12 @@ exports.handler = async (event, context) => {
               'Email': email,
               'Name': fullName,
               'Plan': planName,
+              'PlanType': planTypeMapped,
               'plan_type': planType,
+              'VenueAccess': venueAccess,
               'Status': 'pending',
               'PaymentMethod': 'Bank Transfer',
+              'PaymentEmailSent': false,
               'AccessEnabled': false,
               'Source': 'keiba-intelligence'
             }
