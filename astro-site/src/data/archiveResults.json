@@ -1,5 +1,386 @@
 [
   {
+    "date": "2026-03-30",
+    "venue": "船橋",
+    "venues": [
+      "船橋"
+    ],
+    "totalRaces": 12,
+    "hitRaces": 7,
+    "missRaces": 5,
+    "hitRate": 58.3,
+    "betAmount": 9600,
+    "betPointsPerRace": 8,
+    "totalPayout": 18790,
+    "returnRate": 195.7,
+    "races": [
+      {
+        "raceNumber": 1,
+        "raceName": "サラ３歳",
+        "venue": "船橋",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "ワイルドペガサス"
+          },
+          "second": {
+            "number": 8,
+            "name": "ベストポジション"
+          },
+          "third": {
+            "number": 10,
+            "name": "ムーンアンバック"
+          }
+        },
+        "bettingLines": [
+          "9-8.11.4.6.7.2(抑え1)",
+          "8-9.11.4.6.7.2(抑え1)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "8-9.11.4.6.7.2(抑え1)"
+        ],
+        "umatan": {
+          "combination": "4-8",
+          "payout": 1820
+        }
+      },
+      {
+        "raceNumber": 2,
+        "raceName": "サラ４歳以上",
+        "venue": "船橋",
+        "result": {
+          "first": {
+            "number": 5,
+            "name": "アオイヒビキ"
+          },
+          "second": {
+            "number": 7,
+            "name": "ジャルダンデュロワ"
+          },
+          "third": {
+            "number": 10,
+            "name": "ブロードファイラム"
+          }
+        },
+        "bettingLines": [
+          "12-10.7.2.5.3.8(抑え4)",
+          "10-12.7.2.5.3.8(抑え4)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "5-7",
+          "payout": 1350
+        }
+      },
+      {
+        "raceNumber": 3,
+        "raceName": "サラ３歳",
+        "venue": "船橋",
+        "result": {
+          "first": {
+            "number": 8,
+            "name": "クラムスコイ"
+          },
+          "second": {
+            "number": 1,
+            "name": "アウフグース"
+          },
+          "third": {
+            "number": 11,
+            "name": "ポップザットバディ"
+          }
+        },
+        "bettingLines": [
+          "6-1.2.11.8.3.4(抑え7)",
+          "1-6.2.11.8.3.4(抑え7)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "1-6.2.11.8.3.4(抑え7)"
+        ],
+        "umatan": {
+          "combination": "8-1",
+          "payout": 11180
+        }
+      },
+      {
+        "raceNumber": 4,
+        "raceName": "サラ３歳",
+        "venue": "船橋",
+        "result": {
+          "first": {
+            "number": 5,
+            "name": "ズルタナイト"
+          },
+          "second": {
+            "number": 7,
+            "name": "ノースラノビア"
+          },
+          "third": {
+            "number": 9,
+            "name": "リバースター"
+          }
+        },
+        "bettingLines": [
+          "4-6.5.7.3.2.9",
+          "6-4.5.7.3.2.9"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "5-7",
+          "payout": 1980
+        }
+      },
+      {
+        "raceNumber": 5,
+        "raceName": "夜桜ダッシュ",
+        "venue": "船橋",
+        "result": {
+          "first": {
+            "number": 5,
+            "name": "エスペラード"
+          },
+          "second": {
+            "number": 13,
+            "name": "ファイアーワルツ"
+          },
+          "third": {
+            "number": 14,
+            "name": "ポッドバディ"
+          }
+        },
+        "bettingLines": [
+          "14-5.11.13.12.1.3(抑え4.7.9)",
+          "5-14.11.13.12.1.3(抑え4.7.9)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "5-14.11.13.12.1.3(抑え4.7.9)"
+        ],
+        "umatan": {
+          "combination": "5-13",
+          "payout": 600
+        }
+      },
+      {
+        "raceNumber": 6,
+        "raceName": "サラ４歳以上",
+        "venue": "船橋",
+        "result": {
+          "first": {
+            "number": 3,
+            "name": "ゲンキイッパイ"
+          },
+          "second": {
+            "number": 10,
+            "name": "ブレストサンダー"
+          },
+          "third": {
+            "number": 6,
+            "name": "ザビッグマン"
+          }
+        },
+        "bettingLines": [
+          "6-9.3.5.4.10.2",
+          "9-6.3.5.4.10.2"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "3-10",
+          "payout": 3730
+        }
+      },
+      {
+        "raceNumber": 7,
+        "raceName": "馬い！価格に挑戦サンサンエッグ",
+        "venue": "船橋",
+        "result": {
+          "first": {
+            "number": 8,
+            "name": "ルグランシャリオ"
+          },
+          "second": {
+            "number": 1,
+            "name": "ブリヤンオーブ"
+          },
+          "third": {
+            "number": 5,
+            "name": "ルタンアリュール"
+          }
+        },
+        "bettingLines": [
+          "5-7.8.9.11.2.4(抑え12)",
+          "7-5.8.9.11.2.4(抑え12)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "8-1",
+          "payout": 2990
+        }
+      },
+      {
+        "raceNumber": 8,
+        "raceName": "ハルジオンスプリント",
+        "venue": "船橋",
+        "result": {
+          "first": {
+            "number": 9,
+            "name": "コスモエンエン"
+          },
+          "second": {
+            "number": 11,
+            "name": "ヤギリドリーム"
+          },
+          "third": {
+            "number": 7,
+            "name": "ビットコイン"
+          }
+        },
+        "bettingLines": [
+          "2-9.4.11.8.3.7(抑え6)",
+          "9-2.4.11.8.3.7(抑え6)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "9-2.4.11.8.3.7(抑え6)"
+        ],
+        "umatan": {
+          "combination": "9-11",
+          "payout": 1120
+        }
+      },
+      {
+        "raceNumber": 9,
+        "raceName": "ヒメジョオンスプリント",
+        "venue": "船橋",
+        "result": {
+          "first": {
+            "number": 3,
+            "name": "デザーヴ"
+          },
+          "second": {
+            "number": 10,
+            "name": "ナイトロ"
+          },
+          "third": {
+            "number": 7,
+            "name": "トワイライトウェイ"
+          }
+        },
+        "bettingLines": [
+          "3-10.7.4.6.1.9",
+          "10-3.7.4.6.1.9"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "3-10.7.4.6.1.9",
+          "10-3.7.4.6.1.9"
+        ],
+        "umatan": {
+          "combination": "3-10",
+          "payout": 270
+        }
+      },
+      {
+        "raceNumber": 10,
+        "raceName": "カイヤナイト特別",
+        "venue": "船橋",
+        "result": {
+          "first": {
+            "number": 7,
+            "name": "グラビティモデル"
+          },
+          "second": {
+            "number": 8,
+            "name": "セブンスウェイ"
+          },
+          "third": {
+            "number": 14,
+            "name": "コパノハワード"
+          }
+        },
+        "bettingLines": [
+          "14-5.11.4.9.6.8(抑え12.7)",
+          "5-14.11.4.9.6.8(抑え12.7)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "7-8",
+          "payout": 26540
+        }
+      },
+      {
+        "raceNumber": 11,
+        "raceName": "花まつり特別",
+        "venue": "船橋",
+        "result": {
+          "first": {
+            "number": 12,
+            "name": "クリスタルケイブ"
+          },
+          "second": {
+            "number": 4,
+            "name": "グランピクニック"
+          },
+          "third": {
+            "number": 1,
+            "name": "マシュー"
+          }
+        },
+        "bettingLines": [
+          "1-4.11.12.5.7.6(抑え9)",
+          "4-1.11.12.5.7.6(抑え9)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "4-1.11.12.5.7.6(抑え9)"
+        ],
+        "umatan": {
+          "combination": "12-4",
+          "payout": 2420
+        }
+      },
+      {
+        "raceNumber": 12,
+        "raceName": "カスミソウ賞",
+        "venue": "船橋",
+        "result": {
+          "first": {
+            "number": 10,
+            "name": "バルクヘッド"
+          },
+          "second": {
+            "number": 8,
+            "name": "タイセイルシエル"
+          },
+          "third": {
+            "number": 4,
+            "name": "コウジンキンキ"
+          }
+        },
+        "bettingLines": [
+          "10-7.8.12.6.1.2(抑え11.9.3.4)",
+          "7-10.8.12.6.1.2(抑え11.9.3.4)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "10-7.8.12.6.1.2(抑え11.9.3.4)"
+        ],
+        "umatan": {
+          "combination": "10-8",
+          "payout": 1380
+        }
+      }
+    ],
+    "verifiedAt": "2026-03-30T13:24:58.559Z"
+  },
+  {
     "date": "2026-03-27",
     "venue": "大井",
     "venues": [
