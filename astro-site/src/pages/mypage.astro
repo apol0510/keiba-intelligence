@@ -24,6 +24,14 @@ export const prerender = true;
             <span class="info-label">現在のプラン</span>
             <span class="info-value" id="user-plan-display">-</span>
           </div>
+          <div class="info-row" id="venue-access-row" style="display: none;">
+            <span class="info-label">アクセス対象</span>
+            <span class="info-value" id="venue-access-display">-</span>
+          </div>
+          <div class="info-row" id="expiration-row" style="display: none;">
+            <span class="info-label">有効期限</span>
+            <span class="info-value" id="expiration-display">-</span>
+          </div>
         </div>
 
         <!-- プラン別の機能説明 -->
@@ -365,6 +373,8 @@ export const prerender = true;
     // ログイン済み表示
     const plan = (session.plan || 'free-registered').toLowerCase();
     const email = session.user.email || '-';
+    const venueAccess = session.venueAccess || 'all';
+    const planExpiresAt = session.planExpiresAt || null;
 
     document.getElementById('user-email').textContent = email;
 
@@ -378,6 +388,33 @@ export const prerender = true;
 
     const cfg = planConfig[plan] || planConfig['free-registered'];
     document.getElementById('user-plan-display').innerHTML = `<span class="plan-badge ${cfg.badge}">${cfg.label}</span>`;
+
+    // 会場アクセス表示（有料プランのみ）
+    if (plan !== 'free-registered') {
+      const venueRow = document.getElementById('venue-access-row');
+      const venueDisplay = document.getElementById('venue-access-display');
+      const venueLabels = {
+        'all': '🏇 南関4場 ＋ JRA全10場',
+        'nankan': '🏇 南関4場（大井・川崎・船橋・浦和）',
+        'jra': '🏇 JRA全10場（中央競馬）'
+      };
+      venueDisplay.textContent = venueLabels[venueAccess] || venueLabels['all'];
+      venueRow.style.display = 'flex';
+
+      // 有効期限表示
+      if (planExpiresAt) {
+        const expRow = document.getElementById('expiration-row');
+        const expDisplay = document.getElementById('expiration-display');
+        if (planExpiresAt === '2099-12-31') {
+          expDisplay.textContent = '永久アクセス';
+        } else {
+          const expDate = new Date(planExpiresAt);
+          const formatted = `${expDate.getFullYear()}/${String(expDate.getMonth() + 1).padStart(2, '0')}/${String(expDate.getDate()).padStart(2, '0')}`;
+          expDisplay.textContent = formatted;
+        }
+        expRow.style.display = 'flex';
+      }
+    }
 
     // プラン詳細
     const planDetail = document.getElementById('plan-detail');

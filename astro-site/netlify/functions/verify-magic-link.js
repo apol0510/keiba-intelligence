@@ -131,6 +131,7 @@ exports.handler = async (event) => {
 
     const customer = customers[0].fields;
     const venueAccess = customer.VenueAccess || 'all';
+    const planExpiresAt = customer.ExpirationDate || customer['有効期限'] || null;
 
     // 3.5. 顧客ステータスを更新（pending → active, AccessEnabled → true）
     // ※ PlanTypeは上書きしない（有料プランが消えるバグ防止）
@@ -187,6 +188,7 @@ exports.handler = async (event) => {
           user: { email: customer.Email, name: customer.Name || '' },
           plan: currentPlanType,
           venueAccess: venueAccess,
+          planExpiresAt: planExpiresAt,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         },
       }),
