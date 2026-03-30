@@ -118,8 +118,8 @@ exports.handler = async (event, context) => {
     // Step 3: メール送信
     // ========================================
     const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-    const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@keiba-intelligence.netlify.app';
-    const SUPPORT_EMAIL = process.env.ADMIN_EMAIL || 'support@keiba-intelligence.netlify.app';
+    const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@em8410.keiba-intelligence.jp';
+    const SUPPORT_EMAIL = process.env.ADMIN_EMAIL || 'support@keiba-intelligence.jp';
 
     if (!SENDGRID_API_KEY) {
       throw new Error('SendGrid API key not configured');
@@ -301,7 +301,7 @@ function getVenueAccessDisplay(venueAccess) {
  * プラン別のログインURL・ボタンテキスト
  */
 function getPlanInfo(planType, venueAccess) {
-  const baseUrl = 'https://keiba-intelligence.netlify.app';
+  const baseUrl = 'https://keiba-intelligence.jp';
 
   if (venueAccess === 'jra' || planType === 'monthly-jra') {
     return {
@@ -447,7 +447,7 @@ function generateEmailHTML(fullName, email, planName, planType, expirationDate, 
     <div class="footer">
       <p><strong>KEIBA Intelligence</strong></p>
       <p>AI-Powered Intelligence Dashboard for 競馬予想</p>
-      <p><a href="https://keiba-intelligence.netlify.app" style="color: #3b82f6; text-decoration: none;">https://keiba-intelligence.netlify.app</a></p>
+      <p><a href="https://keiba-intelligence.jp" style="color: #3b82f6; text-decoration: none;">https://keiba-intelligence.jp</a></p>
       <p style="margin-top: 15px; font-size: 0.85rem; color: #94a3b8;">
         ※このメールは入金確認後に自動送信されています
       </p>

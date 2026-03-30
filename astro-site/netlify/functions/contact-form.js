@@ -41,7 +41,7 @@ exports.handler = async (event, context) => {
     }
 
     const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-    const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@keiba-intelligence.netlify.app';
+    const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@em8410.keiba-intelligence.jp';
     const ADMIN_EMAIL = process.env.ADMIN_EMAIL || process.env.ALERT_EMAIL;
 
     if (!SENDGRID_API_KEY) {

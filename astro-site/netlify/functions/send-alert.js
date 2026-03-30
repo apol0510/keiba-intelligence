@@ -67,7 +67,7 @@ export async function handler(event, context) {
     // メール送信
     const msg = {
       to: process.env.ALERT_EMAIL || 'your-email@example.com',
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@keiba-intelligence.netlify.app',
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@em8410.keiba-intelligence.jp',
       subject,
       html
     };
@@ -229,7 +229,7 @@ function generateAlertEmail(type, date, details, metadata) {
           <hr>
           <p><strong>確認:</strong></p>
           <ul>
-            <li><a href="https://keiba-intelligence.netlify.app/results">的中実績ページを確認</a></li>
+            <li><a href="https://keiba-intelligence.jp/results">的中実績ページを確認</a></li>
             <li><a href="https://github.com/apol0510/keiba-intelligence/blob/main/astro-site/src/data/archiveResults.json">archiveResults.jsonを確認</a></li>
           </ul>
           <p style="color: #666; font-size: 12px; margin-top: 20px;">このメールは自動送信されています。</p>

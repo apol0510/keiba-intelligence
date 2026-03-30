@@ -116,11 +116,11 @@ exports.handler = async (event) => {
     console.log('✅ Token created:', token);
 
     // 4. SendGrid経由でマジックリンク送信
-    const magicLink = `https://keiba-intelligence.netlify.app/auth/verify?token=${token}`;
+    const magicLink = `https://keiba-intelligence.jp/auth/verify?token=${token}`;
 
     const msg = {
       to: email,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@keiba-intelligence.netlify.app',
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@em8410.keiba-intelligence.jp',
       subject: '【KEIBA Intelligence】ログインリンク',
       html: `
 <div style="font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">

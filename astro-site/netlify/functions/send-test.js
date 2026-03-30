@@ -82,7 +82,7 @@ exports.handler = async (event) => {
     // SendGrid送信
     const msg = {
       to: test_email,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@keiba-intelligence.netlify.app',
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@em8410.keiba-intelligence.jp',
       subject: `【テスト】${broadcast.subject}`,
       html: `
 <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 16px; margin-bottom: 24px; border-radius: 8px;">
