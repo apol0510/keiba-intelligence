@@ -1,0 +1,189 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+export const prerender = true;
+---
+
+<BaseLayout
+  title="利用規約 - KEIBA Intelligence"
+  description="KEIBA Intelligenceの利用規約です。"
+>
+  <section class="legal-section">
+    <div class="container">
+      <h1>利用規約</h1>
+      <p class="last-updated">最終更新日: 2026年3月30日</p>
+
+      <div class="legal-content">
+
+        <div class="legal-block">
+          <h2>第1条（適用）</h2>
+          <p>本規約は、KEIBA Intelligence（以下「当サービス」）の利用に関する条件を定めるものです。ユーザーは本規約に同意のうえ、当サービスをご利用ください。</p>
+        </div>
+
+        <div class="legal-block">
+          <h2>第2条（サービス内容）</h2>
+          <p>当サービスは、AI・機械学習を活用した競馬予想情報の提供を行うものです。</p>
+          <ul>
+            <li>南関東競馬および中央競馬（JRA）の予想・買い目の提供</li>
+            <li>的中実績・データ分析情報の閲覧</li>
+            <li>関連するメールマガジンの配信</li>
+          </ul>
+        </div>
+
+        <div class="legal-block">
+          <h2>第3条（会員登録）</h2>
+          <p>当サービスの一部機能を利用するには、メールアドレスによる会員登録が必要です。登録情報は正確な情報を入力してください。</p>
+        </div>
+
+        <div class="legal-block">
+          <h2>第4条（有料プラン）</h2>
+          <ul>
+            <li>有料プランの料金・内容は<a href="/pricing">料金プランページ</a>に記載のとおりです</li>
+            <li>お支払いは銀行振込にて承ります</li>
+            <li>入金確認後にサービスが有効化されます</li>
+            <li>デジタルコンテンツの性質上、入金後の返品・返金には応じかねます</li>
+          </ul>
+        </div>
+
+        <div class="legal-block">
+          <h2>第5条（禁止事項）</h2>
+          <p>ユーザーは、以下の行為を行ってはなりません。</p>
+          <ul>
+            <li>当サービスの予想情報・コンテンツを無断で複製・転載・再配布する行為</li>
+            <li>アカウントの第三者への譲渡・共有</li>
+            <li>サーバーに過度な負荷をかける行為</li>
+            <li>不正アクセスやシステムへの攻撃</li>
+            <li>その他、当サービスの運営を妨害する行為</li>
+          </ul>
+        </div>
+
+        <div class="legal-block">
+          <h2>第6条（免責事項）</h2>
+          <ul>
+            <li>当サービスは競馬予想情報の提供を目的としたものであり、馬券の購入を推奨・勧誘するものではありません</li>
+            <li>掲載されている的中率・収支データはAIモデルの算出に基づく理論値であり、実際の収支を保証するものではありません</li>
+            <li>提示する買い目は複数パターンの候補を含むため、表示点数と集計上の基準点数が異なる場合があります</li>
+            <li>馬券の購入および投資判断はお客様ご自身の責任において行ってください</li>
+            <li>当サービスの利用により生じたいかなる損害についても、当サービスは一切の責任を負いません</li>
+          </ul>
+        </div>
+
+        <div class="legal-block">
+          <h2>第7条（サービスの変更・中断・終了）</h2>
+          <p>当サービスは、事前の通知なくサービスの内容変更、一時中断、または終了することがあります。これにより生じた損害について、当サービスは責任を負いません。</p>
+        </div>
+
+        <div class="legal-block">
+          <h2>第8条（知的財産権）</h2>
+          <p>当サービスに掲載されるコンテンツ（予想データ、分析結果、デザイン等）に関する知的財産権は、当サービスまたは正当な権利者に帰属します。</p>
+        </div>
+
+        <div class="legal-block">
+          <h2>第9条（規約の変更）</h2>
+          <p>本規約は、必要に応じて変更することがあります。変更後の規約は本ページに掲載した時点で効力を生じるものとします。</p>
+        </div>
+
+        <div class="legal-block">
+          <h2>第10条（準拠法・管轄）</h2>
+          <p>本規約は日本法に基づき解釈されるものとします。</p>
+        </div>
+
+      </div>
+
+      <div class="back-link">
+        <a href="/">← トップページへ戻る</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .legal-section {
+    padding: 80px 0;
+    min-height: calc(100vh - 200px);
+  }
+
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md);
+  }
+
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+  }
+
+  .last-updated {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+  }
+
+  .legal-content {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .legal-block {
+    padding: 24px 28px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .legal-block:last-child {
+    border-bottom: none;
+  }
+
+  .legal-block h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+  }
+
+  .legal-block p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin: 0 0 8px;
+  }
+
+  .legal-block ul {
+    margin: 8px 0 0;
+    padding-left: 20px;
+  }
+
+  .legal-block li {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 4px;
+  }
+
+  .legal-block a {
+    color: #3b82f6;
+    text-decoration: none;
+  }
+
+  .legal-block a:hover {
+    text-decoration: underline;
+  }
+
+  .back-link {
+    margin-top: 32px;
+    text-align: center;
+  }
+
+  .back-link a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+
+  .back-link a:hover {
+    color: #3b82f6;
+  }
+</style>
