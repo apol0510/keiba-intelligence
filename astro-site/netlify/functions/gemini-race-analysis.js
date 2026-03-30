@@ -101,8 +101,11 @@ exports.handler = async (event, context) => {
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: userMessage }] }],
       generationConfig: {
-        maxOutputTokens: 1000,
+        maxOutputTokens: 2048,
         temperature: 0.8,
+        thinkingConfig: {
+          thinkingBudget: 0,
+        },
       },
     });
 
