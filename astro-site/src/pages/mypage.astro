@@ -10,44 +10,44 @@ export const prerender = true;
 >
   <section class="mypage-section">
     <div class="container">
-      <div class="mypage-card" id="mypage-content" style="display: none;">
-        <h1>マイページ</h1>
+      <div id="mypage-content" style="display: none;">
 
-        <!-- アカウント情報 -->
-        <div class="info-block">
-          <h2>アカウント情報</h2>
-          <div class="info-row">
-            <span class="info-label">メールアドレス</span>
-            <span class="info-value" id="user-email">-</span>
+        <!-- ヘッダー -->
+        <div class="mypage-header">
+          <div class="header-icon" id="header-icon">🏇</div>
+          <h1>マイページ</h1>
+          <p class="header-email" id="user-email">-</p>
+        </div>
+
+        <!-- プランステータスカード -->
+        <div class="status-card" id="status-card">
+          <div class="status-top">
+            <div>
+              <div class="status-label">現在のプラン</div>
+              <div class="status-plan" id="user-plan-display">-</div>
+            </div>
+            <div class="plan-badge-lg" id="plan-badge-lg">-</div>
           </div>
-          <div class="info-row">
-            <span class="info-label">現在のプラン</span>
-            <span class="info-value" id="user-plan-display">-</span>
-          </div>
-          <div class="info-row" id="venue-access-row" style="display: none;">
-            <span class="info-label">アクセス対象</span>
-            <span class="info-value" id="venue-access-display">-</span>
-          </div>
-          <div class="info-row" id="expiration-row" style="display: none;">
-            <span class="info-label">有効期限</span>
-            <span class="info-value" id="expiration-display">-</span>
+          <div class="status-details" id="status-details">
+            <!-- JSで動的に表示 -->
           </div>
         </div>
 
-        <!-- プラン別の機能説明 -->
-        <div class="plan-detail-block" id="plan-detail">
-          <!-- JSで動的に表示 -->
+        <!-- 予想ページカード -->
+        <div class="section-block" id="quick-links" style="display: none;">
+          <h2 class="section-title">予想ページ</h2>
+          <div class="prediction-cards" id="quick-links-content"></div>
         </div>
 
-        <!-- 予想ページへのクイックリンク -->
-        <div class="quick-links-block" id="quick-links" style="display: none;">
-          <h2>予想ページ</h2>
-          <div id="quick-links-content"></div>
+        <!-- 利用可能な機能 -->
+        <div class="section-block" id="plan-detail">
+          <h2 class="section-title">利用可能な機能</h2>
+          <div class="features-grid" id="features-grid"></div>
         </div>
 
-        <!-- アップグレードCTA（プロ以外に表示） -->
-        <div class="upgrade-block" id="upgrade-cta" style="display: none;">
-          <h2>プランアップグレード</h2>
+        <!-- アップグレード -->
+        <div class="section-block" id="upgrade-cta" style="display: none;">
+          <h2 class="section-title">プランアップグレード</h2>
           <div id="upgrade-content"></div>
         </div>
 
@@ -58,13 +58,13 @@ export const prerender = true;
       </div>
 
       <!-- 未ログイン時 -->
-      <div class="mypage-card" id="not-logged-in" style="display: none;">
+      <div class="not-logged-card" id="not-logged-in" style="display: none;">
         <div class="not-logged-icon">🔒</div>
         <h1>ログインが必要です</h1>
         <p>マイページを表示するにはログインしてください。</p>
         <div class="not-logged-actions">
-          <a href="/login" class="btn-primary">ログイン</a>
-          <a href="/register" class="btn-secondary">無料会員登録</a>
+          <a href="/login" class="btn-action primary">ログイン</a>
+          <a href="/register" class="btn-action secondary">無料会員登録</a>
         </div>
       </div>
 
@@ -79,172 +79,283 @@ export const prerender = true;
 
 <style>
   .mypage-section {
-    padding: 80px 0;
+    padding: 60px 0 80px;
     min-height: calc(100vh - 200px);
   }
 
   .container {
-    max-width: 640px;
+    max-width: 720px;
     margin: 0 auto;
     padding: 0 var(--spacing-md);
   }
 
-  .mypage-card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: var(--spacing-2xl);
+  /* ===== ヘッダー ===== */
+  .mypage-header {
+    text-align: center;
+    margin-bottom: 32px;
   }
 
-  .mypage-card h1 {
-    font-size: 1.8rem;
-    margin-bottom: var(--spacing-xl);
+  .header-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+  }
+
+  .mypage-header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 8px;
     background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  .info-block, .plan-detail-block, .quick-links-block, .upgrade-block, .logout-block {
-    margin-bottom: var(--spacing-xl);
-  }
-
-  .info-block h2, .quick-links-block h2, .upgrade-block h2 {
-    font-size: 1.1rem;
-    color: var(--text-secondary);
-    margin-bottom: var(--spacing-md);
-    padding-bottom: var(--spacing-sm);
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-md) 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-  }
-
-  .info-row:last-child {
-    border-bottom: none;
-  }
-
-  .info-label {
+  .header-email {
     color: var(--text-secondary);
     font-size: 0.9rem;
   }
 
-  .info-value {
-    font-weight: 700;
+  /* ===== ステータスカード ===== */
+  .status-card {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.08) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .status-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+  }
+
+  .status-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .status-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  .status-plan {
+    font-size: 1.5rem;
+    font-weight: 800;
     color: var(--text-primary);
   }
 
-  /* プランバッジ */
-  .plan-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 20px;
+  .plan-badge-lg {
+    padding: 6px 16px;
+    border-radius: 24px;
     font-size: 0.85rem;
     font-weight: 700;
   }
 
-  .plan-badge.free-registered {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  .plan-badge-lg.free-registered {
+    background: linear-gradient(135deg, #10b981, #059669);
     color: white;
   }
-
-  .plan-badge.light {
-    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  .plan-badge-lg.light {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
     color: white;
   }
-
-  .plan-badge.pro {
-    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  .plan-badge-lg.pro {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
     color: #1e293b;
   }
-
-  .plan-badge.pro-plus {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  .plan-badge-lg.pro-plus {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
     color: white;
   }
 
-  /* プラン詳細 */
-  .plan-features-list {
-    list-style: none;
-    padding: 0;
+  .status-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
   }
 
-  .plan-features-list li {
-    padding: var(--spacing-sm) 0;
+  .detail-item {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+
+  .detail-item .detail-label {
+    font-size: 0.75rem;
     color: var(--text-secondary);
-    font-size: 0.9rem;
+    margin-bottom: 4px;
   }
 
-  /* クイックリンク */
-  .quick-link-grid {
-    display: flex;
-    gap: var(--spacing-md);
-    flex-wrap: wrap;
-  }
-
-  .quick-link-btn {
-    flex: 1;
-    min-width: 200px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-radius: var(--radius-md);
-    text-decoration: none;
-    font-weight: 700;
+  .detail-item .detail-value {
     font-size: 0.95rem;
-    transition: all 0.3s;
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    background: rgba(59, 130, 246, 0.08);
+    font-weight: 700;
     color: var(--text-primary);
   }
 
-  .quick-link-btn:hover {
+  /* ===== セクション ===== */
+  .section-block {
+    margin-bottom: 28px;
+  }
+
+  .section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    letter-spacing: 0.03em;
+  }
+
+  /* ===== 予想ページカード ===== */
+  .prediction-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  .pred-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px;
+    border-radius: 14px;
+    text-decoration: none;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pred-card::after {
+    content: '→';
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.4);
+    transition: all 0.3s;
+  }
+
+  .pred-card:hover::after {
+    right: 16px;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .pred-card.nankan {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.08) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+  .pred-card.nankan:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.15) 100%);
+    border-color: rgba(16, 185, 129, 0.5);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15);
+  }
+
+  .pred-card.jra {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.08) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+  .pred-card.jra:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.15) 100%);
+    border-color: rgba(59, 130, 246, 0.5);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+  }
+
+  .pred-card-icon {
+    font-size: 2rem;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+
+  .pred-card.nankan .pred-card-icon {
+    background: rgba(16, 185, 129, 0.15);
+  }
+  .pred-card.jra .pred-card-icon {
     background: rgba(59, 130, 246, 0.15);
-    border-color: rgba(59, 130, 246, 0.6);
-    transform: translateY(-2px);
   }
 
-  .quick-link-btn .link-icon {
-    font-size: 1.5rem;
+  .pred-card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 2px;
   }
 
-  .quick-link-btn .link-label {
+  .pred-card-sub {
     font-size: 0.8rem;
     color: var(--text-secondary);
-    font-weight: 400;
   }
 
-  /* アップグレード */
+  /* ===== 機能グリッド ===== */
+  .features-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .feature-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+  }
+
+  .feature-item .feature-check {
+    color: #10b981;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  /* ===== アップグレード ===== */
   .upgrade-card {
-    background: rgba(59, 130, 246, 0.1);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    border-radius: var(--radius-md);
-    padding: var(--spacing-lg);
-    margin-bottom: var(--spacing-md);
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(245, 158, 11, 0.04) 100%);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 12px;
   }
 
   .upgrade-card h3 {
-    font-size: 1rem;
+    font-size: 1.05rem;
     color: var(--text-primary);
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: 6px;
   }
 
   .upgrade-card p {
     font-size: 0.85rem;
     color: var(--text-secondary);
-    margin-bottom: var(--spacing-md);
+    margin-bottom: 14px;
   }
 
   .upgrade-card .price {
-    font-size: 1.3rem;
+    font-size: 1.4rem;
     font-weight: 900;
-    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -252,103 +363,106 @@ export const prerender = true;
 
   .btn-upgrade {
     display: inline-block;
-    padding: 10px 24px;
-    border-radius: var(--radius-md);
+    margin-top: 14px;
+    padding: 10px 28px;
+    border-radius: 10px;
     text-decoration: none;
     font-weight: 700;
     font-size: 0.9rem;
     transition: all 0.3s;
-    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-    color: white;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #1e293b;
   }
 
   .btn-upgrade:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 8px 20px rgba(251, 191, 36, 0.3);
   }
 
-  /* ログアウト */
+  /* ===== ログアウト ===== */
   .logout-block {
-    padding-top: var(--spacing-lg);
+    margin-top: 12px;
+    padding-top: 24px;
     border-top: 1px solid var(--border-color);
   }
 
   .btn-logout {
     width: 100%;
-    padding: var(--spacing-md);
+    padding: 14px;
     background: transparent;
-    border: 2px solid rgba(239, 68, 68, 0.5);
-    border-radius: var(--radius-md);
-    color: #ef4444;
-    font-weight: 700;
-    font-size: 1rem;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 10px;
+    color: rgba(239, 68, 68, 0.7);
+    font-weight: 600;
+    font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.3s;
   }
 
   .btn-logout:hover {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #ef4444;
   }
 
-  /* 未ログイン */
+  /* ===== 未ログイン ===== */
+  .not-logged-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 60px 32px;
+    text-align: center;
+  }
+
   .not-logged-icon {
-    font-size: 48px;
-    text-align: center;
-    margin-bottom: var(--spacing-md);
+    font-size: 56px;
+    margin-bottom: 16px;
   }
 
-  #not-logged-in {
-    text-align: center;
-  }
-
-  #not-logged-in h1 {
+  .not-logged-card h1 {
     font-size: 1.5rem;
     color: var(--text-primary);
-    -webkit-text-fill-color: unset;
-    background: none;
+    margin-bottom: 8px;
   }
 
-  #not-logged-in p {
+  .not-logged-card p {
     color: var(--text-secondary);
-    margin-bottom: var(--spacing-xl);
+    margin-bottom: 28px;
   }
 
   .not-logged-actions {
     display: flex;
-    gap: var(--spacing-md);
+    gap: 12px;
     justify-content: center;
   }
 
-  .btn-primary, .btn-secondary {
-    padding: 12px 28px;
-    border-radius: var(--radius-md);
+  .btn-action {
+    padding: 12px 32px;
+    border-radius: 10px;
     text-decoration: none;
     font-weight: 700;
     transition: all 0.3s;
   }
 
-  .btn-primary {
-    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  .btn-action.primary {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
     color: white;
   }
-
-  .btn-primary:hover {
+  .btn-action.primary:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
   }
 
-  .btn-secondary {
+  .btn-action.secondary {
     background: transparent;
-    border: 2px solid rgba(59, 130, 246, 0.5);
+    border: 1px solid rgba(59, 130, 246, 0.4);
     color: #3b82f6;
   }
-
-  .btn-secondary:hover {
-    background: rgba(59, 130, 246, 0.1);
+  .btn-action.secondary:hover {
+    background: rgba(59, 130, 246, 0.08);
   }
 
-  /* ローディング */
+  /* ===== ローディング ===== */
   .mypage-loading {
     text-align: center;
     padding: 80px 0;
@@ -358,7 +472,7 @@ export const prerender = true;
   .spinner {
     width: 40px;
     height: 40px;
-    margin: 0 auto var(--spacing-md);
+    margin: 0 auto 16px;
     border: 3px solid rgba(59, 130, 246, 0.2);
     border-top: 3px solid #3b82f6;
     border-radius: 50%;
@@ -370,15 +484,18 @@ export const prerender = true;
     100% { transform: rotate(360deg); }
   }
 
+  /* ===== レスポンシブ ===== */
   @media (max-width: 640px) {
-    .mypage-card {
-      padding: var(--spacing-xl);
+    .status-details {
+      grid-template-columns: 1fr;
     }
 
-    .info-row {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 4px;
+    .prediction-cards {
+      grid-template-columns: 1fr;
+    }
+
+    .features-grid {
+      grid-template-columns: 1fr;
     }
 
     .not-logged-actions {
@@ -424,83 +541,93 @@ export const prerender = true;
 
     document.getElementById('user-email').textContent = email;
 
-    // プラン表示
+    // プラン設定
     const planConfig = {
-      'free-registered': { label: '無料会員', badge: 'free-registered', features: ['全レース予想閲覧', '本命・対抗・単穴・連下最上位の馬番号', 'AI分析データ', 'メールマガジン'] },
-      'light': { label: 'ライトプラン', badge: 'light', features: ['全レース予想閲覧', 'メインレースの馬単買い目', '的中実績閲覧', 'データ可視化'] },
-      'pro': { label: 'プロプラン', badge: 'pro', features: ['全レース予想閲覧', '全レースの馬単買い目（本線＋抑え）', '的中実績閲覧', 'データ可視化', 'Feature Importance Analysis'] },
-      'pro-plus': { label: 'プロプラスプラン', badge: 'pro-plus', features: ['プロプランの全機能', '優先サポート'] },
+      'free-registered': { label: '無料会員', badge: 'free-registered', icon: '🆓', features: ['全レース予想閲覧', '上位馬の馬番号', 'AI分析データ', 'メールマガジン'] },
+      'light': { label: 'ライトプラン', badge: 'light', icon: '⚡', features: ['全レース予想閲覧', 'メインレースの馬単買い目', '的中実績閲覧', 'データ可視化'] },
+      'pro': { label: 'プロプラン', badge: 'pro', icon: '👑', features: ['全レース予想閲覧', '全レースの馬単買い目', '的中実績閲覧', 'データ可視化', 'Feature Importance'] },
+      'pro-plus': { label: 'プロプラスプラン', badge: 'pro-plus', icon: '💎', features: ['プロプランの全機能', '優先サポート'] },
     };
 
     const cfg = planConfig[plan] || planConfig['free-registered'];
-    document.getElementById('user-plan-display').innerHTML = `<span class="plan-badge ${cfg.badge}">${cfg.label}</span>`;
 
-    // 会場アクセス表示（有料プランのみ）
+    // ヘッダーアイコン
+    document.getElementById('header-icon').textContent = cfg.icon;
+
+    // ステータスカード
+    document.getElementById('user-plan-display').textContent = cfg.label;
+    const badgeLg = document.getElementById('plan-badge-lg');
+    badgeLg.textContent = cfg.label;
+    badgeLg.className = `plan-badge-lg ${cfg.badge}`;
+
+    // ステータス詳細
+    const statusDetails = document.getElementById('status-details');
+    const details = [];
+
     if (plan !== 'free-registered') {
-      const venueRow = document.getElementById('venue-access-row');
-      const venueDisplay = document.getElementById('venue-access-display');
       const venueLabels = {
-        'all': '🏇 南関4場 ＋ JRA全10場',
-        'nankan': '🏇 南関4場（大井・川崎・船橋・浦和）',
-        'jra': '🏇 JRA全10場（中央競馬）'
+        'all': '南関4場 + JRA全10場',
+        'nankan': '南関4場',
+        'jra': 'JRA全10場'
       };
-      venueDisplay.textContent = venueLabels[venueAccess] || venueLabels['all'];
-      venueRow.style.display = 'flex';
+      details.push({ label: 'アクセス対象', value: venueLabels[venueAccess] || venueLabels['all'] });
 
-      // 有効期限表示
       if (planExpiresAt) {
-        const expRow = document.getElementById('expiration-row');
-        const expDisplay = document.getElementById('expiration-display');
         if (planExpiresAt === '2099-12-31') {
-          expDisplay.textContent = '永久アクセス';
+          details.push({ label: '有効期限', value: '永久アクセス' });
         } else {
-          const expDate = new Date(planExpiresAt);
-          const formatted = `${expDate.getFullYear()}/${String(expDate.getMonth() + 1).padStart(2, '0')}/${String(expDate.getDate()).padStart(2, '0')}`;
-          expDisplay.textContent = formatted;
+          const d = new Date(planExpiresAt);
+          details.push({ label: '有効期限', value: `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}` });
         }
-        expRow.style.display = 'flex';
       }
     }
 
-    // プラン詳細
-    const planDetail = document.getElementById('plan-detail');
-    planDetail.innerHTML = `
-      <ul class="plan-features-list">
-        ${cfg.features.map(f => `<li>✅ ${f}</li>`).join('')}
-      </ul>
-    `;
+    details.push({ label: 'メールアドレス', value: email });
+    details.push({ label: 'ステータス', value: 'アクティブ' });
 
-    // クイックリンク（予想ページ）
+    statusDetails.innerHTML = details.map(d => `
+      <div class="detail-item">
+        <div class="detail-label">${d.label}</div>
+        <div class="detail-value">${d.value}</div>
+      </div>
+    `).join('');
+
+    // 予想ページカード
     const quickLinks = document.getElementById('quick-links');
     const quickLinksContent = document.getElementById('quick-links-content');
     const links = [];
 
     if (plan === 'free-registered') {
-      links.push({ href: '/free-prediction', icon: '🏇', title: '南関予想（無料）', label: '大井・川崎・船橋・浦和' });
-      links.push({ href: '/free-prediction-jra', icon: '🐎', title: '中央予想（無料）', label: 'JRA全10場' });
+      links.push({ href: '/free-prediction', cls: 'nankan', icon: '🏇', title: '南関予想（無料）', sub: '大井・川崎・船橋・浦和' });
+      links.push({ href: '/free-prediction-jra', cls: 'jra', icon: '🐎', title: '中央予想（無料）', sub: 'JRA全10場' });
     } else if (venueAccess === 'nankan') {
-      links.push({ href: '/prediction', icon: '🏇', title: '南関予想', label: '大井・川崎・船橋・浦和' });
+      links.push({ href: '/prediction', cls: 'nankan', icon: '🏇', title: '南関予想', sub: '大井・川崎・船橋・浦和' });
     } else if (venueAccess === 'jra') {
-      links.push({ href: '/prediction-jra', icon: '🐎', title: '中央予想', label: 'JRA全10場' });
+      links.push({ href: '/prediction-jra', cls: 'jra', icon: '🐎', title: '中央予想', sub: 'JRA全10場' });
     } else {
-      links.push({ href: '/prediction', icon: '🏇', title: '南関予想', label: '大井・川崎・船橋・浦和' });
-      links.push({ href: '/prediction-jra', icon: '🐎', title: '中央予想', label: 'JRA全10場' });
+      links.push({ href: '/prediction', cls: 'nankan', icon: '🏇', title: '南関予想', sub: '大井・川崎・船橋・浦和' });
+      links.push({ href: '/prediction-jra', cls: 'jra', icon: '🐎', title: '中央予想', sub: 'JRA全10場' });
     }
 
-    quickLinksContent.innerHTML = `
-      <div class="quick-link-grid">
-        ${links.map(l => `
-          <a href="${l.href}" class="quick-link-btn">
-            <span class="link-icon">${l.icon}</span>
-            <div>
-              <div>${l.title}</div>
-              <div class="link-label">${l.label}</div>
-            </div>
-          </a>
-        `).join('')}
-      </div>
-    `;
+    quickLinksContent.innerHTML = links.map(l => `
+      <a href="${l.href}" class="pred-card ${l.cls}">
+        <div class="pred-card-icon">${l.icon}</div>
+        <div>
+          <div class="pred-card-title">${l.title}</div>
+          <div class="pred-card-sub">${l.sub}</div>
+        </div>
+      </a>
+    `).join('');
     quickLinks.style.display = 'block';
+
+    // 利用可能な機能
+    const featuresGrid = document.getElementById('features-grid');
+    featuresGrid.innerHTML = cfg.features.map(f => `
+      <div class="feature-item">
+        <span class="feature-check">✓</span>
+        <span>${f}</span>
+      </div>
+    `).join('');
 
     // アップグレードCTA
     const upgradeCta = document.getElementById('upgrade-cta');
@@ -513,15 +640,13 @@ export const prerender = true;
           <h3>ライトプラン</h3>
           <p>メインレースの馬単買い目が見られます</p>
           <div><span class="price">¥6,600</span><span style="color:var(--text-secondary)">/月</span></div>
-          <br>
-          <a href="/apply" class="btn-upgrade">申し込む</a>
+          <a href="/pricing" class="btn-upgrade">詳細を見る</a>
         </div>
         <div class="upgrade-card">
           <h3>プロプラン（買い切り）</h3>
           <p>全レースの馬単買い目＋永久アクセス</p>
           <div><span class="price">¥88,000</span></div>
-          <br>
-          <a href="/apply" class="btn-upgrade">申し込む</a>
+          <a href="/pricing" class="btn-upgrade">詳細を見る</a>
         </div>
       `;
     } else if (plan === 'light') {
@@ -531,8 +656,7 @@ export const prerender = true;
           <h3>プロプランにアップグレード</h3>
           <p>全レースの馬単買い目が見られるようになります</p>
           <div><span class="price">¥88,000</span><span style="color:var(--text-secondary)">（買い切り・永久アクセス）</span></div>
-          <br>
-          <a href="/apply" class="btn-upgrade">アップグレード</a>
+          <a href="/pricing" class="btn-upgrade">詳細を見る</a>
         </div>
       `;
     }
