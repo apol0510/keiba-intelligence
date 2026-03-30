@@ -39,6 +39,12 @@ export const prerender = true;
           <!-- JSで動的に表示 -->
         </div>
 
+        <!-- 予想ページへのクイックリンク -->
+        <div class="quick-links-block" id="quick-links" style="display: none;">
+          <h2>予想ページ</h2>
+          <div id="quick-links-content"></div>
+        </div>
+
         <!-- アップグレードCTA（プロ以外に表示） -->
         <div class="upgrade-block" id="upgrade-cta" style="display: none;">
           <h2>プランアップグレード</h2>
@@ -99,11 +105,11 @@ export const prerender = true;
     background-clip: text;
   }
 
-  .info-block, .plan-detail-block, .upgrade-block, .logout-block {
+  .info-block, .plan-detail-block, .quick-links-block, .upgrade-block, .logout-block {
     margin-bottom: var(--spacing-xl);
   }
 
-  .info-block h2, .upgrade-block h2 {
+  .info-block h2, .quick-links-block h2, .upgrade-block h2 {
     font-size: 1.1rem;
     color: var(--text-secondary);
     margin-bottom: var(--spacing-md);
@@ -172,6 +178,46 @@ export const prerender = true;
     padding: var(--spacing-sm) 0;
     color: var(--text-secondary);
     font-size: 0.9rem;
+  }
+
+  /* クイックリンク */
+  .quick-link-grid {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+  }
+
+  .quick-link-btn {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: all 0.3s;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    background: rgba(59, 130, 246, 0.08);
+    color: var(--text-primary);
+  }
+
+  .quick-link-btn:hover {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.6);
+    transform: translateY(-2px);
+  }
+
+  .quick-link-btn .link-icon {
+    font-size: 1.5rem;
+  }
+
+  .quick-link-btn .link-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 400;
   }
 
   /* アップグレード */
@@ -423,6 +469,38 @@ export const prerender = true;
         ${cfg.features.map(f => `<li>✅ ${f}</li>`).join('')}
       </ul>
     `;
+
+    // クイックリンク（予想ページ）
+    const quickLinks = document.getElementById('quick-links');
+    const quickLinksContent = document.getElementById('quick-links-content');
+    const links = [];
+
+    if (plan === 'free-registered') {
+      links.push({ href: '/free-prediction', icon: '🏇', title: '南関予想（無料）', label: '大井・川崎・船橋・浦和' });
+      links.push({ href: '/free-prediction-jra', icon: '🐎', title: '中央予想（無料）', label: 'JRA全10場' });
+    } else if (venueAccess === 'nankan') {
+      links.push({ href: '/prediction', icon: '🏇', title: '南関予想', label: '大井・川崎・船橋・浦和' });
+    } else if (venueAccess === 'jra') {
+      links.push({ href: '/prediction-jra', icon: '🐎', title: '中央予想', label: 'JRA全10場' });
+    } else {
+      links.push({ href: '/prediction', icon: '🏇', title: '南関予想', label: '大井・川崎・船橋・浦和' });
+      links.push({ href: '/prediction-jra', icon: '🐎', title: '中央予想', label: 'JRA全10場' });
+    }
+
+    quickLinksContent.innerHTML = `
+      <div class="quick-link-grid">
+        ${links.map(l => `
+          <a href="${l.href}" class="quick-link-btn">
+            <span class="link-icon">${l.icon}</span>
+            <div>
+              <div>${l.title}</div>
+              <div class="link-label">${l.label}</div>
+            </div>
+          </a>
+        `).join('')}
+      </div>
+    `;
+    quickLinks.style.display = 'block';
 
     // アップグレードCTA
     const upgradeCta = document.getElementById('upgrade-cta');
