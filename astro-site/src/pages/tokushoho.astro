@@ -1,0 +1,184 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+export const prerender = true;
+---
+
+<BaseLayout
+  title="特定商取引法に基づく表記 - KEIBA Intelligence"
+  description="KEIBA Intelligenceの特定商取引法に基づく表記です。"
+>
+  <section class="legal-section">
+    <div class="container">
+      <h1>特定商取引法に基づく表記</h1>
+
+      <div class="legal-table">
+        <div class="legal-row">
+          <div class="legal-label">販売事業者</div>
+          <div class="legal-value">KEIBA Intelligence 運営事務局</div>
+        </div>
+
+        <div class="legal-row">
+          <div class="legal-label">運営責任者</div>
+          <div class="legal-value">浅井 俊裕</div>
+        </div>
+
+        <div class="legal-row">
+          <div class="legal-label">所在地</div>
+          <div class="legal-value">お問い合わせいただいた方に個別にお知らせいたします</div>
+        </div>
+
+        <div class="legal-row">
+          <div class="legal-label">連絡先</div>
+          <div class="legal-value">
+            メール: <a href="mailto:support@keiba-intelligence.jp">support@keiba-intelligence.jp</a><br>
+            ※お問い合わせは<a href="/contact">お問い合わせフォーム</a>よりお願いいたします
+          </div>
+        </div>
+
+        <div class="legal-row">
+          <div class="legal-label">販売価格</div>
+          <div class="legal-value">
+            各プランの価格は<a href="/pricing">料金プランページ</a>に記載のとおりです<br>
+            ※表示価格は税込みです
+          </div>
+        </div>
+
+        <div class="legal-row">
+          <div class="legal-label">お支払い方法</div>
+          <div class="legal-value">銀行振込</div>
+        </div>
+
+        <div class="legal-row">
+          <div class="legal-label">お支払い時期</div>
+          <div class="legal-value">お申し込み後、指定口座へお振込みください。入金確認後にサービスが有効化されます。</div>
+        </div>
+
+        <div class="legal-row">
+          <div class="legal-label">サービス提供時期</div>
+          <div class="legal-value">入金確認後、即時にアクセス権を付与いたします。</div>
+        </div>
+
+        <div class="legal-row">
+          <div class="legal-label">返品・返金について</div>
+          <div class="legal-value">
+            本サービスはデジタルコンテンツの性質上、入金後の返品・返金には応じかねます。<br>
+            サービス内容をご確認のうえ、お申し込みください。
+          </div>
+        </div>
+
+        <div class="legal-row">
+          <div class="legal-label">動作環境</div>
+          <div class="legal-value">
+            インターネット接続環境および主要なWebブラウザ（Chrome、Safari、Firefox、Edge等の最新版）
+          </div>
+        </div>
+
+        <div class="legal-row">
+          <div class="legal-label">免責事項</div>
+          <div class="legal-value">
+            本サービスはAI・機械学習による競馬予想情報の提供を目的としたものであり、馬券の購入を推奨・勧誘するものではありません。<br>
+            掲載されている的中率・収支データはAIモデルの算出に基づく理論値であり、実際の収支を保証するものではありません。<br>
+            馬券の購入および投資判断はお客様ご自身の責任において行ってください。
+          </div>
+        </div>
+      </div>
+
+      <div class="back-link">
+        <a href="/">← トップページへ戻る</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .legal-section {
+    padding: 80px 0;
+    min-height: calc(100vh - 200px);
+  }
+
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md);
+  }
+
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 32px;
+    color: var(--text-primary);
+  }
+
+  .legal-table {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .legal-row {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .legal-row:last-child {
+    border-bottom: none;
+  }
+
+  .legal-label {
+    width: 180px;
+    flex-shrink: 0;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.03);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .legal-value {
+    flex: 1;
+    padding: 16px 20px;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    line-height: 1.7;
+  }
+
+  .legal-value a {
+    color: #3b82f6;
+    text-decoration: none;
+  }
+
+  .legal-value a:hover {
+    text-decoration: underline;
+  }
+
+  .back-link {
+    margin-top: 32px;
+    text-align: center;
+  }
+
+  .back-link a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+
+  .back-link a:hover {
+    color: #3b82f6;
+  }
+
+  @media (max-width: 640px) {
+    .legal-row {
+      flex-direction: column;
+    }
+
+    .legal-label {
+      width: 100%;
+      padding: 12px 16px 4px;
+    }
+
+    .legal-value {
+      padding: 4px 16px 12px;
+    }
+  }
+</style>
