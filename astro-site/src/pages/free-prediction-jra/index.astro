@@ -1,7 +1,7 @@
 ---
 // Force rebuild: 2026-02-27
-import BaseLayout from '../layouts/BaseLayout.astro';
-import AIRaceComment from '../components/AIRaceComment.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import AIRaceComment from '../../components/AIRaceComment.astro';
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { sortHorsesByRole } from '../utils/sortHorsesByRole.js';
@@ -532,6 +532,10 @@ function generateAdvancedMetrics(horse, allHorses) {
             </div>
           </div>
 
+          <!-- 過去予想アーカイブリンク -->
+          <div class="archive-link-box">
+            <a href="/free-prediction-jra/archive">📅 過去の予想アーカイブを見る →</a>
+          </div>
         </>
       )}
     </div>
@@ -1510,6 +1514,22 @@ function generateAdvancedMetrics(horse, allHorses) {
         padding: 4px var(--spacing-sm);
       }
     }
+
+    .archive-link-box {
+      text-align: center;
+      margin-top: var(--spacing-xl);
+      padding: var(--spacing-lg);
+      background: rgba(59, 130, 246, 0.06);
+      border: 1px solid rgba(59, 130, 246, 0.15);
+      border-radius: var(--radius-lg);
+    }
+    .archive-link-box a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .archive-link-box a:hover { text-decoration: underline; }
   </style>
 
   <script is:inline>

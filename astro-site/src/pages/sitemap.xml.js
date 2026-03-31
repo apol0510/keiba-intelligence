@@ -2,7 +2,7 @@ import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 export async function GET() {
-  const baseUrl = 'https://keiba-intelligence.netlify.app';
+  const baseUrl = 'https://keiba-intelligence.jp';
 
   // 静的ページのURL
   const staticPages = [
@@ -88,6 +88,57 @@ export async function GET() {
     }
   } catch (error) {
     console.error('Error generating dynamic sitemap URLs:', error);
+  }
+
+  // 予想アーカイブページ（南関）
+  try {
+    const predDir = join(process.cwd(), 'src', 'data', 'predictions');
+    if (existsSync(predDir)) {
+      const predFiles = readdirSync(predDir)
+        .filter(f => /^\d{4}-\d{2}-\d{2}-[a-z]+\.json$/.test(f));
+      predFiles.forEach(f => {
+        const slug = f.replace('.json', '');
+        const date = slug.substring(0, 10);
+        dynamicPages.push({
+          url: `/free-prediction/${slug}`,
+          priority: '0.7',
+          changefreq: 'never',
+          lastmod: date,
+        });
+      });
+      dynamicPages.push({ url: '/free-prediction/archive', priority: '0.7', changefreq: 'weekly' });
+    }
+  } catch (error) {
+    console.error('Error generating prediction sitemap URLs:', error);
+  }
+
+  // 予想アーカイブページ（JRA）
+  try {
+    const jraDir = join(process.cwd(), 'src', 'data', 'predictions', 'jra');
+    if (existsSync(jraDir)) {
+      const years = readdirSync(jraDir).filter(d => /^\d{4}$/.test(d));
+      for (const year of years) {
+        const yearDir = join(jraDir, year);
+        const months = readdirSync(yearDir).filter(d => /^\d{2}$/.test(d));
+        for (const month of months) {
+          const monthDir = join(yearDir, month);
+          readdirSync(monthDir)
+            .filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
+            .forEach(f => {
+              const date = f.replace('.json', '');
+              dynamicPages.push({
+                url: `/free-prediction-jra/${date}`,
+                priority: '0.7',
+                changefreq: 'never',
+                lastmod: date,
+              });
+            });
+        }
+      }
+      dynamicPages.push({ url: '/free-prediction-jra/archive', priority: '0.7', changefreq: 'weekly' });
+    }
+  } catch (error) {
+    console.error('Error generating JRA prediction sitemap URLs:', error);
   }
 
   // 全URLを結合

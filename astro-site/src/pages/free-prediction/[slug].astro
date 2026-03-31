@@ -1,0 +1,530 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import AIRaceComment from '../../components/AIRaceComment.astro';
+import { readdirSync, readFileSync } from 'fs';
+import { join } from 'path';
+
+export const prerender = true;
+
+export function getStaticPaths() {
+  const predictionsDir = join(process.cwd(), 'src', 'data', 'predictions');
+  const files = readdirSync(predictionsDir)
+    .filter(file => /^\d{4}-\d{2}-\d{2}-[a-z]+\.json$/.test(file));
+
+  return files.map(file => {
+    const slug = file.replace('.json', '');
+    const filePath = join(predictionsDir, file);
+    const data = JSON.parse(readFileSync(filePath, 'utf-8'));
+    return {
+      params: { slug },
+      props: { predictionData: data, slug }
+    };
+  });
+}
+
+const { predictionData, slug } = Astro.props;
+
+const venueMap: Record<string, string> = {
+  'ooi': '大井',
+  'funabashi': '船橋',
+  'kawasaki': '川崎',
+  'urawa': '浦和'
+};
+
+const match = slug.match(/^(\d{4}-\d{2}-\d{2})-([a-z]+)$/);
+const dateStr = match ? match[1] : predictionData.eventInfo.date;
+const venueSlug = match ? match[2] : '';
+const venueName = predictionData.eventInfo.venue || venueMap[venueSlug] || venueSlug;
+
+const pageTitle = `${dateStr} ${venueName} AI予想 - KEIBA Intelligence`;
+const pageDescription = `${dateStr}の${venueName}競馬AI予想アーカイブ。全${predictionData.eventInfo.totalRaces}レースのAI分析結果をご覧いただけます。`;
+
+// 日付を表示用にフォーマット
+const dateParts = dateStr.split('-');
+const displayDate = `${dateParts[0]}年${parseInt(dateParts[1])}月${parseInt(dateParts[2])}日`;
+---
+
+<BaseLayout title={pageTitle} description={pageDescription}>
+  <div class="archive-prediction-page">
+    <!-- アーカイブバナー -->
+    <div class="archive-banner">
+      <span class="archive-banner-icon">📁</span>
+      <span class="archive-banner-text">この予想は過去のアーカイブです</span>
+    </div>
+
+    <!-- ヘッダー -->
+    <div class="page-header">
+      <h1 class="page-title">
+        <span class="venue-name">{venueName}</span>
+        <span class="date-label">{displayDate}</span>
+      </h1>
+      <div class="race-count-badge">全{predictionData.eventInfo.totalRaces}レース</div>
+    </div>
+
+    <!-- レース一覧 -->
+    {predictionData.predictions.map((race: any) => {
+      const allHorses = [...race.horses];
+      const topHorses = allHorses.sort((a: any, b: any) => b.pt - a.pt).slice(0, 5);
+
+      return (
+        <div class="race-card">
+          <div class="race-header">
+            <div class="race-number">{race.raceInfo.raceNumber}R</div>
+            <div class="race-info">
+              <h2 class="race-name">{race.raceInfo.raceName}</h2>
+              <div class="race-details">
+                {race.raceInfo.startTime && <span class="detail-item">🕐 {race.raceInfo.startTime}発走</span>}
+                {race.raceInfo.distance && <span class="detail-item">📏 {race.raceInfo.distance}m</span>}
+                {race.raceInfo.horseCount && <span class="detail-item">🐴 {race.raceInfo.horseCount}頭</span>}
+              </div>
+            </div>
+          </div>
+
+          <!-- AI予想解説 -->
+          <AIRaceComment
+            type="prediction"
+            raceData={JSON.stringify({
+              venue: predictionData.eventInfo.venue,
+              date: predictionData.eventInfo.date,
+              raceNumber: race.raceInfo.raceNumber,
+              raceName: race.raceInfo.raceName,
+              distance: race.raceInfo.distance,
+              horseCount: race.raceInfo.horseCount,
+              topHorses: allHorses.sort((a: any, b: any) => b.pt - a.pt).slice(0, 5).map((h: any) => ({
+                horseNumber: h.horseNumber,
+                horseName: h.horseName,
+                pt: h.pt,
+                role: h.role,
+                jockey: h.jockey,
+                recentRaces: h.recentRaces || []
+              }))
+            })}
+          />
+
+          <!-- 上位5頭テーブル -->
+          <div class="horses-table-wrapper">
+            <table class="horses-table">
+              <thead>
+                <tr>
+                  <th class="col-number">馬番</th>
+                  <th class="col-name">馬名</th>
+                  <th class="col-pt">PT</th>
+                  <th class="col-role">評価</th>
+                  <th class="col-jockey">騎手</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topHorses.map((horse: any, idx: number) => (
+                  <>
+                    <tr class={`horse-row rank-${idx + 1}`}>
+                      <td class="col-number">
+                        <span class="horse-number">{horse.horseNumber}</span>
+                      </td>
+                      <td class="col-name">{horse.horseName}</td>
+                      <td class="col-pt">
+                        <span class="pt-value">{typeof horse.pt === 'number' ? horse.pt.toFixed(2) : horse.pt}</span>
+                      </td>
+                      <td class="col-role">
+                        <span class={`role-badge role-${horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : horse.role === '単穴' ? 'tanana' : horse.role === '連下' ? 'renka' : 'other'}`}>
+                          {horse.role}
+                        </span>
+                      </td>
+                      <td class="col-jockey">{horse.jockey || '-'}</td>
+                    </tr>
+                    {horse.recentRaces && horse.recentRaces.length > 0 && (
+                      <tr class="recent-races-row">
+                        <td colspan="5">
+                          <div class="recent-races">
+                            <span class="recent-label">直近走</span>
+                            <div class="recent-list">
+                              {horse.recentRaces.map((r: any, rIdx: number) => (
+                                <span class="recent-item">
+                                  <span class="recent-tag">{rIdx === 0 ? '前走' : rIdx === 1 ? '2走前' : '3走前'}</span>
+                                  <span class={`recent-rank ${r.rank && r.rank <= 3 ? 'top3' : ''}`}>
+                                    {r.rank ? `${r.rank}着` : r.finishStatus || '-'}
+                                  </span>
+                                  <span class="recent-venue">{r.venue}</span>
+                                  <span class="recent-distance">{r.distance}m</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    })}
+
+    <!-- ナビゲーション -->
+    <div class="nav-links">
+      <a href="/free-prediction/archive" class="nav-link">
+        <span class="nav-icon">📋</span>
+        <span>過去の予想一覧</span>
+      </a>
+      <a href="/free-prediction" class="nav-link nav-link-primary">
+        <span class="nav-icon">🏇</span>
+        <span>最新予想</span>
+      </a>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .archive-prediction-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+
+  .archive-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: rgba(234, 179, 8, 0.15);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+    color: #eab308;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .archive-banner-icon {
+    font-size: 1.2rem;
+  }
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+
+  .page-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+  }
+
+  .venue-name {
+    font-weight: 700;
+  }
+
+  .date-label {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .race-count-badge {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .race-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+
+  .race-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .race-number {
+    background: #3b82f6;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    min-width: 2.5rem;
+    text-align: center;
+  }
+
+  .race-info {
+    flex: 1;
+  }
+
+  .race-name {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .race-details {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  .horses-table-wrapper {
+    padding: 0.75rem 1rem 1rem;
+    overflow-x: auto;
+  }
+
+  .horses-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .horses-table thead th {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+  }
+
+  .horse-row td {
+    padding: 0.6rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+  }
+
+  .horse-row.rank-1 {
+    background: rgba(59, 130, 246, 0.08);
+  }
+
+  .horse-row.rank-2 {
+    background: rgba(59, 130, 246, 0.04);
+  }
+
+  .col-number {
+    width: 3.5rem;
+    text-align: center;
+  }
+
+  .horse-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .col-name {
+    font-weight: 600;
+    min-width: 6rem;
+  }
+
+  .col-pt {
+    width: 4.5rem;
+    text-align: right;
+  }
+
+  .pt-value {
+    font-weight: 700;
+    color: #3b82f6;
+    font-family: 'Courier New', monospace;
+  }
+
+  .col-role {
+    width: 4rem;
+    text-align: center;
+  }
+
+  .role-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .role-honmei {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+  }
+
+  .role-taikou {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+  }
+
+  .role-tanana {
+    background: rgba(234, 179, 8, 0.15);
+    color: #eab308;
+  }
+
+  .role-renka {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+  }
+
+  .role-other {
+    background: rgba(148, 163, 184, 0.15);
+    color: var(--text-secondary);
+  }
+
+  .col-jockey {
+    width: 5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .recent-races-row td {
+    padding: 0 0.6rem 0.6rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .recent-races {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+  }
+
+  .recent-label {
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.72rem;
+    background: var(--bg-primary);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+  }
+
+  .recent-list {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .recent-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--text-secondary);
+  }
+
+  .recent-tag {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    opacity: 0.7;
+  }
+
+  .recent-rank {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .recent-rank.top3 {
+    color: #ef4444;
+  }
+
+  .recent-venue,
+  .recent-distance {
+    opacity: 0.7;
+  }
+
+  .nav-links {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding: 1.5rem 0;
+  }
+
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.7rem 1.25rem;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .nav-link:hover {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.08);
+  }
+
+  .nav-link-primary {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
+  }
+
+  .nav-link-primary:hover {
+    background: #2563eb;
+  }
+
+  @media (max-width: 640px) {
+    .page-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .page-title {
+      font-size: 1.25rem;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .race-header {
+      padding: 0.75rem 1rem;
+    }
+
+    .horses-table-wrapper {
+      padding: 0.5rem;
+    }
+
+    .horses-table {
+      font-size: 0.82rem;
+    }
+
+    .col-jockey {
+      display: none;
+    }
+
+    .nav-links {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .nav-link {
+      justify-content: center;
+    }
+  }
+</style>
