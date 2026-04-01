@@ -190,7 +190,7 @@ const jsonLd = {
               {(race.payouts?.umatan?.[0]?.combination || race.umatan?.combination) && (
                 <div class="summary-item">
                   <span class="summary-label">馬単</span>
-                  <span class="summary-value">{race.payouts?.umatan?.[0]?.combination || race.umatan?.combination}</span>
+                  <span class={`summary-value ${(race.isHit || race.honmeiHit) ? 'hit' : ''}`}>{race.payouts?.umatan?.[0]?.combination || race.umatan?.combination}</span>
                 </div>
               )}
               <div class="summary-item">
