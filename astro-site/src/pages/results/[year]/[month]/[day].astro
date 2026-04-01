@@ -177,11 +177,6 @@ const jsonLd = {
                 <span class="position">3着</span>
                 <span class="horse">{race.third || race.result?.third?.number}番{race.result?.third?.name ? ` ${race.result.third.name}` : ''}</span>
               </div>
-              {(race.payouts?.umatan?.[0] || race.umatan) && (
-                <div class="umatan-payout">
-                  馬単 {race.payouts?.umatan?.[0]?.combination || race.umatan?.combination} → <strong>¥{(race.payouts?.umatan?.[0]?.payout || race.umatan?.payout || 0).toLocaleString()}</strong>
-                </div>
-              )}
               <div class="hit-summary">
                 {race.honmeiHit && <span class="hit-badge">本命的中</span>}
                 {race.umatanHit && <span class="hit-badge">馬単的中</span>}
@@ -192,6 +187,12 @@ const jsonLd = {
             {/* 予想サマリー（買い目は非表示） */}
             <div class="prediction-summary-box">
               <h4>AI予想サマリー</h4>
+              {(race.payouts?.umatan?.[0]?.combination || race.umatan?.combination) && (
+                <div class="summary-item">
+                  <span class="summary-label">馬単</span>
+                  <span class="summary-value">{race.payouts?.umatan?.[0]?.combination || race.umatan?.combination}</span>
+                </div>
+              )}
               <div class="summary-item">
                 <span class="summary-label">判定</span>
                 <span class={`summary-value ${(race.isHit || race.honmeiHit) ? 'hit' : 'miss'}`}>
