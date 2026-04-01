@@ -192,12 +192,6 @@ const jsonLd = {
             {/* 予想サマリー（買い目は非表示） */}
             <div class="prediction-summary-box">
               <h4>AI予想サマリー</h4>
-              {race.bettingPoints && (
-                <div class="summary-item">
-                  <span class="summary-label">買い目点数</span>
-                  <span class="summary-value">{race.bettingPoints}点</span>
-                </div>
-              )}
               <div class="summary-item">
                 <span class="summary-label">判定</span>
                 <span class={`summary-value ${(race.isHit || race.honmeiHit) ? 'hit' : 'miss'}`}>
