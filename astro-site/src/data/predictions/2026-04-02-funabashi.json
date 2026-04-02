@@ -1,0 +1,5093 @@
+{
+  "eventInfo": {
+    "date": "2026-04-02",
+    "venue": "船橋",
+    "totalRaces": 12
+  },
+  "predictions": [
+    {
+      "raceInfo": {
+        "date": "2026-04-02",
+        "venue": "船橋",
+        "raceNumber": 1,
+        "raceName": "サラ４歳以上",
+        "startTime": "14:45",
+        "distance": "1200",
+        "horseCount": 11
+      },
+      "horses": [
+        {
+          "horseNumber": 10,
+          "horseName": "フェアリーランド",
+          "pt": 88,
+          "role": "本命",
+          "jockey": "本田重",
+          "trainer": "(船)山田信",
+          "age": "牝7",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "Ｃ３四",
+              "popularity": 6,
+              "passingOrder": "3-5",
+              "last3f": "37.8"
+            },
+            {
+              "date": "2024-06-27",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 8,
+              "raceName": "ハナカンザシスプリントＣ２選抜",
+              "popularity": 5,
+              "passingOrder": "1-2-2",
+              "last3f": "36.5"
+            },
+            {
+              "date": "2024-05-28",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "ジュウイチスプリントＣ２選抜馬",
+              "popularity": 11,
+              "passingOrder": "10-11-9",
+              "last3f": "36.6"
+            }
+          ]
+        },
+        {
+          "horseNumber": 5,
+          "horseName": "シャイニングアース",
+          "pt": 86,
+          "role": "対抗",
+          "jockey": "小杉亮",
+          "trainer": "(船)矢野義",
+          "age": "牡5",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "Ｃ３四",
+              "popularity": 5,
+              "passingOrder": "5-6-6",
+              "last3f": "40.5"
+            },
+            {
+              "date": "2026-02-10",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ３五",
+              "popularity": 4,
+              "passingOrder": "5-2-3",
+              "last3f": "39.7"
+            },
+            {
+              "date": "2026-01-20",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ３六",
+              "popularity": 6,
+              "passingOrder": "11-11-11",
+              "last3f": "39.2"
+            }
+          ]
+        },
+        {
+          "horseNumber": 9,
+          "horseName": "クリスプオブウォー",
+          "pt": 82,
+          "role": "単穴",
+          "jockey": "山中悠",
+          "trainer": "(船)佐々清",
+          "age": "牡6",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 1,
+          "horseName": "セイウンヤタガラス",
+          "pt": 76,
+          "role": "連下最上位",
+          "jockey": "山林堂信",
+          "trainer": "(川)田邊",
+          "age": "牡4",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-05",
+              "venue": "川崎",
+              "distance": 1400,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "Ｃ３一 二",
+              "popularity": 9,
+              "passingOrder": "5-5-5-7",
+              "last3f": "40.6"
+            },
+            {
+              "date": "2026-02-05",
+              "venue": "川崎",
+              "distance": 1400,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ３三 四",
+              "popularity": 6,
+              "passingOrder": "4-4-2-3",
+              "last3f": "40.1"
+            },
+            {
+              "date": "2026-01-03",
+              "venue": "川崎",
+              "distance": 1400,
+              "rank": 13,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "毘沙門天賞Ｃ３三 四",
+              "popularity": 6,
+              "passingOrder": "9-11-8-11",
+              "last3f": "42.0"
+            }
+          ]
+        },
+        {
+          "horseNumber": 4,
+          "horseName": "セイダンシング",
+          "pt": 76,
+          "role": "連下",
+          "jockey": "高橋利",
+          "trainer": "(船)玉井昇",
+          "age": "牡7",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-12",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ３二 三",
+              "popularity": 8,
+              "passingOrder": "8-9-10",
+              "last3f": "39.1"
+            },
+            {
+              "date": "2026-02-26",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ３三 四",
+              "popularity": 12,
+              "passingOrder": "10-11-7-7",
+              "last3f": "39.0"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ３二",
+              "popularity": 10,
+              "passingOrder": "8-10-10",
+              "last3f": "40.6"
+            }
+          ]
+        },
+        {
+          "horseNumber": 2,
+          "horseName": "ミカサ",
+          "pt": 74,
+          "role": "連下",
+          "jockey": "見越彬",
+          "trainer": "(浦)小久保",
+          "age": "牡5",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-01-09",
+              "venue": "浦和",
+              "distance": 1500,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "道の駅おがわまち賞Ｃ３二 三",
+              "popularity": 2,
+              "passingOrder": "4-4-3-4",
+              "last3f": "40.8"
+            },
+            {
+              "date": "2025-12-22",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "ノースポール特別Ｃ２九Ｃ３一",
+              "popularity": 5,
+              "passingOrder": "4-3-4-3",
+              "last3f": "39.6"
+            },
+            {
+              "date": "2025-11-27",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "射手座特別Ｃ２九Ｃ３一",
+              "popularity": 5,
+              "passingOrder": "2-2-3-5",
+              "last3f": "41.0"
+            }
+          ]
+        },
+        {
+          "horseNumber": 11,
+          "horseName": "ニットウアクシア",
+          "pt": 74,
+          "role": "連下",
+          "jockey": "伊藤裕",
+          "trainer": "(川)茂木",
+          "age": "牝4",
+          "weight": "54"
+        },
+        {
+          "horseNumber": 7,
+          "horseName": "タワーオブプリンス",
+          "pt": 71,
+          "role": "補欠",
+          "jockey": "野沢憲",
+          "trainer": "(船)佐々清",
+          "age": "牡4",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 8,
+          "horseName": "ムンディ",
+          "pt": 71,
+          "role": "補欠",
+          "jockey": "達城龍",
+          "trainer": "(川)武井和",
+          "age": "牝4",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-06",
+              "venue": "川崎",
+              "distance": 2000,
+              "rank": 12,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "ヒカリオーソ賞Ｃ２Ｃ３選定馬",
+              "popularity": 5,
+              "passingOrder": "4-3-5-11",
+              "last3f": "42.7"
+            },
+            {
+              "date": "2026-02-05",
+              "venue": "川崎",
+              "distance": 1400,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ３三 四",
+              "popularity": 3,
+              "passingOrder": "1-1-1",
+              "last3f": "40.7"
+            },
+            {
+              "date": "2025-12-22",
+              "venue": "名古屋",
+              "distance": 1700,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "歳流特別Ｃ１４",
+              "popularity": 2,
+              "passingOrder": "3-3-3",
+              "last3f": "39.0"
+            }
+          ]
+        },
+        {
+          "horseNumber": 3,
+          "horseName": "ラブミーエール",
+          "pt": 70,
+          "role": "無",
+          "jockey": "岡村健",
+          "trainer": "(船)渋谷博",
+          "age": "牝5",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-12",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ３二 三",
+              "popularity": 7,
+              "passingOrder": "10-10-9",
+              "last3f": "39.7"
+            },
+            {
+              "date": "2026-02-23",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "ラヴミー・ラヴユー・ラヴＣ３一",
+              "popularity": 12,
+              "passingOrder": "10-10-11-13",
+              "last3f": "40.3"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ３三",
+              "popularity": 7,
+              "passingOrder": "12-12-12",
+              "last3f": "41.0"
+            }
+          ]
+        },
+        {
+          "horseNumber": 6,
+          "horseName": "ノワスティエ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "七夕裕",
+          "trainer": "(浦)工藤",
+          "age": "牝4",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-17",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "Ｃ３ ４歳イ",
+              "popularity": 11,
+              "passingOrder": "5-3-4",
+              "last3f": "41.5"
+            },
+            {
+              "date": "2026-02-27",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "Ｃ３ ４歳イ",
+              "popularity": 12,
+              "passingOrder": "7-11-11",
+              "last3f": "41.6"
+            },
+            {
+              "date": "2026-01-08",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ３ ４歳イ",
+              "popularity": 9,
+              "passingOrder": "8-8-6-11",
+              "last3f": "44.1"
+            }
+          ]
+        }
+      ],
+      "bettingLines": {
+        "umatan": [
+          "10-5.9.1.4.2.11(抑え7.8)",
+          "5-10.9.1.4.2.11(抑え7.8)"
+        ]
+      },
+      "generatedAt": "2026-04-02T05:48:43.541Z"
+    },
+    {
+      "raceInfo": {
+        "date": "2026-04-02",
+        "venue": "船橋",
+        "raceNumber": 2,
+        "raceName": "サラ４歳以上",
+        "startTime": "15:15",
+        "distance": "1200",
+        "horseCount": 9
+      },
+      "horses": [
+        {
+          "horseNumber": 6,
+          "horseName": "ベルヴィヴァン",
+          "pt": 90,
+          "role": "本命",
+          "jockey": "御神本訓",
+          "trainer": "(船)川島一",
+          "age": "牝4",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-12",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ３二 三",
+              "popularity": 1,
+              "passingOrder": "1-2-1",
+              "last3f": "38.7"
+            },
+            {
+              "date": "2025-09-07",
+              "venue": "",
+              "distance": null,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 16,
+              "raceName": "",
+              "popularity": 8,
+              "passingOrder": "3-3",
+              "last3f": "36.3"
+            },
+            {
+              "date": "2025-07-20",
+              "venue": "",
+              "distance": null,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 18,
+              "raceName": "",
+              "popularity": 10,
+              "passingOrder": "4-3",
+              "last3f": "36.1"
+            }
+          ]
+        },
+        {
+          "horseNumber": 2,
+          "horseName": "ダンガリー",
+          "pt": 86,
+          "role": "対抗",
+          "jockey": "小杉亮",
+          "trainer": "(船)林正人",
+          "age": "牡5",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-12",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "Ｃ３選抜馬",
+              "popularity": 1,
+              "passingOrder": "5-5-5",
+              "last3f": "37.9"
+            },
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ３選抜馬",
+              "popularity": 2,
+              "passingOrder": "7-6-4",
+              "last3f": "38.8"
+            },
+            {
+              "date": "2026-01-22",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ３二 三",
+              "popularity": 3,
+              "passingOrder": "5-1-1",
+              "last3f": "40.1"
+            }
+          ]
+        },
+        {
+          "horseNumber": 1,
+          "horseName": "スティールチャーム",
+          "pt": 79,
+          "role": "単穴",
+          "jockey": "仲野光",
+          "trainer": "(船)渡邊貴",
+          "age": "牝4",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "Ｃ２七 八 九イ",
+              "popularity": 4,
+              "passingOrder": "5-6-7",
+              "last3f": "39.6"
+            },
+            {
+              "date": "2025-07-10",
+              "venue": "門別",
+              "distance": 1000,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "３歳以上　Ｃ３－２　Ｃ４－１",
+              "popularity": 4,
+              "passingOrder": "12-12",
+              "last3f": "36.4"
+            },
+            {
+              "date": "2025-06-05",
+              "venue": "門別",
+              "distance": 1200,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "３歳以上　Ｃ３－２　Ｃ４－１",
+              "popularity": 4,
+              "passingOrder": "6-7",
+              "last3f": "38.7"
+            }
+          ]
+        },
+        {
+          "horseNumber": 7,
+          "horseName": "レバット",
+          "pt": 79,
+          "role": "連下最上位",
+          "jockey": "半澤慶",
+          "trainer": "(浦)宇野博",
+          "age": "牡4",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-16",
+              "venue": "浦和",
+              "distance": 1500,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "特選Ｃ３ ４歳ア",
+              "popularity": 2,
+              "passingOrder": "2-3-2-1",
+              "last3f": "39.1"
+            },
+            {
+              "date": "2026-02-27",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "Ｃ３ ４歳イ",
+              "popularity": 5,
+              "passingOrder": "2-2-2-1",
+              "last3f": "39.5"
+            },
+            {
+              "date": "2026-01-06",
+              "venue": "浦和",
+              "distance": 1500,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "新座市制施行５５周年ゾウキＣ３",
+              "popularity": 7,
+              "passingOrder": "4-4-4-7",
+              "last3f": "42.0"
+            }
+          ]
+        },
+        {
+          "horseNumber": 3,
+          "horseName": "スクラマサクス",
+          "pt": 76,
+          "role": "連下",
+          "jockey": "山本紀",
+          "trainer": "(船)渡邊貴",
+          "age": "牡5",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-12",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "Ｃ３選抜馬",
+              "popularity": 9,
+              "passingOrder": "1-1-1",
+              "last3f": "39.0"
+            },
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ３選抜馬",
+              "popularity": 7,
+              "passingOrder": "8-7-6",
+              "last3f": "41.8"
+            },
+            {
+              "date": "2026-01-23",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ３選抜馬",
+              "popularity": 10,
+              "passingOrder": "10-11-11",
+              "last3f": "38.6"
+            }
+          ]
+        },
+        {
+          "horseNumber": 5,
+          "horseName": "サヴォーカ",
+          "pt": 73,
+          "role": "連下",
+          "jockey": "所蛍",
+          "trainer": "(船)山下",
+          "age": "牝4",
+          "weight": "52",
+          "recentRaces": [
+            {
+              "date": "2025-12-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ２十",
+              "popularity": 8,
+              "passingOrder": "6-6-7",
+              "last3f": "39.6"
+            },
+            {
+              "date": "2025-11-06",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！八丈島西浜レＣ２七 八 九",
+              "popularity": 8,
+              "passingOrder": "7-8-8",
+              "last3f": "40.5"
+            },
+            {
+              "date": "2025-06-30",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": null,
+              "finishStatus": "取消",
+              "headCount": 9,
+              "raceName": "３歳四",
+              "popularity": 3,
+              "passingOrder": "3-2-1",
+              "last3f": "41.2"
+            }
+          ]
+        },
+        {
+          "horseNumber": 9,
+          "horseName": "シェルヴァレイ",
+          "pt": 71,
+          "role": "補欠",
+          "jockey": "山中悠",
+          "trainer": "(船)玉井昇",
+          "age": "牡4",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 4,
+          "horseName": "タイニービキニ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "福原杏",
+          "trainer": "(船)山本学",
+          "age": "牝4",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ２七 八 九ウ",
+              "popularity": 8,
+              "passingOrder": "5-7-7",
+              "last3f": "40.3"
+            },
+            {
+              "date": "2026-02-28",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "Ｃ２九",
+              "popularity": 12,
+              "passingOrder": "10-12-13-11",
+              "last3f": "40.1"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！唐津レモンと淡Ｃ２九 十",
+              "popularity": 11,
+              "passingOrder": "12-12-12",
+              "last3f": "40.0"
+            }
+          ]
+        },
+        {
+          "horseNumber": 8,
+          "horseName": "スマイルナゴミ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "岡村健",
+          "trainer": "(船)函館一",
+          "age": "牝4",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "Ｃ２七 八 九イ",
+              "popularity": 6,
+              "passingOrder": "7-8-9",
+              "last3f": "39.2"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！唐津レモンと淡Ｃ２九 十",
+              "popularity": 7,
+              "passingOrder": "10-8-9",
+              "last3f": "39.5"
+            },
+            {
+              "date": "2026-01-23",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ２七 八 九ウ",
+              "popularity": 13,
+              "passingOrder": "6-6-6-8",
+              "last3f": "43.1"
+            }
+          ]
+        }
+      ],
+      "bettingLines": {
+        "umatan": [
+          "6-2.1.7.3.5(抑え9)",
+          "2-6.1.7.3.5(抑え9)"
+        ]
+      },
+      "generatedAt": "2026-04-02T05:48:43.541Z"
+    },
+    {
+      "raceInfo": {
+        "date": "2026-04-02",
+        "venue": "船橋",
+        "raceNumber": 3,
+        "raceName": "サラ４歳以上",
+        "startTime": "15:45",
+        "distance": "1500",
+        "horseCount": 12
+      },
+      "horses": [
+        {
+          "horseNumber": 5,
+          "horseName": "ワールドクライシス",
+          "pt": 87,
+          "role": "本命",
+          "jockey": "本田重",
+          "trainer": "(船)新井",
+          "age": "牡4",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-12",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "Ｃ３選抜馬",
+              "popularity": 10,
+              "passingOrder": "11-11-11-11",
+              "last3f": "41.9"
+            },
+            {
+              "date": "2025-07-30",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "３歳五",
+              "popularity": 10,
+              "passingOrder": "13-13-12-12",
+              "last3f": "40.6"
+            },
+            {
+              "date": "2025-07-04",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 6,
+              "raceName": "３歳七",
+              "popularity": 9,
+              "passingOrder": "9-9-6-5",
+              "last3f": "40.4"
+            }
+          ]
+        },
+        {
+          "horseNumber": 3,
+          "horseName": "ジャスマン",
+          "pt": 82,
+          "role": "対抗",
+          "jockey": "町田直",
+          "trainer": "(船)佐々功",
+          "age": "牡4",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "馬い！グリーングラＣ２七 八 九",
+              "popularity": 3,
+              "passingOrder": "10-10-10-10",
+              "last3f": "39.8"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 2200,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "２０２５ＪｏｃｋｅｙｓＦｅＣ２",
+              "popularity": 3,
+              "passingOrder": "6-7-6-6",
+              "last3f": "43.9"
+            },
+            {
+              "date": "2026-01-21",
+              "venue": "船橋",
+              "distance": 1700,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "２０２５ＪｏｃｋｅｙｓＦｅＣ３",
+              "popularity": 1,
+              "passingOrder": "12-11-3-3",
+              "last3f": "39.4"
+            }
+          ]
+        },
+        {
+          "horseNumber": 8,
+          "horseName": "アドラマリク",
+          "pt": 80,
+          "role": "単穴",
+          "jockey": "澤田龍",
+          "trainer": "(船)新井",
+          "age": "牡4",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 4,
+          "horseName": "アルセリア",
+          "pt": 78,
+          "role": "連下最上位",
+          "jockey": "篠谷葵",
+          "trainer": "(船)林正人",
+          "age": "牝6",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "野田賞Ｃ３一",
+              "popularity": 10,
+              "passingOrder": "12-12-10-8",
+              "last3f": "38.5"
+            },
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 12,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "ものの芽特別Ｃ３一",
+              "popularity": 6,
+              "passingOrder": "2-2-2-4",
+              "last3f": "45.6"
+            },
+            {
+              "date": "2026-01-23",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "Ｃ３一特選",
+              "popularity": 5,
+              "passingOrder": "3-3-4-2",
+              "last3f": "41.3"
+            }
+          ]
+        },
+        {
+          "horseNumber": 10,
+          "horseName": "レジェンド",
+          "pt": 77,
+          "role": "連下",
+          "jockey": "笹川翼",
+          "trainer": "(船)山田信",
+          "age": "セン4",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 11,
+          "horseName": "ビジューメファ",
+          "pt": 75,
+          "role": "連下",
+          "jockey": "福原杏",
+          "trainer": "(船)山本学",
+          "age": "牝5",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "野田賞Ｃ３一",
+              "popularity": 10,
+              "passingOrder": "9-9-9",
+              "last3f": "38.3"
+            },
+            {
+              "date": "2026-02-23",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "ラヴミー・ラヴユー・ラヴＣ３一",
+              "popularity": 6,
+              "passingOrder": "6-6-7",
+              "last3f": "38.9"
+            },
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "ものの芽特別Ｃ３一",
+              "popularity": 9,
+              "passingOrder": "5-6-5",
+              "last3f": "39.2"
+            }
+          ]
+        },
+        {
+          "horseNumber": 1,
+          "horseName": "エリセイラ",
+          "pt": 74,
+          "role": "連下",
+          "jockey": "野畑凌",
+          "trainer": "(船)斉藤敏",
+          "age": "牝4",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-09",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "舞浜賞Ｃ３選抜馬",
+              "popularity": 3,
+              "passingOrder": "10-10-6-6",
+              "last3f": "40.0"
+            },
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "ものの芽特別Ｃ３一",
+              "popularity": 5,
+              "passingOrder": "14-14-12-12",
+              "last3f": "40.4"
+            },
+            {
+              "date": "2026-01-23",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "Ｃ３一特選",
+              "popularity": 11,
+              "passingOrder": "13-13-10-10",
+              "last3f": "39.7"
+            }
+          ]
+        },
+        {
+          "horseNumber": 12,
+          "horseName": "サンマルディライト",
+          "pt": 74,
+          "role": "補欠",
+          "jockey": "御神本訓",
+          "trainer": "(船)川島一",
+          "age": "牡7",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 7,
+          "horseName": "テリオスボス",
+          "pt": 72,
+          "role": "補欠",
+          "jockey": "和田譲",
+          "trainer": "(船)佐々功",
+          "age": "牡5",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "馬い！グリーングラＣ２七 八 九",
+              "popularity": 8,
+              "passingOrder": "2-2-5-6",
+              "last3f": "42.7"
+            },
+            {
+              "date": "2026-02-26",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ２七 八",
+              "popularity": 4,
+              "passingOrder": "4-4-4",
+              "last3f": "43.9"
+            },
+            {
+              "date": "2026-01-23",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "ホテルシローで今年Ｃ２七 八 九",
+              "popularity": 3,
+              "passingOrder": "7-6-5",
+              "last3f": "40.0"
+            }
+          ]
+        },
+        {
+          "horseNumber": 2,
+          "horseName": "スマイルポピー",
+          "pt": 70,
+          "role": "無",
+          "jockey": "吉留孝",
+          "trainer": "(浦)薮口",
+          "age": "牝6",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-20",
+              "venue": "浦和",
+              "distance": 800,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "浦和８００ラウンドＣ２Ｃ３選抜",
+              "popularity": 11,
+              "passingOrder": "11-10",
+              "last3f": "36.7"
+            },
+            {
+              "date": "2025-12-16",
+              "venue": "川崎",
+              "distance": 2000,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "アストレア賞Ｃ２選定馬",
+              "popularity": 12,
+              "passingOrder": "13-13-13-11",
+              "last3f": "42.1"
+            },
+            {
+              "date": "2025-12-08",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "Ｃ２二 三",
+              "popularity": 13,
+              "passingOrder": "6-6-8-10",
+              "last3f": "40.6"
+            }
+          ]
+        },
+        {
+          "horseNumber": 6,
+          "horseName": "ノメンターノ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "小杉亮",
+          "trainer": "(船)坂本昇",
+          "age": "牝4",
+          "weight": "54"
+        },
+        {
+          "horseNumber": 9,
+          "horseName": "ザボドフスキー",
+          "pt": 70,
+          "role": "無",
+          "jockey": "椿聡太",
+          "trainer": "(船)伊藤滋",
+          "age": "牡4",
+          "weight": "53",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ２七 八 九ウ",
+              "popularity": 5,
+              "passingOrder": "3-3-2-3",
+              "last3f": "42.9"
+            },
+            {
+              "date": "2026-02-28",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "Ｃ２九",
+              "popularity": 3,
+              "passingOrder": "2-3-3",
+              "last3f": "42.3"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ２九 十",
+              "popularity": 2,
+              "passingOrder": "2-3-3",
+              "last3f": "39.5"
+            }
+          ]
+        }
+      ],
+      "bettingLines": {
+        "umatan": [
+          "5-3.8.4.10.11.1(抑え12.7)",
+          "3-5.8.4.10.11.1(抑え12.7)"
+        ]
+      },
+      "generatedAt": "2026-04-02T05:48:43.541Z"
+    },
+    {
+      "raceInfo": {
+        "date": "2026-04-02",
+        "venue": "船橋",
+        "raceNumber": 4,
+        "raceName": "サラ４歳以上",
+        "startTime": "16:20",
+        "distance": "1200",
+        "horseCount": 10
+      },
+      "horses": [
+        {
+          "horseNumber": 8,
+          "horseName": "ブリックスラテ",
+          "pt": 89,
+          "role": "本命",
+          "jockey": "和田譲",
+          "trainer": "(船)新井",
+          "age": "牡4",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 1,
+          "horseName": "ソーサレス",
+          "pt": 84,
+          "role": "対抗",
+          "jockey": "山本大",
+          "trainer": "(船)田中力",
+          "age": "牝7",
+          "weight": "51",
+          "recentRaces": [
+            {
+              "date": "2026-01-19",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！大寒卵はサンサＣ１四 五",
+              "popularity": 7,
+              "passingOrder": "4-3-2",
+              "last3f": "38.1"
+            },
+            {
+              "date": "2025-12-12",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "市川ＪＣ６０周年おＣ１一 二 三",
+              "popularity": 9,
+              "passingOrder": "7-6-6",
+              "last3f": "41.4"
+            },
+            {
+              "date": "2025-08-30",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "マリーゴールドスプリントＣ２選",
+              "popularity": 1,
+              "passingOrder": "5-4-4",
+              "last3f": "38.7"
+            }
+          ]
+        },
+        {
+          "horseNumber": 4,
+          "horseName": "ビックプーカオ",
+          "pt": 83,
+          "role": "単穴",
+          "jockey": "笹川翼",
+          "trainer": "(船)川島一",
+          "age": "セン9",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ１二 三 四ウ",
+              "popularity": 2,
+              "passingOrder": "3-3-4",
+              "last3f": "38.5"
+            },
+            {
+              "date": "2026-02-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！卵はサンサンＣ１四 五 六",
+              "popularity": 3,
+              "passingOrder": "6-7-7",
+              "last3f": "38.5"
+            },
+            {
+              "date": "2025-09-03",
+              "venue": "大井",
+              "distance": 1200,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ１七 八",
+              "popularity": 1,
+              "passingOrder": "4-4",
+              "last3f": "37.7"
+            }
+          ]
+        },
+        {
+          "horseNumber": 7,
+          "horseName": "エーティースピカ",
+          "pt": 76,
+          "role": "連下最上位",
+          "jockey": "半澤慶",
+          "trainer": "(浦)宇野博",
+          "age": "牝6",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2025-08-20",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "鳳仙花特別Ｃ１一",
+              "popularity": 3,
+              "passingOrder": "1-1-1",
+              "last3f": "38.7"
+            },
+            {
+              "date": "2025-07-23",
+              "venue": "浦和",
+              "distance": 800,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "夕凪特別Ｃ１選抜馬ア",
+              "popularity": 2,
+              "passingOrder": "1-1-1",
+              "last3f": "39.1"
+            },
+            {
+              "date": "2025-07-05",
+              "venue": "船橋",
+              "distance": 1000,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "へびつかい座ダッシュＣ１選抜馬",
+              "popularity": 1,
+              "passingOrder": "2-2",
+              "last3f": "38.8"
+            }
+          ]
+        },
+        {
+          "horseNumber": 9,
+          "horseName": "ヴェントフレイバー",
+          "pt": 76,
+          "role": "連下",
+          "jockey": "川島正",
+          "trainer": "(船)稲益",
+          "age": "牡5",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2025-10-01",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "馬い！八丈西浜レモＣ１四 五 六",
+              "popularity": 9,
+              "passingOrder": "9-7-6",
+              "last3f": "38.7"
+            },
+            {
+              "date": "2025-08-30",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "マリーゴールドスプリントＣ２選",
+              "popularity": 9,
+              "passingOrder": "11-9-9",
+              "last3f": "38.7"
+            },
+            {
+              "date": "2025-07-17",
+              "venue": "大井",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "Ｃ２二 三 四",
+              "popularity": 10,
+              "passingOrder": "11-10-10",
+              "last3f": "38.7"
+            }
+          ]
+        },
+        {
+          "horseNumber": 2,
+          "horseName": "マナラナキラ",
+          "pt": 74,
+          "role": "連下",
+          "jockey": "野畑凌",
+          "trainer": "(船)斉藤敏",
+          "age": "牡4",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！佐賀小松レモＣ１二 三 四",
+              "popularity": 3,
+              "passingOrder": "5-6-7",
+              "last3f": "38.9"
+            },
+            {
+              "date": "2026-02-28",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "浦和エイトチャレンジＣ１六",
+              "popularity": 1,
+              "passingOrder": "4-4-2-1",
+              "last3f": "38.9"
+            },
+            {
+              "date": "2026-02-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ１四 五 六ウ",
+              "popularity": 4,
+              "passingOrder": "7-9-9",
+              "last3f": "40.2"
+            }
+          ]
+        },
+        {
+          "horseNumber": 6,
+          "horseName": "セキテイレア",
+          "pt": 74,
+          "role": "連下",
+          "jockey": "篠谷葵",
+          "trainer": "(船)張田",
+          "age": "牝5",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ１五 六",
+              "popularity": 5,
+              "passingOrder": "9-9-4",
+              "last3f": "38.8"
+            },
+            {
+              "date": "2026-02-23",
+              "venue": "浦和",
+              "distance": 800,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "陸離の編纂者クロノ記念Ｃ１選抜",
+              "popularity": 7,
+              "passingOrder": "8-8",
+              "last3f": "36.5"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1000,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "駿光ダッシュＣ１選抜馬",
+              "popularity": 6,
+              "passingOrder": "10-10",
+              "last3f": "38.4"
+            }
+          ]
+        },
+        {
+          "horseNumber": 10,
+          "horseName": "シナジーエフェクト",
+          "pt": 71,
+          "role": "補欠",
+          "jockey": "臼井健",
+          "trainer": "(船)函館一",
+          "age": "牡6",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 3,
+          "horseName": "キャッスルレーヴ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "山本紀",
+          "trainer": "(船)渋谷博",
+          "age": "牝5",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2025-10-03",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "渡り鳥スプリントＣ１一 二 三ウ",
+              "popularity": 7,
+              "passingOrder": "4-4-5",
+              "last3f": "39.5"
+            },
+            {
+              "date": "2025-09-12",
+              "venue": "川崎",
+              "distance": 1500,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "軍配賞Ｃ１一 二 三",
+              "popularity": 11,
+              "passingOrder": "9-10-11-9",
+              "last3f": "41.6"
+            },
+            {
+              "date": "2025-08-31",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "獅子奮迅スプリントＣ１一 二 三",
+              "popularity": 11,
+              "passingOrder": "10-11-11",
+              "last3f": "37.6"
+            }
+          ]
+        },
+        {
+          "horseNumber": 5,
+          "horseName": "ジュンフカリ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "山口達",
+          "trainer": "(船)坂本昇",
+          "age": "牡6",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ１二 三 四ウ",
+              "popularity": 11,
+              "passingOrder": "8-11-11",
+              "last3f": "39.8"
+            },
+            {
+              "date": "2026-02-12",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 12,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！熊本菊池水田ごＣ１二 三",
+              "popularity": 11,
+              "passingOrder": "6-10-12",
+              "last3f": "40.8"
+            },
+            {
+              "date": "2026-01-21",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ１二 三",
+              "popularity": 6,
+              "passingOrder": "8-8-9",
+              "last3f": "39.4"
+            }
+          ]
+        }
+      ],
+      "bettingLines": {
+        "umatan": [
+          "8-1.4.7.9.2.6(抑え10)",
+          "1-8.4.7.9.2.6(抑え10)"
+        ]
+      },
+      "generatedAt": "2026-04-02T05:48:43.541Z"
+    },
+    {
+      "raceInfo": {
+        "date": "2026-04-02",
+        "venue": "船橋",
+        "raceNumber": 5,
+        "raceName": "牡羊座スプリント",
+        "startTime": "16:50",
+        "distance": "1200",
+        "horseCount": 7
+      },
+      "horses": [
+        {
+          "horseNumber": 5,
+          "horseName": "プレストエンペラー",
+          "pt": 90,
+          "role": "本命",
+          "jockey": "本橋孝",
+          "trainer": "(船)山下",
+          "age": "牡3",
+          "weight": "57",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 8,
+              "raceName": "千葉の酪農応援賞３歳選抜馬",
+              "popularity": 1,
+              "passingOrder": "7-4-4",
+              "last3f": "38.4"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "寒椿スプリント３歳選抜馬",
+              "popularity": 3,
+              "passingOrder": "3-3-2",
+              "last3f": "40.1"
+            },
+            {
+              "date": "2026-01-20",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "若駒スプリント３歳一",
+              "popularity": 2,
+              "passingOrder": "5-4-4",
+              "last3f": "38.8"
+            }
+          ]
+        },
+        {
+          "horseNumber": 3,
+          "horseName": "エゴンウレア",
+          "pt": 84,
+          "role": "対抗",
+          "jockey": "木間塚龍",
+          "trainer": "(船)矢野義",
+          "age": "牝3",
+          "weight": "55",
+          "recentRaces": [
+            {
+              "date": "2026-01-11",
+              "venue": "",
+              "distance": null,
+              "rank": 16,
+              "finishStatus": null,
+              "headCount": 16,
+              "raceName": "",
+              "popularity": 16,
+              "passingOrder": "2-2-2",
+              "last3f": "36.7"
+            },
+            {
+              "date": "2025-10-26",
+              "venue": "",
+              "distance": null,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 18,
+              "raceName": "",
+              "popularity": 5,
+              "passingOrder": "6-8",
+              "last3f": "34.2"
+            }
+          ]
+        },
+        {
+          "horseNumber": 2,
+          "horseName": "オルタスグロウ",
+          "pt": 79,
+          "role": "単穴",
+          "jockey": "佐野遥",
+          "trainer": "(船)渋谷博",
+          "age": "牡3",
+          "weight": "55",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 8,
+              "raceName": "千葉の酪農応援賞３歳選抜馬",
+              "popularity": 5,
+              "passingOrder": "2-2-2",
+              "last3f": "39.1"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "寒椿スプリント３歳選抜馬",
+              "popularity": 7,
+              "passingOrder": "2-2-3",
+              "last3f": "41.3"
+            },
+            {
+              "date": "2025-12-10",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "ジュニアスプリント２歳選抜馬",
+              "popularity": 7,
+              "passingOrder": "1-1-1",
+              "last3f": "39.4"
+            }
+          ]
+        },
+        {
+          "horseNumber": 4,
+          "horseName": "フークアンビション",
+          "pt": 78,
+          "role": "連下最上位",
+          "jockey": "笹川翼",
+          "trainer": "(船)米谷",
+          "age": "牡3",
+          "weight": "57",
+          "recentRaces": [
+            {
+              "date": "2026-03-12",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "Ｊ認 ネクストスター東日本３歳",
+              "popularity": 7,
+              "passingOrder": "6-7-8",
+              "last3f": "39.2"
+            },
+            {
+              "date": "2025-12-10",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "ジュニアスプリント２歳選抜馬",
+              "popularity": 3,
+              "passingOrder": "8-9-7",
+              "last3f": "38.6"
+            },
+            {
+              "date": "2025-12-04",
+              "venue": "大井",
+              "distance": 1200,
+              "rank": 12,
+              "finishStatus": null,
+              "headCount": 16,
+              "raceName": "ジェムストーン賞２歳オープン重",
+              "popularity": 12,
+              "passingOrder": "15-15",
+              "last3f": "38.2"
+            }
+          ]
+        },
+        {
+          "horseNumber": 7,
+          "horseName": "ギフテッドクィーン",
+          "pt": 77,
+          "role": "連下",
+          "jockey": "野畑凌",
+          "trainer": "(川)鈴木義",
+          "age": "牝3",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-02-25",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "ユングフラウ賞３歳牝馬オープン",
+              "popularity": 7,
+              "passingOrder": "11-12-12-9",
+              "last3f": "37.8"
+            },
+            {
+              "date": "2026-02-04",
+              "venue": "川崎",
+              "distance": 1400,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｊ交 ガーネットフラワー賞３歳",
+              "popularity": 1,
+              "passingOrder": "1-1-1-1",
+              "last3f": "40.5"
+            },
+            {
+              "date": "2026-01-04",
+              "venue": "川崎",
+              "distance": 1500,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "招福特別３歳１",
+              "popularity": 1,
+              "passingOrder": "1-1-1-1",
+              "last3f": "39.8"
+            }
+          ]
+        },
+        {
+          "horseNumber": 1,
+          "horseName": "ウールドランジュ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "吉留孝",
+          "trainer": "(浦)平山",
+          "age": "牝3",
+          "weight": "55",
+          "recentRaces": [
+            {
+              "date": "2026-03-16",
+              "venue": "浦和",
+              "distance": 800,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "浦和８００ラウンド３歳選抜馬ア",
+              "popularity": 6,
+              "passingOrder": "7-6",
+              "last3f": "35.8"
+            },
+            {
+              "date": "2026-02-25",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "ユングフラウ賞３歳牝馬オープン",
+              "popularity": 13,
+              "passingOrder": "10-10-11-12",
+              "last3f": "39.7"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "寒椿スプリント３歳選抜馬",
+              "popularity": 10,
+              "passingOrder": "7-8-7",
+              "last3f": "40.4"
+            }
+          ]
+        },
+        {
+          "horseNumber": 6,
+          "horseName": "ラタランテラ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "岡村健",
+          "trainer": "(船)斉藤敏",
+          "age": "牝3",
+          "weight": "55",
+          "recentRaces": [
+            {
+              "date": "2025-09-09",
+              "venue": "川崎",
+              "distance": 900,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "のぞみ賞２歳未格付選定馬",
+              "popularity": 1,
+              "passingOrder": "1-1-1",
+              "last3f": "37.6"
+            },
+            {
+              "date": "2025-08-27",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 6,
+              "raceName": "２歳二",
+              "popularity": 2,
+              "passingOrder": "3-3-3",
+              "last3f": "37.6"
+            },
+            {
+              "date": "2025-07-29",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 6,
+              "raceName": "線香花火特別２歳選抜馬",
+              "popularity": 4,
+              "passingOrder": "3-3-3-5",
+              "last3f": "41.9"
+            }
+          ]
+        }
+      ],
+      "bettingLines": {
+        "umatan": [
+          "5-3.2.4.7",
+          "3-5.2.4.7"
+        ]
+      },
+      "generatedAt": "2026-04-02T05:48:43.541Z"
+    },
+    {
+      "raceInfo": {
+        "date": "2026-04-02",
+        "venue": "船橋",
+        "raceNumber": 6,
+        "raceName": "ナイスハルター特別",
+        "startTime": "17:20",
+        "distance": "1600",
+        "horseCount": 11
+      },
+      "horses": [
+        {
+          "horseNumber": 3,
+          "horseName": "トラペジウム",
+          "pt": 88,
+          "role": "本命",
+          "jockey": "川島正",
+          "trainer": "(船)大津",
+          "age": "牝3",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-04",
+              "venue": "川崎",
+              "distance": 1400,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｊ交 アクアマリンフラワー３歳",
+              "popularity": 4,
+              "passingOrder": "6-6-4-6",
+              "last3f": "39.1"
+            },
+            {
+              "date": "2026-02-10",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "３歳四組下選抜馬",
+              "popularity": 5,
+              "passingOrder": "11-10-9-8",
+              "last3f": "38.4"
+            },
+            {
+              "date": "2026-01-23",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 7,
+              "raceName": "３歳未出走未受賞ア",
+              "popularity": 2,
+              "passingOrder": "1-1-1",
+              "last3f": "39.7"
+            }
+          ]
+        },
+        {
+          "horseNumber": 2,
+          "horseName": "パテントプール",
+          "pt": 87,
+          "role": "対抗",
+          "jockey": "丹内祐",
+          "trainer": "(美)萩原",
+          "age": "牡3",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-01-05",
+              "venue": "Ｊ中山",
+              "distance": 1800,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "",
+              "popularity": 3,
+              "passingOrder": "3-2-3-5",
+              "last3f": "42.3"
+            },
+            {
+              "date": "2025-11-15",
+              "venue": "",
+              "distance": null,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "",
+              "popularity": 4,
+              "passingOrder": "4-2-2",
+              "last3f": "34.3"
+            }
+          ]
+        },
+        {
+          "horseNumber": 5,
+          "horseName": "プレザントトーン",
+          "pt": 82,
+          "role": "単穴",
+          "jockey": "佐々木大",
+          "trainer": "(美)秋本",
+          "age": "牝3",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-01-05",
+              "venue": "Ｊ京都",
+              "distance": 1800,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "",
+              "popularity": 8,
+              "passingOrder": "5-6-6-7",
+              "last3f": "40.2"
+            },
+            {
+              "date": "2025-12-07",
+              "venue": "Ｊ阪神",
+              "distance": 1800,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "",
+              "popularity": 7,
+              "passingOrder": "6-6-7-7",
+              "last3f": "38.2"
+            },
+            {
+              "date": "2025-11-22",
+              "venue": "Ｊ福島",
+              "distance": 1700,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "",
+              "popularity": 8,
+              "passingOrder": "14-13-13-12",
+              "last3f": "39.9"
+            }
+          ]
+        },
+        {
+          "horseNumber": 10,
+          "horseName": "レヴェンドール",
+          "pt": 76,
+          "role": "連下最上位",
+          "jockey": "野中悠",
+          "trainer": "(美)柄崎",
+          "age": "牝3",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-01-25",
+              "venue": "Ｊ中山",
+              "distance": 1800,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "",
+              "popularity": 3,
+              "passingOrder": "4-6-5-4",
+              "last3f": "38.3"
+            },
+            {
+              "date": "2026-01-18",
+              "venue": "Ｊ中山",
+              "distance": 1800,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 16,
+              "raceName": "",
+              "popularity": 6,
+              "passingOrder": "8-8-8-8",
+              "last3f": "38.6"
+            },
+            {
+              "date": "2025-10-05",
+              "venue": "",
+              "distance": null,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 17,
+              "raceName": "",
+              "popularity": 6,
+              "passingOrder": "3-5-4-4",
+              "last3f": "40.5"
+            }
+          ]
+        },
+        {
+          "horseNumber": 1,
+          "horseName": "メドウセージ",
+          "pt": 75,
+          "role": "連下",
+          "jockey": "本田重",
+          "trainer": "(栗)藤岡健",
+          "age": "牝3",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-01-17",
+              "venue": "",
+              "distance": null,
+              "rank": 17,
+              "finishStatus": null,
+              "headCount": 18,
+              "raceName": "",
+              "popularity": 11,
+              "passingOrder": "9-9-8-9",
+              "last3f": "39.4"
+            },
+            {
+              "date": "2025-10-25",
+              "venue": "",
+              "distance": null,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "",
+              "popularity": 9,
+              "passingOrder": "9-9",
+              "last3f": "36.6"
+            }
+          ]
+        },
+        {
+          "horseNumber": 11,
+          "horseName": "セザンバトラー",
+          "pt": 75,
+          "role": "連下",
+          "jockey": "小杉亮",
+          "trainer": "(船)林幻",
+          "age": "セン3",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 9,
+          "horseName": "アドバンスモダン",
+          "pt": 73,
+          "role": "連下",
+          "jockey": "笹川翼",
+          "trainer": "(栗)森秀行",
+          "age": "セン3",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 6,
+          "horseName": "スチールナイト",
+          "pt": 72,
+          "role": "補欠",
+          "jockey": "舟山瑠",
+          "trainer": "(美)和田雄",
+          "age": "牡3",
+          "weight": "53",
+          "recentRaces": [
+            {
+              "date": "2026-03-01",
+              "venue": "",
+              "distance": null,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 8,
+              "raceName": "",
+              "popularity": 8,
+              "passingOrder": "15-15",
+              "last3f": "41.3"
+            },
+            {
+              "date": "2026-02-14",
+              "venue": "",
+              "distance": null,
+              "rank": 15,
+              "finishStatus": null,
+              "headCount": 17,
+              "raceName": "",
+              "popularity": 15,
+              "passingOrder": "13-14",
+              "last3f": "36.7"
+            },
+            {
+              "date": "2026-01-24",
+              "venue": "",
+              "distance": null,
+              "rank": 18,
+              "finishStatus": null,
+              "headCount": 18,
+              "raceName": "",
+              "popularity": 18,
+              "passingOrder": "14-14-16-18",
+              "last3f": "38.4"
+            }
+          ]
+        },
+        {
+          "horseNumber": 4,
+          "horseName": "ストゥディア",
+          "pt": 70,
+          "role": "無",
+          "jockey": "木間塚龍",
+          "trainer": "(船)矢野義",
+          "age": "牡3",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1700,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "アクアマリンカップ３歳未格選抜",
+              "popularity": 9,
+              "passingOrder": "1-1-1-3",
+              "last3f": "41.6"
+            },
+            {
+              "date": "2026-02-27",
+              "venue": "浦和",
+              "distance": 1500,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "若盛特別３歳一",
+              "popularity": 5,
+              "passingOrder": "3-2-1-2",
+              "last3f": "41.1"
+            },
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "船橋フューチュリティマイル３歳",
+              "popularity": 9,
+              "passingOrder": "1-1-1-1",
+              "last3f": "41.1"
+            }
+          ]
+        },
+        {
+          "horseNumber": 7,
+          "horseName": "ショービット",
+          "pt": 70,
+          "role": "無",
+          "jockey": "佐野遥",
+          "trainer": "(美)小笠",
+          "age": "牡3",
+          "weight": "55"
+        },
+        {
+          "horseNumber": 8,
+          "horseName": "オオイシフジノハナ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "藤本現",
+          "trainer": "(船)林正人",
+          "age": "牡3",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "花見月特別３歳一",
+              "popularity": 9,
+              "passingOrder": "13-13",
+              "last3f": "38.8"
+            },
+            {
+              "date": "2026-02-23",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "涙も花束にして賞３歳二",
+              "popularity": 8,
+              "passingOrder": "13-14",
+              "last3f": "38.7"
+            },
+            {
+              "date": "2026-02-09",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "３歳二 三",
+              "popularity": 9,
+              "passingOrder": "6-8",
+              "last3f": "36.4"
+            }
+          ]
+        }
+      ],
+      "bettingLines": {
+        "umatan": [
+          "3-2.5.10.1.11.9(抑え6)",
+          "2-3.5.10.1.11.9(抑え6)"
+        ]
+      },
+      "generatedAt": "2026-04-02T05:48:43.541Z"
+    },
+    {
+      "raceInfo": {
+        "date": "2026-04-02",
+        "venue": "船橋",
+        "raceNumber": 7,
+        "raceName": "マックホルツダッシュ",
+        "startTime": "17:55",
+        "distance": "1000",
+        "horseCount": 11
+      },
+      "horses": [
+        {
+          "horseNumber": 11,
+          "horseName": "ヴェルデヴェント",
+          "pt": 85,
+          "role": "本命",
+          "jockey": "岡村健",
+          "trainer": "(船)大津",
+          "age": "牝7",
+          "weight": "54"
+        },
+        {
+          "horseNumber": 3,
+          "horseName": "スイッチオン",
+          "pt": 84,
+          "role": "対抗",
+          "jockey": "野畑凌",
+          "trainer": "(川)鈴木義",
+          "age": "牡6",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-03",
+              "venue": "川崎",
+              "distance": 900,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "進撃賞Ｃ１選定馬",
+              "popularity": 4,
+              "passingOrder": "12-9-7",
+              "last3f": "37.1"
+            },
+            {
+              "date": "2026-02-06",
+              "venue": "川崎",
+              "distance": 900,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "爆速賞Ｃ１選定馬",
+              "popularity": 3,
+              "passingOrder": "11-11-7",
+              "last3f": "37.5"
+            },
+            {
+              "date": "2026-01-01",
+              "venue": "川崎",
+              "distance": 1500,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "２３ｒｄゴールデンホーＣ１Ｃ２",
+              "popularity": 6,
+              "passingOrder": "8-9-6-6",
+              "last3f": "41.5"
+            }
+          ]
+        },
+        {
+          "horseNumber": 5,
+          "horseName": "エテルネル",
+          "pt": 84,
+          "role": "単穴",
+          "jockey": "山本大",
+          "trainer": "(船)新井",
+          "age": "牝6",
+          "weight": "51",
+          "recentRaces": [
+            {
+              "date": "2026-03-12",
+              "venue": "船橋",
+              "distance": 1000,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "全力疾走ダッシュＣ１選抜馬",
+              "popularity": 1,
+              "passingOrder": "7-7",
+              "last3f": "38.8"
+            },
+            {
+              "date": "2025-06-02",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": null,
+              "finishStatus": "中止",
+              "headCount": 12,
+              "raceName": "スイカズラスプリントＢ３選抜馬",
+              "popularity": 1,
+              "passingOrder": "6-6-5",
+              "last3f": "38.2"
+            },
+            {
+              "date": "2025-05-05",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "鯉のぼりスプリントＢ３選抜馬ア",
+              "popularity": 5,
+              "passingOrder": "5-4-4",
+              "last3f": "38.9"
+            }
+          ]
+        },
+        {
+          "horseNumber": 6,
+          "horseName": "ハクサンセレーネ",
+          "pt": 79,
+          "role": "連下最上位",
+          "jockey": "秋元耕",
+          "trainer": "(船)矢野義",
+          "age": "牝7",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-12",
+              "venue": "船橋",
+              "distance": 1000,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "全力疾走ダッシュＣ１選抜馬",
+              "popularity": 10,
+              "passingOrder": "10-10",
+              "last3f": "38.4"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1000,
+              "rank": 12,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "駿光ダッシュＣ１選抜馬",
+              "popularity": 11,
+              "passingOrder": "2-2-3-8",
+              "last3f": "43.6"
+            },
+            {
+              "date": "2026-01-23",
+              "venue": "船橋",
+              "distance": 1000,
+              "rank": 13,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "慶雲昌光ダッシュＣ１選抜馬",
+              "popularity": 9,
+              "passingOrder": "11-12",
+              "last3f": "37.9"
+            }
+          ]
+        },
+        {
+          "horseNumber": 2,
+          "horseName": "アンエクスプロード",
+          "pt": 75,
+          "role": "連下",
+          "jockey": "澤田龍",
+          "trainer": "(船)大津",
+          "age": "牡4",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ１五 六",
+              "popularity": 8,
+              "passingOrder": "2-1-1",
+              "last3f": "41.2"
+            },
+            {
+              "date": "2025-12-01",
+              "venue": "大井",
+              "distance": 1200,
+              "rank": 12,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "Ｃ１七 八",
+              "popularity": 8,
+              "passingOrder": "6-6",
+              "last3f": "41.9"
+            },
+            {
+              "date": "2025-11-10",
+              "venue": "大井",
+              "distance": 1200,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "Ｃ１八 九",
+              "popularity": 3,
+              "passingOrder": "6-6",
+              "last3f": "41.3"
+            }
+          ]
+        },
+        {
+          "horseNumber": 8,
+          "horseName": "サンファウンテン",
+          "pt": 75,
+          "role": "連下",
+          "jockey": "西村栄",
+          "trainer": "(船)石井",
+          "age": "牡5",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-10",
+              "venue": "船橋",
+              "distance": 1000,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "迅速果敢ダッシュＣ２Ｃ３選抜馬",
+              "popularity": 3,
+              "passingOrder": "2-3",
+              "last3f": "39.6"
+            },
+            {
+              "date": "2026-02-27",
+              "venue": "浦和",
+              "distance": 800,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "浦和８００ラウンドＣ２選抜馬ア",
+              "popularity": 3,
+              "passingOrder": "1-1",
+              "last3f": "40.4"
+            },
+            {
+              "date": "2026-02-12",
+              "venue": "船橋",
+              "distance": 1000,
+              "rank": 12,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "フェブラリーダッシュＣ２Ｃ３選",
+              "popularity": 1,
+              "passingOrder": "2-2",
+              "last3f": "38.7"
+            }
+          ]
+        },
+        {
+          "horseNumber": 9,
+          "horseName": "ミホノキセキ",
+          "pt": 74,
+          "role": "連下",
+          "jockey": "濱田達",
+          "trainer": "(船)山田信",
+          "age": "牝5",
+          "weight": "54"
+        },
+        {
+          "horseNumber": 4,
+          "horseName": "トーケンマンボ",
+          "pt": 71,
+          "role": "補欠",
+          "jockey": "山本紀",
+          "trainer": "(船)山本学",
+          "age": "牝7",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-12",
+              "venue": "船橋",
+              "distance": 1000,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "全力疾走ダッシュＣ１選抜馬",
+              "popularity": 6,
+              "passingOrder": "6-6",
+              "last3f": "38.6"
+            },
+            {
+              "date": "2026-02-12",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！熊本菊池水田ごＣ１二 三",
+              "popularity": 8,
+              "passingOrder": "2-2-3",
+              "last3f": "40.3"
+            },
+            {
+              "date": "2026-01-22",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "クロッカススプリントＣ１選抜馬",
+              "popularity": 9,
+              "passingOrder": "2-2-2",
+              "last3f": "40.4"
+            }
+          ]
+        },
+        {
+          "horseNumber": 1,
+          "horseName": "ウインラグラス",
+          "pt": 70,
+          "role": "無",
+          "jockey": "木間塚龍",
+          "trainer": "(船)長谷剛",
+          "age": "牝5",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ１五 六",
+              "popularity": 10,
+              "passingOrder": "1-2-2",
+              "last3f": "41.7"
+            },
+            {
+              "date": "2026-02-25",
+              "venue": "浦和",
+              "distance": 1500,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "越生町のマスコット「Ｃ１四 五",
+              "popularity": 10,
+              "passingOrder": "6-6-10-11",
+              "last3f": "42.4"
+            },
+            {
+              "date": "2026-02-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 12,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ１四 五 六ウ",
+              "popularity": 9,
+              "passingOrder": "6-7-8",
+              "last3f": "41.6"
+            }
+          ]
+        },
+        {
+          "horseNumber": 7,
+          "horseName": "キープカミング",
+          "pt": 70,
+          "role": "無",
+          "jockey": "臼井健",
+          "trainer": "(船)矢内",
+          "age": "牡5",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 10,
+          "horseName": "ラブシックボッサ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "仲野光",
+          "trainer": "(船)伊藤滋",
+          "age": "牡7",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "うお座賞Ｃ１一",
+              "popularity": 4,
+              "passingOrder": "9-9",
+              "last3f": "37.9"
+            },
+            {
+              "date": "2026-02-26",
+              "venue": "浦和",
+              "distance": 1500,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "まだまだ盛り上がろう！ウＣ１二",
+              "popularity": 6,
+              "passingOrder": "9-7-5",
+              "last3f": "37.6"
+            },
+            {
+              "date": "2026-02-12",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！熊本菊池水田ごＣ１二 三",
+              "popularity": 10,
+              "passingOrder": "7-3",
+              "last3f": "35.3"
+            }
+          ]
+        }
+      ],
+      "bettingLines": {
+        "umatan": [
+          "11-3.5.6.2.8.9(抑え4)",
+          "3-11.5.6.2.8.9(抑え4)"
+        ]
+      },
+      "generatedAt": "2026-04-02T05:48:43.542Z"
+    },
+    {
+      "raceInfo": {
+        "date": "2026-04-02",
+        "venue": "船橋",
+        "raceNumber": 8,
+        "raceName": "馬い！淡路うしろ農園玉ねぎ記念",
+        "startTime": "18:30",
+        "distance": "1200",
+        "horseCount": 11
+      },
+      "horses": [
+        {
+          "horseNumber": 8,
+          "horseName": "アルヴァレス",
+          "pt": 87,
+          "role": "本命",
+          "jockey": "篠谷葵",
+          "trainer": "(船)森泰斗",
+          "age": "牡5",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2025-12-21",
+              "venue": "Ｊ中京",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 16,
+              "raceName": "",
+              "popularity": 10,
+              "passingOrder": "11-10",
+              "last3f": "35.1"
+            },
+            {
+              "date": "2025-11-24",
+              "venue": "Ｊ福島",
+              "distance": 1150,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 16,
+              "raceName": "",
+              "popularity": 9,
+              "passingOrder": "11-11-11-11",
+              "last3f": "39.8"
+            },
+            {
+              "date": "2025-10-19",
+              "venue": "",
+              "distance": null,
+              "rank": 14,
+              "finishStatus": null,
+              "headCount": 18,
+              "raceName": "",
+              "popularity": 13,
+              "passingOrder": "8-8-8-8",
+              "last3f": "41.1"
+            }
+          ]
+        },
+        {
+          "horseNumber": 2,
+          "horseName": "フェイスザワン",
+          "pt": 84,
+          "role": "対抗",
+          "jockey": "所蛍",
+          "trainer": "(船)山下",
+          "age": "牡5",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！佐賀小松レモＣ１二 三 四",
+              "popularity": 9,
+              "passingOrder": "4-7-5",
+              "last3f": "38.8"
+            },
+            {
+              "date": "2025-10-03",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "渡り鳥スプリントＣ１一 二 三ウ",
+              "popularity": 9,
+              "passingOrder": "5-6-7",
+              "last3f": "39.3"
+            },
+            {
+              "date": "2025-08-31",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 12,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "獅子奮迅スプリントＣ１一 二 三",
+              "popularity": 10,
+              "passingOrder": "12-12-12",
+              "last3f": "40.8"
+            }
+          ]
+        },
+        {
+          "horseNumber": 5,
+          "horseName": "レインボーポラリス",
+          "pt": 81,
+          "role": "単穴",
+          "jockey": "矢野貴",
+          "trainer": "(船)新井",
+          "age": "牡7",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ１二 三 四ウ",
+              "popularity": 4,
+              "passingOrder": "11-9-10",
+              "last3f": "38.2"
+            },
+            {
+              "date": "2026-02-12",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！熊本菊池水田ごＣ１二 三",
+              "popularity": 4,
+              "passingOrder": "9-6-5",
+              "last3f": "39.0"
+            },
+            {
+              "date": "2026-01-23",
+              "venue": "船橋",
+              "distance": 1000,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "慶雲昌光ダッシュＣ１選抜馬",
+              "popularity": 7,
+              "passingOrder": "12-11",
+              "last3f": "36.5"
+            }
+          ]
+        },
+        {
+          "horseNumber": 10,
+          "horseName": "バトルクリーク",
+          "pt": 78,
+          "role": "連下最上位",
+          "jockey": "木間塚龍",
+          "trainer": "(船)斉藤敏",
+          "age": "牡5",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ１二 三 四ウ",
+              "popularity": 7,
+              "passingOrder": "12-10-10",
+              "last3f": "38.9"
+            },
+            {
+              "date": "2024-12-16",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "グレイトフルスプリントＢ３選抜",
+              "popularity": 2,
+              "passingOrder": "9-8-7",
+              "last3f": "38.0"
+            },
+            {
+              "date": "2024-11-27",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "ジャスミンスプリントＢ３選抜馬",
+              "popularity": 4,
+              "passingOrder": "8-8-6",
+              "last3f": "38.0"
+            }
+          ]
+        },
+        {
+          "horseNumber": 7,
+          "horseName": "サニーサフラン",
+          "pt": 77,
+          "role": "連下",
+          "jockey": "張田昂",
+          "trainer": "(船)張田",
+          "age": "牡6",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 11,
+          "horseName": "リュウノマサムネ",
+          "pt": 77,
+          "role": "連下",
+          "jockey": "野沢憲",
+          "trainer": "(船)斉藤敏",
+          "age": "牡6",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 1,
+          "horseName": "ノベンバーステップ",
+          "pt": 73,
+          "role": "連下",
+          "jockey": "濱田達",
+          "trainer": "(船)渋谷博",
+          "age": "牡6",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！佐賀小松レモＣ１二 三 四",
+              "popularity": 7,
+              "passingOrder": "7-9-10",
+              "last3f": "39.0"
+            },
+            {
+              "date": "2026-02-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｃ１四 五 六ウ",
+              "popularity": 7,
+              "passingOrder": "10-6-6",
+              "last3f": "40.0"
+            },
+            {
+              "date": "2025-12-08",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "ジャスミンスプリントＢ３選抜馬",
+              "popularity": 10,
+              "passingOrder": "7-8-9",
+              "last3f": "39.3"
+            }
+          ]
+        },
+        {
+          "horseNumber": 3,
+          "horseName": "メイショウポルポ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "山本大",
+          "trainer": "(船)玉井昇",
+          "age": "牡9",
+          "weight": "53",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！佐賀小松レモＣ１二 三 四",
+              "popularity": 11,
+              "passingOrder": "10-10-11",
+              "last3f": "40.1"
+            },
+            {
+              "date": "2026-02-25",
+              "venue": "浦和",
+              "distance": 1500,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "越生町のマスコット「Ｃ１四 五",
+              "popularity": 8,
+              "passingOrder": "9-9-9-6",
+              "last3f": "40.1"
+            },
+            {
+              "date": "2026-02-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！卵はサンサンＣ１四 五 六",
+              "popularity": 10,
+              "passingOrder": "10-11-12",
+              "last3f": "38.9"
+            }
+          ]
+        },
+        {
+          "horseNumber": 4,
+          "horseName": "ロシュニ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "仲野光",
+          "trainer": "(船)阿井",
+          "age": "牝4",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 12,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！佐賀小松レモＣ１二 三 四",
+              "popularity": 12,
+              "passingOrder": "11-8-8",
+              "last3f": "41.0"
+            },
+            {
+              "date": "2025-11-07",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 12,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "立冬特別Ｃ１一 二 三イ",
+              "popularity": 12,
+              "passingOrder": "5-7-8",
+              "last3f": "41.6"
+            },
+            {
+              "date": "2025-10-28",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "特選Ｃ１選抜牝馬",
+              "popularity": 10,
+              "passingOrder": "7-8-9-10",
+              "last3f": "39.7"
+            }
+          ]
+        },
+        {
+          "horseNumber": 6,
+          "horseName": "ナユタ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "小杉亮",
+          "trainer": "(船)伊藤滋",
+          "age": "牝4",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！佐賀小松レモＣ１二 三 四",
+              "popularity": 6,
+              "passingOrder": "2-2-2",
+              "last3f": "39.7"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1000,
+              "rank": null,
+              "finishStatus": "中止",
+              "headCount": 14,
+              "raceName": "駿光ダッシュＣ１選抜馬",
+              "popularity": 3,
+              "passingOrder": "6-6-3-4",
+              "last3f": "41.9"
+            },
+            {
+              "date": "2026-01-22",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "スターベリルスプリントＣ１選抜",
+              "popularity": 5,
+              "passingOrder": "7-5-5",
+              "last3f": "39.2"
+            }
+          ]
+        },
+        {
+          "horseNumber": 9,
+          "horseName": "アパショナード",
+          "pt": 70,
+          "role": "無",
+          "jockey": "秋元耕",
+          "trainer": "(浦)薮口",
+          "age": "牡7",
+          "weight": "56"
+        }
+      ],
+      "bettingLines": {
+        "umatan": [
+          "8-2.5.10.7.11.1",
+          "2-8.5.10.7.11.1"
+        ]
+      },
+      "generatedAt": "2026-04-02T05:48:43.542Z"
+    },
+    {
+      "raceInfo": {
+        "date": "2026-04-02",
+        "venue": "船橋",
+        "raceNumber": 9,
+        "raceName": "クローバースプリント",
+        "startTime": "19:05",
+        "distance": "1200",
+        "horseCount": 10
+      },
+      "horses": [
+        {
+          "horseNumber": 10,
+          "horseName": "ファストワン",
+          "pt": 89,
+          "role": "本命",
+          "jockey": "御神本訓",
+          "trainer": "(浦)藤原智",
+          "age": "牝4",
+          "weight": "55"
+        },
+        {
+          "horseNumber": 9,
+          "horseName": "トールハンマー",
+          "pt": 85,
+          "role": "対抗",
+          "jockey": "矢野貴",
+          "trainer": "(船)川島一",
+          "age": "牡4",
+          "weight": "57",
+          "recentRaces": [
+            {
+              "date": "2026-03-12",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "マーチスプリントＢ２選抜馬",
+              "popularity": 1,
+              "passingOrder": "1-1-1-1",
+              "last3f": "39.2"
+            },
+            {
+              "date": "2026-02-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "海神スプリントＢ３選抜馬ア",
+              "popularity": 1,
+              "passingOrder": "1-1-1",
+              "last3f": "37.9"
+            },
+            {
+              "date": "2026-01-19",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "初鷹スプリントＢ３選抜馬",
+              "popularity": 2,
+              "passingOrder": "1-1-1-1",
+              "last3f": "38.2"
+            }
+          ]
+        },
+        {
+          "horseNumber": 6,
+          "horseName": "アランフェスローズ",
+          "pt": 84,
+          "role": "単穴",
+          "jockey": "本田重",
+          "trainer": "(船)山中尊",
+          "age": "牝4",
+          "weight": "55",
+          "recentRaces": [
+            {
+              "date": "2026-03-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "ルピナススプリントＢ２Ｂ３選抜",
+              "popularity": 1,
+              "passingOrder": "2-2-2",
+              "last3f": "38.3"
+            },
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "エーデルワイス特別Ｃ１選抜馬",
+              "popularity": 2,
+              "passingOrder": "2-2-2",
+              "last3f": "38.1"
+            },
+            {
+              "date": "2026-01-22",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "スターベリルスプリントＣ１選抜",
+              "popularity": 2,
+              "passingOrder": "2-3-3",
+              "last3f": "40.2"
+            }
+          ]
+        },
+        {
+          "horseNumber": 7,
+          "horseName": "セイショウフジ",
+          "pt": 75,
+          "role": "連下最上位",
+          "jockey": "和田譲",
+          "trainer": "(船)米谷",
+          "age": "牡5",
+          "weight": "55",
+          "recentRaces": [
+            {
+              "date": "2026-01-20",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "馬い！淡路イザナミ玉ねＢ２Ｂ３",
+              "popularity": 3,
+              "passingOrder": "9-9-10",
+              "last3f": "37.7"
+            },
+            {
+              "date": "2025-12-08",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "ジャスミンスプリントＢ３選抜馬",
+              "popularity": 4,
+              "passingOrder": "10-10",
+              "last3f": "36.6"
+            },
+            {
+              "date": "2025-09-29",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "オリオンビアバー船橋競馬場Ｂ３",
+              "popularity": 2,
+              "passingOrder": "8-6-5",
+              "last3f": "36.5"
+            }
+          ]
+        },
+        {
+          "horseNumber": 3,
+          "horseName": "フォトスフィア",
+          "pt": 74,
+          "role": "連下",
+          "jockey": "山本大",
+          "trainer": "(船)佐藤裕",
+          "age": "牡7",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-12",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "マーチスプリントＢ２選抜馬",
+              "popularity": 9,
+              "passingOrder": "6-6-5",
+              "last3f": "37.9"
+            },
+            {
+              "date": "2026-02-28",
+              "venue": "浦和",
+              "distance": 1500,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "ありがとう！またねＢ２二Ｂ３一",
+              "popularity": 7,
+              "passingOrder": "8-8-8-6",
+              "last3f": "39.3"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "桜梅桃李賞Ｂ２",
+              "popularity": 12,
+              "passingOrder": "9-9-12-11",
+              "last3f": "40.8"
+            }
+          ]
+        },
+        {
+          "horseNumber": 4,
+          "horseName": "サーマウント",
+          "pt": 74,
+          "role": "連下",
+          "jockey": "本橋孝",
+          "trainer": "(船)張田",
+          "age": "牡5",
+          "weight": "55",
+          "recentRaces": [
+            {
+              "date": "2026-03-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "ルピナススプリントＢ２Ｂ３選抜",
+              "popularity": 8,
+              "passingOrder": "5-7-7",
+              "last3f": "39.3"
+            },
+            {
+              "date": "2025-07-05",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "ラベンダースプリントＢ２選抜馬",
+              "popularity": 7,
+              "passingOrder": "6-7-7",
+              "last3f": "39.7"
+            },
+            {
+              "date": "2025-06-05",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "マリーゴールドスプリントＢ２選",
+              "popularity": 5,
+              "passingOrder": "6-6-6",
+              "last3f": "40.2"
+            }
+          ]
+        },
+        {
+          "horseNumber": 8,
+          "horseName": "エイシンスコッティ",
+          "pt": 74,
+          "role": "連下",
+          "jockey": "木間塚龍",
+          "trainer": "(船)石井",
+          "age": "セン7",
+          "weight": "57"
+        },
+        {
+          "horseNumber": 2,
+          "horseName": "スピネーカー",
+          "pt": 71,
+          "role": "補欠",
+          "jockey": "小杉亮",
+          "trainer": "(船)矢野義",
+          "age": "牡5",
+          "weight": "57",
+          "recentRaces": [
+            {
+              "date": "2026-03-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "春蘭スプリントＢ２Ｂ３選抜馬イ",
+              "popularity": 6,
+              "passingOrder": "10-12-11",
+              "last3f": "39.9"
+            },
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "みずがめ座スプリントＢ２選抜馬",
+              "popularity": 9,
+              "passingOrder": "4-10-10",
+              "last3f": "39.2"
+            },
+            {
+              "date": "2026-01-22",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 8,
+              "raceName": "スノードロップスプリントＢ２選",
+              "popularity": 6,
+              "passingOrder": "1-1-1",
+              "last3f": "39.2"
+            }
+          ]
+        },
+        {
+          "horseNumber": 1,
+          "horseName": "キャッスルシオン",
+          "pt": 70,
+          "role": "無",
+          "jockey": "山中悠",
+          "trainer": "(船)渋谷博",
+          "age": "牝6",
+          "weight": "53",
+          "recentRaces": [
+            {
+              "date": "2026-03-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "ルピナススプリントＢ２Ｂ３選抜",
+              "popularity": 9,
+              "passingOrder": "4-5-5",
+              "last3f": "39.3"
+            },
+            {
+              "date": "2026-02-27",
+              "venue": "浦和",
+              "distance": 1400,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "最強ティアラ世代特別Ｂ３二",
+              "popularity": 9,
+              "passingOrder": "12-12-13-11",
+              "last3f": "37.7"
+            },
+            {
+              "date": "2026-02-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "浜風スプリントＢ３選抜馬イ",
+              "popularity": 10,
+              "passingOrder": "11-10-8",
+              "last3f": "39.7"
+            }
+          ]
+        },
+        {
+          "horseNumber": 5,
+          "horseName": "レオスパーク",
+          "pt": 70,
+          "role": "無",
+          "jockey": "張田昂",
+          "trainer": "(船)渡邊貴",
+          "age": "牡5",
+          "weight": "55",
+          "recentRaces": [
+            {
+              "date": "2026-03-10",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "アケビ特別Ｂ２三Ｂ３一",
+              "popularity": 6,
+              "passingOrder": "1-1-1-1",
+              "last3f": "42.2"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 14,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "野島崎特別Ｂ３一",
+              "popularity": 7,
+              "passingOrder": "8-8-11-12",
+              "last3f": "42.9"
+            },
+            {
+              "date": "2026-01-21",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "笑門来福賞Ｂ３二",
+              "popularity": 4,
+              "passingOrder": "10-9-7-7",
+              "last3f": "40.3"
+            }
+          ]
+        }
+      ],
+      "bettingLines": {
+        "umatan": [
+          "10-9.6.7.3.4.8(抑え2)",
+          "9-10.6.7.3.4.8(抑え2)"
+        ]
+      },
+      "generatedAt": "2026-04-02T05:48:43.542Z"
+    },
+    {
+      "raceInfo": {
+        "date": "2026-04-02",
+        "venue": "船橋",
+        "raceNumber": 10,
+        "raceName": "桜ドローンショー４月１８日開催！",
+        "startTime": "19:40",
+        "distance": "1600",
+        "horseCount": 14
+      },
+      "horses": [
+        {
+          "horseNumber": 11,
+          "horseName": "エンリプリンス",
+          "pt": 89,
+          "role": "本命",
+          "jockey": "山口達",
+          "trainer": "(船)林正人",
+          "age": "牡4",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "春疾風賞Ｃ１二 三 四ア",
+              "popularity": 9,
+              "passingOrder": "3-3-3-4",
+              "last3f": "40.0"
+            },
+            {
+              "date": "2026-02-09",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "鶯賞Ｃ１四 五 六ア",
+              "popularity": 12,
+              "passingOrder": "6-7-8-8",
+              "last3f": "40.7"
+            },
+            {
+              "date": "2026-01-19",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "睦月賞Ｃ１四 五",
+              "popularity": 11,
+              "passingOrder": "3-4-3-3",
+              "last3f": "39.7"
+            }
+          ]
+        },
+        {
+          "horseNumber": 12,
+          "horseName": "レンダリング",
+          "pt": 85,
+          "role": "対抗",
+          "jockey": "野沢憲",
+          "trainer": "(船)佐々清",
+          "age": "牡6",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 3,
+          "horseName": "ボールドチャー",
+          "pt": 79,
+          "role": "単穴",
+          "jockey": "笹川翼",
+          "trainer": "(船)稲益",
+          "age": "牡5",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2025-12-12",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "師走賞Ｃ１一 二 三ア",
+              "popularity": 10,
+              "passingOrder": "6-6-7-3",
+              "last3f": "39.3"
+            },
+            {
+              "date": "2025-11-04",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "馬い！卵はサンサンエＣ１四 五",
+              "popularity": 10,
+              "passingOrder": "6-8-5-10",
+              "last3f": "41.8"
+            },
+            {
+              "date": "2025-09-29",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "オリオンビール×新潟Ｃ１七 八",
+              "popularity": 12,
+              "passingOrder": "4-4-3-5",
+              "last3f": "39.5"
+            }
+          ]
+        },
+        {
+          "horseNumber": 13,
+          "horseName": "グレイトフルペイン",
+          "pt": 78,
+          "role": "連下最上位",
+          "jockey": "澤田龍",
+          "trainer": "(船)長谷剛",
+          "age": "牝5",
+          "weight": "54",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "春疾風賞Ｃ１二 三 四ア",
+              "popularity": 7,
+              "passingOrder": "9-9-10-8",
+              "last3f": "39.7"
+            },
+            {
+              "date": "2025-09-05",
+              "venue": "大井",
+              "distance": 1600,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "ソノラ賞Ｃ１二 三 四",
+              "popularity": 12,
+              "passingOrder": "10-8-5-6",
+              "last3f": "41.1"
+            },
+            {
+              "date": "2025-08-13",
+              "venue": "大井",
+              "distance": 1800,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 15,
+              "raceName": "ヒカルタカイ賞Ｃ１一選抜特別",
+              "popularity": 9,
+              "passingOrder": "12-12-11-11",
+              "last3f": "40.7"
+            }
+          ]
+        },
+        {
+          "horseNumber": 5,
+          "horseName": "カムバック",
+          "pt": 77,
+          "role": "連下",
+          "jockey": "臼井健",
+          "trainer": "(船)岩崎",
+          "age": "牡4",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2025-12-08",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "馬い！八丈西浜レモンＣ１六 七",
+              "popularity": 2,
+              "passingOrder": "5-5-4-3",
+              "last3f": "40.4"
+            },
+            {
+              "date": "2025-11-03",
+              "venue": "船橋",
+              "distance": 1500,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "感動の、渦になれ。記Ｃ１六 七",
+              "popularity": 4,
+              "passingOrder": "13-12-13-11",
+              "last3f": "38.4"
+            },
+            {
+              "date": "2025-06-03",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "Ｊ交 ナイスビット特別３歳未格",
+              "popularity": 4,
+              "passingOrder": "9-9-8",
+              "last3f": "38.4"
+            }
+          ]
+        },
+        {
+          "horseNumber": 6,
+          "horseName": "マクマード",
+          "pt": 74,
+          "role": "連下",
+          "jockey": "野畑凌",
+          "trainer": "(船)新井",
+          "age": "牡4",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 2,
+          "horseName": "バーンズベリー",
+          "pt": 73,
+          "role": "連下",
+          "jockey": "藤本現",
+          "trainer": "(船)佐々功",
+          "age": "牡4",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-09",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "Ｃ１五 六",
+              "popularity": 1,
+              "passingOrder": "5-6-7",
+              "last3f": "39.3"
+            },
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "ネコヤナギスプリントＣ２選抜馬",
+              "popularity": 1,
+              "passingOrder": "5-6-4",
+              "last3f": "38.9"
+            },
+            {
+              "date": "2026-01-21",
+              "venue": "船橋",
+              "distance": 1200,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "ジャニュアリースプリントＣ２選",
+              "popularity": 4,
+              "passingOrder": "8-8-5",
+              "last3f": "37.5"
+            }
+          ]
+        },
+        {
+          "horseNumber": 10,
+          "horseName": "タロマイスター",
+          "pt": 73,
+          "role": "補欠",
+          "jockey": "山中悠",
+          "trainer": "(浦)小久保",
+          "age": "牡7",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 8,
+          "horseName": "ホウオウヴィーナス",
+          "pt": 72,
+          "role": "補欠",
+          "jockey": "川島正",
+          "trainer": "(船)岩崎",
+          "age": "牝6",
+          "weight": "54"
+        },
+        {
+          "horseNumber": 1,
+          "horseName": "ソルテア",
+          "pt": 70,
+          "role": "無",
+          "jockey": "福原杏",
+          "trainer": "(浦)水野史",
+          "age": "牡6",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-17",
+              "venue": "浦和",
+              "distance": 2000,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "季春特別Ｃ１選抜馬ア",
+              "popularity": 7,
+              "passingOrder": "11-11-8-9",
+              "last3f": "41.6"
+            },
+            {
+              "date": "2026-02-27",
+              "venue": "浦和",
+              "distance": 2000,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "春花特別Ｃ１選抜馬",
+              "popularity": 8,
+              "passingOrder": "8-8-6-4",
+              "last3f": "39.6"
+            },
+            {
+              "date": "2026-02-12",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 13,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "Ｃ１二 三",
+              "popularity": 11,
+              "passingOrder": "7-8-11-13",
+              "last3f": "42.3"
+            }
+          ]
+        },
+        {
+          "horseNumber": 4,
+          "horseName": "コモドアーズ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "七夕裕",
+          "trainer": "(浦)横山保",
+          "age": "牡6",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 7,
+          "horseName": "ミズイロアウダクス",
+          "pt": 70,
+          "role": "無",
+          "jockey": "中山遥",
+          "trainer": "(船)伊藤滋",
+          "age": "牝4",
+          "weight": "53",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "春疾風賞Ｃ１二 三 四ア",
+              "popularity": 7,
+              "passingOrder": "5-6-7",
+              "last3f": "38.8"
+            },
+            {
+              "date": "2026-02-27",
+              "venue": "浦和",
+              "distance": 2000,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "春花特別Ｃ１選抜馬",
+              "popularity": 4,
+              "passingOrder": "9-9-8-5",
+              "last3f": "40.1"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1000,
+              "rank": 13,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "駿光ダッシュＣ１選抜馬",
+              "popularity": 6,
+              "passingOrder": "10-11-11",
+              "last3f": "39.1"
+            }
+          ]
+        },
+        {
+          "horseNumber": 9,
+          "horseName": "ハクサントップ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "秋元耕",
+          "trainer": "(船)矢野義",
+          "age": "牡8",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "春疾風賞Ｃ１二 三 四ア",
+              "popularity": 3,
+              "passingOrder": "3-3-4-5",
+              "last3f": "39.4"
+            },
+            {
+              "date": "2026-02-25",
+              "venue": "浦和",
+              "distance": 1500,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "越生町のマスコット「Ｃ１四 五",
+              "popularity": 6,
+              "passingOrder": "8-8-7-6",
+              "last3f": "38.9"
+            },
+            {
+              "date": "2026-02-10",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 12,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "アルデミラン特別Ｃ１選抜馬",
+              "popularity": 6,
+              "passingOrder": "8-9-9-9",
+              "last3f": "39.4"
+            }
+          ]
+        },
+        {
+          "horseNumber": 14,
+          "horseName": "ロードヴェスパー",
+          "pt": 70,
+          "role": "無",
+          "jockey": "木間塚龍",
+          "trainer": "(船)佐々功",
+          "age": "牡5",
+          "weight": "56"
+        }
+      ],
+      "bettingLines": {
+        "umatan": [
+          "11-12.3.13.5.6.2(抑え10.8)",
+          "12-11.3.13.5.6.2(抑え10.8)"
+        ]
+      },
+      "generatedAt": "2026-04-02T05:48:43.542Z"
+    },
+    {
+      "raceInfo": {
+        "date": "2026-04-02",
+        "venue": "船橋",
+        "raceNumber": 11,
+        "raceName": "こぼれ桜特別",
+        "startTime": "20:15",
+        "distance": "1800",
+        "horseCount": 9
+      },
+      "horses": [
+        {
+          "horseNumber": 6,
+          "horseName": "キタサンドーシン",
+          "pt": 89,
+          "role": "本命",
+          "jockey": "本田重",
+          "trainer": "(船)川島一",
+          "age": "牡7",
+          "weight": "57",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "３月２２日はばんえい記念Ｂ１二",
+              "popularity": 1,
+              "passingOrder": "4-4-3-2",
+              "last3f": "38.8"
+            },
+            {
+              "date": "2025-09-18",
+              "venue": "大井",
+              "distance": 1600,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "マイルグランプリトライアルＡ２",
+              "popularity": 3,
+              "passingOrder": "8-8-7-7",
+              "last3f": "38.5"
+            },
+            {
+              "date": "2025-08-31",
+              "venue": "船橋",
+              "distance": 1700,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "千葉ジェッツ盃Ａ２Ｂ１一",
+              "popularity": 1,
+              "passingOrder": "5-4-3-3",
+              "last3f": "37.7"
+            }
+          ]
+        },
+        {
+          "horseNumber": 4,
+          "horseName": "カレンアルカンタラ",
+          "pt": 83,
+          "role": "対抗",
+          "jockey": "山中悠",
+          "trainer": "(船)佐藤裕",
+          "age": "牡6",
+          "weight": "55",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "３月２２日はばんえい記念Ｂ１二",
+              "popularity": 4,
+              "passingOrder": "1-1-1-1",
+              "last3f": "40.0"
+            },
+            {
+              "date": "2026-02-04",
+              "venue": "川崎",
+              "distance": 2100,
+              "rank": 12,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "報知オールスターカＡ１下４歳上",
+              "popularity": 8,
+              "passingOrder": "3-3-5-10",
+              "last3f": "42.3"
+            },
+            {
+              "date": "2026-01-02",
+              "venue": "川崎",
+              "distance": 2100,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 7,
+              "raceName": "スパーキングオールスターＡ２下",
+              "popularity": 3,
+              "passingOrder": "1-1-2-2",
+              "last3f": "38.7"
+            }
+          ]
+        },
+        {
+          "horseNumber": 2,
+          "horseName": "ジルバーン",
+          "pt": 82,
+          "role": "単穴",
+          "jockey": "矢野貴",
+          "trainer": "(船)山下",
+          "age": "牡7",
+          "weight": "55",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "３月２２日はばんえい記念Ｂ１二",
+              "popularity": 3,
+              "passingOrder": "9-9-8-6",
+              "last3f": "38.7"
+            },
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 2200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "アルメリア賞Ａ２Ｂ１一",
+              "popularity": 4,
+              "passingOrder": "7-7-4-3",
+              "last3f": "39.9"
+            },
+            {
+              "date": "2026-01-20",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "白富士特別Ｂ１二Ｂ２一",
+              "popularity": 5,
+              "passingOrder": "11-11-12-13",
+              "last3f": "40.0"
+            }
+          ]
+        },
+        {
+          "horseNumber": 1,
+          "horseName": "アルラ",
+          "pt": 79,
+          "role": "連下最上位",
+          "jockey": "藤田凌",
+          "trainer": "(浦)箕輪",
+          "age": "牡7",
+          "weight": "57",
+          "recentRaces": [
+            {
+              "date": "2025-11-04",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "大福山特別Ａ２Ｂ１一",
+              "popularity": 2,
+              "passingOrder": "10-11-10-7",
+              "last3f": "38.0"
+            },
+            {
+              "date": "2025-10-29",
+              "venue": "浦和",
+              "distance": 2000,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "埼玉新聞栄冠賞３上オープン",
+              "popularity": 7,
+              "passingOrder": "7-7-7-6",
+              "last3f": "38.8"
+            },
+            {
+              "date": "2025-06-19",
+              "venue": "川崎",
+              "distance": 2000,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "中原オープン３上",
+              "popularity": 8,
+              "passingOrder": "8-6-5-3",
+              "last3f": "39.6"
+            }
+          ]
+        },
+        {
+          "horseNumber": 7,
+          "horseName": "マキシマムパワー",
+          "pt": 77,
+          "role": "連下",
+          "jockey": "町田直",
+          "trainer": "(船)林正人",
+          "age": "牡4",
+          "weight": "55",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 2400,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "ダイオライト記念JpnII",
+              "popularity": 9,
+              "passingOrder": "8-10-6-8",
+              "last3f": "41.1"
+            },
+            {
+              "date": "2026-02-12",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "冬夏青青特別Ｂ２Ｂ３選抜馬",
+              "popularity": 1,
+              "passingOrder": "7-6-4-4",
+              "last3f": "38.1"
+            },
+            {
+              "date": "2026-01-23",
+              "venue": "船橋",
+              "distance": 2200,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "ガーネット２２００Ｂ２Ｂ３選抜",
+              "popularity": 1,
+              "passingOrder": "10-10-5-4",
+              "last3f": "39.3"
+            }
+          ]
+        },
+        {
+          "horseNumber": 3,
+          "horseName": "ペルマナント",
+          "pt": 74,
+          "role": "連下",
+          "jockey": "藤本現",
+          "trainer": "(大)高野毅",
+          "age": "牡7",
+          "weight": "57",
+          "recentRaces": [
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 2200,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "アルメリア賞Ａ２Ｂ１一",
+              "popularity": 8,
+              "passingOrder": "10-9-9-7",
+              "last3f": "40.0"
+            },
+            {
+              "date": "2026-01-23",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "鯛ノ浦特別Ａ２Ｂ１一",
+              "popularity": 9,
+              "passingOrder": "11-11-11-11",
+              "last3f": "39.0"
+            },
+            {
+              "date": "2026-01-02",
+              "venue": "川崎",
+              "distance": 2100,
+              "rank": null,
+              "finishStatus": "除外",
+              "headCount": 7,
+              "raceName": "スパーキングオールスターＡ２下",
+              "popularity": 13,
+              "passingOrder": "13-13-13-13",
+              "last3f": "40.1"
+            }
+          ]
+        },
+        {
+          "horseNumber": 5,
+          "horseName": "ヒロシゲジャック",
+          "pt": 72,
+          "role": "連下",
+          "jockey": "笠野雄",
+          "trainer": "(船)山中尊",
+          "age": "牡7",
+          "weight": "55",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "３月２２日はばんえい記念Ｂ１二",
+              "popularity": 6,
+              "passingOrder": "6-6-5-7",
+              "last3f": "40.3"
+            },
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 2200,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "アルメリア賞Ａ２Ｂ１一",
+              "popularity": 5,
+              "passingOrder": "3-3-3-5",
+              "last3f": "40.7"
+            },
+            {
+              "date": "2026-01-23",
+              "venue": "船橋",
+              "distance": 2200,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "ガーネット２２００Ｂ２Ｂ３選抜",
+              "popularity": 11,
+              "passingOrder": "6-6-1-1",
+              "last3f": "40.1"
+            }
+          ]
+        },
+        {
+          "horseNumber": 8,
+          "horseName": "ナショナルモール",
+          "pt": 70,
+          "role": "無",
+          "jockey": "野畑凌",
+          "trainer": "(船)佐々清",
+          "age": "セン7",
+          "weight": "55",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "３月２２日はばんえい記念Ｂ１二",
+              "popularity": 9,
+              "passingOrder": "10-11-11-13",
+              "last3f": "39.1"
+            },
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 2200,
+              "rank": 3,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "アルメリア賞Ａ２Ｂ１一",
+              "popularity": 11,
+              "passingOrder": "4-4-10-11",
+              "last3f": "45.8"
+            },
+            {
+              "date": "2025-08-15",
+              "venue": "大井",
+              "distance": 2000,
+              "rank": null,
+              "finishStatus": "中止",
+              "headCount": 10,
+              "raceName": "シーブリーズ賞Ｂ１三Ｂ２一選抜",
+              "popularity": 7,
+              "passingOrder": "2-2-2-5",
+              "last3f": "41.6"
+            }
+          ]
+        },
+        {
+          "horseNumber": 9,
+          "horseName": "シトラルテミニ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "和田譲",
+          "trainer": "(浦)小久保",
+          "age": "牝5",
+          "weight": "55"
+        }
+      ],
+      "bettingLines": {
+        "umatan": [
+          "6-4.2.1.7.3.5",
+          "4-6.2.1.7.3.5"
+        ]
+      },
+      "generatedAt": "2026-04-02T05:48:43.542Z"
+    },
+    {
+      "raceInfo": {
+        "date": "2026-04-02",
+        "venue": "船橋",
+        "raceNumber": 12,
+        "raceName": "アンデルセン特別",
+        "startTime": "20:50",
+        "distance": "1800",
+        "horseCount": 12
+      },
+      "horses": [
+        {
+          "horseNumber": 7,
+          "horseName": "グラヴィス",
+          "pt": 85,
+          "role": "本命",
+          "jockey": "笹川翼",
+          "trainer": "(小)荒山",
+          "age": "牡5",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "大井",
+              "distance": 1800,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "ブリリアントカップトライアＡ２",
+              "popularity": 4,
+              "passingOrder": "4-4-4-4",
+              "last3f": "38.4"
+            },
+            {
+              "date": "2025-12-20",
+              "venue": "Ｊ中京",
+              "distance": 1800,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "",
+              "popularity": 2,
+              "passingOrder": "1-1-1-1",
+              "last3f": "40.5"
+            },
+            {
+              "date": "2025-10-05",
+              "venue": "Ｊ東京",
+              "distance": 1600,
+              "rank": 14,
+              "finishStatus": null,
+              "headCount": 16,
+              "raceName": "",
+              "popularity": 5,
+              "passingOrder": "6-8-8-9",
+              "last3f": "40.4"
+            }
+          ]
+        },
+        {
+          "horseNumber": 8,
+          "horseName": "プラセボ",
+          "pt": 82,
+          "role": "対抗",
+          "jockey": "小杉亮",
+          "trainer": "(船)林幻",
+          "age": "セン5",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 1,
+          "horseName": "ヴィクトゥーラ",
+          "pt": 80,
+          "role": "単穴",
+          "jockey": "野畑凌",
+          "trainer": "(川)田島寿",
+          "age": "牡8",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-10",
+              "venue": "船橋",
+              "distance": 1700,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "ブラッドストーン賞Ａ２Ｂ１一",
+              "popularity": 2,
+              "passingOrder": "7-8-7-7",
+              "last3f": "38.3"
+            },
+            {
+              "date": "2026-02-12",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "Ｊ交 ハートビートレイＡ２Ｂ１",
+              "popularity": 5,
+              "passingOrder": "13-13-13-7",
+              "last3f": "37.8"
+            },
+            {
+              "date": "2026-01-03",
+              "venue": "川崎",
+              "distance": 1600,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "川崎マイラーズ４歳上オープン",
+              "popularity": 8,
+              "passingOrder": "11-10-11-8",
+              "last3f": "38.6"
+            }
+          ]
+        },
+        {
+          "horseNumber": 3,
+          "horseName": "ヴェールトゥマラン",
+          "pt": 80,
+          "role": "連下最上位",
+          "jockey": "矢野貴",
+          "trainer": "(川)高月賢",
+          "age": "牡6",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2025-11-04",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 14,
+              "raceName": "大福山特別Ａ２Ｂ１一",
+              "popularity": 4,
+              "passingOrder": "7-8-9-6",
+              "last3f": "39.5"
+            },
+            {
+              "date": "2025-07-01",
+              "venue": "大井",
+              "distance": 1800,
+              "rank": null,
+              "finishStatus": "除外",
+              "headCount": 7,
+              "raceName": "ルビー賞Ａ２以下選抜特別",
+              "popularity": 1,
+              "passingOrder": "4-4-2-1",
+              "last3f": "39.4"
+            },
+            {
+              "date": "2025-04-02",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "こぼれ桜特別Ａ２Ｂ１一",
+              "popularity": 2,
+              "passingOrder": "2-2-2-1",
+              "last3f": "39.2"
+            }
+          ]
+        },
+        {
+          "horseNumber": 4,
+          "horseName": "フロインフォッサル",
+          "pt": 78,
+          "role": "連下",
+          "jockey": "本田重",
+          "trainer": "(船)山下",
+          "age": "牡5",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-10",
+              "venue": "船橋",
+              "distance": 1700,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "ブラッドストーン賞Ａ２Ｂ１一",
+              "popularity": 3,
+              "passingOrder": "8-7-8-8",
+              "last3f": "39.3"
+            },
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 2200,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "アルメリア賞Ａ２Ｂ１一",
+              "popularity": 1,
+              "passingOrder": "8-8-7-8",
+              "last3f": "39.5"
+            },
+            {
+              "date": "2026-01-13",
+              "venue": "大井",
+              "distance": 1800,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "ジャニュアリー賞Ａ２一Ｂ１一選",
+              "popularity": 3,
+              "passingOrder": "9-8-6-6",
+              "last3f": "37.9"
+            }
+          ]
+        },
+        {
+          "horseNumber": 12,
+          "horseName": "アオイイーグル",
+          "pt": 78,
+          "role": "連下",
+          "jockey": "舟山瑠",
+          "trainer": "(船)山下",
+          "age": "牡6",
+          "weight": "53"
+        },
+        {
+          "horseNumber": 5,
+          "horseName": "ゴールドバランサー",
+          "pt": 73,
+          "role": "連下",
+          "jockey": "町田直",
+          "trainer": "(船)林正人",
+          "age": "牡6",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-10",
+              "venue": "船橋",
+              "distance": 1700,
+              "rank": 8,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "ブラッドストーン賞Ａ２Ｂ１一",
+              "popularity": 6,
+              "passingOrder": "5-5-5-6",
+              "last3f": "40.1"
+            },
+            {
+              "date": "2025-08-01",
+              "venue": "船橋",
+              "distance": 1700,
+              "rank": 2,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "海ほたる特別Ａ２Ｂ１一",
+              "popularity": 11,
+              "passingOrder": "4-4-7-9",
+              "last3f": "42.5"
+            },
+            {
+              "date": "2025-07-06",
+              "venue": "船橋",
+              "distance": 2200,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "桑島孝春記念Ａ２Ｂ１一",
+              "popularity": 9,
+              "passingOrder": "4-4-6-13",
+              "last3f": "40.9"
+            }
+          ]
+        },
+        {
+          "horseNumber": 6,
+          "horseName": "ガバナビリティー",
+          "pt": 71,
+          "role": "補欠",
+          "jockey": "笠野雄",
+          "trainer": "(船)佐藤裕",
+          "age": "牡4",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 9,
+          "horseName": "ウィルシャイン",
+          "pt": 71,
+          "role": "補欠",
+          "jockey": "山本大",
+          "trainer": "(船)佐藤裕",
+          "age": "牝4",
+          "weight": "51",
+          "recentRaces": [
+            {
+              "date": "2026-03-04",
+              "venue": "川崎",
+              "distance": 2000,
+              "rank": 4,
+              "finishStatus": null,
+              "headCount": 6,
+              "raceName": "スプリングヒロインカップＡ１下",
+              "popularity": 12,
+              "passingOrder": "7-8-9-12",
+              "last3f": "44.6"
+            },
+            {
+              "date": "2026-02-11",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 11,
+              "finishStatus": null,
+              "headCount": 13,
+              "raceName": "クイーン賞JpnIII",
+              "popularity": 13,
+              "passingOrder": "7-7-13-13",
+              "last3f": "48.3"
+            },
+            {
+              "date": "2025-12-11",
+              "venue": "船橋",
+              "distance": 1600,
+              "rank": 1,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "クイーンズオーディションＡ２以",
+              "popularity": 11,
+              "passingOrder": "9-9-14-14",
+              "last3f": "48.2"
+            }
+          ]
+        },
+        {
+          "horseNumber": 2,
+          "horseName": "ケンシレインボー",
+          "pt": 70,
+          "role": "無",
+          "jockey": "山中悠",
+          "trainer": "(船)佐藤裕",
+          "age": "牡4",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-11",
+              "venue": "船橋",
+              "distance": 2400,
+              "rank": 10,
+              "finishStatus": null,
+              "headCount": 12,
+              "raceName": "ダイオライト記念JpnII",
+              "popularity": 11,
+              "passingOrder": "10-8-10-10",
+              "last3f": "45.1"
+            },
+            {
+              "date": "2026-01-28",
+              "venue": "大井",
+              "distance": 2600,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 15,
+              "raceName": "金盃４上オープン重賞",
+              "popularity": 8,
+              "passingOrder": "11-11-11-11",
+              "last3f": "38.4"
+            },
+            {
+              "date": "2026-01-02",
+              "venue": "川崎",
+              "distance": 2100,
+              "rank": 6,
+              "finishStatus": null,
+              "headCount": 7,
+              "raceName": "スパーキングオールスターＡ２下",
+              "popularity": 4,
+              "passingOrder": "3-2-3-3",
+              "last3f": "39.3"
+            }
+          ]
+        },
+        {
+          "horseNumber": 10,
+          "horseName": "ルークズネスト",
+          "pt": 70,
+          "role": "無",
+          "jockey": "見越彬",
+          "trainer": "(浦)小久保",
+          "age": "牡8",
+          "weight": "56"
+        },
+        {
+          "horseNumber": 11,
+          "horseName": "キャッスルブレイヴ",
+          "pt": 70,
+          "role": "無",
+          "jockey": "仲野光",
+          "trainer": "(船)渋谷博",
+          "age": "牡7",
+          "weight": "56",
+          "recentRaces": [
+            {
+              "date": "2026-03-13",
+              "venue": "大井",
+              "distance": 1800,
+              "rank": 7,
+              "finishStatus": null,
+              "headCount": 10,
+              "raceName": "ブリリアントカップトライアＡ２",
+              "popularity": 1,
+              "passingOrder": "3-3-3-3",
+              "last3f": "38.7"
+            },
+            {
+              "date": "2026-02-13",
+              "venue": "船橋",
+              "distance": 2200,
+              "rank": 9,
+              "finishStatus": null,
+              "headCount": 11,
+              "raceName": "アルメリア賞Ａ２Ｂ１一",
+              "popularity": 2,
+              "passingOrder": "4-4-6-2",
+              "last3f": "39.0"
+            },
+            {
+              "date": "2026-01-22",
+              "venue": "船橋",
+              "distance": 1800,
+              "rank": 5,
+              "finishStatus": null,
+              "headCount": 9,
+              "raceName": "報知グランプリカップ４上オープ",
+              "popularity": 1,
+              "passingOrder": "5-5-1-1",
+              "last3f": "38.1"
+            }
+          ]
+        }
+      ],
+      "bettingLines": {
+        "umatan": [
+          "7-8.1.3.4.12.5(抑え6.9)",
+          "8-7.1.3.4.12.5(抑え6.9)"
+        ]
+      },
+      "generatedAt": "2026-04-02T05:48:43.542Z"
+    }
+  ]
+}
