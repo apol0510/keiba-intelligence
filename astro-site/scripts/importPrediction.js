@@ -574,7 +574,7 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
           const horseObj = {
             horseNumber: h.number,
             horseName: h.name,
-            pt: Number(h.displayScore) || Number(h.rawScore) || 70, // ptフィールド（数値保証）
+            pt: (() => { const v = Number(h.displayScore) || Number(h.rawScore) || 70; return (isNaN(v) || v > 200) ? 70 : v; })(), // ptフィールド（数値保証、異常値ガード）
             role: h.role, // 印1システムではroleをそのまま保持
             jockey: h.jockey || h.kisyu || '', // 騎手
             trainer: h.trainer || h.kyusya || '', // 厩舎
