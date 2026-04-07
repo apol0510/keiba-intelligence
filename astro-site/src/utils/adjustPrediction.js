@@ -114,10 +114,13 @@ export function adjustPrediction(normalized) {
     // 全馬のcustomScoreが0の場合（computer/形式など）、rawScoreでソート
     const hasCustomScore = race.horses.some(h => h.customScore > 0);
 
+    // スコアのある馬のみ対象（customScore=0 かつ rawScore=0 は「無」のまま）
+    const activeHorses = race.horses.filter(h => h.customScore > 0 || h.rawScore > 0);
+
     // 独自スコアで降順ソート（customScoreがない場合はrawScoreでソート）
     const sortedHorses = hasCustomScore
-      ? [...race.horses].sort((a, b) => b.customScore - a.customScore)
-      : [...race.horses].sort((a, b) => b.rawScore - a.rawScore);
+      ? [...activeHorses].sort((a, b) => b.customScore - a.customScore)
+      : [...activeHorses].sort((a, b) => b.rawScore - a.rawScore);
 
     // customScoreがない場合（computer/形式など）で、既に役割が割り当てられている場合は維持
     const hasExistingRoles = race.horses.some(h => h.role !== '無');

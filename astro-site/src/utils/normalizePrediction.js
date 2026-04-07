@@ -100,7 +100,13 @@ export function normalizeDetailed(input) {
 
     // 馬データ変換
     let horses = (race.horses || []).map(horse => {
-      const rawScore = horse.PT || horse.totalScore || horse.computerIndex || horse.rawScore || 0;
+      // computerIndex 44以下は「無」扱い（rawScore=0）
+      const COMPI_MIN = 45;
+      let rawScore = horse.PT || horse.totalScore || horse.rawScore || 0;
+      if (rawScore === 0) {
+        const ci = parseInt(horse.computerIndex || '0');
+        rawScore = (ci >= COMPI_MIN) ? ci : 0;
+      }
       const role = horse.assignment || horse.role || '無';
 
       // 印1を取得（独自予想用）
@@ -132,9 +138,10 @@ export function normalizeDetailed(input) {
     const hasAssignment = horses.some(h => h.role !== '無');
     if (!hasAssignment && horses.length > 0) {
       // rawScore降順にソート
-      const sorted = [...horses].sort((a, b) => b.rawScore - a.rawScore);
+      // rawScore > 0 の馬のみ役割割り当て対象
+      const scored = horses.filter(h => h.rawScore > 0);
+      const sorted = [...scored].sort((a, b) => b.rawScore - a.rawScore);
 
-      // 上位から役割を割り当て
       if (sorted.length >= 1) sorted[0].role = '本命';
       if (sorted.length >= 2) sorted[1].role = '対抗';
       if (sorted.length >= 3) sorted[2].role = '単穴';
@@ -145,9 +152,7 @@ export function normalizeDetailed(input) {
       for (let i = 7; i < sorted.length; i++) {
         sorted[i].role = '補欠';
       }
-
-      // ソート後の配列をhorsesに戻す（番号順に戻す）
-      horses = sorted.sort((a, b) => a.number - b.number);
+      // rawScore=0 の馬は role='無' のまま
     }
 
     // 買い目データ（存在する場合）
