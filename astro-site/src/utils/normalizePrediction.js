@@ -117,8 +117,14 @@ export function normalizeDetailed(input) {
         jockey: horse.kisyu || horse.jockey || '', // 騎手
         trainer: horse.kyusya || horse.trainer || '', // 厩舎
         age: horse.seirei || horse.ageGender || horse.age || '', // 馬齢（牡3、牝4など）
-        weight: horse.kinryo || horse.weight || '' // 斤量
-        // ⚠️ marks（全記者印）は秘匿
+        weight: horse.kinryo || horse.weight || '', // 斤量
+        // racebook由来の拡張フィールド（存在する場合のみ保持）
+        ...(horse._pastRaces ? { _pastRaces: horse._pastRaces } : {}),
+        ...(horse._training ? { _training: horse._training } : {}),
+        ...(horse._shortComment ? { _shortComment: horse._shortComment } : {}),
+        ...(horse._predictedOdds ? { _predictedOdds: horse._predictedOdds } : {}),
+        ...(horse._sire ? { _sire: horse._sire } : {}),
+        ...(horse._marks ? { _marks: horse._marks } : {})
       };
     });
 

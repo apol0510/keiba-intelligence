@@ -141,6 +141,98 @@ async function fetchComputerPredictions(date, venue = 'nankan') {
 }
 
 /**
+ * keiba-data-sharedからracebook JSONを取得
+ * race-data-importer が保存したデータ（印・近走・調教を含む）
+ */
+async function fetchRacebookData(date, category = 'nankan') {
+  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+  const [year, month] = date.split('-');
+  const dirPath = `${category}/racebook/${year}/${month}`;
+  const owner = 'apol0510';
+  const repo = 'keiba-data-shared';
+
+  console.log(`📡 [RACEBOOK] racebookデータ取得中: ${dirPath}`);
+
+  const headers = GITHUB_TOKEN ? {
+    'Authorization': `token ${GITHUB_TOKEN}`,
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'keiba-intelligence-import'
+  } : {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'keiba-intelligence-import'
+  };
+
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
+  const dirResponse = await fetch(apiUrl, { headers });
+
+  if (!dirResponse.ok) {
+    console.log(`⏭️  [RACEBOOK] ディレクトリなし: ${dirPath}`);
+    return null;
+  }
+
+  const files = await dirResponse.json();
+  const dateFiles = files.filter(f => f.name.startsWith(`${date}-`) && f.name.endsWith('.json'));
+
+  if (dateFiles.length === 0) {
+    console.log(`⏭️  [RACEBOOK] ${date}のracebookファイルなし`);
+    return null;
+  }
+
+  const venues = [];
+  for (const file of dateFiles) {
+    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${file.name}`;
+    const fetchHeaders = GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {};
+    const response = await fetch(rawUrl, { headers: fetchHeaders });
+    if (!response.ok) continue;
+
+    const rbData = JSON.parse(await response.text());
+    console.log(`   ✅ [RACEBOOK] ${file.name} 取得完了 (${rbData.races?.length || 0}R)`);
+
+    venues.push(convertRacebookToPredictions(rbData, date));
+  }
+
+  if (venues.length === 0) return null;
+  return venues.length === 1 ? venues[0] : { venues };
+}
+
+function convertRacebookToPredictions(rbData, date) {
+  return {
+    raceDate: date,
+    date: date,
+    track: rbData.track,
+    venue: rbData.track,
+    totalRaces: rbData.races?.length || 0,
+    source: 'racebook',
+    races: (rbData.races || []).map(r => ({
+      raceNumber: r.raceNumber,
+      raceInfo: {
+        raceNumber: `${r.raceNumber}R`,
+        raceName: r.raceClass || '',
+        distance: r.distance || '',
+        raceType: r.conditions || ''
+      },
+      horses: (r.horses || []).map(h => ({
+        number: h.number,
+        name: h.name,
+        totalScore: h.totalScore || 0,
+        assignment: h.assignment || '無',
+        jockey: h.jockey || '',
+        trainer: h.trainer || '',
+        seirei: h.sexAge || '',
+        kinryo: h.weight != null ? String(h.weight) : '',
+        computerIndex: h.computerIndex || null,
+        _pastRaces: h.pastRaces || [],
+        _training: h.training || null,
+        _shortComment: h.shortComment || null,
+        _predictedOdds: h.predictedOdds || null,
+        _sire: h.sire || null,
+        _marks: h.marks || []
+      }))
+    }))
+  };
+}
+
+/**
  * keiba-data-sharedから予想JSONを取得（従来の統合ファイル）
  *
  * GitHub Contents APIを使用（private対応）
@@ -242,6 +334,12 @@ async function importPrediction(date, venue = 'nankan') {
     if (sharedJSON) {
       console.log(`⚠️  [IMPORT] 警告: 単一ファイル形式は将来廃止されます。会場別ファイルに移行してください。`);
     }
+  }
+
+  // 優先順位4: racebook（race-data-importer保存データ）
+  if (!sharedJSON) {
+    console.log(`📡 [IMPORT] racebook配下をチェック`);
+    sharedJSON = await fetchRacebookData(date, venue);
   }
 
   // 予想データがない場合はスキップ
@@ -473,10 +571,25 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
             age: h.age || h.seirei || '', // 馬齢
             weight: h.weight || h.kinryo || '' // 斤量
           };
-          // 過去走データがあれば追加
-          if (horseDataMap && horseDataMap.has(h.name)) {
+          // 過去走データ: racebook由来 > entries由来
+          if (h._pastRaces && h._pastRaces.length > 0) {
+            horseObj.recentRaces = h._pastRaces.slice(0, 5).map(pr => ({
+              date: null, venue: pr.venue || null, distance: null,
+              rank: pr.finish, finishStatus: null, headCount: null,
+              raceName: pr.raceClass || null, popularity: null,
+              passingOrder: null, last3f: pr.final3F || null,
+              time: pr.time || null, paceType: pr.paceType || null,
+              bodyWeight: pr.bodyWeight || null, winner: pr.winner || null
+            }));
+            horseObj.recentFormSource = 'racebook';
+          } else if (horseDataMap && horseDataMap.has(h.name)) {
             horseObj.recentRaces = horseDataMap.get(h.name);
+            horseObj.recentFormSource = 'entries';
           }
+          if (h._training) horseObj.training = h._training;
+          if (h._shortComment) horseObj.shortComment = h._shortComment;
+          if (h._predictedOdds) horseObj.predictedOdds = h._predictedOdds;
+          if (h._sire) horseObj.sire = h._sire;
           return horseObj;
         })
         .sort((a, b) => {

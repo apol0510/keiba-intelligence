@@ -128,6 +128,70 @@ async function fetchSharedPrediction(date, venue = 'jra') {
 }
 
 /**
+ * keiba-data-sharedからracebook JSONを取得（JRA用）
+ */
+async function fetchRacebookData(date, category = 'jra') {
+  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+  const [year, month] = date.split('-');
+  const dirPath = `${category}/racebook/${year}/${month}`;
+  const owner = 'apol0510';
+  const repo = 'keiba-data-shared';
+
+  console.log(`📡 [RACEBOOK] racebookデータ取得中: ${dirPath}`);
+
+  const headers = GITHUB_TOKEN ? {
+    'Authorization': `token ${GITHUB_TOKEN}`,
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'keiba-intelligence-import'
+  } : {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'keiba-intelligence-import'
+  };
+
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
+  const dirResponse = await fetch(apiUrl, { headers });
+
+  if (!dirResponse.ok) {
+    console.log(`⏭️  [RACEBOOK] ディレクトリなし: ${dirPath}`);
+    return null;
+  }
+
+  const files = await dirResponse.json();
+  const dateFiles = files.filter(f => f.name.startsWith(`${date}-`) && f.name.endsWith('.json'));
+
+  if (dateFiles.length === 0) {
+    console.log(`⏭️  [RACEBOOK] ${date}のracebookファイルなし`);
+    return null;
+  }
+
+  const venues = [];
+  for (const file of dateFiles) {
+    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${file.name}`;
+    const fetchHeaders = GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {};
+    const response = await fetch(rawUrl, { headers: fetchHeaders });
+    if (!response.ok) continue;
+
+    const rbData = JSON.parse(await response.text());
+    console.log(`   ✅ [RACEBOOK] ${file.name} 取得完了 (${rbData.races?.length || 0}R)`);
+
+    venues.push({
+      date, venue: rbData.track, totalRaces: rbData.races?.length || 0,
+      races: (rbData.races || []).map(r => ({
+        raceInfo: { raceNumber: `${r.raceNumber}R`, raceName: r.raceClass || '', distance: r.distance || '', raceType: r.conditions || '' },
+        horses: (r.horses || []).map(h => ({
+          number: h.number, name: h.name, totalScore: h.totalScore || 0, assignment: h.assignment || '無',
+          jockey: h.jockey || '', trainer: h.trainer || '', seirei: h.sexAge || '',
+          kinryo: h.weight != null ? String(h.weight) : '', computerIndex: h.computerIndex || null
+        }))
+      }))
+    });
+  }
+
+  if (venues.length === 0) return null;
+  return { date, venues };
+}
+
+/**
  * 予想データを取り込み（正規化 + 調整ルール適用）
  *
  * @param {string} date - 日付（YYYY-MM-DD）
@@ -137,8 +201,14 @@ async function fetchSharedPrediction(date, venue = 'jra') {
 async function importPrediction(date, venue = 'jra') {
   console.log(`\n━━━ ${date} 中央競馬予想データ取り込み開始 ━━━`);
 
-  // keiba-data-sharedから取得
-  const sharedJSON = await fetchSharedPrediction(date, venue);
+  // 優先順位1: predictions（従来）
+  let sharedJSON = await fetchSharedPrediction(date, venue);
+
+  // 優先順位2: racebook（race-data-importer保存データ）
+  if (!sharedJSON) {
+    console.log(`📡 [IMPORT] racebook配下をチェック`);
+    sharedJSON = await fetchRacebookData(date, venue);
+  }
 
   // 予想データがない場合はスキップ
   if (!sharedJSON) {
