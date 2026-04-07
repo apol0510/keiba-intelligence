@@ -39,10 +39,6 @@ const pageTitle = predictionData
   ? `${predictionData.eventInfo.date} ${predictionData.eventInfo.venue} 全${predictionData.eventInfo.totalRaces}R予想`
   : '予想データ';
 
-// generateAdvancedMetrics is imported in frontmatter from featureScores.js
-const _featureScoresReady = { generateAdvancedMetrics
-  };
-}
 ---
 
 <BaseLayout title={pageTitle} description="AI予想データ">
