@@ -114,6 +114,7 @@ export function normalizeDetailed(input) {
         role: role,
         mark: '', // adjustPrediction()で生成
         mark1: mark1, // 印1を保持（独自予想用）
+        marks: horse.marks || {}, // adjustPredictionのcustomScore計算用（印1〜印N）
         jockey: horse.kisyu || horse.jockey || '', // 騎手
         trainer: horse.kyusya || horse.trainer || '', // 厩舎
         age: horse.seirei || horse.ageGender || horse.age || '', // 馬齢（牡3、牝4など）
@@ -123,8 +124,7 @@ export function normalizeDetailed(input) {
         ...(horse._training ? { _training: horse._training } : {}),
         ...(horse._shortComment ? { _shortComment: horse._shortComment } : {}),
         ...(horse._predictedOdds ? { _predictedOdds: horse._predictedOdds } : {}),
-        ...(horse._sire ? { _sire: horse._sire } : {}),
-        ...(horse._marks ? { _marks: horse._marks } : {})
+        ...(horse._sire ? { _sire: horse._sire } : {})
       };
     });
 

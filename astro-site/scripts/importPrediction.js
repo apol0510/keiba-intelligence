@@ -211,23 +211,32 @@ function convertRacebookToPredictions(rbData, date) {
         distance: r.distance || '',
         raceType: r.conditions || ''
       },
-      horses: (r.horses || []).map(h => ({
-        number: h.number,
-        name: h.name,
-        totalScore: h.totalScore || 0,
-        assignment: h.assignment || '無',
-        jockey: h.jockey || '',
-        trainer: h.trainer || '',
-        seirei: h.sexAge || '',
-        kinryo: h.weight != null ? String(h.weight) : '',
-        computerIndex: h.computerIndex || null,
-        _pastRaces: h.pastRaces || [],
-        _training: h.training || null,
-        _shortComment: h.shortComment || null,
-        _predictedOdds: h.predictedOdds || null,
-        _sire: h.sire || null,
-        _marks: h.marks || []
-      }))
+      horses: (r.horses || []).map(h => {
+        // marks配列 → 印1〜印N object に変換
+        // adjustPredictionのcustomScore計算（印1×4+印2×3+印3×2+印4×1）で使用
+        const marksObj = {};
+        const marksArr = Array.isArray(h.marks) ? h.marks : [];
+        for (let mi = 0; mi < marksArr.length; mi++) {
+          marksObj[`印${mi + 1}`] = marksArr[mi];
+        }
+        return {
+          number: h.number,
+          name: h.name,
+          totalScore: h.totalScore || 0,
+          assignment: '無', // 既存ロジックで再割り当てさせる
+          jockey: h.jockey || '',
+          trainer: h.trainer || '',
+          seirei: h.sexAge || '',
+          kinryo: h.weight != null ? String(h.weight) : '',
+          computerIndex: h.computerIndex || null,
+          marks: marksObj,
+          _pastRaces: h.pastRaces || [],
+          _training: h.training || null,
+          _shortComment: h.shortComment || null,
+          _predictedOdds: h.predictedOdds || null,
+          _sire: h.sire || null
+        };
+      })
     }))
   };
 }
