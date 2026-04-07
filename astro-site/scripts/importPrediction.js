@@ -243,6 +243,68 @@ function convertRacebookToPredictions(rbData, date) {
 }
 
 /**
+ * racebook JSONからpastRacesだけを取得してhorseDataMapに変換
+ */
+async function fetchRacebookPastRaces(date, category = 'nankan') {
+  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+  const [year, month] = date.split('-');
+  const dirPath = `${category}/racebook/${year}/${month}`;
+  const owner = 'apol0510';
+  const repo = 'keiba-data-shared';
+
+  console.log(`📡 [RACEBOOK-PAST] racebookからpastRaces取得中: ${dirPath}`);
+
+  const headers = GITHUB_TOKEN ? {
+    'Authorization': `token ${GITHUB_TOKEN}`,
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'keiba-intelligence-import'
+  } : {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'keiba-intelligence-import'
+  };
+
+  try {
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
+    const dirResponse = await fetch(apiUrl, { headers });
+    if (!dirResponse.ok) return null;
+
+    const files = await dirResponse.json();
+    const dateFiles = files.filter(f => f.name.startsWith(`${date}-`) && f.name.endsWith('.json'));
+    if (dateFiles.length === 0) return null;
+
+    const horseDataMap = new Map();
+    for (const file of dateFiles) {
+      const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${file.name}`;
+      const fetchHeaders = GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {};
+      const response = await fetch(rawUrl, { headers: fetchHeaders });
+      if (!response.ok) continue;
+
+      const rbData = JSON.parse(await response.text());
+      for (const race of (rbData.races || [])) {
+        for (const horse of (race.horses || [])) {
+          if (horse.name && horse.pastRaces && horse.pastRaces.length > 0) {
+            horseDataMap.set(horse.name, horse.pastRaces.slice(0, 5).map(pr => ({
+              date: null, venue: pr.venue || null, distance: null,
+              rank: pr.finish, finishStatus: null, headCount: null,
+              raceName: pr.raceClass || null, popularity: null,
+              passingOrder: null, last3f: pr.final3F || null,
+              time: pr.time || null, paceType: pr.paceType || null,
+              bodyWeight: pr.bodyWeight || null, winner: pr.winner || null
+            })));
+          }
+        }
+      }
+    }
+
+    console.log(`✅ [RACEBOOK-PAST] ${horseDataMap.size}頭のpastRacesを取得`);
+    return horseDataMap.size > 0 ? horseDataMap : null;
+  } catch (err) {
+    console.warn('[RACEBOOK-PAST] 取得エラー:', err.message);
+    return null;
+  }
+}
+
+/**
  * keiba-data-sharedから予想JSONを取得（従来の統合ファイル）
  *
  * GitHub Contents APIを使用（private対応）
@@ -359,7 +421,11 @@ async function importPrediction(date, venue = 'nankan') {
   }
 
   // 出馬表データ（recentRaces）を取得
-  const horseDataMap = await fetchEntriesData(date, venue);
+  let horseDataMap = await fetchEntriesData(date, venue);
+  // entries未保存時はracebookのpastRacesで補完
+  if (!horseDataMap || horseDataMap.size === 0) {
+    horseDataMap = await fetchRacebookPastRaces(date, venue);
+  }
 
   // 【複数会場対応】venues配列があるか確認
   if (sharedJSON.venues && Array.isArray(sharedJSON.venues) && sharedJSON.venues.length > 0) {
