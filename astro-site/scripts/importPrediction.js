@@ -213,10 +213,10 @@ function convertRacebookToPredictions(rbData, date) {
         startTime: r.startTime || ''
       },
       horses: (r.horses || []).map(h => {
-        // marks配列 → 印1〜印N object に変換
+        // marks配列 → 印1〜印N object に変換（逆順: 本紙=配列末尾 → 印1に）
         // adjustPredictionのcustomScore計算（印1×4+印2×3+印3×2+印4×1）で使用
         const marksObj = {};
-        const marksArr = Array.isArray(h.marks) ? h.marks : [];
+        const marksArr = Array.isArray(h.marks) ? [...h.marks].reverse() : [];
         for (let mi = 0; mi < marksArr.length; mi++) {
           marksObj[`印${mi + 1}`] = marksArr[mi];
         }
@@ -574,7 +574,7 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
           const horseObj = {
             horseNumber: h.number,
             horseName: h.name,
-            pt: (() => { const v = Number(h.displayScore) || Number(h.rawScore) || 70; return (isNaN(v) || v > 200) ? 70 : v; })(), // ptフィールド（数値保証、異常値ガード）
+            pt: (() => { const v = Number(h.displayScore) || Number(h.rawScore) || 70; return (isNaN(v) || v > 100) ? 70 : v; })(), // ptフィールド（数値保証、100超は異常値）
             role: h.role, // 印1システムではroleをそのまま保持
             jockey: h.jockey || h.kisyu || '', // 騎手
             trainer: h.trainer || h.kyusya || '', // 厩舎

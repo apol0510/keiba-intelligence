@@ -143,10 +143,14 @@ export function generateAdvancedMetrics(horse, allHorses, raceInfo) {
   const dataRichness = Math.min(1, recent.length / 4);
   const modelCertainty = Math.min(0.95, Math.max(0.60, 0.65 + dataRichness * 0.25 + normalizedPt * 0.05));
 
-  // 推定オッズ: predictedOddsがあればそれを使用、なければpt順位から推定
-  const ptRank = allHorses.filter(h => Number(h.pt) > Number(horse.pt)).length + 1;
-  const rankBasedOdds = ptRank <= 1 ? 2.5 : ptRank <= 2 ? 4.0 : ptRank <= 3 ? 7.0 : ptRank <= 5 ? 12.0 : 25.0;
-  const estimatedOdds = horse.predictedOdds ? Number(horse.predictedOdds) : rankBasedOdds;
+  // 推定オッズ: predictedOddsがあればそれを使用、なければ勝率から逆算
+  let estimatedOdds;
+  if (horse.predictedOdds && Number(horse.predictedOdds) > 0) {
+    estimatedOdds = Number(horse.predictedOdds);
+  } else {
+    // 勝率から推定オッズを算出（控除率25%想定）
+    estimatedOdds = winProbability > 0 ? Math.max(1.2, (75 / winProbability)) : 50.0;
+  }
   // 期待値 = (オッズ × 勝率) - 1
   const expectedValue = (estimatedOdds * (winProbability / 100)) - 1;
 
