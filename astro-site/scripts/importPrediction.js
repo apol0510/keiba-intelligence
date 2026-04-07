@@ -209,7 +209,8 @@ function convertRacebookToPredictions(rbData, date) {
         raceNumber: `${r.raceNumber}R`,
         raceName: r.raceClass || '',
         distance: r.distance || '',
-        raceType: r.conditions || ''
+        raceType: r.conditions || '',
+        startTime: r.startTime || ''
       },
       horses: (r.horses || []).map(h => {
         // marks配列 → 印1〜印N object に変換
