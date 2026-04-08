@@ -282,15 +282,25 @@ async function fetchRacebookPastRaces(date, category = 'nankan') {
       const rbData = JSON.parse(await response.text());
       for (const race of (rbData.races || [])) {
         for (const horse of (race.horses || [])) {
-          if (horse.name && horse.pastRaces && horse.pastRaces.length > 0) {
-            horseDataMap.set(horse.name, horse.pastRaces.slice(0, 5).map(pr => ({
-              date: null, venue: pr.venue || null, distance: pr.distance || null,
-              rank: pr.finish, finishStatus: null, headCount: null,
-              raceName: pr.raceClass || null, popularity: null,
-              passingOrder: null, last3f: pr.final3F || null,
-              time: pr.time || null, paceType: pr.paceType || null,
-              bodyWeight: pr.bodyWeight || null, winner: pr.winner || null
-            })));
+          if (horse.name) {
+            const data = {
+              jockey: horse.jockey || null,
+              trainer: horse.trainer || null,
+              weight: horse.weight || null,
+              age: horse.sexAge || null,
+              sire: horse.sire || null
+            };
+            if (horse.pastRaces && horse.pastRaces.length > 0) {
+              data.recentRaces = horse.pastRaces.slice(0, 5).map(pr => ({
+                date: null, venue: pr.venue || null, distance: pr.distance || null,
+                rank: pr.finish, finishStatus: null, headCount: null,
+                raceName: pr.raceClass || null, popularity: null,
+                passingOrder: null, last3f: pr.final3F || null,
+                time: pr.time || null, paceType: pr.paceType || null,
+                bodyWeight: pr.bodyWeight || null, winner: pr.winner || null
+              }));
+            }
+            horseDataMap.set(horse.name, data);
           }
         }
       }
@@ -647,7 +657,18 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
             age: h.age || h.seirei || '', // 馬齢
             weight: h.weight || h.kinryo || '' // 斤量
           };
-          // 過去走データ: racebook由来 > entries由来
+          // racebook由来の基本情報で補完
+          if (horseDataMap && horseDataMap.has(h.name)) {
+            const rbInfo = horseDataMap.get(h.name);
+            if (rbInfo && typeof rbInfo === 'object' && !Array.isArray(rbInfo)) {
+              if (!horseObj.jockey && rbInfo.jockey) horseObj.jockey = rbInfo.jockey;
+              if (!horseObj.trainer && rbInfo.trainer) horseObj.trainer = rbInfo.trainer;
+              if (!horseObj.weight && rbInfo.weight) horseObj.weight = String(rbInfo.weight);
+              if (!horseObj.age && rbInfo.age) horseObj.age = rbInfo.age;
+              if (rbInfo.sire) horseObj.sire = rbInfo.sire;
+            }
+          }
+          // 過去走データ: racebook由来(_pastRaces) > horseDataMap > entries
           if (h._pastRaces && h._pastRaces.length > 0) {
             horseObj.recentRaces = h._pastRaces.slice(0, 5).map(pr => ({
               date: null, venue: pr.venue || null, distance: pr.distance || null,
@@ -659,8 +680,14 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
             }));
             horseObj.recentFormSource = 'racebook';
           } else if (horseDataMap && horseDataMap.has(h.name)) {
-            horseObj.recentRaces = horseDataMap.get(h.name);
-            horseObj.recentFormSource = 'entries';
+            const mapData = horseDataMap.get(h.name);
+            if (Array.isArray(mapData)) {
+              horseObj.recentRaces = mapData;
+              horseObj.recentFormSource = 'entries';
+            } else if (mapData && mapData.recentRaces) {
+              horseObj.recentRaces = mapData.recentRaces;
+              horseObj.recentFormSource = 'racebook';
+            }
           }
           if (h._training) horseObj.training = h._training;
           if (h._shortComment) horseObj.shortComment = h._shortComment;
