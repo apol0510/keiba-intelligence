@@ -8,61 +8,46 @@
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const PREDICTION_PROMPT = `あなたはKEIBA Intelligenceの競馬AI予想解説者です。
+const PREDICTION_PROMPT = `あなたは文章整形ツールです。
 
-以下のレース予想データを元に、簡潔な解説コメントを生成してください。
+入力された各行の語尾だけを自然な日本語に整え、そのまま出力してください。
 
 【絶対厳守ルール】
-- 提供されたデータのみを使用する。データにない情報は絶対に創作しない
-- 直近走データ（recentRaces）がある場合のみ、過去走の着順・会場・距離に触れてよい
-- 直近走データがない馬については、PT値と役割だけで言及する
-- 「コース適性」「血統」「パドックの気配」など、データにない情報は一切書かない
-- 知らないことは書かない。嘘を書くくらいなら書かない
-
-【解説の書き方】
-- 3〜5文程度で簡潔にまとめる
-- PT値（予測スコア）と直近走の着順を組み合わせて解説する
-- 例：「本命14番コパノハワードはPT90と高スコア。前走大井1600mで2着と好走しており安定感がある。逃げ脚質で展開も向きそうだ」
-- 直近走で1着があれば「勢いがある」、着順上昇傾向なら「上昇傾向」と表現してよい
-- 直近走で着外続きなら「近走は苦戦しているが、AIスコアは高く評価」と表現してよい
-- 脚質データ（逃げ・先行・差し・追込）がある場合はレース展開予想に活用する
-- 逃げ馬が複数いれば「ハイペース予想」、逃げ馬不在なら「スロー予想」と触れてよい
-- マークダウン記法は使わない。プレーンテキストのみ
+- 入力文を分解しない、結合しない、意味を拡張しない
+- 語尾の調整と句読点の追加のみ許可。語順変更は最小限のみ許可
+- 数値・馬名・会場名・距離・着順は一字一句変えない
+- 入力にない情報は絶対に追加しない
+- 1入力行＝1出力文。行を統合しない
+- 以下の表現は禁止: 「安定」「好走」「巻き返し」「期待」「有力」「注目」「実力」「勢い」「堅実」「上昇」「充実」等の評価語
+- 以下の接続は禁止: 「〜が」「〜ため」「〜ので」「〜であり」「〜しており」等の因果・逆接表現
+- 「コース適性」「血統」「パドック」「展開予想」「能力評価」など入力にない概念は書かない
 - 的中を保証する表現は禁止
-- 自然な日本語で、競馬ファンに向けた解説口調
-- 「KEIBA Intelligenceがお届けする」等の前置き・自己紹介は一切不要。いきなり解説本文から始める
-- 箇条書きや番号リストは使わない。文章で書く`;
 
-const RESULT_PROMPT = `あなたはKEIBA Intelligenceの競馬AI結果解説者です。
+【出力形式】
+- マークダウン記法は使わない。プレーンテキストのみ
+- 箇条書きや番号リストは使わない
+- 「KEIBA Intelligenceがお届けする」等の前置き・自己紹介は不要。いきなり本文から始める`;
 
-以下のレース結果データを元に、読み応えのある振り返りコメントを生成してください。
+const RESULT_PROMPT = `あなたは文章整形ツールです。
 
-【最重要ルール：判定フィールドは絶対的事実】
-- 【判定】が「的中」なら、そのレースは的中である。これは確定した事実であり、覆してはならない
-- 【判定】が「不的中」なら、そのレースは不的中である
-- 買い目データを独自に解析して「この組み合わせはカバーされていない」等と判断してはならない
-- 買い目フォーマットは表裏（1着-2着/2着-1着の両方向）を含む場合があり、見た目だけでは判断できない
-- 【判定】と矛盾する内容（的中なのに「逃した」「不的中」、不的中なのに「的中」等）は絶対に書いてはならない
+入力された各行の語尾だけを自然な日本語に整え、そのまま出力してください。
 
 【絶対厳守ルール】
-- 提供されたデータのみを使用する。データにない情報は絶対に創作・推測しない
-- 「前走」「過去の実績」「戦績」「脚質」「パドック」「血統」など、提供データに含まれない情報には一切触れない
-- 知らないことは書かない。嘘を書くくらいなら書かない
+- 入力文を分解しない、結合しない、意味を拡張しない
+- 語尾の調整と句読点の追加のみ許可。語順変更は最小限のみ許可
+- 馬番・馬名・着順・払戻金額・的中判定は一字一句変えない
+- 入力にない情報は絶対に追加しない
+- 1入力行＝1出力文。行を統合しない
+- 「的中」と書かれていれば的中、「不的中」と書かれていれば不的中。判定を覆さない
+- 以下の表現は禁止: 「惜しい」「さすが」「意外」「実力通り」「好走」「安定」「巻き返し」「期待」「有力」等の評価語
+- 以下の接続は禁止: 「〜が」「〜ため」「〜ので」「〜であり」「〜しており」等の因果・逆接表現
+- レース展開・脚質・能力評価・感想・主観は一切書かない
+- 買い目の軸馬構造（「軸馬は○番」等）には触れない
 
-【解説の書き方】
-- 4〜6文程度でしっかりまとめる
-- まず結果の要点（1着馬名と的中/不的中）を述べ、次にAI予想との関係を分析する
-- 買い目データの構造は「軸馬番号-相手馬番号」の形式だが、軸馬が何頭いるか・軸馬の構造には絶対に触れない。「軸馬は○番と○番」のような表現は禁止
-- 代わりに「AI予想の上位馬」「予想の中心馬」などの曖昧な表現を使う
-- 的中した場合: 払戻額を含めて評価する。高配当なら「AIが穴馬を捉えた好的中」、低配当なら「堅実に本命サイドを的中」等
-- 外れた場合: 勝った馬が予想に含まれていたかを分析する。原因の推測はしないが「1着馬は買い目に含まれていたものの、2着馬が予想外の結果となり不的中」等の事実分析はOK
-- hitLines（的中した買い目）がある場合は的中の事実に触れてよいが、買い目の構造・形式をそのまま引用しない
-- 馬単の組み合わせと配当の関係に触れると読み応えが出る
+【出力形式】
 - マークダウン記法は使わない。プレーンテキストのみ
-- 言い訳はせず客観的に事実を述べつつ、分析的な視点を加える
-- 自然な日本語で、競馬ファンが読んで「なるほど」と思える解説口調
-- 「KEIBA Intelligenceがお届けする」等の前置き・自己紹介は一切不要。いきなり解説本文から始める
-- 箇条書きや番号リストは使わない。文章で書く`;
+- 箇条書きや番号リストは使わない
+- 「KEIBA Intelligenceがお届けする」等の前置き・自己紹介は不要。いきなり本文から始める`;
 
 exports.handler = async (event, context) => {
   const headers = {
@@ -111,10 +96,7 @@ exports.handler = async (event, context) => {
       contents: [{ role: 'user', parts: [{ text: userMessage }] }],
       generationConfig: {
         maxOutputTokens: 2048,
-        temperature: 0.8,
-        thinkingConfig: {
-          thinkingBudget: 0,
-        },
+        temperature: 0.3,
       },
     });
 
@@ -137,91 +119,103 @@ exports.handler = async (event, context) => {
 };
 
 /**
- * 通過順から脚質を判定
+ * recentRaceの1件を検証し、完全なデータのみ返す。不完全なら null
+ * 必須: venue（会場名のみ）, distance（数値）, rank（着順数値）or finishStatus
  */
-function judgeRunningStyle(recentRaces) {
-  if (!recentRaces || recentRaces.length === 0) return null;
+function validateRecentRace(race) {
+  if (!race) return null;
 
-  const styles = recentRaces
-    .filter(r => r.passingOrder && r.rank)
-    .map(r => {
-      const positions = r.passingOrder.split('-').map(Number);
-      const firstPos = positions[0];
-      const headCount = r.headCount || 12;
-      const ratio = firstPos / headCount;
+  // rank も finishStatus もなければ不完全 → 削除
+  const hasRank = race.rank && typeof race.rank === 'number' && race.rank > 0;
+  const hasFinishStatus = race.finishStatus && typeof race.finishStatus === 'string';
+  if (!hasRank && !hasFinishStatus) return null;
 
-      if (firstPos <= 1) return '逃げ';
-      if (ratio <= 0.25) return '先行';
-      if (ratio <= 0.6) return '差し';
-      return '追込';
-    });
+  // venue: 会場名のみ抽出（"盛岡 11.17" → "盛岡"、null → 不完全）
+  if (!race.venue) return null;
+  const venueName = race.venue.replace(/\s+[\d.\/]+$/, '').trim();
+  if (!venueName) return null;
 
-  if (styles.length === 0) return null;
+  // distance: 数値のみ抽出（"ダ1400" → 1400、null → 不完全）
+  let distanceNum = null;
+  if (race.distance) {
+    const distStr = race.distance.toString().replace(/^[ダ芝障]+/, '').trim();
+    const parsed = parseInt(distStr, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      distanceNum = parsed;
+    }
+  }
+  // distanceがなければ不完全 → 削除
+  if (!distanceNum) return null;
 
-  // 最頻出の脚質を返す
-  const counts = {};
-  styles.forEach(s => { counts[s] = (counts[s] || 0) + 1; });
-  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+  const rankText = hasFinishStatus ? race.finishStatus : `${race.rank}着`;
+
+  return { venue: venueName, distance: distanceNum, rankText };
 }
 
+/**
+ * 予想データを事前確定された事実文に変換する
+ * LLMは「この文章を自然な日本語に整形するだけ」
+ */
 function formatPredictionData(data) {
   const { venue, date, raceNumber, raceName, distance, horseCount, topHorses } = data;
-  let text = `【レース情報】\n`;
-  text += `${date} ${venue} ${raceNumber}R ${raceName || ''}\n`;
-  if (distance) text += `距離: ${distance}m / `;
-  if (horseCount) text += `出走頭数: ${horseCount}頭\n`;
-  text += `\n【予想上位馬】\n`;
-  topHorses.forEach((h, i) => {
-    const style = judgeRunningStyle(h.recentRaces);
-    const styleText = style ? ` 脚質:${style}` : '';
-    text += `${i + 1}. ${h.role} ${h.horseNumber}番 ${h.horseName} (PT: ${h.pt}) 騎手: ${h.jockey || '不明'}${styleText}\n`;
-    // 直近走データがあれば追加（1走目=前走、2走目=前々走の順）
+
+  const facts = [];
+  facts.push(`${date} ${venue} ${raceNumber}R${raceName ? ' ' + raceName : ''}${distance ? ' ' + distance + 'm' : ''}${horseCount ? ' ' + horseCount + '頭立て' : ''}`);
+
+  topHorses.forEach(h => {
+    // 1行目: 役割・馬番・馬名・PT
+    facts.push(`${h.role}は${h.horseNumber}番${h.horseName}、PT${h.pt}`);
+
+    // recentRaces を厳密に検証し、完全なデータのみ使用（1走=1行）
     if (h.recentRaces && h.recentRaces.length > 0) {
-      h.recentRaces.forEach((r, idx) => {
-        const label = idx === 0 ? '前走' : idx === 1 ? '2走前' : '3走前';
-        const rankText = r.finishStatus ? r.finishStatus : `${r.rank}着`;
-        text += `   ${label}: ${r.date} ${r.venue}${r.distance}m ${rankText}(${r.headCount}頭中)\n`;
-      });
+      let count = 0;
+      for (const r of h.recentRaces) {
+        const validated = validateRecentRace(r);
+        if (!validated) continue;
+        const label = count === 0 ? '前走' : count === 1 ? '2走前' : '3走前';
+        facts.push(`${label}は${validated.venue}${validated.distance}mで${validated.rankText}`);
+        count++;
+        if (count >= 3) break;
+      }
     }
   });
 
-  // 展開予想用の脚質分布
-  const styles = topHorses.map(h => judgeRunningStyle(h.recentRaces)).filter(Boolean);
-  if (styles.length > 0) {
-    const escapeCount = styles.filter(s => s === '逃げ').length;
-    const frontCount = styles.filter(s => s === '先行').length;
-    text += `\n【上位馬の脚質分布】逃げ:${escapeCount}頭 先行:${frontCount}頭 差し:${styles.filter(s => s === '差し').length}頭 追込:${styles.filter(s => s === '追込').length}頭\n`;
-  }
-
-  return text;
+  return `以下の各行の語尾だけ整えて出力してください。内容の追加・変更・結合は禁止です。\n\n${facts.join('\n')}`;
 }
 
+/**
+ * 結果データを事前確定された事実文に変換する
+ * LLMは「この文章を自然な日本語に整形するだけ」
+ */
 function formatResultData(data) {
   const { venue, date, raceNumber, raceName, isHit, result, bettingLines, hitLines, payout, umatanCombination } = data;
-  let text = `【レース情報】\n`;
-  text += `${date} ${venue} ${raceNumber}R ${raceName || ''}\n`;
-  text += `\n【レース結果】\n`;
-  text += `1着: ${result.first.number}番 ${result.first.name || ''}\n`;
-  text += `2着: ${result.second.number}番 ${result.second.name || ''}\n`;
-  text += `3着: ${result.third.number}番 ${result.third.name || ''}\n`;
+
+  const facts = [];
+
+  // ① 結果事実
+  facts.push(`${date} ${venue} ${raceNumber}R${raceName ? ' ' + raceName : ''}`);
+  facts.push(`1着: ${result.first.number}番${result.first.name ? ' ' + result.first.name : ''}`);
+  facts.push(`2着: ${result.second.number}番${result.second.name ? ' ' + result.second.name : ''}`);
+  facts.push(`3着: ${result.third.number}番${result.third.name ? ' ' + result.third.name : ''}`);
   if (umatanCombination) {
-    text += `馬単: ${umatanCombination}\n`;
+    facts.push(`馬単: ${umatanCombination}`);
   }
-  text += `\n【AI予想の買い目】\n`;
+
+  // ② AI予想の買い目
   if (bettingLines && bettingLines.length > 0) {
-    bettingLines.forEach(line => {
-      text += `${line}\n`;
-    });
-  } else {
-    text += `データなし\n`;
+    facts.push(`AI予想の買い目: ${bettingLines.join(' / ')}`);
   }
+
+  // ③ 的中状況
+  facts.push(`判定: ${isHit ? '的中' : '不的中'}`);
   if (hitLines && hitLines.length > 0) {
-    text += `\n【的中した買い目】\n`;
-    hitLines.forEach(line => {
-      text += `${line}\n`;
-    });
+    facts.push(`的中した買い目: ${hitLines.join(' / ')}`);
   }
-  text += `\n【判定】${isHit ? '的中' : '不的中'}\n`;
-  if (isHit && payout) text += `払戻: ¥${payout.toLocaleString()}\n`;
-  return text;
+
+  // ④ 金額結果
+  if (isHit && payout) {
+    facts.push(`払戻: ¥${payout.toLocaleString()}`);
+  }
+
+  return `以下の各行の語尾だけ整えて出力してください。内容の追加・変更・結合は禁止です。\n\n${facts.join('\n')}`;
 }
