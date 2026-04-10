@@ -8,41 +8,42 @@
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const PREDICTION_PROMPT = `あなたは文章整形ツールです。
+const PREDICTION_PROMPT = `あなたは競馬AI予想の解説ライターです。
 
-入力された各行の語尾だけを自然な日本語に整え、そのまま出力してください。
+入力されたデータ（レース情報・各馬の近走成績・分析結果）を、読みやすい自然な解説文にまとめてください。
 
 【絶対厳守ルール】
-- 入力文を分解しない、結合しない、意味を拡張しない
-- 語尾の調整と句読点の追加のみ許可。語順変更は最小限のみ許可
-- 数値・馬名・会場名・距離・着順は一字一句変えない
-- 入力にない情報は絶対に追加しない
-- 1入力行＝1出力文。行を統合しない
-- 以下の表現は禁止: 「安定」「好走」「巻き返し」「期待」「有力」「注目」「実力」「勢い」「堅実」「上昇」「充実」等の評価語
-- 以下の接続は禁止: 「〜が」「〜ため」「〜ので」「〜であり」「〜しており」等の因果・逆接表現
-- 「コース適性」「血統」「パドック」「展開予想」「能力評価」など入力にない概念は書かない
-- 的中を保証する表現は禁止
+- 入力データに含まれる事実のみを使う。入力にない情報は絶対に追加しない
+- 数値・馬名・会場名・距離・着順・タイムは一字一句変えない
+- 的中を保証する表現は禁止（「確実」「間違いない」「鉄板」等）
+- 「コース適性」「血統」「パドック」等、入力にないデータに基づく分析は書かない
+- 各馬の解説は入力の[分析]セクションの内容に基づくこと
+
+【文章スタイル】
+- 各馬ごとに1〜2文で簡潔にまとめる
+- レース概要→本命→対抗→その他の順で書く
+- 近走の着順やタイムに触れながら、なぜその評価なのかが伝わる文章にする
+- 語尾は「〜だ」「〜である」調で統一
 
 【出力形式】
 - マークダウン記法は使わない。プレーンテキストのみ
 - 箇条書きや番号リストは使わない
 - 「KEIBA Intelligenceがお届けする」等の前置き・自己紹介は不要。いきなり本文から始める`;
 
-const RESULT_PROMPT = `あなたは文章整形ツールです。
+const RESULT_PROMPT = `あなたは競馬AI予想の結果振り返りライターです。
 
-入力された各行の語尾だけを自然な日本語に整え、そのまま出力してください。
+入力されたレース結果データを、読みやすい自然な振り返り文にまとめてください。
 
 【絶対厳守ルール】
-- 入力文を分解しない、結合しない、意味を拡張しない
-- 語尾の調整と句読点の追加のみ許可。語順変更は最小限のみ許可
+- 入力データに含まれる事実のみを使う。入力にない情報は絶対に追加しない
 - 馬番・馬名・着順・払戻金額・的中判定は一字一句変えない
-- 入力にない情報は絶対に追加しない
-- 1入力行＝1出力文。行を統合しない
 - 「的中」と書かれていれば的中、「不的中」と書かれていれば不的中。判定を覆さない
-- 以下の表現は禁止: 「惜しい」「さすが」「意外」「実力通り」「好走」「安定」「巻き返し」「期待」「有力」等の評価語
-- 以下の接続は禁止: 「〜が」「〜ため」「〜ので」「〜であり」「〜しており」等の因果・逆接表現
-- レース展開・脚質・能力評価・感想・主観は一切書かない
+- レース展開・脚質・能力評価など入力にない分析は書かない
 - 買い目の軸馬構造（「軸馬は○番」等）には触れない
+
+【文章スタイル】
+- レース結果→AI予想の買い目→的中判定の順で簡潔にまとめる
+- 語尾は「〜だ」「〜である」調で統一
 
 【出力形式】
 - マークダウン記法は使わない。プレーンテキストのみ
@@ -96,7 +97,7 @@ exports.handler = async (event, context) => {
       contents: [{ role: 'user', parts: [{ text: userMessage }] }],
       generationConfig: {
         maxOutputTokens: 2048,
-        temperature: 0.3,
+        temperature: 0.5,
       },
     });
 
@@ -153,34 +154,130 @@ function validateRecentRace(race) {
 }
 
 /**
- * 予想データを事前確定された事実文に変換する
- * LLMは「この文章を自然な日本語に整形するだけ」
+ * 近走データから分析ファクトを生成する（LLMに渡す前の事前計算）
+ */
+function analyzeRecentRaces(recentRaces, currentDistance, currentVenue) {
+  if (!recentRaces || recentRaces.length === 0) return null;
+
+  const analysis = {};
+  const validRaces = [];
+
+  for (const r of recentRaces.slice(0, 5)) {
+    const validated = validateRecentRace(r);
+    if (!validated) continue;
+    validRaces.push({ ...validated, raw: r });
+  }
+  if (validRaces.length === 0) return null;
+
+  // 直近走の成績サマリ（最大3走）
+  const runLines = [];
+  for (let i = 0; i < Math.min(3, validRaces.length); i++) {
+    const v = validRaces[i];
+    const label = i === 0 ? '前走' : i === 1 ? '2走前' : '3走前';
+    let line = `${label}${v.venue}${v.distance}m${v.rankText}`;
+    // 上がり3Fを追加
+    const f3 = parseFloat(v.raw.last3f || '0');
+    if (f3 > 0) {
+      line += `(上がり${f3}秒)`;
+    }
+    runLines.push(line);
+  }
+  analysis.runLines = runLines;
+
+  // 着順傾向（直近の好走率）
+  const top3count = validRaces.filter(r => {
+    const rank = r.raw.rank;
+    return rank && rank <= 3;
+  }).length;
+  if (validRaces.length >= 2) {
+    analysis.top3rate = `直近${validRaces.length}走中${top3count}回3着以内`;
+  }
+
+  // 上がり3F分析
+  const f3values = validRaces.map(r => parseFloat(r.raw.last3f || '0')).filter(v => v > 0);
+  if (f3values.length >= 2) {
+    const avg = f3values.reduce((a, b) => a + b, 0) / f3values.length;
+    const best = Math.min(...f3values);
+    analysis.last3f = `上がり3F平均${avg.toFixed(1)}秒、最速${best.toFixed(1)}秒`;
+  } else if (f3values.length === 1) {
+    analysis.last3f = `前走の上がり3Fは${f3values[0].toFixed(1)}秒`;
+  }
+
+  // 距離適性
+  const targetDist = parseInt(String(currentDistance || '').match(/(\d{3,4})/)?.[1] || '0');
+  if (targetDist > 0) {
+    const sameDistRaces = validRaces.filter(r => {
+      const rDist = r.distance;
+      return rDist && Math.abs(rDist - targetDist) <= 200;
+    });
+    if (sameDistRaces.length > 0) {
+      const goodCount = sameDistRaces.filter(r => r.raw.rank && r.raw.rank <= 3).length;
+      analysis.distFit = `同距離帯${sameDistRaces.length}走中${goodCount}回3着以内`;
+    }
+  }
+
+  // コース適性
+  if (currentVenue) {
+    const venueShort = currentVenue.replace(/競馬/g, '');
+    const sameVenue = validRaces.filter(r => r.venue.includes(venueShort));
+    if (sameVenue.length > 0) {
+      const goodCount = sameVenue.filter(r => r.raw.rank && r.raw.rank <= 3).length;
+      analysis.trackFit = `${venueShort}では${sameVenue.length}走中${goodCount}回3着以内`;
+    }
+  }
+
+  // ペース傾向
+  const paceTypes = validRaces.map(r => r.raw.paceType).filter(Boolean);
+  if (paceTypes.length >= 2) {
+    const paceCount = {};
+    paceTypes.forEach(p => { paceCount[p] = (paceCount[p] || 0) + 1; });
+    const dominant = Object.entries(paceCount).sort((a, b) => b[1] - a[1])[0];
+    const paceLabels = { 'H': 'ハイペース', 'M': 'ミドルペース', 'S': 'スローペース', 'Ｈ': 'ハイペース', 'Ｍ': 'ミドルペース', 'Ｓ': 'スローペース' };
+    if (dominant && paceLabels[dominant[0]]) {
+      analysis.pace = `近走は${paceLabels[dominant[0]]}のレースが多い`;
+    }
+  }
+
+  return analysis;
+}
+
+/**
+ * 予想データを分析付きファクト文に変換する
+ * LLMは「このデータを自然な解説文にまとめる」
  */
 function formatPredictionData(data) {
   const { venue, date, raceNumber, raceName, distance, horseCount, topHorses } = data;
 
-  const facts = [];
-  facts.push(`${date} ${venue} ${raceNumber}R${raceName ? ' ' + raceName : ''}${distance ? ' ' + distance + 'm' : ''}${horseCount ? ' ' + horseCount + '頭立て' : ''}`);
+  const sections = [];
+  sections.push(`[レース情報]`);
+  sections.push(`${date} ${venue} ${raceNumber}R${raceName ? ' ' + raceName : ''}${distance ? ' ' + distance + 'm' : ''}${horseCount ? ' ' + horseCount + '頭立て' : ''}`);
 
   topHorses.forEach(h => {
-    // 1行目: 役割・馬番・馬名・PT
-    facts.push(`${h.role}は${h.horseNumber}番${h.horseName}、PT${h.pt}`);
+    sections.push('');
+    sections.push(`[${h.role}] ${h.horseNumber}番${h.horseName} PT${h.pt}`);
 
-    // recentRaces を厳密に検証し、完全なデータのみ使用（1走=1行）
-    if (h.recentRaces && h.recentRaces.length > 0) {
-      let count = 0;
-      for (const r of h.recentRaces) {
-        const validated = validateRecentRace(r);
-        if (!validated) continue;
-        const label = count === 0 ? '前走' : count === 1 ? '2走前' : '3走前';
-        facts.push(`${label}は${validated.venue}${validated.distance}mで${validated.rankText}`);
-        count++;
-        if (count >= 3) break;
+    const analysis = analyzeRecentRaces(h.recentRaces, distance, venue);
+    if (analysis) {
+      sections.push('[近走]');
+      if (analysis.runLines) {
+        analysis.runLines.forEach(line => sections.push(line));
+      }
+
+      const insights = [];
+      if (analysis.top3rate) insights.push(analysis.top3rate);
+      if (analysis.last3f) insights.push(analysis.last3f);
+      if (analysis.distFit) insights.push(analysis.distFit);
+      if (analysis.trackFit) insights.push(analysis.trackFit);
+      if (analysis.pace) insights.push(analysis.pace);
+
+      if (insights.length > 0) {
+        sections.push('[分析]');
+        insights.forEach(i => sections.push(i));
       }
     }
   });
 
-  return `以下の各行の語尾だけ整えて出力してください。内容の追加・変更・結合は禁止です。\n\n${facts.join('\n')}`;
+  return `以下のレースデータを元に、自然な解説文を作成してください。データに含まれる事実のみを使い、情報の追加は禁止です。\n\n${sections.join('\n')}`;
 }
 
 /**
@@ -217,5 +314,5 @@ function formatResultData(data) {
     facts.push(`払戻: ¥${payout.toLocaleString()}`);
   }
 
-  return `以下の各行の語尾だけ整えて出力してください。内容の追加・変更・結合は禁止です。\n\n${facts.join('\n')}`;
+  return `以下のレース結果データを元に、自然な振り返り文を作成してください。データに含まれる事実のみを使い、情報の追加は禁止です。\n\n${facts.join('\n')}`;
 }
