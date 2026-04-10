@@ -254,7 +254,14 @@ function formatPredictionData(data) {
 
   topHorses.forEach(h => {
     sections.push('');
-    sections.push(`[${h.role}] ${h.horseNumber}番${h.horseName} PT${h.pt}`);
+    // 基本情報行: 騎手・調教師・年齢・斤量があれば追加
+    const basicInfo = [];
+    if (h.jockey) basicInfo.push(`騎手:${h.jockey}`);
+    if (h.trainer) basicInfo.push(`調教師:${h.trainer}`);
+    if (h.age) basicInfo.push(h.age);
+    if (h.weight) basicInfo.push(`${h.weight}kg`);
+    const infoStr = basicInfo.length > 0 ? ` (${basicInfo.join(' ')})` : '';
+    sections.push(`[${h.role}] ${h.horseNumber}番${h.horseName} PT${h.pt}${infoStr}`);
 
     const analysis = analyzeRecentRaces(h.recentRaces, distance, venue);
     if (analysis) {
