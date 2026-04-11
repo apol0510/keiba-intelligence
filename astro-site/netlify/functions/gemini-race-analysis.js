@@ -32,19 +32,25 @@ const PREDICTION_PROMPT = `あなたは競馬AI予想の解説ライターです
 
 const RESULT_PROMPT = `あなたは競馬AI予想の結果振り返りライターです。
 
-入力されたレース結果データを、読みやすい自然な振り返り文にまとめてください。
+入力されたレース結果データを、優しく丁寧な振り返り文にまとめてください。
 
 【絶対厳守ルール】
 - 入力データに含まれる事実のみを使う。入力にない情報は絶対に追加しない
 - 馬番・馬名・着順・払戻金額・的中判定は一字一句変えない
 - 「的中」と書かれていれば的中、「不的中」と書かれていれば不的中。判定を覆さない
 - レース展開・脚質・能力評価など入力にない分析は書かない
+- 買い目の内容（馬番の組み合わせ「○-○.○.○」等）は絶対に書かない
 - 買い目の軸馬構造（「軸馬は○番」等）には触れない
-- 買い目の内容（馬番の組み合わせ等）は一切書かない
+
+【文章の方向性】
+- AI予想の役割（本命・対抗等）と実際の着順を照らし合わせた振り返りにする
+- 本命馬が好走したか、対抗・単穴が絡んだか等、予想の精度を振り返る内容にする
+- 的中時は素直に喜び、不的中時は次に繋がる前向きなトーンで
 
 【文章スタイル】
-- レース結果→的中判定の順で簡潔にまとめる
-- 語尾は「〜だ」「〜である」調で統一
+- 語尾は「〜ですね」「〜でした」「〜ました」等の丁寧語で統一
+- 読者に語りかけるような優しいトーンで
+- 2〜3文程度で簡潔にまとめる
 
 【出力形式】
 - マークダウン記法は使わない。プレーンテキストのみ
@@ -293,7 +299,7 @@ function formatPredictionData(data) {
  * LLMは「この文章を自然な日本語に整形するだけ」
  */
 function formatResultData(data) {
-  const { venue, date, raceNumber, raceName, isHit, result, payout, umatanCombination } = data;
+  const { venue, date, raceNumber, raceName, isHit, result, payout, umatanCombination, roles } = data;
 
   const facts = [];
 
@@ -303,10 +309,18 @@ function formatResultData(data) {
   facts.push(`2着: ${result.second.number}番${result.second.name ? ' ' + result.second.name : ''}`);
   facts.push(`3着: ${result.third.number}番${result.third.name ? ' ' + result.third.name : ''}`);
   if (umatanCombination) {
-    facts.push(`馬単: ${umatanCombination}`);
+    facts.push(`馬単決着: ${umatanCombination}`);
   }
 
-  // ② 的中状況（買い目の内容は非表示）
+  // ② AI予想の役割（買い目の内容は絶対に含めない）
+  if (roles && roles.length > 0) {
+    facts.push(`AI予想の評価:`);
+    roles.forEach(r => {
+      facts.push(`  ${r.horseNumber}番${r.horseName || ''} → ${r.role}`);
+    });
+  }
+
+  // ③ 的中状況
   facts.push(`判定: ${isHit ? '的中' : '不的中'}`);
 
   // ④ 金額結果
@@ -314,5 +328,5 @@ function formatResultData(data) {
     facts.push(`払戻: ¥${payout.toLocaleString()}`);
   }
 
-  return `以下のレース結果データを元に、自然な振り返り文を作成してください。データに含まれる事実のみを使い、情報の追加は禁止です。\n\n${facts.join('\n')}`;
+  return `以下のレース結果データを元に、優しく丁寧な振り返り文を作成してください。データに含まれる事実のみを使い、情報の追加は禁止です。買い目（馬番の組み合わせ）は絶対に書かないでください。\n\n${facts.join('\n')}`;
 }

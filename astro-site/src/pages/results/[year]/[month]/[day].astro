@@ -3,6 +3,8 @@ import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import AIRaceComment from '../../../../components/AIRaceComment.astro';
 import archiveResults from '../../../../data/archiveResults.json';
 import archiveResultsJra from '../../../../data/archiveResultsJra.json';
+import fs from 'node:fs';
+import path from 'node:path';
 
 export const prerender = true;
 
@@ -32,6 +34,54 @@ export async function getStaticPaths() {
 
 const { entry, type } = Astro.props;
 const { year, month, day } = Astro.params;
+
+// 予想データから役割情報（本命・対抗等）を取得
+const venueToFile: Record<string, string> = { '大井': 'ooi', '川崎': 'kawasaki', '船橋': 'funabashi', '浦和': 'urawa' };
+const predictionRoles: Record<string, Array<{horseNumber: number, horseName: string, role: string}>> = {};
+
+try {
+  const dateStr = entry.date;
+  if (type === 'jra') {
+    const jraPath = path.join(process.cwd(), 'src/data/predictions/jra', year, month, `${dateStr}.json`);
+    if (fs.existsSync(jraPath)) {
+      const jraData = JSON.parse(fs.readFileSync(jraPath, 'utf-8'));
+      for (const v of jraData.venues || []) {
+        for (const pred of v.predictions || []) {
+          const rNum = pred.raceInfo?.raceNumber;
+          const vName = v.venue || pred.raceInfo?.venue;
+          if (rNum) {
+            const key = `${vName}-${rNum}`;
+            predictionRoles[key] = (pred.horses || [])
+              .filter((h: any) => h.role && h.role !== '無')
+              .slice(0, 5)
+              .map((h: any) => ({ horseNumber: h.horseNumber, horseName: h.horseName, role: h.role }));
+          }
+        }
+      }
+    }
+  } else {
+    const venues = (entry.venues || [entry.venue]).flatMap((v: string) => v.split('・'));
+    for (const venue of venues) {
+      const fileKey = venueToFile[venue];
+      if (!fileKey) continue;
+      const predPath = path.join(process.cwd(), 'src/data/predictions', `${dateStr}-${fileKey}.json`);
+      if (!fs.existsSync(predPath)) continue;
+      const predData = JSON.parse(fs.readFileSync(predPath, 'utf-8'));
+      for (const pred of predData.predictions || []) {
+        const rNum = pred.raceInfo?.raceNumber;
+        if (rNum) {
+          const key = `${venue}-${rNum}`;
+          predictionRoles[key] = (pred.horses || [])
+            .filter((h: any) => h.role && h.role !== '無')
+            .slice(0, 5)
+            .map((h: any) => ({ horseNumber: h.horseNumber, horseName: h.horseName, role: h.role }));
+        }
+      }
+    }
+  }
+} catch (e) {
+  // 予想データがない場合は空のままで問題ない
+}
 
 const title = `${entry.date} ${type === 'jra' ? '中央競馬' : '南関競馬'} 的中実績 - KEIBA Intelligence`;
 const description = `${entry.date}の${type === 'jra' ? '中央競馬' : '南関競馬'}予想の的中実績。的中率${entry.hitRate}%、回収率${entry.returnRate}%、${entry.hitRaces}/${entry.totalRaces}レース的中。AI競馬予想の詳細な結果を公開。`;
@@ -224,7 +274,8 @@ const jsonLd = {
                 third: { number: race.third || '?', name: '' }
               },
               umatanCombination: race.umatan?.combination || race.payouts?.umatan?.[0]?.combination || '',
-              payout: race.umatan?.payout || race.payouts?.umatan?.[0]?.payout || 0
+              payout: race.umatan?.payout || race.payouts?.umatan?.[0]?.payout || 0,
+              roles: predictionRoles[`${race.venue || entry.venue}-${race.raceNumber}`] || []
             })}
           />
         </div>
