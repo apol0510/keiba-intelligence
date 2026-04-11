@@ -177,11 +177,15 @@ async function fetchRacebookData(date, category = 'jra') {
     venues.push({
       date, venue: rbData.track, totalRaces: rbData.races?.length || 0,
       races: (rbData.races || []).map(r => ({
-        raceInfo: { raceNumber: `${r.raceNumber}R`, raceName: r.raceClass || '', distance: r.distance || '', raceType: r.conditions || '' },
+        raceInfo: {
+          raceNumber: `${r.raceNumber}R`, raceName: r.raceClass || '',
+          startTime: r.startTime || '', distance: r.distance || '', raceType: r.conditions || ''
+        },
         horses: (r.horses || []).map(h => ({
           number: h.number, name: h.name, totalScore: h.totalScore || 0, assignment: h.assignment || '無',
           jockey: h.jockey || '', trainer: h.trainer || '', seirei: h.sexAge || '',
-          kinryo: h.weight != null ? String(h.weight) : '', computerIndex: h.computerIndex || null
+          kinryo: h.weight != null ? String(h.weight) : '', computerIndex: h.computerIndex || null,
+          marks: h.marks || [], ranking: h.ranking || null
         }))
       }))
     });
