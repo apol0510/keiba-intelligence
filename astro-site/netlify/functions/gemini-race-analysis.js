@@ -40,9 +40,10 @@ const RESULT_PROMPT = `あなたは競馬AI予想の結果振り返りライタ�
 - 「的中」と書かれていれば的中、「不的中」と書かれていれば不的中。判定を覆さない
 - レース展開・脚質・能力評価など入力にない分析は書かない
 - 買い目の軸馬構造（「軸馬は○番」等）には触れない
+- 買い目の内容（馬番の組み合わせ等）は一切書かない
 
 【文章スタイル】
-- レース結果→AI予想の買い目→的中判定の順で簡潔にまとめる
+- レース結果→的中判定の順で簡潔にまとめる
 - 語尾は「〜だ」「〜である」調で統一
 
 【出力形式】
@@ -292,7 +293,7 @@ function formatPredictionData(data) {
  * LLMは「この文章を自然な日本語に整形するだけ」
  */
 function formatResultData(data) {
-  const { venue, date, raceNumber, raceName, isHit, result, bettingLines, hitLines, payout, umatanCombination } = data;
+  const { venue, date, raceNumber, raceName, isHit, result, payout, umatanCombination } = data;
 
   const facts = [];
 
@@ -305,16 +306,8 @@ function formatResultData(data) {
     facts.push(`馬単: ${umatanCombination}`);
   }
 
-  // ② AI予想の買い目
-  if (bettingLines && bettingLines.length > 0) {
-    facts.push(`AI予想の買い目: ${bettingLines.join(' / ')}`);
-  }
-
-  // ③ 的中状況
+  // ② 的中状況（買い目の内容は非表示）
   facts.push(`判定: ${isHit ? '的中' : '不的中'}`);
-  if (hitLines && hitLines.length > 0) {
-    facts.push(`的中した買い目: ${hitLines.join(' / ')}`);
-  }
 
   // ④ 金額結果
   if (isHit && payout) {

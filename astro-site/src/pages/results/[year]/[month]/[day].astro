@@ -223,8 +223,6 @@ const jsonLd = {
                 second: { number: race.second || '?', name: '' },
                 third: { number: race.third || '?', name: '' }
               },
-              bettingLines: race.bettingLines || [],
-              hitLines: race.hitLines || [],
               umatanCombination: race.umatan?.combination || race.payouts?.umatan?.[0]?.combination || '',
               payout: race.umatan?.payout || race.payouts?.umatan?.[0]?.payout || 0
             })}
