@@ -423,7 +423,7 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
         const isMasked = section.dataset.masked === 'true';
         // キャッシュチェック
         if (window._aiCommentCache[cacheKey]) {
-          renderAIComment(textEl, window._aiCommentCache[cacheKey], isMasked);
+          renderAIComment(textEl, window._aiCommentCache[cacheKey], isMasked, type);
           window._aiCommentLoaded.add(cacheKey);
           return;
         }
@@ -444,7 +444,7 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
             console.log('[AI Comment] API response length:', data.comment.length, 'chars');
             window._aiCommentCache[cacheKey] = data.comment;
             const isMasked = section.dataset.masked === 'true';
-            renderAIComment(textEl, data.comment, isMasked);
+            renderAIComment(textEl, data.comment, isMasked, type);
           } else {
             textEl.textContent = 'AI解説を取得できませんでした。';
             textEl.classList.add('error');
@@ -458,7 +458,7 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
       }
     });
 
-    function renderAIComment(el, comment, masked) {
+    function renderAIComment(el, comment, masked, type) {
       el.innerHTML = '';
       const lines = comment.split('\n').filter(l => l.trim());
 
@@ -471,17 +471,31 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
         return;
       }
 
-      // 無料版: 最初の3文程度を表示、残りをマスク
+      // 無料版: 文の総数に応じて可視範囲を動的に決定
       const fullText = lines.join('\n');
+      const totalSentences = (fullText.match(/。/g) || []).length;
+      // 短文（〜3文）は40%文字数、長文は3文まで
       let cutIdx = -1;
-      let searchFrom = 0;
-      for (let i = 0; i < 3; i++) {
-        const idx = fullText.indexOf('。', searchFrom);
-        if (idx === -1) break;
-        cutIdx = idx;
-        searchFrom = idx + 1;
+      if (totalSentences <= 3) {
+        // 文字数の約40%で切り、直前の「、」か「。」で区切る
+        const targetLen = Math.max(40, Math.floor(fullText.length * 0.4));
+        cutIdx = targetLen;
+        const nextPunct = fullText.substring(targetLen).search(/[。、]/);
+        if (nextPunct !== -1 && nextPunct < 30) {
+          cutIdx = targetLen + nextPunct;
+        }
+      } else {
+        let searchFrom = 0;
+        for (let i = 0; i < 3; i++) {
+          const idx = fullText.indexOf('。', searchFrom);
+          if (idx === -1) break;
+          cutIdx = idx;
+          searchFrom = idx + 1;
+        }
       }
-      if (cutIdx === -1) cutIdx = Math.min(200, fullText.length - 1);
+      if (cutIdx === -1 || cutIdx >= fullText.length - 10) {
+        cutIdx = Math.floor(fullText.length * 0.4);
+      }
       const visible = fullText.slice(0, cutIdx + 1);
       const hidden = fullText.slice(cutIdx + 1);
 
