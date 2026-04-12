@@ -471,15 +471,17 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
         return;
       }
 
-      // 無料版: 最初の1〜2文のみ表示、残りをマスク
+      // 無料版: 最初の3文程度を表示、残りをマスク
       const fullText = lines.join('\n');
-      // 最初の「。」までを可視範囲とする（ただし短すぎる場合は2文目まで）
-      let cutIdx = fullText.indexOf('。');
-      if (cutIdx !== -1 && cutIdx < 40) {
-        const next = fullText.indexOf('。', cutIdx + 1);
-        if (next !== -1) cutIdx = next;
+      let cutIdx = -1;
+      let searchFrom = 0;
+      for (let i = 0; i < 3; i++) {
+        const idx = fullText.indexOf('。', searchFrom);
+        if (idx === -1) break;
+        cutIdx = idx;
+        searchFrom = idx + 1;
       }
-      if (cutIdx === -1) cutIdx = Math.min(80, fullText.length - 1);
+      if (cutIdx === -1) cutIdx = Math.min(200, fullText.length - 1);
       const visible = fullText.slice(0, cutIdx + 1);
       const hidden = fullText.slice(cutIdx + 1);
 
