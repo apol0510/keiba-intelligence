@@ -255,21 +255,24 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
   /* マスク（無料版） */
   .ai-comment-masked {
     position: relative;
-    margin-top: 12px;
-    padding: 14px 16px;
-    background: rgba(0, 0, 0, 0.25);
-    border-radius: 8px;
-    border: 1px dashed rgba(139, 92, 246, 0.4);
+    margin-top: 14px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    border: 1px dashed rgba(251, 191, 36, 0.35);
     overflow: hidden;
+    min-height: 220px;
   }
 
   .ai-comment-masked-blur {
-    filter: blur(5px);
+    filter: blur(6px);
     user-select: none;
     pointer-events: none;
     color: var(--text-primary);
     line-height: 1.85;
     font-size: 0.95rem;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 
   .ai-comment-masked-overlay {
@@ -279,39 +282,75 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.55) 0%, rgba(15, 23, 42, 0.88) 100%);
-    padding: 16px;
+    gap: 14px;
+    background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.82) 0%, rgba(15, 23, 42, 0.94) 100%);
+    padding: 20px;
     text-align: center;
   }
 
   .ai-comment-masked-lock {
-    font-size: 1.6rem;
+    font-size: 2rem;
+    filter: drop-shadow(0 2px 8px rgba(251, 191, 36, 0.4));
   }
 
-  .ai-comment-masked-message {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #e2e8f0;
+  .ai-comment-masked-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #fbbf24;
+    line-height: 1.4;
+    letter-spacing: 0.5px;
+  }
+
+  .ai-comment-masked-sub {
+    font-size: 0.85rem;
+    color: #cbd5e1;
     line-height: 1.5;
+  }
+
+  .ai-comment-masked-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 4px;
   }
 
   .ai-comment-masked-cta {
     display: inline-block;
-    padding: 8px 20px;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-    color: #fff;
-    font-size: 0.85rem;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 0.9rem;
     font-weight: 700;
     text-decoration: none;
-    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  }
+
+  .ai-comment-masked-cta.primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+  }
+
+  .ai-comment-masked-cta.secondary {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #1e293b;
+    box-shadow: 0 4px 14px rgba(251, 191, 36, 0.35);
   }
 
   .ai-comment-masked-cta:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(139, 92, 246, 0.45);
+    filter: brightness(1.08);
+  }
+
+  @media (max-width: 480px) {
+    .ai-comment-masked-buttons {
+      flex-direction: column;
+      width: 100%;
+    }
+    .ai-comment-masked-cta {
+      width: 100%;
+      text-align: center;
+    }
   }
 
   @media (max-width: 768px) {
@@ -457,15 +496,20 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
 
         const blur = document.createElement('div');
         blur.className = 'ai-comment-masked-blur';
-        blur.textContent = hidden.replace(/\n+/g, ' ').slice(0, 200);
+        // ブラー領域には隠しテキストの一部を表示（見えそうで見えない演出）
+        blur.textContent = hidden.trim();
         maskWrap.appendChild(blur);
 
         const overlay = document.createElement('div');
         overlay.className = 'ai-comment-masked-overlay';
         overlay.innerHTML = `
           <div class="ai-comment-masked-lock">🔒</div>
-          <div class="ai-comment-masked-message">続きは有料会員で<br>全文ご覧いただけます</div>
-          <a href="/pricing" class="ai-comment-masked-cta">料金プランを見る →</a>
+          <div class="ai-comment-masked-title">プロ会員で全文表示</div>
+          <div class="ai-comment-masked-sub">各馬の詳細解説・買い目・期待値分析をご覧いただけます</div>
+          <div class="ai-comment-masked-buttons">
+            <a href="/pricing" class="ai-comment-masked-cta primary">料金プランを見る</a>
+            <a href="/register" class="ai-comment-masked-cta secondary">無料会員登録</a>
+          </div>
         `;
         maskWrap.appendChild(overlay);
         el.appendChild(maskWrap);
