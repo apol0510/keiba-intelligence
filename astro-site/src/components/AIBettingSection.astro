@@ -324,8 +324,7 @@ const { masked = false, bettingLines = [] } = Astro.props;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    width: 45%;
-    max-width: 280px;
+    width: 100%;
   }
 
   .dummy-line {
@@ -346,8 +345,8 @@ const { masked = false, bettingLines = [] } = Astro.props;
     align-items: center;
     justify-content: center;
     gap: 14px;
-    background: linear-gradient(90deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.7) 35%, rgba(15, 23, 42, 0.95) 55%, rgba(15, 23, 42, 0.95) 100%);
-    padding: 20px 24px 20px 48%;
+    background: linear-gradient(90deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.88) 28%, rgba(15, 23, 42, 0.95) 50%, rgba(15, 23, 42, 0.88) 72%, rgba(15, 23, 42, 0) 100%);
+    padding: 20px;
     text-align: center;
   }
 
@@ -432,12 +431,9 @@ const { masked = false, bettingLines = [] } = Astro.props;
   }
 
   @media (max-width: 640px) {
-    .ai-betting-masked-blur {
-      width: 35%;
-    }
     .ai-betting-masked-overlay {
-      padding: 16px 16px 16px 40%;
-      background: linear-gradient(90deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.8) 30%, rgba(15, 23, 42, 0.95) 50%);
+      padding: 16px;
+      background: linear-gradient(90deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.9) 20%, rgba(15, 23, 42, 0.95) 50%, rgba(15, 23, 42, 0.9) 80%, rgba(15, 23, 42, 0) 100%);
     }
   }
 
