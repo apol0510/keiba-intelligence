@@ -23,7 +23,8 @@ const PREDICTION_PROMPT = `あなたは競馬AI予想の解説ライターです
 - 各馬ごとに1〜2文で簡潔にまとめる
 - レース概要→本命→対抗→その他の順で書く
 - 近走の着順やタイムに触れながら、なぜその評価なのかが伝わる文章にする
-- 語尾は「〜だ」「〜である」調で統一
+- 語尾は「〜ですね」「〜でしょう」「〜でした」等の丁寧語で統一
+- 読者に語りかけるような優しく親しみやすいトーンで
 
 【出力形式】
 - マークダウン記法は使わない。プレーンテキストのみ
@@ -107,8 +108,11 @@ exports.handler = async (event, context) => {
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: userMessage }] }],
       generationConfig: {
-        maxOutputTokens: 2048,
+        maxOutputTokens: 8192,
         temperature: 0.5,
+        thinkingConfig: {
+          thinkingBudget: 0,
+        },
       },
     });
 
