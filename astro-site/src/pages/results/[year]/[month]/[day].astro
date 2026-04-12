@@ -262,6 +262,7 @@ const jsonLd = {
           {/* AI振り返り */}
           <AIRaceComment
             type="result"
+            masked={true}
             raceData={JSON.stringify({
               venue: race.venue || entry.venue,
               date: entry.date,
