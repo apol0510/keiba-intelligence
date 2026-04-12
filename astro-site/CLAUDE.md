@@ -67,16 +67,21 @@ cd "/Users/apolon/Projects/keiba-intelligence/astro-site"
 - `astro-site/` ディレクトリ内の全ファイル
 - `CLAUDE.md`, `README.md`（親ディレクトリ）
 
+#### **⚠️ 制限付きで許可される操作**
+- `/Users/apolon/Projects/nankan-analytics/` へのアクセス・編集（2026-04-12解禁）
+  - keiba-intelligenceとの自動化連携・JRA拡張対応のため
+  - 作業前に必ずpwd・git remoteで現在プロジェクトを確認
+
 #### **❌ 絶対禁止の操作**
-- `/Users/apolon/Projects/nankan-analytics/` への一切のアクセス ⚠️
 - `/Users/apolon/Projects/Keiba review platform/` への一切のアクセス ⚠️
 - 親ディレクトリ `/Users/apolon/Projects/` の直接走査・検索
 
 ### **マコさんが複数プロジェクトを並行作業する場合**
 
-- ✅ 各Claudeウィンドウは**独立した1つのプロジェクトのみ**を担当
+- ✅ 基本は各Claudeウィンドウで**独立した1つのプロジェクト**を担当
 - ✅ ウィンドウAでkeiba-intelligence、ウィンドウBでnankan-analytics
-- ❌ 1つのウィンドウで複数プロジェクトを横断してはいけない
+- ⚠️ 2026-04-12以降、nankan-analyticsとの連携作業のため横断アクセスは許可
+  （ただし作業前にpwd/git remoteで現在地確認必須）
 
 ---
 
