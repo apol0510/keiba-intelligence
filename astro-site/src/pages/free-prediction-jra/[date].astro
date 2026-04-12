@@ -181,6 +181,7 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
                     {/* AI予想解説 */}
                     <AIRaceComment
                       type="prediction"
+                      masked={true}
                       raceData={JSON.stringify({
                         venue: venueData.venue,
                         date: jraData.date,

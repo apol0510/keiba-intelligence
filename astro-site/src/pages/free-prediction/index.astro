@@ -276,6 +276,7 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                 <!-- AI予想解説 -->
                 <AIRaceComment
                   type="prediction"
+                  masked={true}
                   raceData={JSON.stringify({
                     venue: predictionData.eventInfo.venue,
                     date: predictionData.eventInfo.date,

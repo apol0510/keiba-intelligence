@@ -10,13 +10,14 @@
 interface Props {
   type: 'prediction' | 'result';
   raceData: string;
+  masked?: boolean;
 }
 
-const { type, raceData } = Astro.props;
+const { type, raceData, masked = false } = Astro.props;
 const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
 ---
 
-<div class="ai-comment-section" data-type={type} data-race={raceData}>
+<div class="ai-comment-section" data-type={type} data-race={raceData} data-masked={masked ? 'true' : 'false'}>
   <div class="ai-comment-header">
     <div class="ai-comment-header-left">
       <div class="ai-comment-badge">
@@ -251,6 +252,68 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
     border-left-color: rgba(239, 68, 68, 0.5);
   }
 
+  /* マスク（無料版） */
+  .ai-comment-masked {
+    position: relative;
+    margin-top: 12px;
+    padding: 14px 16px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+    border: 1px dashed rgba(139, 92, 246, 0.4);
+    overflow: hidden;
+  }
+
+  .ai-comment-masked-blur {
+    filter: blur(5px);
+    user-select: none;
+    pointer-events: none;
+    color: var(--text-primary);
+    line-height: 1.85;
+    font-size: 0.95rem;
+  }
+
+  .ai-comment-masked-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.55) 0%, rgba(15, 23, 42, 0.88) 100%);
+    padding: 16px;
+    text-align: center;
+  }
+
+  .ai-comment-masked-lock {
+    font-size: 1.6rem;
+  }
+
+  .ai-comment-masked-message {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    line-height: 1.5;
+  }
+
+  .ai-comment-masked-cta {
+    display: inline-block;
+    padding: 8px 20px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .ai-comment-masked-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(139, 92, 246, 0.45);
+  }
+
   @media (max-width: 768px) {
     .ai-comment-header {
       padding: 12px 14px;
@@ -318,9 +381,10 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
       toggleText.textContent = isOpen ? '閉じる' : '解説を見る';
 
       if (isOpen && !window._aiCommentLoaded.has(cacheKey)) {
+        const isMasked = section.dataset.masked === 'true';
         // キャッシュチェック
         if (window._aiCommentCache[cacheKey]) {
-          renderAIComment(textEl, window._aiCommentCache[cacheKey]);
+          renderAIComment(textEl, window._aiCommentCache[cacheKey], isMasked);
           window._aiCommentLoaded.add(cacheKey);
           return;
         }
@@ -339,9 +403,9 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
 
           if (data.success && data.comment) {
             console.log('[AI Comment] API response length:', data.comment.length, 'chars');
-            console.log('[AI Comment] Full text:', data.comment);
             window._aiCommentCache[cacheKey] = data.comment;
-            renderAIComment(textEl, data.comment);
+            const isMasked = section.dataset.masked === 'true';
+            renderAIComment(textEl, data.comment, isMasked);
           } else {
             textEl.textContent = 'AI解説を取得できませんでした。';
             textEl.classList.add('error');
@@ -355,16 +419,54 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
       }
     });
 
-    function renderAIComment(el, comment) {
+    function renderAIComment(el, comment, masked) {
       el.innerHTML = '';
       const lines = comment.split('\n').filter(l => l.trim());
-      console.log('[AI Comment] Rendering lines:', lines.length, 'from', comment.length, 'chars');
-      lines.forEach(line => {
+
+      if (!masked) {
+        lines.forEach(line => {
+          const p = document.createElement('p');
+          p.textContent = line;
+          el.appendChild(p);
+        });
+        return;
+      }
+
+      // 無料版: 全体の約40%を表示、残りをマスク
+      const fullText = lines.join('\n');
+      const visibleLen = Math.max(40, Math.floor(fullText.length * 0.4));
+      let visible = fullText.slice(0, visibleLen);
+      const lastPunct = Math.max(visible.lastIndexOf('。'), visible.lastIndexOf('、'));
+      if (lastPunct > visibleLen * 0.5) {
+        visible = visible.slice(0, lastPunct + 1);
+      }
+      const hidden = fullText.slice(visible.length);
+
+      visible.split('\n').filter(l => l.trim()).forEach(line => {
         const p = document.createElement('p');
-        p.textContent = line;
+        p.textContent = line + '…';
         el.appendChild(p);
       });
-      console.log('[AI Comment] DOM textContent length:', el.textContent.length);
+
+      if (hidden.trim()) {
+        const maskWrap = document.createElement('div');
+        maskWrap.className = 'ai-comment-masked';
+
+        const blur = document.createElement('div');
+        blur.className = 'ai-comment-masked-blur';
+        blur.textContent = hidden;
+        maskWrap.appendChild(blur);
+
+        const overlay = document.createElement('div');
+        overlay.className = 'ai-comment-masked-overlay';
+        overlay.innerHTML = `
+          <div class="ai-comment-masked-lock">🔒</div>
+          <div class="ai-comment-masked-message">続きは無料会員登録で<br>全文ご覧いただけます</div>
+          <a href="/register" class="ai-comment-masked-cta">無料会員登録する</a>
+        `;
+        maskWrap.appendChild(overlay);
+        el.appendChild(maskWrap);
+      }
     }
   }
 </script>

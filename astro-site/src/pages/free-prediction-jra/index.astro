@@ -273,6 +273,7 @@ try {
                         {/* AI予想解説 */}
                         <AIRaceComment
                           type="prediction"
+                          masked={true}
                           raceData={JSON.stringify({
                             venue: venueData.venue,
                             date: venueData.eventInfo.date,
