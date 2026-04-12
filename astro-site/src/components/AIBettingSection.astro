@@ -46,10 +46,8 @@ const { masked = false, bettingLines = [] } = Astro.props;
       <div class="ai-betting-masked">
         <div class="ai-betting-masked-blur">
           {/* ダミー買い目（ブラー表示用） */}
-          <div class="dummy-line">◎ 3-1.5.7.9.11(抑え2.4)</div>
-          <div class="dummy-line">○ 1-3.5.7.9.11(抑え2.4)</div>
-          <div class="dummy-line">◎ 5-2.6.8.10.12(抑え1.3)</div>
-          <div class="dummy-line">○ 2-5.6.8.10.12(抑え1.3)</div>
+          <div class="dummy-line">◎ 3-1.5.7.9.11</div>
+          <div class="dummy-line">○ 1-3.5.7.9.11</div>
         </div>
         <div class="ai-betting-masked-overlay">
           <div class="ai-betting-masked-lock">🔒</div>
@@ -314,7 +312,7 @@ const { masked = false, bettingLines = [] } = Astro.props;
     border-radius: 10px;
     border: 1px dashed rgba(251, 191, 36, 0.35);
     overflow: hidden;
-    min-height: 240px;
+    min-height: 200px;
   }
 
   .ai-betting-masked-blur {
