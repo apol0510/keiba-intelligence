@@ -309,32 +309,34 @@ const { masked = false, bettingLines = [] } = Astro.props;
   /* マスク（無料版） */
   .ai-betting-masked {
     position: relative;
-    padding: 24px;
-    background: rgba(0, 0, 0, 0.3);
+    padding: 18px;
+    background: rgba(30, 41, 59, 0.4);
     border-radius: 10px;
     border: 1px dashed rgba(251, 191, 36, 0.35);
     overflow: hidden;
-    min-height: 220px;
+    min-height: 240px;
   }
 
   .ai-betting-masked-blur {
-    filter: blur(7px);
+    filter: blur(4px);
     user-select: none;
     pointer-events: none;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
   }
 
   .dummy-line {
     font-family: 'Courier New', monospace;
-    font-size: 1rem;
-    color: var(--text-primary);
-    padding: 10px 14px;
-    background: rgba(0, 0, 0, 0.35);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fef3c7;
+    padding: 12px 16px;
+    background: rgba(251, 191, 36, 0.12);
     border-radius: 6px;
     border-left: 3px solid #fbbf24;
+    letter-spacing: 1px;
   }
 
   .ai-betting-masked-overlay {
