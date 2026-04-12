@@ -309,12 +309,12 @@ const { masked = false, bettingLines = [] } = Astro.props;
   /* マスク（無料版） */
   .ai-betting-masked {
     position: relative;
-    padding: 20px;
+    padding: 24px;
     background: rgba(0, 0, 0, 0.3);
     border-radius: 10px;
     border: 1px dashed rgba(251, 191, 36, 0.35);
     overflow: hidden;
-    min-height: 200px;
+    min-height: 220px;
   }
 
   .ai-betting-masked-blur {
@@ -324,14 +324,16 @@ const { masked = false, bettingLines = [] } = Astro.props;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    width: 45%;
+    max-width: 280px;
   }
 
   .dummy-line {
     font-family: 'Courier New', monospace;
     font-size: 1rem;
     color: var(--text-primary);
-    padding: 8px 12px;
-    background: rgba(0, 0, 0, 0.2);
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.35);
     border-radius: 6px;
     border-left: 3px solid #fbbf24;
   }
@@ -344,8 +346,8 @@ const { masked = false, bettingLines = [] } = Astro.props;
     align-items: center;
     justify-content: center;
     gap: 14px;
-    background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.82) 0%, rgba(15, 23, 42, 0.94) 100%);
-    padding: 20px;
+    background: linear-gradient(90deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.7) 35%, rgba(15, 23, 42, 0.95) 55%, rgba(15, 23, 42, 0.95) 100%);
+    padding: 20px 24px 20px 48%;
     text-align: center;
   }
 
@@ -429,6 +431,16 @@ const { masked = false, bettingLines = [] } = Astro.props;
     }
   }
 
+  @media (max-width: 640px) {
+    .ai-betting-masked-blur {
+      width: 35%;
+    }
+    .ai-betting-masked-overlay {
+      padding: 16px 16px 16px 40%;
+      background: linear-gradient(90deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.8) 30%, rgba(15, 23, 42, 0.95) 50%);
+    }
+  }
+
   @media (max-width: 480px) {
     .ai-betting-masked-buttons {
       flex-direction: column;
@@ -437,6 +449,10 @@ const { masked = false, bettingLines = [] } = Astro.props;
     .ai-betting-masked-cta {
       width: 100%;
       text-align: center;
+    }
+    .ai-betting-masked-title,
+    .ai-betting-masked-sub {
+      font-size: 0.85rem;
     }
   }
 </style>
