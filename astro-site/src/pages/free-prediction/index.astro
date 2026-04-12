@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import AIRaceComment from '../../components/AIRaceComment.astro';
+import AIBettingSection from '../../components/AIBettingSection.astro';
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { generateAdvancedMetrics } from '../../utils/featureScores.js';
@@ -297,6 +298,9 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                     }))
                   })}
                 />
+
+                <!-- AI買い目（無料版マスク） -->
+                <AIBettingSection masked={true} />
 
                 <!-- AIモデル情報カード -->
                 <div class="ai-model-card">

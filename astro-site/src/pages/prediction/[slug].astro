@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import AIBettingSection from '../../components/AIBettingSection.astro';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { generateAdvancedMetrics } from '../../utils/featureScores.js';
@@ -379,40 +380,19 @@ const pageTitle = predictionData
                     )}
                   </div>
 
-                  <!-- 買い目 -->
-                  <div class="betting-section">
-                    <div class="section-header">
-                      <div class="header-icon">🎯</div>
-                      <h2>Recommended Betting Strategy / 推奨買い目戦略</h2>
-                      <span class="strategy-badge">Optimized for ROI / 投資回収率最適化</span>
-                    </div>
-                    <div class="betting-container">
-                      <div class="betting-lines">
-                      {race.bettingLines.umatan.map((line, idx) => {
-                        const parts = line.match(/^(.+?)(\(抑え.+\))?$/);
-                        const mainPart = parts ? parts[1] : line;
-                        const osaePart = parts && parts[2] ? parts[2] : '';
-
-                        return (
-                          <div class="betting-line">
-                            <div class="axis-label">
-                              <span class="axis-type">{idx === 0 ? 'PRIMARY AXIS' : 'SECONDARY AXIS'}</span>
-                              <span class="axis-marker">{idx === 0 ? '◎' : '○'}</span>
-                            </div>
-                            <div class="betting-formula">
-                              <span class="formula-main">{mainPart}</span>
-                              {osaePart && <span class="formula-osae">{osaePart}</span>}
-                            </div>
-                            <div class="ev-indicator">
-                              <span class="ev-label">Expected Value / 期待値</span>
-                              <span class="ev-value positive">+{(Math.random() * 15 + 5).toFixed(1)}%</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      </div>
-                    </div>
-                  </div>
+                  <!-- AI買い目（トグル式） -->
+                  <AIBettingSection
+                    bettingLines={race.bettingLines.umatan.map((line, idx) => {
+                      const parts = line.match(/^(.+?)(\(抑え.+\))?$/);
+                      return {
+                        main: parts ? parts[1] : line,
+                        osae: parts && parts[2] ? parts[2] : '',
+                        axisType: idx === 0 ? 'PRIMARY AXIS' : 'SECONDARY AXIS',
+                        axisMarker: idx === 0 ? '◎' : '○',
+                        ev: `+${(Math.random() * 15 + 5).toFixed(1)}%`
+                      };
+                    })}
+                  />
                 </div>
               );
             })}

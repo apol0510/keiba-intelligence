@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import AIRaceComment from '../../components/AIRaceComment.astro';
+import AIBettingSection from '../../components/AIBettingSection.astro';
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { generateAdvancedMetrics } from '../../utils/featureScores.js';
@@ -202,6 +203,9 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
                         }))
                       })}
                     />
+
+                    {/* AI買い目（無料版マスク）*/}
+                    <AIBettingSection masked={true} />
 
                     {/* 詳細分析テーブル（上位5頭）*/}
                     <div class="analysis-section">

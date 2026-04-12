@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import AIRaceComment from '../../components/AIRaceComment.astro';
+import AIBettingSection from '../../components/AIBettingSection.astro';
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -104,6 +105,9 @@ const displayDate = `${dateParts[0]}年${parseInt(dateParts[1])}月${parseInt(da
               }))
             })}
           />
+
+          <!-- AI買い目（無料版マスク） -->
+          <AIBettingSection masked={true} />
 
           <!-- 上位5頭テーブル -->
           <div class="horses-table-wrapper">

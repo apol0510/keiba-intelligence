@@ -2,6 +2,7 @@
 // Force rebuild: 2026-02-27
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import AIRaceComment from '../../components/AIRaceComment.astro';
+import AIBettingSection from '../../components/AIBettingSection.astro';
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { sortHorsesByRole } from '../utils/sortHorsesByRole.js';
@@ -294,6 +295,9 @@ try {
                             }))
                           })}
                         />
+
+                        {/* AI買い目（無料版マスク）*/}
+                        <AIBettingSection masked={true} />
 
                         {/* 詳細分析テーブル（上位5頭）*/}
                         <div class="analysis-section">
