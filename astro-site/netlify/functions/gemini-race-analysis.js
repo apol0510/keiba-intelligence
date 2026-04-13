@@ -51,6 +51,10 @@ const RESULT_PROMPT = `あなたは競馬AI予想の結果振り返りライタ�
 - 役割名（本命・対抗・単穴・連下）を文中に絶対に出さない。「本命に推した」「対抗に推した」「単穴の」「連下の」等の表現は完全禁止
 - 「AI推奨」「AIが推奨した」等のAI推奨ラベルは文中で**最大1回のみ**使用可（複数回使うと推奨頭数が推測されてしまうため絶対に禁止）。2頭目以降は「○番○○も」「さらに○番○○が」等、AI推奨のラベルを付けずに馬名だけで自然に触れる
 - 推奨頭数が読者に推測されるような書き方（「AI推奨のA、AI推奨のBも」等）は完全禁止
+- 入力データに「騎手」「厩舎」「単勝○番人気」「着差」が含まれる場合は積極的に盛り込んでよい（例：「○○騎手が鮮やかに導き」「人気薄の○番が激走」「クビ差の接戦」）
+- 着差データがある場合は展開表現（「僅差の接戦」「クビ差の叩き合い」「1馬身突き抜けた完勝」等）に活用してよい
+- 単勝人気データがある場合は「1番人気がそのまま」「人気薄の激走」「上位人気の堅い決着」等の表現に活用してよい（ただし推測で書かず、入力にある人気データのみ使用）
+- 1着→2着→3着を順に並べる書き方ばかりにせず、レース全体像（堅い決着/波乱/接戦/圧勝）から書き始めるなど構成に変化をつける
 - 3着以内に入った馬のポジティブな活躍のみを中心に書く
 - 的中時は素直に喜び、不的中時は着順事実を淡々と述べた上で次のレースへの前向きな締めで終える（外れた馬名・役割には触れない）
 
@@ -105,9 +109,22 @@ exports.handler = async (event, context) => {
       systemInstruction: systemPrompt,
     });
 
+    // 結果型の場合、keiba-data-sharedから詳細データ（騎手・厩舎・着差・単勝人気）を取得
+    let enrichedRaceData = raceData;
+    if (type === 'result') {
+      try {
+        const enrichment = await fetchRaceDetails(raceData);
+        if (enrichment) {
+          enrichedRaceData = { ...raceData, details: enrichment };
+        }
+      } catch (e) {
+        console.warn('Enrichment fetch failed:', e.message);
+      }
+    }
+
     const userMessage = type === 'prediction'
       ? formatPredictionData(raceData)
-      : formatResultData(raceData);
+      : formatResultData(enrichedRaceData);
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: userMessage }] }],
@@ -137,6 +154,54 @@ exports.handler = async (event, context) => {
     };
   }
 };
+
+/**
+ * keiba-data-sharedから指定レースの上位3頭詳細（騎手・厩舎・着差・単勝人気）を取得
+ * 南関: nankan/results/YYYY/MM/YYYY-MM-DD-CODE.json
+ * JRA : jra/results/YYYY/MM/YYYY-MM-DD-CODE.json
+ */
+const NANKAN_VENUES = { '大井': 'OOI', '船橋': 'FUN', '川崎': 'KAW', '浦和': 'URA' };
+const JRA_VENUES = {
+  '東京': 'TOK', '中山': 'NAK', '阪神': 'HAN', '京都': 'KYO',
+  '中京': 'CHU', '新潟': 'NII', '福島': 'FKS', '小倉': 'KOK',
+  '札幌': 'SAP', '函館': 'HAK'
+};
+
+async function fetchRaceDetails({ venue, date, raceNumber, result }) {
+  if (!venue || !date || !raceNumber || !result) return null;
+  const venueName = String(venue).replace(/競馬$/, '').trim();
+  const isNankan = NANKAN_VENUES[venueName] !== undefined;
+  const code = NANKAN_VENUES[venueName] || JRA_VENUES[venueName];
+  if (!code) return null;
+
+  const [year, month] = date.split('-');
+  const category = isNankan ? 'nankan' : 'jra';
+  const url = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/${category}/results/${year}/${month}/${date}-${code}.json`;
+
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+
+  const races = Array.isArray(data.races) ? data.races : [];
+  const race = races.find(r => Number(r.raceNumber) === Number(raceNumber));
+  if (!race || !Array.isArray(race.results)) return null;
+
+  const pickByNumber = (num) => race.results.find(r => Number(r.number) === Number(num));
+  const topDetails = {};
+  ['first', 'second', 'third'].forEach(key => {
+    const hNum = result[key]?.number;
+    if (hNum == null) return;
+    const row = pickByNumber(hNum);
+    if (!row) return;
+    topDetails[key] = {
+      jockey: row.jockey || null,
+      trainer: row.trainer || null,
+      margin: row.margin || null,
+      popularity: row.popularity || null
+    };
+  });
+  return topDetails;
+}
 
 /**
  * recentRaceの1件を検証し、完全なデータのみ返す。不完全なら null
@@ -311,15 +376,27 @@ function formatPredictionData(data) {
  * LLMは「この文章を自然な日本語に整形するだけ」
  */
 function formatResultData(data) {
-  const { venue, date, raceNumber, raceName, isHit, result, payout, umatanCombination, roles } = data;
+  const { venue, date, raceNumber, raceName, isHit, result, payout, umatanCombination, roles, details } = data;
 
   const facts = [];
 
-  // ① 結果事実
+  // ① 結果事実（詳細データがあれば騎手・厩舎・着差・単勝人気を併記）
+  const detailLine = (key, res) => {
+    const d = details?.[key];
+    const base = `${res.number}番${res.name ? ' ' + res.name : ''}`;
+    if (!d) return base;
+    const extras = [];
+    if (d.jockey) extras.push(`騎手:${d.jockey}`);
+    if (d.trainer) extras.push(`厩舎:${d.trainer}`);
+    if (d.popularity) extras.push(`単勝${d.popularity}番人気`);
+    if (d.margin && d.margin !== '-') extras.push(`着差:${d.margin}`);
+    return extras.length > 0 ? `${base}（${extras.join(' / ')}）` : base;
+  };
+
   facts.push(`${date} ${venue} ${raceNumber}R${raceName ? ' ' + raceName : ''}`);
-  facts.push(`1着: ${result.first.number}番${result.first.name ? ' ' + result.first.name : ''}`);
-  facts.push(`2着: ${result.second.number}番${result.second.name ? ' ' + result.second.name : ''}`);
-  facts.push(`3着: ${result.third.number}番${result.third.name ? ' ' + result.third.name : ''}`);
+  facts.push(`1着: ${detailLine('first', result.first)}`);
+  facts.push(`2着: ${detailLine('second', result.second)}`);
+  facts.push(`3着: ${detailLine('third', result.third)}`);
   if (umatanCombination) {
     facts.push(`馬単決着: ${umatanCombination}`);
   }
