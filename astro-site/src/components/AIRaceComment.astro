@@ -474,10 +474,10 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
       // 無料版: 文の総数に応じて可視範囲を動的に決定
       const fullText = lines.join('\n');
       const totalSentences = (fullText.match(/。/g) || []).length;
-      // 短文（〜4文）は50%文字数、長文は先頭4文まで表示
+      // 短文（〜3文）は45%文字数、長文は先頭3文まで表示
       let cutIdx = -1;
-      if (totalSentences <= 4) {
-        const targetLen = Math.max(60, Math.floor(fullText.length * 0.5));
+      if (totalSentences <= 3) {
+        const targetLen = Math.max(50, Math.floor(fullText.length * 0.45));
         cutIdx = targetLen;
         const nextPunct = fullText.substring(targetLen).search(/[。、]/);
         if (nextPunct !== -1 && nextPunct < 40) {
@@ -485,7 +485,7 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
         }
       } else {
         let searchFrom = 0;
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 3; i++) {
           const idx = fullText.indexOf('。', searchFrom);
           if (idx === -1) break;
           cutIdx = idx;
