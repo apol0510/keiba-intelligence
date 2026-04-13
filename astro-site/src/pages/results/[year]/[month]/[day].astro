@@ -251,7 +251,7 @@ const jsonLd = {
               </div>
               {(race.isHit || race.honmeiHit) && (race.umatan?.payout || race.payouts?.umatan?.[0]?.payout) && (
                 <div class="summary-item">
-                  <span class="summary-label">回収額</span>
+                  <span class="summary-label">払い戻し</span>
                   <span class="summary-value hit">¥{(race.umatan?.payout || race.payouts?.umatan?.[0]?.payout || 0).toLocaleString()}</span>
                 </div>
               )}
