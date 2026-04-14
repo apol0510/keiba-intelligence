@@ -2,6 +2,7 @@
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { sortRacesByVenueAndNumber } from '../../../../utils/sortRaces.js';
 
 export const prerender = false;
 
@@ -134,8 +135,11 @@ const pageDescription = monthData.length > 0
 
                 <div class="races-list">
                   {(() => {
-                    // 的中レースのみを元の順序で表示
-                    const hitRaces = dayData.races.filter(race => race.isHit);
+                    // 的中レースのみ: 会場→レース番号順でソート
+                    const hitRaces = sortRacesByVenueAndNumber(
+                      dayData.races.filter(race => race.isHit),
+                      dayData.venues
+                    );
 
                     if (hitRaces.length === 0) {
                       return <div class="no-hits">的中レースなし</div>;
