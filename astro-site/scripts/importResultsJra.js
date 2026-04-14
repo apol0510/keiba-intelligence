@@ -20,7 +20,26 @@ const ALERT_ENDPOINT = process.env.ALERT_ENDPOINT || 'https://keiba-intelligence
 const IS_CI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
 
 /**
- * アラートメール送信
+ * 最終状態ゲート：archiveResultsJra.json（remote main最新）に指定日付が
+ * 既に反映されていれば true を返す。アラート送信前の誤検知防止に使用。
+ */
+async function isDateAlreadyInArchive(date) {
+  if (!date) return false;
+  const url = `https://raw.githubusercontent.com/apol0510/keiba-intelligence/main/astro-site/src/data/archiveResultsJra.json?t=${Date.now()}`;
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return false;
+    const text = await res.text();
+    return text.includes(`"date": "${date}"`) || text.includes(`"date":"${date}"`);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * アラートメール送信（JRA版）
+ * 最終状態が成功（archiveに反映済み）なら送信しない
+ * details には必ず stage/error/message を含めること
  */
 async function sendAlert(type, date, details = {}, metadata = {}) {
   // CI環境でのみアラート送信（ローカル実行時はスキップ）
@@ -29,8 +48,31 @@ async function sendAlert(type, date, details = {}, metadata = {}) {
     return;
   }
 
+  // 最終状態ゲート：「取り込み失敗」系アラートのみ、archive反映済みなら抑止
+  const IMPORT_FAILURE_TYPES = new Set([
+    'import-results-failure-jra',
+    'import-results-failure',
+    'archive-post-check-failed-jra',
+    'archive-post-check-failed'
+  ]);
+  if (IMPORT_FAILURE_TYPES.has(type)) {
+    const alreadyArchived = await isDateAlreadyInArchive(date);
+    if (alreadyArchived) {
+      console.log(`✅ [ALERT_SKIP] 最終状態が成功のためアラートを送信しません: ${type} (${date})`);
+      console.log(`   理由: archiveResultsJra.json に ${date} が既に反映済み`);
+      return;
+    }
+  }
+
+  // 必須フィールド検証：「エラー内容不明」を絶対に出さない
+  if (!details.error && !details.message && !details.stage) {
+    details.error = '[詳細情報欠落] sendAlert呼び出し側で error/message/stage のいずれかを必ず指定してください';
+    details.stack = new Error('missing details').stack;
+  }
+  if (!details.stage) details.stage = 'unknown';
+
   try {
-    console.log(`📧 アラートメール送信中: ${type} (${date || 'N/A'})`);
+    console.log(`📧 [ALERT_SEND] アラートメール送信中: ${type} (${date || 'N/A'}) stage=${details.stage}`);
 
     const response = await fetch(ALERT_ENDPOINT, {
       method: 'POST',
@@ -577,15 +619,19 @@ async function main() {
           console.error(`   venue: ${venue}`);
           console.error(`   元のエラー: ${error.message}\n`);
 
-          // アラート送信
+          // アラート送信（stage/error/message を明示）
           await sendAlert('import-results-failure', date, {
-            error: error.message,
+            stage: 'fetch-predictions-jra',
+            error: error.message || 'JRA予想データ読み込み失敗',
+            message: `JRA予想データは存在するが読み込みに失敗。venue=${venue}`,
+            stack: error.stack ? String(error.stack).slice(0, 800) : undefined,
             venue: venue,
             venueIsUndefined: venue === undefined || venue === 'undefined',
             sharedPredictionExists: true,
             sharedPredictionPath: sharedPredictionPath,
             localSearchPath: error.message
           }, {
+            variant: 'jra',
             timestamp: new Date().toISOString(),
             critical: true
           });
@@ -657,6 +703,9 @@ async function main() {
     if (archiveEntry.hitRate === 0 && archiveEntry.totalRaces >= 10) {
       console.log(`⚠️  異常値検知：的中率0%`);
       await sendAlert('zero-hit-rate', date, {
+        stage: 'hit-rate-check-jra',
+        error: `JRA的中率0%を検知（${archiveEntry.totalRaces}レース中 的中0）`,
+        message: '異常値の可能性があるため確認が必要',
         hitRate: archiveEntry.hitRate,
         hitRaces: archiveEntry.hitRaces,
         totalRaces: archiveEntry.totalRaces,
@@ -664,6 +713,7 @@ async function main() {
         totalPayout: archiveEntry.totalPayout,
         returnRate: archiveEntry.returnRate
       }, {
+        variant: 'jra',
         venue,
         timestamp: new Date().toISOString()
       });

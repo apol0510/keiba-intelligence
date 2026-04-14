@@ -11,8 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout keiba-intelligence
+      - name: Checkout keiba-intelligence (always freshest main)
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -55,11 +58,31 @@ jobs:
 
               # 10レース以上ある場合のみチェック
               if [ "$RACE_COUNT" -ge 10 ]; then
-                # keiba-intelligenceのアーカイブにあるかチェック
-                if grep -q "\"date\": \"$DATE\"" astro-site/src/data/archiveResultsJra.json; then
+                # アーカイブ検証（誤検知防止：最大3回リトライ、最後はraw.githubusercontentから直接確認）
+                FOUND=false
+                for ATTEMPT in 1 2 3; do
+                  if grep -q "\"date\": \"$DATE\"" astro-site/src/data/archiveResultsJra.json; then
+                    FOUND=true
+                    break
+                  fi
+                  echo "⚠️  Archive grep attempt $ATTEMPT failed, re-fetching remote main..."
+                  sleep 10
+                  git fetch origin main --depth=1 2>/dev/null || true
+                  git checkout origin/main -- astro-site/src/data/archiveResultsJra.json 2>/dev/null || true
+                done
+                # 最終フォールバック：raw.githubusercontentから直接チェック（キャッシュバイパス）
+                if [ "$FOUND" = false ]; then
+                  echo "🔄 Final check via raw.githubusercontent..."
+                  REMOTE_URL="https://raw.githubusercontent.com/apol0510/keiba-intelligence/main/astro-site/src/data/archiveResultsJra.json?t=$(date +%s)"
+                  if curl -sf -H "Cache-Control: no-cache" "$REMOTE_URL" | grep -q "\"date\": \"$DATE\""; then
+                    FOUND=true
+                    echo "✅ Archive: Found on remote (workspace was stale)"
+                  fi
+                fi
+                if [ "$FOUND" = true ]; then
                   echo "✅ Archive: Found"
                 else
-                  echo "❌ Archive: MISSING!"
+                  echo "❌ Archive: MISSING! (confirmed after 3 retries + remote check)"
                   MISSING_DATES="${MISSING_DATES}${DATE} (${RACE_COUNT}R), "
                   ALERT_NEEDED=true
                 fi
@@ -116,7 +139,7 @@ jobs:
 
             echo "━━━ Checking: $DATE ━━━"
 
-            # 予想データがあるかチェック
+            # 予想データがあるかチェック（統合ファイル優先、会場別ファイルもフォールバック）
             PREDICTION_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/predictions/$YEAR/$MONTH/$DATE.json"
             HAS_PREDICTION=false
 
@@ -124,23 +147,70 @@ jobs:
               echo "✅ Prediction: Found"
               HAS_PREDICTION=true
             else
-              echo "⏭️  Prediction: Not found"
+              for V in OOI FUN KAW URA; do
+                if curl -sf "https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/predictions/$YEAR/$MONTH/$DATE-$V.json" > /dev/null; then
+                  HAS_PREDICTION=true
+                  break
+                fi
+              done
+              if [ "$HAS_PREDICTION" = true ]; then
+                echo "✅ Prediction: Found (会場別ファイル)"
+              else
+                echo "⏭️  Prediction: Not found"
+              fi
             fi
 
-            # 結果データがあるかチェック
+            # 結果データがあるかチェック（統合ファイル優先、なければ会場別ファイルをマージ）
             RESULT_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/$YEAR/$MONTH/$DATE.json"
-
+            HAS_RESULT=false
+            RACE_COUNT=0
             if curl -sf "$RESULT_URL" > /tmp/result.json; then
               RACE_COUNT=$(cat /tmp/result.json | jq -r '.races | length')
+              HAS_RESULT=true
+            else
+              # 会場別ファイル（OOI/FUN/KAW/URA）を個別確認してレース数を合算
+              TOTAL=0
+              for V in OOI FUN KAW URA; do
+                V_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/$YEAR/$MONTH/$DATE-$V.json"
+                if curl -sf "$V_URL" > /tmp/v_result.json; then
+                  V_COUNT=$(cat /tmp/v_result.json | jq -r '.races | length' 2>/dev/null || echo 0)
+                  TOTAL=$((TOTAL + V_COUNT))
+                  HAS_RESULT=true
+                fi
+              done
+              RACE_COUNT=$TOTAL
+              [ "$HAS_RESULT" = true ] && echo "   (会場別ファイルで検出: $RACE_COUNT races)"
+            fi
+
+            if [ "$HAS_RESULT" = true ]; then
               echo "✅ Results: $RACE_COUNT races"
 
               # 12レース揃っている場合のみチェック
               if [ "$RACE_COUNT" -ge 12 ]; then
-                # keiba-intelligenceのアーカイブにあるかチェック
-                if grep -q "\"date\": \"$DATE\"" astro-site/src/data/archiveResults.json; then
+                # アーカイブ検証（誤検知防止：最大3回リトライ、最後はraw.githubusercontentから直接確認）
+                FOUND=false
+                for ATTEMPT in 1 2 3; do
+                  if grep -q "\"date\": \"$DATE\"" astro-site/src/data/archiveResults.json; then
+                    FOUND=true
+                    break
+                  fi
+                  echo "⚠️  Archive grep attempt $ATTEMPT failed, re-fetching remote main..."
+                  sleep 10
+                  git fetch origin main --depth=1 2>/dev/null || true
+                  git checkout origin/main -- astro-site/src/data/archiveResults.json 2>/dev/null || true
+                done
+                if [ "$FOUND" = false ]; then
+                  echo "🔄 Final check via raw.githubusercontent..."
+                  REMOTE_URL="https://raw.githubusercontent.com/apol0510/keiba-intelligence/main/astro-site/src/data/archiveResults.json?t=$(date +%s)"
+                  if curl -sf -H "Cache-Control: no-cache" "$REMOTE_URL" | grep -q "\"date\": \"$DATE\""; then
+                    FOUND=true
+                    echo "✅ Archive: Found on remote (workspace was stale)"
+                  fi
+                fi
+                if [ "$FOUND" = true ]; then
                   echo "✅ Archive: Found"
                 else
-                  echo "❌ Archive: MISSING!"
+                  echo "❌ Archive: MISSING! (confirmed after 3 retries + remote check)"
                   MISSING_DATES="${MISSING_DATES}${DATE} (${RACE_COUNT}R), "
                   ALERT_NEEDED=true
                 fi

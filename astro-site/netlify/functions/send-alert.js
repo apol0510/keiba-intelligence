@@ -117,7 +117,8 @@ function generateAlertEmail(type, date, details, metadata) {
           <p><strong>ワークフロー:</strong> ${details?.workflow || '不明'}</p>
           <p><strong>ステップ:</strong> ${details?.step || '不明'}</p>
           <p><strong>エラー内容:</strong></p>
-          <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${details?.error || 'エラー内容不明'}</pre>
+          <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${details?.error || details?.message || '[詳細情報欠落：呼び出し側で details.error を指定してください]'}</pre>
+          ${details?.stack ? `<p><strong>stack要約:</strong></p><pre style="background:#f5f5f5;padding:10px;border-radius:4px;font-size:12px;">${String(details.stack).split('\n').slice(0,6).join('\n')}</pre>` : ''}
           <hr>
           <p><strong>対応が必要です：</strong></p>
           <ul>
@@ -172,23 +173,46 @@ function generateAlertEmail(type, date, details, metadata) {
         `
       };
 
-    case 'import-results-failure':
+    case 'import-results-failure': {
+      const stage = details?.stage || 'unknown';
+      const errorMsg = details?.error || details?.message || '[詳細情報欠落：sendAlert呼び出し側で error/message/stage を指定してください]';
+      const stackSummary = details?.stack ? String(details.stack).split('\n').slice(0, 6).join('\n') : '(スタックトレース未収集)';
+      const variant = metadata?.variant || 'nankan';
+      const cmd = variant === 'jra' ? 'npm run import:results:jra' : 'npm run import:results';
+      const stageLabel = {
+        'fetch': 'fetch（データ取得）',
+        'fetch-predictions': 'fetch（予想データ取得）',
+        'fetch-predictions-jra': 'fetch（JRA予想データ取得）',
+        'parse': 'parse（解析）',
+        'write': 'write（書き込み）',
+        'verify': 'verify（検証）',
+        'verify-archive': 'verify（archive反映検証）',
+        'commit': 'commit（コミット）',
+        'push': 'push（プッシュ）',
+        'unknown': 'unknown（段階未指定）'
+      }[stage] || stage;
       return {
-        subject: `❌ [keiba-intelligence] 結果データ取り込み失敗 (${date})`,
+        subject: `❌ [keiba-intelligence] 結果データ取り込み失敗 (${date}) stage=${stage}`,
         html: `
           <h2 style="color: #d32f2f;">❌ 結果データ取り込み失敗</h2>
           <p><strong>日時:</strong> ${timestamp}</p>
           <p><strong>対象日付:</strong> ${date}</p>
-          <p><strong>エラー内容:</strong></p>
-          <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${details?.error || 'エラー内容不明'}</pre>
+          <p><strong>失敗段階:</strong> <code style="background:#fee;padding:2px 6px;border-radius:3px;">${stageLabel}</code></p>
+          <p><strong>例外メッセージ:</strong></p>
+          <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${errorMsg}</pre>
+          <p><strong>stack要約:</strong></p>
+          <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; font-size: 12px;">${stackSummary}</pre>
+          ${details?.message && details.message !== errorMsg ? `<p><strong>補足:</strong> ${details.message}</p>` : ''}
           <hr>
-          <p><strong>対応が必要です：</strong></p>
+          <p><strong>対応:</strong></p>
           <ul>
             <li><a href="https://github.com/apol0510/keiba-data-shared">keiba-data-sharedに結果データが存在するか確認</a></li>
-            <li>手動で再実行：<code>npm run import:results -- --date ${date}</code></li>
+            <li>手動で再実行：<code>${cmd} -- --date ${date}</code></li>
           </ul>
+          <p style="color:#888;font-size:12px;">※ このアラートは最終状態が失敗の場合のみ送信されます（archive反映済みの誤検知は抑止されます）</p>
         `
       };
+    }
 
     case 'results-imported-success':
       const profit = details?.profit || 0;

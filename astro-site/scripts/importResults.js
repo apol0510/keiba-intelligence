@@ -20,7 +20,29 @@ const ALERT_ENDPOINT = process.env.ALERT_ENDPOINT || 'https://keiba-intelligence
 const IS_CI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
 
 /**
+ * 最終状態ゲート：archiveResults.json（remote main最新）に指定日付が
+ * 既に反映されていれば true を返す。アラート送信前の誤検知防止に使用。
+ */
+async function isDateAlreadyInArchive(date, variant = 'nankan') {
+  if (!date) return false;
+  const file = variant === 'jra' ? 'archiveResultsJra.json' : 'archiveResults.json';
+  const url = `https://raw.githubusercontent.com/apol0510/keiba-intelligence/main/astro-site/src/data/${file}?t=${Date.now()}`;
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return false;
+    const text = await res.text();
+    return text.includes(`"date": "${date}"`) || text.includes(`"date":"${date}"`);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * アラートメール送信
+ * @param {string} type - アラート種別
+ * @param {string} date - 対象日付
+ * @param {object} details - 詳細情報（必ず stage/error/message を含めること）
+ * @param {object} metadata - 追加メタデータ
  */
 async function sendAlert(type, date, details = {}, metadata = {}) {
   // CI環境でのみアラート送信（ローカル実行時はスキップ）
@@ -29,8 +51,32 @@ async function sendAlert(type, date, details = {}, metadata = {}) {
     return;
   }
 
+  // 最終状態ゲート：「取り込み失敗」系アラートのみ、既にarchiveに反映済みなら抑止
+  // zero-hit-rate等の異常値アラートはarchive反映の有無と独立した通知のため対象外
+  const IMPORT_FAILURE_TYPES = new Set([
+    'import-results-failure',
+    'archive-post-check-failed'
+  ]);
+  if (IMPORT_FAILURE_TYPES.has(type)) {
+    const variant = metadata?.variant || (type.includes('jra') ? 'jra' : 'nankan');
+    const alreadyArchived = await isDateAlreadyInArchive(date, variant);
+    if (alreadyArchived) {
+      console.log(`✅ [ALERT_SKIP] 最終状態が成功のためアラートを送信しません: ${type} (${date})`);
+      console.log(`   理由: archiveResults${variant === 'jra' ? 'Jra' : ''}.json に ${date} が既に反映済み`);
+      return;
+    }
+  }
+
+  // 必須フィールド検証：「エラー内容不明」を絶対に出さない
+  if (!details.error && !details.message && !details.stage) {
+    details.error = '[詳細情報欠落] sendAlert呼び出し側で error/message/stage のいずれかを必ず指定してください';
+    details.stack = new Error('missing details').stack;
+  }
+  // stage が未指定なら unknown と明記
+  if (!details.stage) details.stage = 'unknown';
+
   try {
-    console.log(`📧 アラートメール送信中: ${type} (${date || 'N/A'})`);
+    console.log(`📧 [ALERT_SEND] アラートメール送信中: ${type} (${date || 'N/A'}) stage=${details.stage}`);
 
     const response = await fetch(ALERT_ENDPOINT, {
       method: 'POST',
@@ -588,11 +634,17 @@ async function main() {
         console.error(`   会場: ${existingVenues.map(v => v.venue).join(', ')}`);
         console.error(`   エラー: ${loadErrors.map(e => e.error).join(', ')}\n`);
 
-        // アラート送信
+        // アラート送信（stage/error/message を明示。最終状態チェックはsendAlert側で実施）
+        const firstError = loadErrors[0] || {};
         await sendAlert('import-results-failure', date, {
+          stage: 'fetch-predictions',
+          error: firstError.error || firstError.message || '予想データ読み込み失敗（詳細不明）',
+          message: `予想データは存在するが読み込みに失敗。対象会場: ${existingVenues.map(v => v.venue).join(', ')}`,
+          stack: firstError.stack ? String(firstError.stack).slice(0, 800) : undefined,
           venues: existingVenues.map(v => v.venue),
           errors: loadErrors
         }, {
+          variant: 'nankan',
           timestamp: new Date().toISOString(),
           critical: true
         });
@@ -645,6 +697,9 @@ async function main() {
     if (archiveEntry.hitRate === 0 && archiveEntry.totalRaces >= 10) {
       console.log(`⚠️  異常値検知：的中率0%`);
       await sendAlert('zero-hit-rate', date, {
+        stage: 'hit-rate-check',
+        error: `的中率0%を検知（${archiveEntry.totalRaces}レース中 的中0）`,
+        message: '異常値の可能性があるため確認が必要',
         hitRate: archiveEntry.hitRate,
         hitRaces: archiveEntry.hitRaces,
         totalRaces: archiveEntry.totalRaces,
@@ -652,6 +707,7 @@ async function main() {
         totalPayout: archiveEntry.totalPayout,
         returnRate: archiveEntry.returnRate
       }, {
+        variant: 'nankan',
         venue,
         timestamp: new Date().toISOString()
       });
@@ -670,13 +726,16 @@ async function main() {
       console.error(`   処理は完了したはずですが、何らかの理由でアーカイブに反映されていません。`);
       console.error(`   これは重大なエラーです。手動で確認してください。`);
 
-      // CI環境の場合はアラート送信
+      // CI環境の場合はアラート送信（sendAlert側で最終状態を再確認し、既に反映済みなら抑止）
       if (process.env.CI === 'true') {
         await sendAlert('archive-post-check-failed', date, {
-          message: `${date}の処理は完了したがarchiveResults.jsonに追加されていない`,
+          stage: 'verify-archive',
+          error: `archiveResults.jsonに${date}が反映されていない`,
+          message: `${date}の処理は完了したがローカルarchiveResults.jsonには追加されていない`,
           expectedDate: date,
           archiveLatestDate: archive[0]?.date || 'N/A'
         }, {
+          variant: 'nankan',
           venue,
           timestamp: new Date().toISOString(),
           critical: true
