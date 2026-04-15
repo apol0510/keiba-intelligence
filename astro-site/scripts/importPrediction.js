@@ -243,16 +243,68 @@ function convertRacebookToPredictions(rbData, date) {
 }
 
 /**
- * racebook JSONからpastRacesだけを取得してhorseDataMapに変換
+ * racebook JSONをhorseDataMapに変換（純粋関数）
  */
-async function fetchRacebookPastRaces(date, category = 'nankan') {
+function buildHorseDataMapFromRacebook(rbData, targetMap = new Map()) {
+  for (const race of (rbData.races || [])) {
+    for (const horse of (race.horses || [])) {
+      if (!horse.name) continue;
+      const data = {
+        jockey: horse.jockey || null,
+        trainer: horse.trainer || null,
+        weight: horse.weight || null,
+        age: horse.sexAge || null,
+        sire: horse.sire || null
+      };
+      if (horse.pastRaces && horse.pastRaces.length > 0) {
+        data.recentRaces = horse.pastRaces.slice(0, 5).map(pr => ({
+          date: null, venue: pr.venue || null, distance: pr.distance || null,
+          rank: pr.finish, finishStatus: null, headCount: null,
+          raceName: pr.raceClass || null, popularity: null,
+          passingOrder: null, last3f: pr.final3F || null,
+          time: pr.time || null, paceType: pr.paceType || null,
+          bodyWeight: pr.bodyWeight || null, winner: pr.winner || null
+        }));
+      }
+      targetMap.set(horse.name, data);
+    }
+  }
+  return targetMap;
+}
+
+/**
+ * レース名の正規化（全角/半角・空白・装飾記号を吸収）
+ */
+function normalizeRaceName(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/\s+/g, '')
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+    .trim();
+}
+
+/**
+ * 内容ベース照合でracebookからpastRacesを取得
+ *
+ * 仕様:
+ * - 指定月の同venueコード別racebookファイルを全件列挙
+ * - 馬名一致率 * 0.7 + レース名一致率 * 0.3 の総合スコア算出
+ * - 総合スコア70%以上 かつ 2位差10pt以上 のファイルを採用
+ * - 条件未達なら warning を出して recentRaces無しで進行
+ *
+ * @param {string} date
+ * @param {string} category - 'nankan' | 'jra' | 'local'
+ * @param {Set<string>} predHorseNames - 予想側の馬名集合
+ * @param {Set<string>} predRaceNames - 予想側のレース名集合（正規化済み）
+ */
+async function fetchRacebookPastRaces(date, category = 'nankan', predHorseNames = null, predRaceNames = null) {
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
   const [year, month] = date.split('-');
   const dirPath = `${category}/racebook/${year}/${month}`;
   const owner = 'apol0510';
   const repo = 'keiba-data-shared';
 
-  console.log(`📡 [RACEBOOK-PAST] racebookからpastRaces取得中: ${dirPath}`);
+  console.log(`📡 [RACEBOOK-PAST] 内容ベース照合: ${dirPath}`);
 
   const headers = GITHUB_TOKEN ? {
     'Authorization': `token ${GITHUB_TOKEN}`,
@@ -266,52 +318,133 @@ async function fetchRacebookPastRaces(date, category = 'nankan') {
   try {
     const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
     const dirResponse = await fetch(apiUrl, { headers });
-    if (!dirResponse.ok) return null;
+    if (!dirResponse.ok) {
+      console.warn(`[RACEBOOK-PAST] ディレクトリ取得失敗: ${dirResponse.status}`);
+      return null;
+    }
 
     const files = await dirResponse.json();
-    const dateFiles = files.filter(f => f.name.startsWith(`${date}-`) && f.name.endsWith('.json'));
-    if (dateFiles.length === 0) return null;
+    const jsonFiles = files.filter(f => f.name.endsWith('.json') && /^\d{4}-\d{2}-\d{2}-[A-Za-z0-9]+\.json$/.test(f.name));
+    if (jsonFiles.length === 0) return null;
+
+    // 馬名・レース名情報が無い場合は従来動作（日付ファイル名一致）にフォールバック
+    const canScore = predHorseNames instanceof Set && predHorseNames.size > 0;
+    if (!canScore) {
+      console.warn(`[RACEBOOK-PAST] ⚠️ 予想馬名未提供 → ファイル名一致モード`);
+      const dateFiles = jsonFiles.filter(f => f.name.startsWith(`${date}-`));
+      const map = new Map();
+      for (const file of dateFiles) {
+        const rbData = await fetchRacebookFile(dirPath, file.name, owner, repo, GITHUB_TOKEN);
+        if (rbData) buildHorseDataMapFromRacebook(rbData, map);
+      }
+      console.log(`[RACEBOOK-PAST] 名前一致モード: ${map.size}頭取得`);
+      return map.size > 0 ? map : null;
+    }
+
+    // venueコード別にグループ化
+    const byVenue = new Map();
+    for (const f of jsonFiles) {
+      const m = f.name.match(/^\d{4}-\d{2}-\d{2}-([A-Za-z0-9]+)\.json$/);
+      if (!m) continue;
+      const code = m[1].toUpperCase();
+      if (!byVenue.has(code)) byVenue.set(code, []);
+      byVenue.get(code).push(f.name);
+    }
 
     const horseDataMap = new Map();
-    for (const file of dateFiles) {
-      const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${file.name}`;
-      const fetchHeaders = GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {};
-      const response = await fetch(rawUrl, { headers: fetchHeaders });
-      if (!response.ok) continue;
+    const totalHorseCount = predHorseNames.size;
+    const totalRaceCount = predRaceNames ? predRaceNames.size : 0;
+    const failedVenues = []; // {venueCode, bestScore, diff, candidates}
+    let adoptedCount = 0;
 
-      const rbData = JSON.parse(await response.text());
-      for (const race of (rbData.races || [])) {
-        for (const horse of (race.horses || [])) {
-          if (horse.name) {
-            const data = {
-              jockey: horse.jockey || null,
-              trainer: horse.trainer || null,
-              weight: horse.weight || null,
-              age: horse.sexAge || null,
-              sire: horse.sire || null
-            };
-            if (horse.pastRaces && horse.pastRaces.length > 0) {
-              data.recentRaces = horse.pastRaces.slice(0, 5).map(pr => ({
-                date: null, venue: pr.venue || null, distance: pr.distance || null,
-                rank: pr.finish, finishStatus: null, headCount: null,
-                raceName: pr.raceClass || null, popularity: null,
-                passingOrder: null, last3f: pr.final3F || null,
-                time: pr.time || null, paceType: pr.paceType || null,
-                bodyWeight: pr.bodyWeight || null, winner: pr.winner || null
-              }));
-            }
-            horseDataMap.set(horse.name, data);
-          }
+    for (const [venueCode, fileList] of byVenue) {
+      console.log(`🔎 [MATCH] venue=${venueCode} 候補ファイル数=${fileList.length}`);
+      const scored = [];
+
+      for (const filename of fileList) {
+        const rbData = await fetchRacebookFile(dirPath, filename, owner, repo, GITHUB_TOKEN);
+        if (!rbData) continue;
+
+        const rbHorses = new Set();
+        const rbRaces = new Set();
+        for (const r of (rbData.races || [])) {
+          if (r.raceClass) rbRaces.add(normalizeRaceName(r.raceClass));
+          for (const h of (r.horses || [])) if (h.name) rbHorses.add(h.name);
+        }
+
+        let horseMatch = 0;
+        for (const n of rbHorses) if (predHorseNames.has(n)) horseMatch++;
+        let raceMatch = 0;
+        if (predRaceNames) for (const n of rbRaces) if (predRaceNames.has(n)) raceMatch++;
+
+        const horseRate = totalHorseCount > 0 ? horseMatch / totalHorseCount : 0;
+        const raceRate = totalRaceCount > 0 ? raceMatch / totalRaceCount : 0;
+        const score = horseRate * 0.7 + raceRate * 0.3;
+
+        scored.push({ filename, rbData, horseMatch, raceMatch, score });
+      }
+
+      scored.sort((a, b) => b.score - a.score);
+
+      const best = scored[0];
+      const second = scored[1];
+      const diff = best && second ? (best.score - second.score) : (best ? best.score : 0);
+      const adopted = best && best.score >= 0.7 && diff >= 0.1;
+
+      for (const s of scored) {
+        const mark = (s === best && adopted) ? '✅ 採用' : '';
+        console.log(`  [MATCH] file=${s.filename} horse=${s.horseMatch}/${totalHorseCount} race=${s.raceMatch}/${totalRaceCount} score=${(s.score * 100).toFixed(0)}% ${mark}`);
+      }
+
+      if (adopted) {
+        buildHorseDataMapFromRacebook(best.rbData, horseDataMap);
+        adoptedCount++;
+      } else {
+        failedVenues.push({
+          venueCode,
+          bestScore: best ? best.score : 0,
+          diff,
+          candidates: scored.map(s => ({ filename: s.filename, score: s.score, horseMatch: s.horseMatch, raceMatch: s.raceMatch }))
+        });
+        if (best) {
+          console.error(`  ❌ [ERROR] ${venueCode} racebook一致候補なし: bestScore=${(best.score * 100).toFixed(0)}%, diff=${(diff * 100).toFixed(0)}pt`);
+        } else {
+          console.error(`  ❌ [ERROR] ${venueCode} racebook候補ファイルが一切取得できませんでした`);
         }
       }
     }
 
-    console.log(`✅ [RACEBOOK-PAST] ${horseDataMap.size}頭のpastRacesを取得`);
+    // 予想データの会場が1件でもracebookと照合できなければ import を止める
+    if (adoptedCount === 0) {
+      console.error(`\n❌ [ERROR] racebook一致候補なし → import中断`);
+      console.error(`   予想: ${totalHorseCount}頭 / ${totalRaceCount}レース`);
+      console.error(`   比較したファイル:`);
+      for (const fv of failedVenues) {
+        console.error(`   [venue=${fv.venueCode}] bestScore=${(fv.bestScore * 100).toFixed(0)}% diff=${(fv.diff * 100).toFixed(0)}pt`);
+        for (const c of fv.candidates) {
+          console.error(`     - ${c.filename}: horse=${c.horseMatch}/${totalHorseCount} race=${c.raceMatch}/${totalRaceCount} score=${(c.score * 100).toFixed(0)}%`);
+        }
+      }
+      throw new Error(`racebook照合失敗: 予想と一致率70%以上のracebookが見つかりません（対象月: ${dirPath}）`);
+    }
+
+    console.log(`✅ [RACEBOOK-PAST] ${horseDataMap.size}頭のpastRacesを取得 (${adoptedCount}会場採用)`);
     return horseDataMap.size > 0 ? horseDataMap : null;
   } catch (err) {
+    // fetch系のネットワークエラーは継続可能としてnullを返す
+    // ただし照合失敗（明示的throw）は上位に伝播させる
+    if (err.message && err.message.startsWith('racebook照合失敗')) throw err;
     console.warn('[RACEBOOK-PAST] 取得エラー:', err.message);
     return null;
   }
+}
+
+async function fetchRacebookFile(dirPath, filename, owner, repo, GITHUB_TOKEN) {
+  const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${filename}`;
+  const headers = GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {};
+  const res = await fetch(rawUrl, { headers });
+  if (!res.ok) return null;
+  try { return JSON.parse(await res.text()); } catch { return null; }
 }
 
 /**
@@ -430,11 +563,38 @@ async function importPrediction(date, venue = 'nankan') {
     return null;
   }
 
+  // 予想データから馬名・レース名を抽出（racebook内容ベース照合用）
+  const predHorseNames = new Set();
+  const predRaceNames = new Set();
+  const venuesForNames = (sharedJSON.venues && Array.isArray(sharedJSON.venues)) ? sharedJSON.venues : [sharedJSON];
+  for (const vd of venuesForNames) {
+    for (const race of (vd.races || [])) {
+      const rn = race.raceName || race.raceInfo?.raceName;
+      if (rn) predRaceNames.add(normalizeRaceName(rn));
+      for (const h of (race.horses || [])) {
+        if (h.name) predHorseNames.add(h.name);
+      }
+    }
+  }
+  console.log(`🔍 [IMPORT] 予想データ: ${predHorseNames.size}頭 / ${predRaceNames.size}レース`);
+
   // 出馬表データ（recentRaces）を取得
   let horseDataMap = await fetchEntriesData(date, venue);
-  // entries未保存時はracebookのpastRacesで補完
+  // entries未保存時はracebookのpastRacesで補完（内容ベース照合）
   if (!horseDataMap || horseDataMap.size === 0) {
-    horseDataMap = await fetchRacebookPastRaces(date, venue);
+    horseDataMap = await fetchRacebookPastRaces(date, venue, predHorseNames, predRaceNames);
+  }
+
+  // recentRaces紐付け結果をログ（0件なら警告）
+  if (horseDataMap && horseDataMap.size > 0) {
+    let withRecent = 0;
+    for (const v of horseDataMap.values()) {
+      if (Array.isArray(v) ? v.length > 0 : (v?.recentRaces?.length > 0)) withRecent++;
+    }
+    console.log(`🧩 [IMPORT] recentRaces紐付け: ${withRecent}/${horseDataMap.size}頭 (馬名マップ総数)`);
+    if (withRecent === 0) console.warn(`⚠️  [IMPORT] recentRaces 0件 → 特徴量50固定の可能性`);
+  } else {
+    console.warn(`⚠️  [IMPORT] horseDataMap取得失敗 → recentRaces無しで継続`);
   }
 
   // 【複数会場対応】venues配列があるか確認
