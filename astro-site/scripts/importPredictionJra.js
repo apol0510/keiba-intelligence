@@ -185,7 +185,8 @@ async function fetchRacebookData(date, category = 'jra') {
           number: h.number, name: h.name, totalScore: h.totalScore || 0, assignment: h.assignment || '無',
           jockey: h.jockey || '', trainer: h.trainer || '', seirei: h.sexAge || '',
           kinryo: h.weight != null ? String(h.weight) : '', computerIndex: h.computerIndex || null,
-          marks: h.marks || [], ranking: h.ranking || null
+          marks: h.marks || [], ranking: h.ranking || null,
+          _pastRaces: h.pastRaces || []
         }))
       }))
     });
@@ -193,6 +194,98 @@ async function fetchRacebookData(date, category = 'jra') {
 
   if (venues.length === 0) return null;
   return { date, venues };
+}
+
+/**
+ * racebook JSONをhorseDataMapに変換（純粋関数）
+ * nankan版importPrediction.jsと同一ロジック
+ */
+function buildHorseDataMapFromRacebook(rbData, targetMap = new Map()) {
+  for (const race of (rbData.races || [])) {
+    for (const horse of (race.horses || [])) {
+      const name = horse.name || horse.horseName;
+      if (!name) continue;
+      const data = {
+        jockey: horse.jockey || null,
+        trainer: horse.trainer || null,
+        weight: horse.weight || horse.kinryo || null,
+        age: horse.sexAge || horse.seirei || null,
+        sire: horse.sire || null
+      };
+      const pastRaces = horse.pastRaces || horse._pastRaces || [];
+      if (pastRaces.length > 0) {
+        data.recentRaces = pastRaces.slice(0, 5).map(pr => ({
+          date: null, venue: pr.venue || null,
+          distance: pr.distance || null,
+          distanceMeters: pr.distanceMeters || null,
+          rank: pr.finish, finishStatus: null, headCount: null,
+          raceName: pr.raceClass || null, popularity: null,
+          passingOrder: null, last3f: pr.final3F || null,
+          time: pr.time || null, paceType: pr.paceType || null,
+          bodyWeight: pr.bodyWeight || null, winner: pr.winner || null
+        }));
+      }
+      targetMap.set(name, data);
+    }
+  }
+  return targetMap;
+}
+
+/**
+ * racebook生データを取得してhorseDataMapを構築（JRA用）
+ */
+async function fetchRacebookPastRaces(date, category = 'jra') {
+  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+  const [year, month] = date.split('-');
+  const dirPath = `${category}/racebook/${year}/${month}`;
+  const owner = 'apol0510';
+  const repo = 'keiba-data-shared';
+
+  console.log(`📡 [RACEBOOK-PAST] pastRaces取得中: ${dirPath}`);
+
+  const headers = GITHUB_TOKEN ? {
+    'Authorization': `token ${GITHUB_TOKEN}`,
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'keiba-intelligence-import-jra'
+  } : {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'keiba-intelligence-import-jra'
+  };
+
+  try {
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
+    const dirResponse = await fetch(apiUrl, { headers });
+    if (!dirResponse.ok) {
+      console.log(`⏭️  [RACEBOOK-PAST] ディレクトリなし: ${dirPath}`);
+      return null;
+    }
+
+    const files = await dirResponse.json();
+    const dateFiles = files.filter(f => f.name.startsWith(`${date}-`) && f.name.endsWith('.json'));
+
+    if (dateFiles.length === 0) {
+      console.log(`⏭️  [RACEBOOK-PAST] ${date}のracebookファイルなし`);
+      return null;
+    }
+
+    const horseDataMap = new Map();
+    for (const file of dateFiles) {
+      const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${file.name}`;
+      const fetchHeaders = GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {};
+      const res = await fetch(rawUrl, { headers: fetchHeaders });
+      if (!res.ok) continue;
+
+      const rbData = JSON.parse(await res.text());
+      console.log(`   ✅ [RACEBOOK-PAST] ${file.name} 取得完了 (${rbData.races?.length || 0}R)`);
+      buildHorseDataMapFromRacebook(rbData, horseDataMap);
+    }
+
+    console.log(`✅ [RACEBOOK-PAST] ${horseDataMap.size}頭のpastRacesを取得`);
+    return horseDataMap.size > 0 ? horseDataMap : null;
+  } catch (err) {
+    console.warn('[RACEBOOK-PAST] 取得エラー:', err.message);
+    return null;
+  }
 }
 
 /**
@@ -218,6 +311,21 @@ async function importPrediction(date, venue = 'jra') {
   if (!sharedJSON) {
     console.log(`⏭️  予想データがないため、スキップします`);
     return null;
+  }
+
+  // racebook pastRaces を取得してhorseDataMapを構築
+  let horseDataMap = await fetchRacebookPastRaces(date, venue);
+
+  // recentRaces紐付け結果をログ
+  if (horseDataMap && horseDataMap.size > 0) {
+    let withRecent = 0;
+    for (const v of horseDataMap.values()) {
+      if (v?.recentRaces?.length > 0) withRecent++;
+    }
+    console.log(`🧩 [IMPORT] recentRaces紐付け: ${withRecent}/${horseDataMap.size}頭`);
+    if (withRecent === 0) console.warn(`⚠️  [IMPORT] recentRaces 0件 → 特徴量50固定の可能性`);
+  } else {
+    console.warn(`⚠️  [IMPORT] horseDataMap取得失敗 → recentRaces無しで継続`);
   }
 
   // 複数会場対応：venues配列がある場合
@@ -253,7 +361,7 @@ async function importPrediction(date, venue = 'jra') {
     console.log(`   - 会場数: ${result.totalVenues}`);
     console.log(`   - 総レース数: ${result.totalRaces}`);
 
-    return result;
+    return { normalizedResult: result, horseDataMap };
   }
 
   // 単一会場の場合（従来フォーマット）
@@ -265,7 +373,7 @@ async function importPrediction(date, venue = 'jra') {
   console.log(`   - 競馬場: ${normalizedAndAdjusted.venue}`);
   console.log(`   - レース数: ${normalizedAndAdjusted.totalRaces}`);
 
-  return normalizedAndAdjusted;
+  return { normalizedResult: normalizedAndAdjusted, horseDataMap };
 }
 
 /**
@@ -273,9 +381,10 @@ async function importPrediction(date, venue = 'jra') {
  *
  * @param {Object} data - 正規化・調整済みデータ
  * @param {string} date - 日付
+ * @param {Map|null} horseDataMap - 馬名→{recentRaces, jockey, ...}のMap
  * @returns {Object} 既存フォーマット
  */
-function convertToLegacyFormat(data, date) {
+function convertToLegacyFormat(data, date, horseDataMap = null) {
   const predictions = data.races.map((race) => {
     // 役割別に馬を抽出
     const honmei = race.horses.find(h => h.role === '本命');
@@ -322,16 +431,52 @@ function convertToLegacyFormat(data, date) {
         horseCount: race.horses?.length || 0 // 頭数
       },
       horses: race.horses
-        .map(h => ({
-          horseNumber: h.number,
-          horseName: h.name,
-          pt: h.displayScore || h.rawScore || 70, // ptフィールド
-          role: h.role, // roleをそのまま保持（JRAのassignmentをそのまま使用）
-          jockey: h.jockey || h.kisyu || '', // 騎手
-          trainer: h.trainer || h.kyusya || '', // 厩舎
-          age: h.age || h.seirei || '', // 馬齢
-          weight: h.weight || h.kinryo || '' // 斤量
-        }))
+        .map(h => {
+          const horseObj = {
+            horseNumber: h.number,
+            horseName: h.name,
+            pt: h.displayScore || h.rawScore || 70, // ptフィールド
+            role: h.role, // roleをそのまま保持（JRAのassignmentをそのまま使用）
+            jockey: h.jockey || h.kisyu || '', // 騎手
+            trainer: h.trainer || h.kyusya || '', // 厩舎
+            age: h.age || h.seirei || '', // 馬齢
+            weight: h.weight || h.kinryo || '' // 斤量
+          };
+          // racebook由来の基本情報で補完
+          if (horseDataMap && horseDataMap.has(h.name)) {
+            const rbInfo = horseDataMap.get(h.name);
+            if (rbInfo && typeof rbInfo === 'object' && !Array.isArray(rbInfo)) {
+              if (!horseObj.jockey && rbInfo.jockey) horseObj.jockey = rbInfo.jockey;
+              if (!horseObj.trainer && rbInfo.trainer) horseObj.trainer = rbInfo.trainer;
+              if (!horseObj.weight && rbInfo.weight) horseObj.weight = String(rbInfo.weight);
+              if (!horseObj.age && rbInfo.age) horseObj.age = rbInfo.age;
+              if (rbInfo.sire) horseObj.sire = rbInfo.sire;
+            }
+          }
+          // 過去走データ: racebook由来(_pastRaces) > horseDataMap
+          if (h._pastRaces && h._pastRaces.length > 0) {
+            horseObj.recentRaces = h._pastRaces.slice(0, 5).map(pr => ({
+              date: null, venue: pr.venue || null,
+              distance: pr.distance || null,
+              distanceMeters: pr.distanceMeters || null,
+              rank: pr.finish, finishStatus: null, headCount: null,
+              raceName: pr.raceClass || null, popularity: null,
+              passingOrder: null, last3f: pr.final3F || null,
+              time: pr.time || null, paceType: pr.paceType || null,
+              bodyWeight: pr.bodyWeight || null, winner: pr.winner || null
+            }));
+            horseObj.recentFormSource = 'racebook';
+          } else if (horseDataMap && horseDataMap.has(h.name)) {
+            const mapData = horseDataMap.get(h.name);
+            if (mapData && mapData.recentRaces) {
+              horseObj.recentRaces = mapData.recentRaces;
+              horseObj.recentFormSource = 'racebook';
+            }
+          }
+          if (h._predictedOdds) horseObj.predictedOdds = h._predictedOdds;
+          if (h._sire) horseObj.sire = h._sire;
+          return horseObj;
+        })
         .sort((a, b) => {
           // 役割の優先順位
           const roleOrder = { '本命': 1, '対抗': 2, '単穴': 3, '連下': 4, '補欠': 5, '抑え': 6, '無': 7 };
@@ -367,7 +512,7 @@ function convertToLegacyFormat(data, date) {
  * @param {Object} normalizedAndAdjusted - 調整済みNormalizedPrediction
  * @returns {boolean} 保存したかどうか（true: 保存, false: no-op）
  */
-function savePrediction(date, normalizedAndAdjusted) {
+function savePrediction(date, normalizedAndAdjusted, horseDataMap = null) {
   console.log(`\n💾 保存処理開始...`);
 
   // 保存先パス構築（階層構造：jra/YYYY/MM/YYYY-MM-DD.json）
@@ -387,7 +532,7 @@ function savePrediction(date, normalizedAndAdjusted) {
     // 複数会場の場合：各会場を個別に変換
     console.log(`⚙️  複数会場フォーマット変換中...`);
     const venuesConverted = normalizedAndAdjusted.venues.map(venueData => {
-      const converted = convertToLegacyFormat(venueData, date);
+      const converted = convertToLegacyFormat(venueData, date, horseDataMap);
       return {
         venue: venueData.venue,
         ...converted
@@ -403,7 +548,7 @@ function savePrediction(date, normalizedAndAdjusted) {
     console.log(`   ✅ ${venuesConverted.length}会場の変換完了`);
   } else {
     // 単一会場の場合（従来フォーマット）
-    convertedData = convertToLegacyFormat(normalizedAndAdjusted, date);
+    convertedData = convertToLegacyFormat(normalizedAndAdjusted, date, horseDataMap);
   }
 
   // 【再発防止】データ検証を実行（印1ロジック適用後は警告のみ）
@@ -486,18 +631,20 @@ async function main() {
     }
 
     // 取り込み実行
-    const normalizedAndAdjusted = await importPrediction(date);
+    const importResult = await importPrediction(date);
 
     // 予想データがない場合は正常終了
-    if (!normalizedAndAdjusted) {
+    if (!importResult) {
       console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('⏭️  予想データがないため、処理を終了します');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       return; // 正常終了
     }
 
+    const { normalizedResult, horseDataMap } = importResult;
+
     // 保存
-    const saved = savePrediction(date, normalizedAndAdjusted);
+    const saved = savePrediction(date, normalizedResult, horseDataMap);
 
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     if (saved) {
