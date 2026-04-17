@@ -5,6 +5,18 @@
  * 全予想ページ共通で使用
  */
 
+/**
+ * 距離を数値で抽出する (number | string | null → number | 0)
+ * - 数値: そのまま返す (e.g. 1600)
+ * - 文字列: "ダ1400", "ダ内1600", "芝2000", "一般 ダ内1600" などから3-4桁の数値を抽出
+ */
+function extractDistance(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  const m = String(value).match(/(\d{3,4})/);
+  return m ? parseInt(m[1]) : 0;
+}
+
 function finishToScore(rank) {
   if (!rank || rank <= 0) return 0;
   if (rank === 1) return 100;
@@ -72,10 +84,15 @@ export function calcStaminaRating(recentRaces) {
 
 export function calcTrackCompatibility(recentRaces, currentVenue) {
   if (!recentRaces || recentRaces.length === 0) return 50;
+  // currentVenue: "大井", "東京競馬" etc. → 比較用に"競馬"を除去
+  const normalizedCurrentVenue = (currentVenue || '').replace('競馬', '');
+  if (!normalizedCurrentVenue) return 50;
   let sameVenue = 0, sameVenueGood = 0;
   for (const r of recentRaces) {
-    const venue = r.venue || '';
-    if (currentVenue && venue.includes(currentVenue.replace('競馬', ''))) {
+    // venue: "大井 3.24" or "大井" → スペース前を取得して比較
+    const rawVenue = r.venue || '';
+    const trackName = rawVenue.split(/\s+/)[0]; // "大井 3.24" → "大井"
+    if (trackName && trackName.includes(normalizedCurrentVenue)) {
       sameVenue++;
       const rank = r.rank || r.finish;
       if (rank && rank <= 3) sameVenueGood++;
@@ -87,13 +104,13 @@ export function calcTrackCompatibility(recentRaces, currentVenue) {
 
 export function calcDistanceFitness(recentRaces, currentDistance) {
   if (!recentRaces || recentRaces.length === 0) return 50;
-  const distMatch = String(currentDistance || '').match(/(\d{3,4})/);
-  const targetDist = distMatch ? parseInt(distMatch[1]) : 0;
+  const targetDist = extractDistance(currentDistance);
   if (!targetDist) return 50;
 
   let sameDist = 0, sameDistGood = 0;
   for (const r of recentRaces) {
-    const rDist = r.distance ? parseInt(String(r.distance).match(/(\d{3,4})/)?.[1] || '0') : 0;
+    // distanceMeters (number) > distance (string/number) > raceName から距離を抽出
+    const rDist = r.distanceMeters || extractDistance(r.distance) || extractDistance(r.raceName);
     if (rDist && Math.abs(rDist - targetDist) <= 200) {
       sameDist++;
       const rank = r.rank || r.finish;
@@ -125,7 +142,16 @@ export function generateAdvancedMetrics(horse, allHorses, raceInfo) {
 
   const recent = horse.recentRaces || [];
   const venue = raceInfo?.venue || '';
-  const distance = raceInfo?.distance || '';
+  const distance = raceInfo?.distance || raceInfo?.distanceMeters || '';
+
+  // DEBUG: 特徴量入力データの確認
+  console.log('[FeatureScore]', horse.horseName || horse.name, 'pastRaces:', recent?.length,
+              'distanceMeters:', recent?.[0]?.distanceMeters,
+              'distance:', recent?.[0]?.distance,
+              'raceName:', recent?.[0]?.raceName,
+              'finish:', recent?.[0]?.rank || recent?.[0]?.finish,
+              'raceInfo.distance:', distance,
+              'raceInfo.venue:', venue);
 
   const formTrendRaw = calcFormTrend(recent);
   const speedIndex = calcSpeedIndex(recent);
@@ -133,6 +159,11 @@ export function generateAdvancedMetrics(horse, allHorses, raceInfo) {
   const trackCompatibility = calcTrackCompatibility(recent, venue);
   const distanceFitness = calcDistanceFitness(recent, distance);
   const jockeyFactor = calcJockeyFactor(horse, allHorses);
+
+  // DEBUG: 各特徴量の算出結果
+  console.log('[FeatureScore]', horse.horseName || horse.name, 'results:',
+              'speed=', speedIndex, 'stamina=', staminaRating, 'form=', formTrendRaw,
+              'track=', trackCompatibility, 'dist=', distanceFitness, 'jockey=', jockeyFactor);
 
   const featureAvg = (speedIndex * 0.25 + (formTrendRaw + 50) * 0.3 + staminaRating * 0.15 +
     trackCompatibility * 0.1 + distanceFitness * 0.1 + jockeyFactor * 0.1) / 100 * 40;

@@ -258,7 +258,9 @@ function buildHorseDataMapFromRacebook(rbData, targetMap = new Map()) {
       };
       if (horse.pastRaces && horse.pastRaces.length > 0) {
         data.recentRaces = horse.pastRaces.slice(0, 5).map(pr => ({
-          date: null, venue: pr.venue || null, distance: pr.distance || null,
+          date: null, venue: pr.venue || null,
+          distance: pr.distance || null,
+          distanceMeters: pr.distanceMeters || null,
           rank: pr.finish, finishStatus: null, headCount: null,
           raceName: pr.raceClass || null, popularity: null,
           passingOrder: null, last3f: pr.final3F || null,
@@ -831,7 +833,9 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
           // 過去走データ: racebook由来(_pastRaces) > horseDataMap > entries
           if (h._pastRaces && h._pastRaces.length > 0) {
             horseObj.recentRaces = h._pastRaces.slice(0, 5).map(pr => ({
-              date: null, venue: pr.venue || null, distance: pr.distance || null,
+              date: null, venue: pr.venue || null,
+              distance: pr.distance || null,
+              distanceMeters: pr.distanceMeters || null,
               rank: pr.finish, finishStatus: null, headCount: null,
               raceName: pr.raceClass || null, popularity: null,
               passingOrder: null, last3f: pr.final3F || null,
