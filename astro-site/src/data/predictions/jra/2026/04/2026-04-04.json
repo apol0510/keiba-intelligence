@@ -53,6 +53,16 @@
               "weight": "55"
             },
             {
+              "horseNumber": 1,
+              "horseName": "ザタイムハズカム",
+              "pt": 78,
+              "role": "連下",
+              "jockey": "川田将",
+              "trainer": "(栗)福永",
+              "age": "牝3",
+              "weight": "55"
+            },
+            {
               "horseNumber": 5,
               "horseName": "グロリアス",
               "pt": 78,
@@ -63,32 +73,22 @@
               "weight": "52"
             },
             {
-              "horseNumber": 13,
-              "horseName": "ハッピーリオン",
-              "pt": 76,
-              "role": "連下",
-              "jockey": "太宰啓",
-              "trainer": "(栗)武英",
-              "age": "牝3",
-              "weight": "55"
-            },
-            {
-              "horseNumber": 12,
-              "horseName": "ヤマニンエルファバ",
-              "pt": 75,
-              "role": "連下",
-              "jockey": "武豊",
-              "trainer": "(栗)千田",
-              "age": "牝3",
-              "weight": "55"
-            },
-            {
               "horseNumber": 10,
               "horseName": "シャドウクライ",
               "pt": 74,
-              "role": "補欠",
+              "role": "連下",
               "jockey": "北村友",
               "trainer": "(栗)杉山佳",
+              "age": "牝3",
+              "weight": "55"
+            },
+            {
+              "horseNumber": 13,
+              "horseName": "ハッピーリオン",
+              "pt": 76,
+              "role": "補欠",
+              "jockey": "太宰啓",
+              "trainer": "(栗)武英",
               "age": "牝3",
               "weight": "55"
             },
@@ -173,23 +173,23 @@
               "weight": "55"
             },
             {
-              "horseNumber": 1,
-              "horseName": "ザタイムハズカム",
-              "pt": 78,
+              "horseNumber": 12,
+              "horseName": "ヤマニンエルファバ",
+              "pt": 75,
               "role": "連下最上位",
-              "jockey": "川田将",
-              "trainer": "(栗)福永",
+              "jockey": "武豊",
+              "trainer": "(栗)千田",
               "age": "牝3",
               "weight": "55"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "16-3.7.1.5.13.12(抑え10.15.4.9.11)",
-              "3-16.7.1.5.13.12(抑え10.15.4.9.11)"
+              "16-3.7.12.1.5.10(抑え13.15.4.9.11)",
+              "3-16.7.12.1.5.10(抑え13.15.4.9.11)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.027Z"
+          "generatedAt": "2026-04-17T13:43:52.896Z"
         },
         {
           "raceInfo": {
@@ -213,22 +213,12 @@
               "weight": "57"
             },
             {
-              "horseNumber": 14,
-              "horseName": "アニマレイ",
-              "pt": 86,
-              "role": "対抗",
-              "jockey": "ルメール",
-              "trainer": "(栗)須貝尚",
-              "age": "牡3",
-              "weight": "57"
-            },
-            {
-              "horseNumber": 1,
-              "horseName": "ジャーナーリア",
+              "horseNumber": 10,
+              "horseName": "(外)ジューンレトリバー",
               "pt": 80,
-              "role": "単穴",
-              "jockey": "松山弘",
-              "trainer": "(栗)本田",
+              "role": "対抗",
+              "jockey": "富田暁",
+              "trainer": "(栗)長谷川",
               "age": "牡3",
               "weight": "57"
             },
@@ -236,7 +226,7 @@
               "horseNumber": 11,
               "horseName": "モズプリフォール",
               "pt": 80,
-              "role": "連下",
+              "role": "単穴",
               "jockey": "岩田望",
               "trainer": "(栗)矢作",
               "age": "牡3",
@@ -266,11 +256,21 @@
               "horseNumber": 8,
               "horseName": "モズジェネラル",
               "pt": 75,
-              "role": "補欠",
+              "role": "連下",
               "jockey": "森田誠",
               "trainer": "(栗)田中克",
               "age": "牡3",
               "weight": "54"
+            },
+            {
+              "horseNumber": 1,
+              "horseName": "ジャーナーリア",
+              "pt": 80,
+              "role": "補欠",
+              "jockey": "松山弘",
+              "trainer": "(栗)本田",
+              "age": "牡3",
+              "weight": "57"
             },
             {
               "horseNumber": 2,
@@ -353,23 +353,23 @@
               "weight": "55"
             },
             {
-              "horseNumber": 10,
-              "horseName": "(外)ジューンレトリバー",
-              "pt": 80,
+              "horseNumber": 14,
+              "horseName": "アニマレイ",
+              "pt": 86,
               "role": "連下最上位",
-              "jockey": "富田暁",
-              "trainer": "(栗)長谷川",
+              "jockey": "ルメール",
+              "trainer": "(栗)須貝尚",
               "age": "牡3",
               "weight": "57"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "15-14.1.10.11.16.3(抑え8.2)",
-              "14-15.1.10.11.16.3(抑え8.2)"
+              "15-14.10.11.16.3.8(抑え1.2)",
+              "10-15.14.11.16.3.8(抑え1.2)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.027Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -413,6 +413,16 @@
               "weight": "57"
             },
             {
+              "horseNumber": 12,
+              "horseName": "キャリアハイ",
+              "pt": 74,
+              "role": "連下",
+              "jockey": "亀田温",
+              "trainer": "(栗)北出",
+              "age": "牡3",
+              "weight": "57"
+            },
+            {
               "horseNumber": 3,
               "horseName": "テーオータウンズ",
               "pt": 73,
@@ -430,16 +440,6 @@
               "jockey": "河原田菜",
               "trainer": "(栗)池添学",
               "age": "牡3",
-              "weight": "53"
-            },
-            {
-              "horseNumber": 1,
-              "horseName": "メエメエ",
-              "pt": 72,
-              "role": "連下",
-              "jockey": "永島ま",
-              "trainer": "(栗)高橋康",
-              "age": "牝3",
               "weight": "53"
             },
             {
@@ -513,23 +513,23 @@
               "weight": "57"
             },
             {
-              "horseNumber": 12,
-              "horseName": "キャリアハイ",
-              "pt": 74,
+              "horseNumber": 1,
+              "horseName": "メエメエ",
+              "pt": 72,
               "role": "連下最上位",
-              "jockey": "亀田温",
-              "trainer": "(栗)北出",
-              "age": "牡3",
-              "weight": "57"
+              "jockey": "永島ま",
+              "trainer": "(栗)高橋康",
+              "age": "牝3",
+              "weight": "53"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "13-6.4.12.3.10.1(抑え7.8.14)",
-              "6-13.4.12.3.10.1(抑え7.8.14)"
+              "13-6.4.1.12.3.10(抑え7.8.14)",
+              "6-13.4.1.12.3.10(抑え7.8.14)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.027Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -563,24 +563,14 @@
               "weight": "57"
             },
             {
-              "horseNumber": 16,
-              "horseName": "ハピネスサンライズ",
-              "pt": 81,
+              "horseNumber": 18,
+              "horseName": "レインボーステート",
+              "pt": 79,
               "role": "単穴",
-              "jockey": "松若風",
-              "trainer": "(栗)東田",
-              "age": "牝3",
-              "weight": "55"
-            },
-            {
-              "horseNumber": 13,
-              "horseName": "ダノンベルビュー",
-              "pt": 76,
-              "role": "連下",
-              "jockey": "川田将",
-              "trainer": "(栗)坂口智",
-              "age": "牝3",
-              "weight": "55"
+              "jockey": "坂井瑠",
+              "trainer": "(栗)茶木",
+              "age": "牡3",
+              "weight": "57"
             },
             {
               "horseNumber": 15,
@@ -593,20 +583,10 @@
               "weight": "55"
             },
             {
-              "horseNumber": 5,
-              "horseName": "ブランチアウト",
-              "pt": 74,
-              "role": "連下",
-              "jockey": "古川吉",
-              "trainer": "(栗)昆",
-              "age": "牡3",
-              "weight": "57"
-            },
-            {
               "horseNumber": 8,
               "horseName": "ティアラティアレ",
               "pt": 73,
-              "role": "補欠",
+              "role": "連下",
               "jockey": "国分優",
               "trainer": "(栗)梅田智",
               "age": "牝3",
@@ -616,11 +596,31 @@
               "horseNumber": 2,
               "horseName": "サンエンジェルス",
               "pt": 72,
-              "role": "補欠",
+              "role": "連下",
               "jockey": "浜中俊",
               "trainer": "(栗)谷",
               "age": "牝3",
               "weight": "55"
+            },
+            {
+              "horseNumber": 13,
+              "horseName": "ダノンベルビュー",
+              "pt": 76,
+              "role": "補欠",
+              "jockey": "川田将",
+              "trainer": "(栗)坂口智",
+              "age": "牝3",
+              "weight": "55"
+            },
+            {
+              "horseNumber": 5,
+              "horseName": "ブランチアウト",
+              "pt": 74,
+              "role": "補欠",
+              "jockey": "古川吉",
+              "trainer": "(栗)昆",
+              "age": "牡3",
+              "weight": "57"
             },
             {
               "horseNumber": 12,
@@ -713,23 +713,23 @@
               "weight": "55"
             },
             {
-              "horseNumber": 18,
-              "horseName": "レインボーステート",
-              "pt": 79,
+              "horseNumber": 16,
+              "horseName": "ハピネスサンライズ",
+              "pt": 81,
               "role": "連下最上位",
-              "jockey": "坂井瑠",
-              "trainer": "(栗)茶木",
-              "age": "牡3",
-              "weight": "57"
+              "jockey": "松若風",
+              "trainer": "(栗)東田",
+              "age": "牝3",
+              "weight": "55"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "11-6.16.18.13.15.5(抑え8.2.12.14.7)",
-              "6-11.16.18.13.15.5(抑え8.2.12.14.7)"
+              "11-6.16.18.15.8.2(抑え13.5.12.14.7)",
+              "6-11.16.18.15.8.2(抑え13.5.12.14.7)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.027Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -783,16 +783,6 @@
               "weight": "57"
             },
             {
-              "horseNumber": 1,
-              "horseName": "リノルアナ",
-              "pt": 76,
-              "role": "連下",
-              "jockey": "酒井学",
-              "trainer": "(栗)坂口智",
-              "age": "牡3",
-              "weight": "57"
-            },
-            {
               "horseNumber": 12,
               "horseName": "フィニステーレ",
               "pt": 75,
@@ -806,11 +796,21 @@
               "horseNumber": 11,
               "horseName": "ラヴィニール",
               "pt": 73,
-              "role": "補欠",
+              "role": "連下",
               "jockey": "北村友",
               "trainer": "(栗)武英",
               "age": "牝3",
               "weight": "55"
+            },
+            {
+              "horseNumber": 8,
+              "horseName": "プレスリリース",
+              "pt": 81,
+              "role": "補欠",
+              "jockey": "川田将",
+              "trainer": "(栗)中内田",
+              "age": "牡3",
+              "weight": "57"
             },
             {
               "horseNumber": 10,
@@ -913,23 +913,23 @@
               "weight": "52"
             },
             {
-              "horseNumber": 8,
-              "horseName": "プレスリリース",
-              "pt": 81,
+              "horseNumber": 1,
+              "horseName": "リノルアナ",
+              "pt": 76,
               "role": "連下最上位",
-              "jockey": "川田将",
-              "trainer": "(栗)中内田",
+              "jockey": "酒井学",
+              "trainer": "(栗)坂口智",
               "age": "牡3",
               "weight": "57"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "16-6.3.8.17.1.12(抑え11.10.14.15.18)",
-              "6-16.3.8.17.1.12(抑え11.10.14.15.18)"
+              "16-6.3.1.17.12.11(抑え8.10.14.15.18)",
+              "6-16.3.1.17.12.11(抑え8.10.14.15.18)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.027Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -953,10 +953,20 @@
               "weight": "58"
             },
             {
+              "horseNumber": 5,
+              "horseName": "ガビーズブラザー",
+              "pt": 81,
+              "role": "対抗",
+              "jockey": "松若風",
+              "trainer": "(栗)牧田",
+              "age": "牡4",
+              "weight": "58"
+            },
+            {
               "horseNumber": 7,
               "horseName": "ゼットスパンキー",
               "pt": 86,
-              "role": "対抗",
+              "role": "単穴",
               "jockey": "浜中俊",
               "trainer": "(栗)宮",
               "age": "牡5",
@@ -966,21 +976,11 @@
               "horseNumber": 4,
               "horseName": "テーオーミリカン",
               "pt": 83,
-              "role": "単穴",
+              "role": "連下",
               "jockey": "田山旺",
               "trainer": "(栗)宮",
               "age": "牡4",
               "weight": "55"
-            },
-            {
-              "horseNumber": 13,
-              "horseName": "スカイブルー",
-              "pt": 76,
-              "role": "連下",
-              "jockey": "秋山稔",
-              "trainer": "(栗)佐藤悠",
-              "age": "牡4",
-              "weight": "58"
             },
             {
               "horseNumber": 2,
@@ -993,10 +993,20 @@
               "weight": "58"
             },
             {
+              "horseNumber": 12,
+              "horseName": "ワンウェイトゥヘル",
+              "pt": 71,
+              "role": "連下",
+              "jockey": "岩田望",
+              "trainer": "(栗)中村",
+              "age": "牡4",
+              "weight": "58"
+            },
+            {
               "horseNumber": 16,
               "horseName": "(地)カネコメファミリー",
               "pt": 73,
-              "role": "連下",
+              "role": "補欠",
               "jockey": "斎藤新",
               "trainer": "(栗)中尾秀",
               "age": "牝5",
@@ -1031,16 +1041,6 @@
               "trainer": "(栗)宮本",
               "age": "牝4",
               "weight": "56"
-            },
-            {
-              "horseNumber": 12,
-              "horseName": "ワンウェイトゥヘル",
-              "pt": 71,
-              "role": "補欠",
-              "jockey": "岩田望",
-              "trainer": "(栗)中村",
-              "age": "牡4",
-              "weight": "58"
             },
             {
               "horseNumber": 14,
@@ -1093,23 +1093,23 @@
               "weight": "58"
             },
             {
-              "horseNumber": 5,
-              "horseName": "ガビーズブラザー",
-              "pt": 81,
+              "horseNumber": 13,
+              "horseName": "スカイブルー",
+              "pt": 76,
               "role": "連下最上位",
-              "jockey": "松若風",
-              "trainer": "(栗)牧田",
+              "jockey": "秋山稔",
+              "trainer": "(栗)佐藤悠",
               "age": "牡4",
               "weight": "58"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "6-7.4.5.13.2.16(抑え1.15.3.12.14)",
-              "7-6.4.5.13.2.16(抑え1.15.3.12.14)"
+              "6-7.5.13.4.2.12(抑え16.1.15.3.14)",
+              "5-6.7.13.4.2.12(抑え16.1.15.3.14)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.027Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -1133,22 +1133,22 @@
               "weight": "58"
             },
             {
-              "horseNumber": 4,
-              "horseName": "エイユーファイヤー",
-              "pt": 85,
+              "horseNumber": 3,
+              "horseName": "マジックブルー",
+              "pt": 83,
               "role": "対抗",
-              "jockey": "松山弘",
-              "trainer": "(栗)森田",
-              "age": "牡4",
+              "jockey": "幸英明",
+              "trainer": "(栗)荒川",
+              "age": "牡5",
               "weight": "58"
             },
             {
-              "horseNumber": 8,
-              "horseName": "ジーティーアメリカ",
+              "horseNumber": 4,
+              "horseName": "エイユーファイヤー",
               "pt": 85,
               "role": "単穴",
-              "jockey": "北村友",
-              "trainer": "(栗)吉岡",
+              "jockey": "松山弘",
+              "trainer": "(栗)森田",
               "age": "牡4",
               "weight": "58"
             },
@@ -1173,24 +1173,24 @@
               "weight": "58"
             },
             {
-              "horseNumber": 6,
-              "horseName": "ゴルデールスカー",
-              "pt": 74,
-              "role": "連下",
-              "jockey": "鮫島駿",
-              "trainer": "(栗)加藤公",
-              "age": "牡6",
-              "weight": "58"
-            },
-            {
               "horseNumber": 7,
               "horseName": "ハイグッドワールド",
               "pt": 73,
-              "role": "補欠",
+              "role": "連下",
               "jockey": "柴田裕",
               "trainer": "(栗)谷",
               "age": "牡5",
               "weight": "56"
+            },
+            {
+              "horseNumber": 6,
+              "horseName": "ゴルデールスカー",
+              "pt": 74,
+              "role": "補欠",
+              "jockey": "鮫島駿",
+              "trainer": "(栗)加藤公",
+              "age": "牡6",
+              "weight": "58"
             },
             {
               "horseNumber": 1,
@@ -1203,23 +1203,23 @@
               "weight": "54"
             },
             {
-              "horseNumber": 3,
-              "horseName": "マジックブルー",
-              "pt": 83,
+              "horseNumber": 8,
+              "horseName": "ジーティーアメリカ",
+              "pt": 85,
               "role": "連下最上位",
-              "jockey": "幸英明",
-              "trainer": "(栗)荒川",
-              "age": "牡5",
+              "jockey": "北村友",
+              "trainer": "(栗)吉岡",
+              "age": "牡4",
               "weight": "58"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "5-4.8.3.9.2.6(抑え7)",
-              "4-5.8.3.9.2.6(抑え7)"
+              "5-4.8.3.9.2.7(抑え6)",
+              "3-5.4.8.9.2.7(抑え6)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.027Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -1243,24 +1243,24 @@
               "weight": "58"
             },
             {
-              "horseNumber": 7,
-              "horseName": "リリーフィールド",
-              "pt": 88,
-              "role": "対抗",
-              "jockey": "武豊",
-              "trainer": "(栗)小崎",
-              "age": "牝4",
-              "weight": "56"
-            },
-            {
               "horseNumber": 1,
               "horseName": "タガノアンファン",
               "pt": 86,
-              "role": "単穴",
+              "role": "対抗",
               "jockey": "高杉吏",
               "trainer": "(栗)石坂公",
               "age": "牡4",
               "weight": "58"
+            },
+            {
+              "horseNumber": 7,
+              "horseName": "リリーフィールド",
+              "pt": 88,
+              "role": "単穴",
+              "jockey": "武豊",
+              "trainer": "(栗)小崎",
+              "age": "牝4",
+              "weight": "56"
             },
             {
               "horseNumber": 9,
@@ -1326,10 +1326,10 @@
           "bettingLines": {
             "umatan": [
               "2-7.1.6.9.8.3",
-              "7-2.1.6.9.8.3"
+              "1-2.7.6.9.8.3"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.027Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -1373,12 +1373,12 @@
               "weight": "57"
             },
             {
-              "horseNumber": 8,
-              "horseName": "サトノリシャール",
-              "pt": 76,
+              "horseNumber": 7,
+              "horseName": "ヴァロンブローサ",
+              "pt": 77,
               "role": "連下",
-              "jockey": "岩田望",
-              "trainer": "(栗)福永",
+              "jockey": "幸英明",
+              "trainer": "(栗)池添学",
               "age": "牡3",
               "weight": "57"
             },
@@ -1423,23 +1423,23 @@
               "weight": "57"
             },
             {
-              "horseNumber": 7,
-              "horseName": "ヴァロンブローサ",
-              "pt": 77,
+              "horseNumber": 8,
+              "horseName": "サトノリシャール",
+              "pt": 76,
               "role": "連下最上位",
-              "jockey": "幸英明",
-              "trainer": "(栗)池添学",
+              "jockey": "岩田望",
+              "trainer": "(栗)福永",
               "age": "牡3",
               "weight": "57"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "2-4.9.7.8.6.5(抑え1.3)",
-              "4-2.9.7.8.6.5(抑え1.3)"
+              "2-4.9.8.7.6.5(抑え1.3)",
+              "4-2.9.8.7.6.5(抑え1.3)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.027Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -1493,16 +1493,6 @@
               "weight": "57"
             },
             {
-              "horseNumber": 2,
-              "horseName": "ヴーレヴー",
-              "pt": 74,
-              "role": "連下",
-              "jockey": "浜中俊",
-              "trainer": "(栗)武幸",
-              "age": "牝4",
-              "weight": "54"
-            },
-            {
               "horseNumber": 9,
               "horseName": "クロジシジョー",
               "pt": 74,
@@ -1516,11 +1506,21 @@
               "horseNumber": 6,
               "horseName": "バトルクライ",
               "pt": 73,
-              "role": "補欠",
+              "role": "連下",
               "jockey": "北村友",
               "trainer": "(美)高木登",
               "age": "牡7",
               "weight": "58.5"
+            },
+            {
+              "horseNumber": 2,
+              "horseName": "ヴーレヴー",
+              "pt": 74,
+              "role": "補欠",
+              "jockey": "浜中俊",
+              "trainer": "(栗)武幸",
+              "age": "牝4",
+              "weight": "54"
             },
             {
               "horseNumber": 10,
@@ -1615,11 +1615,11 @@
           ],
           "bettingLines": {
             "umatan": [
-              "7-8.12.3.5.2.9(抑え6.10.16)",
-              "8-7.12.3.5.2.9(抑え6.10.16)"
+              "7-8.12.3.5.9.6(抑え2.10.16)",
+              "8-7.12.3.5.9.6(抑え2.10.16)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.027Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -1663,16 +1663,6 @@
               "weight": "57"
             },
             {
-              "horseNumber": 3,
-              "horseName": "リゾートアイランド",
-              "pt": 77,
-              "role": "連下",
-              "jockey": "武豊",
-              "trainer": "(美)上原佑",
-              "age": "牡3",
-              "weight": "57"
-            },
-            {
               "horseNumber": 5,
               "horseName": "シーミハットク",
               "pt": 76,
@@ -1696,9 +1686,19 @@
               "horseNumber": 4,
               "horseName": "エイシンティザー",
               "pt": 75,
-              "role": "補欠",
+              "role": "連下",
               "jockey": "西塚洸",
               "trainer": "(栗)吉村",
+              "age": "牡3",
+              "weight": "57"
+            },
+            {
+              "horseNumber": 3,
+              "horseName": "リゾートアイランド",
+              "pt": 77,
+              "role": "補欠",
+              "jockey": "武豊",
+              "trainer": "(美)上原佑",
               "age": "牡3",
               "weight": "57"
             },
@@ -1775,11 +1775,11 @@
           ],
           "bettingLines": {
             "umatan": [
-              "8-6.10.14.3.5.7(抑え4.13.9)",
-              "6-8.10.14.3.5.7(抑え4.13.9)"
+              "8-6.10.14.5.7.4(抑え3.13.9)",
+              "6-8.10.14.5.7.4(抑え3.13.9)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.027Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -1823,6 +1823,16 @@
               "weight": "56"
             },
             {
+              "horseNumber": 8,
+              "horseName": "ラヴオントップ",
+              "pt": 79,
+              "role": "連下",
+              "jockey": "吉村誠",
+              "trainer": "(栗)西村",
+              "age": "牝5",
+              "weight": "56"
+            },
+            {
               "horseNumber": 14,
               "horseName": "モズタチアガレ",
               "pt": 78,
@@ -1830,16 +1840,6 @@
               "jockey": "北村友",
               "trainer": "(栗)中尾秀",
               "age": "牡4",
-              "weight": "58"
-            },
-            {
-              "horseNumber": 15,
-              "horseName": "ツーネサーン",
-              "pt": 74,
-              "role": "連下",
-              "jockey": "岩田望",
-              "trainer": "(栗)矢作",
-              "age": "牡5",
               "weight": "58"
             },
             {
@@ -1933,23 +1933,23 @@
               "weight": "58"
             },
             {
-              "horseNumber": 8,
-              "horseName": "ラヴオントップ",
-              "pt": 79,
+              "horseNumber": 15,
+              "horseName": "ツーネサーン",
+              "pt": 74,
               "role": "連下最上位",
-              "jockey": "吉村誠",
-              "trainer": "(栗)西村",
-              "age": "牝5",
-              "weight": "56"
+              "jockey": "岩田望",
+              "trainer": "(栗)矢作",
+              "age": "牡5",
+              "weight": "58"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "5-3.6.8.14.15.4(抑え9.7)",
-              "3-5.6.8.14.15.4(抑え9.7)"
+              "5-3.6.15.8.14.4(抑え9.7)",
+              "3-5.6.15.8.14.4(抑え9.7)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.028Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         }
       ]
     },
@@ -1983,44 +1983,34 @@
               "weight": "55"
             },
             {
-              "horseNumber": 5,
-              "horseName": "アドミ",
-              "pt": 84,
-              "role": "対抗",
-              "jockey": "三浦皇",
-              "trainer": "(美)中川",
-              "age": "牝3",
-              "weight": "55"
-            },
-            {
               "horseNumber": 12,
               "horseName": "エコロセレナ",
               "pt": 84,
-              "role": "単穴",
+              "role": "対抗",
               "jockey": "岩田康",
               "trainer": "(美)斎藤誠",
               "age": "牝3",
               "weight": "55"
             },
             {
-              "horseNumber": 3,
-              "horseName": "フェルアフリーゼ",
-              "pt": 80,
-              "role": "連下",
-              "jockey": "石神道",
-              "trainer": "(美)深山",
+              "horseNumber": 5,
+              "horseName": "アドミ",
+              "pt": 84,
+              "role": "単穴",
+              "jockey": "三浦皇",
+              "trainer": "(美)中川",
               "age": "牝3",
-              "weight": "52"
+              "weight": "55"
             },
             {
-              "horseNumber": 14,
-              "horseName": "ニシノゲッパク",
-              "pt": 76,
+              "horseNumber": 11,
+              "horseName": "マーマレードスカイ",
+              "pt": 83,
               "role": "連下",
-              "jockey": "遠藤汰",
-              "trainer": "(美)伊藤伸",
+              "jockey": "松岡正",
+              "trainer": "(美)堀内",
               "age": "牝3",
-              "weight": "52"
+              "weight": "55"
             },
             {
               "horseNumber": 7,
@@ -2036,11 +2026,21 @@
               "horseNumber": 15,
               "horseName": "オレンジリバー",
               "pt": 73,
-              "role": "補欠",
+              "role": "連下",
               "jockey": "長浜鴻",
               "trainer": "(美)黒岩",
               "age": "牝3",
               "weight": "53"
+            },
+            {
+              "horseNumber": 14,
+              "horseName": "ニシノゲッパク",
+              "pt": 76,
+              "role": "補欠",
+              "jockey": "遠藤汰",
+              "trainer": "(美)伊藤伸",
+              "age": "牝3",
+              "weight": "52"
             },
             {
               "horseNumber": 1,
@@ -2123,23 +2123,23 @@
               "weight": "52"
             },
             {
-              "horseNumber": 11,
-              "horseName": "マーマレードスカイ",
-              "pt": 83,
+              "horseNumber": 3,
+              "horseName": "フェルアフリーゼ",
+              "pt": 80,
               "role": "連下最上位",
-              "jockey": "松岡正",
-              "trainer": "(美)堀内",
+              "jockey": "石神道",
+              "trainer": "(美)深山",
               "age": "牝3",
-              "weight": "55"
+              "weight": "52"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "8-5.12.11.3.14.7(抑え15)",
-              "5-8.12.11.3.14.7(抑え15)"
+              "8-5.12.3.11.7.15(抑え14)",
+              "12-8.5.3.11.7.15(抑え14)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.028Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -2183,6 +2183,16 @@
               "weight": "57"
             },
             {
+              "horseNumber": 3,
+              "horseName": "ノーブルジャッカル",
+              "pt": 78,
+              "role": "連下",
+              "jockey": "武藤雅",
+              "trainer": "(美)武藤",
+              "age": "セン3",
+              "weight": "57"
+            },
+            {
               "horseNumber": 11,
               "horseName": "ゴールドドレッサ",
               "pt": 76,
@@ -2191,16 +2201,6 @@
               "trainer": "(美)中川",
               "age": "牝3",
               "weight": "52"
-            },
-            {
-              "horseNumber": 7,
-              "horseName": "プリンセスダーコ",
-              "pt": 75,
-              "role": "連下",
-              "jockey": "原優介",
-              "trainer": "(美)清水英",
-              "age": "牝3",
-              "weight": "55"
             },
             {
               "horseNumber": 9,
@@ -2283,23 +2283,23 @@
               "weight": "54"
             },
             {
-              "horseNumber": 3,
-              "horseName": "ノーブルジャッカル",
-              "pt": 78,
+              "horseNumber": 7,
+              "horseName": "プリンセスダーコ",
+              "pt": 75,
               "role": "連下最上位",
-              "jockey": "武藤雅",
-              "trainer": "(美)武藤",
-              "age": "セン3",
-              "weight": "57"
+              "jockey": "原優介",
+              "trainer": "(美)清水英",
+              "age": "牝3",
+              "weight": "55"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "5-12.14.3.11.7.9(抑え10.2.8.1.13)",
-              "12-5.14.3.11.7.9(抑え10.2.8.1.13)"
+              "5-12.14.7.3.11.9(抑え10.2.8.1.13)",
+              "12-5.14.7.3.11.9(抑え10.2.8.1.13)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.028Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -2479,7 +2479,7 @@
               "1-3.4.14.2.16.6(抑え10.5.13.15)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.028Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -2513,24 +2513,24 @@
               "weight": "58"
             },
             {
-              "horseNumber": 4,
-              "horseName": "メイショウゲキリン",
-              "pt": 82,
-              "role": "単穴",
-              "jockey": "小牧加",
-              "trainer": "(栗)笹田",
-              "age": "牡7",
-              "weight": "60"
-            },
-            {
               "horseNumber": 11,
               "horseName": "モンツァフレイバー",
               "pt": 79,
-              "role": "連下",
+              "role": "単穴",
               "jockey": "草野太",
               "trainer": "(美)久保田",
               "age": "牡4",
               "weight": "59"
+            },
+            {
+              "horseNumber": 5,
+              "horseName": "フォルガイル",
+              "pt": 79,
+              "role": "連下",
+              "jockey": "五十嵐雄",
+              "trainer": "(美)加藤和",
+              "age": "牡5",
+              "weight": "60"
             },
             {
               "horseNumber": 12,
@@ -2623,23 +2623,23 @@
               "weight": "60"
             },
             {
-              "horseNumber": 5,
-              "horseName": "フォルガイル",
-              "pt": 79,
+              "horseNumber": 4,
+              "horseName": "メイショウゲキリン",
+              "pt": 82,
               "role": "連下最上位",
-              "jockey": "五十嵐雄",
-              "trainer": "(美)加藤和",
-              "age": "牡5",
+              "jockey": "小牧加",
+              "trainer": "(栗)笹田",
+              "age": "牡7",
               "weight": "60"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "14-13.4.5.11.12.1(抑え10.8.3)",
-              "13-14.4.5.11.12.1(抑え10.8.3)"
+              "14-13.4.11.5.12.1(抑え10.8.3)",
+              "13-14.4.11.5.12.1(抑え10.8.3)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.028Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -2673,14 +2673,14 @@
               "weight": "55"
             },
             {
-              "horseNumber": 15,
-              "horseName": "ムーングレイル",
-              "pt": 82,
+              "horseNumber": 6,
+              "horseName": "アリアス",
+              "pt": 81,
               "role": "単穴",
-              "jockey": "石神道",
-              "trainer": "(美)森一誠",
-              "age": "セン3",
-              "weight": "54"
+              "jockey": "三浦皇",
+              "trainer": "(美)高柳瑞",
+              "age": "牝3",
+              "weight": "55"
             },
             {
               "horseNumber": 11,
@@ -2703,10 +2703,20 @@
               "weight": "57"
             },
             {
+              "horseNumber": 5,
+              "horseName": "レッドフリーマン",
+              "pt": 72,
+              "role": "連下",
+              "jockey": "荻野極",
+              "trainer": "(美)大竹",
+              "age": "牡3",
+              "weight": "57"
+            },
+            {
               "horseNumber": 10,
               "horseName": "マイネルヴェーゼン",
               "pt": 75,
-              "role": "連下",
+              "role": "補欠",
               "jockey": "石川裕",
               "trainer": "(美)相沢",
               "age": "牡3",
@@ -2721,16 +2731,6 @@
               "trainer": "(美)萱野",
               "age": "牝3",
               "weight": "55"
-            },
-            {
-              "horseNumber": 5,
-              "horseName": "レッドフリーマン",
-              "pt": 72,
-              "role": "補欠",
-              "jockey": "荻野極",
-              "trainer": "(美)大竹",
-              "age": "牡3",
-              "weight": "57"
             },
             {
               "horseNumber": 12,
@@ -2803,23 +2803,23 @@
               "weight": "53"
             },
             {
-              "horseNumber": 6,
-              "horseName": "アリアス",
-              "pt": 81,
+              "horseNumber": 15,
+              "horseName": "ムーングレイル",
+              "pt": 82,
               "role": "連下最上位",
-              "jockey": "三浦皇",
-              "trainer": "(美)高柳瑞",
-              "age": "牝3",
-              "weight": "55"
+              "jockey": "石神道",
+              "trainer": "(美)森一誠",
+              "age": "セン3",
+              "weight": "54"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "13-3.15.6.11.7.10(抑え4.5.12.1)",
-              "3-13.15.6.11.7.10(抑え4.5.12.1)"
+              "13-3.15.6.11.7.5(抑え10.4.12.1)",
+              "3-13.15.6.11.7.5(抑え10.4.12.1)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.028Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -2843,24 +2843,24 @@
               "weight": "57"
             },
             {
-              "horseNumber": 10,
-              "horseName": "カシマライフウ",
-              "pt": 89,
-              "role": "対抗",
-              "jockey": "松岡正",
-              "trainer": "(美)伊藤伸",
-              "age": "牡3",
-              "weight": "57"
-            },
-            {
               "horseNumber": 3,
               "horseName": "クアッドフォルツァ",
               "pt": 85,
-              "role": "単穴",
+              "role": "対抗",
               "jockey": "佐藤翔",
               "trainer": "(美)伊藤圭",
               "age": "牡3",
               "weight": "54"
+            },
+            {
+              "horseNumber": 10,
+              "horseName": "カシマライフウ",
+              "pt": 89,
+              "role": "単穴",
+              "jockey": "松岡正",
+              "trainer": "(美)伊藤伸",
+              "age": "牡3",
+              "weight": "57"
             },
             {
               "horseNumber": 5,
@@ -2883,24 +2883,24 @@
               "weight": "57"
             },
             {
-              "horseNumber": 8,
-              "horseName": "アビヤント",
-              "pt": 75,
-              "role": "連下",
-              "jockey": "三浦皇",
-              "trainer": "(美)鹿戸雄",
-              "age": "牡3",
-              "weight": "57"
-            },
-            {
               "horseNumber": 12,
               "horseName": "ジェイエルトランプ",
               "pt": 73,
-              "role": "補欠",
+              "role": "連下",
               "jockey": "長浜鴻",
               "trainer": "(美)平岩",
               "age": "牡3",
               "weight": "55"
+            },
+            {
+              "horseNumber": 8,
+              "horseName": "アビヤント",
+              "pt": 75,
+              "role": "補欠",
+              "jockey": "三浦皇",
+              "trainer": "(美)鹿戸雄",
+              "age": "牡3",
+              "weight": "57"
             },
             {
               "horseNumber": 13,
@@ -2965,11 +2965,11 @@
           ],
           "bettingLines": {
             "umatan": [
-              "4-10.3.7.5.1.8(抑え12.13.9)",
-              "10-4.3.7.5.1.8(抑え12.13.9)"
+              "4-10.3.7.5.1.12(抑え8.13.9)",
+              "3-4.10.7.5.1.12(抑え8.13.9)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.028Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -3003,14 +3003,14 @@
               "weight": "56"
             },
             {
-              "horseNumber": 8,
-              "horseName": "パストラーレ",
-              "pt": 85,
+              "horseNumber": 2,
+              "horseName": "ロジャリーマイン",
+              "pt": 79,
               "role": "単穴",
-              "jockey": "田辺裕",
-              "trainer": "(美)武市",
-              "age": "牡5",
-              "weight": "58"
+              "jockey": "岩田康",
+              "trainer": "(美)久保田",
+              "age": "牝4",
+              "weight": "56"
             },
             {
               "horseNumber": 9,
@@ -3033,10 +3033,20 @@
               "weight": "56"
             },
             {
+              "horseNumber": 4,
+              "horseName": "ニシノエピカリ",
+              "pt": 72,
+              "role": "連下",
+              "jockey": "佐々木大",
+              "trainer": "(美)秋本",
+              "age": "牝4",
+              "weight": "56"
+            },
+            {
               "horseNumber": 5,
               "horseName": "ルージュカエラ",
               "pt": 74,
-              "role": "連下",
+              "role": "補欠",
               "jockey": "団野大",
               "trainer": "(美)加藤征",
               "age": "牝5",
@@ -3051,16 +3061,6 @@
               "trainer": "(美)牧",
               "age": "牡4",
               "weight": "58"
-            },
-            {
-              "horseNumber": 4,
-              "horseName": "ニシノエピカリ",
-              "pt": 72,
-              "role": "補欠",
-              "jockey": "佐々木大",
-              "trainer": "(美)秋本",
-              "age": "牝4",
-              "weight": "56"
             },
             {
               "horseNumber": 12,
@@ -3093,23 +3093,23 @@
               "weight": "58"
             },
             {
-              "horseNumber": 2,
-              "horseName": "ロジャリーマイン",
-              "pt": 79,
+              "horseNumber": 8,
+              "horseName": "パストラーレ",
+              "pt": 85,
               "role": "連下最上位",
-              "jockey": "岩田康",
-              "trainer": "(美)久保田",
-              "age": "牝4",
-              "weight": "56"
+              "jockey": "田辺裕",
+              "trainer": "(美)武市",
+              "age": "牡5",
+              "weight": "58"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "1-7.8.2.9.10.5(抑え6.4.12.11)",
-              "7-1.8.2.9.10.5(抑え6.4.12.11)"
+              "1-7.8.2.9.10.4(抑え5.6.12.11)",
+              "7-1.8.2.9.10.4(抑え5.6.12.11)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.028Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -3153,13 +3153,13 @@
               "weight": "56"
             },
             {
-              "horseNumber": 1,
-              "horseName": "オウケンシルヴァー",
-              "pt": 78,
+              "horseNumber": 5,
+              "horseName": "ロードソルスティス",
+              "pt": 79,
               "role": "連下",
-              "jockey": "木幡育",
-              "trainer": "(美)松永康",
-              "age": "牡5",
+              "jockey": "横山琉",
+              "trainer": "(美)斎藤誠",
+              "age": "牡4",
               "weight": "58"
             },
             {
@@ -3173,23 +3173,23 @@
               "weight": "58"
             },
             {
-              "horseNumber": 2,
-              "horseName": "ロジルーラー",
-              "pt": 72,
-              "role": "連下",
-              "jockey": "松岡正",
-              "trainer": "(美)稲垣",
-              "age": "牡5",
-              "weight": "58"
-            },
-            {
               "horseNumber": 10,
               "horseName": "ナムラジミー",
               "pt": 72,
-              "role": "補欠",
+              "role": "連下",
               "jockey": "菊沢一",
               "trainer": "(美)武市",
               "age": "牡4",
+              "weight": "58"
+            },
+            {
+              "horseNumber": 2,
+              "horseName": "ロジルーラー",
+              "pt": 72,
+              "role": "補欠",
+              "jockey": "松岡正",
+              "trainer": "(美)稲垣",
+              "age": "牡5",
               "weight": "58"
             },
             {
@@ -3223,23 +3223,23 @@
               "weight": "58"
             },
             {
-              "horseNumber": 5,
-              "horseName": "ロードソルスティス",
-              "pt": 79,
+              "horseNumber": 1,
+              "horseName": "オウケンシルヴァー",
+              "pt": 78,
               "role": "連下最上位",
-              "jockey": "横山琉",
-              "trainer": "(美)斎藤誠",
-              "age": "牡4",
+              "jockey": "木幡育",
+              "trainer": "(美)松永康",
+              "age": "牡5",
               "weight": "58"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "7-3.6.5.1.11.2(抑え10.9)",
-              "3-7.6.5.1.11.2(抑え10.9)"
+              "7-3.6.1.5.11.10(抑え2.9)",
+              "3-7.6.1.5.11.10(抑え2.9)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.028Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -3263,32 +3263,32 @@
               "weight": "57"
             },
             {
-              "horseNumber": 8,
-              "horseName": "ドッグウッド",
-              "pt": 85,
-              "role": "対抗",
-              "jockey": "横山和",
-              "trainer": "(美)斎藤誠",
-              "age": "牡3",
-              "weight": "57"
-            },
-            {
               "horseNumber": 7,
               "horseName": "ヨカオウ",
               "pt": 83,
-              "role": "単穴",
+              "role": "対抗",
               "jockey": "岩田康",
               "trainer": "(栗)谷",
               "age": "牡3",
               "weight": "57"
             },
             {
-              "horseNumber": 5,
-              "horseName": "レイヒストリコ",
-              "pt": 78,
+              "horseNumber": 8,
+              "horseName": "ドッグウッド",
+              "pt": 85,
+              "role": "単穴",
+              "jockey": "横山和",
+              "trainer": "(美)斎藤誠",
+              "age": "牡3",
+              "weight": "57"
+            },
+            {
+              "horseNumber": 4,
+              "horseName": "ポッドクロス",
+              "pt": 80,
               "role": "連下",
-              "jockey": "団野大",
-              "trainer": "(美)黒岩",
+              "jockey": "荻野極",
+              "trainer": "(美)大竹",
               "age": "牡3",
               "weight": "57"
             },
@@ -3303,10 +3303,20 @@
               "weight": "57"
             },
             {
+              "horseNumber": 10,
+              "horseName": "バリオス",
+              "pt": 71,
+              "role": "連下",
+              "jockey": "西村淳",
+              "trainer": "(栗)武幸",
+              "age": "牡3",
+              "weight": "57"
+            },
+            {
               "horseNumber": 6,
               "horseName": "モウエエデショー",
               "pt": 77,
-              "role": "連下",
+              "role": "補欠",
               "jockey": "原田和",
               "trainer": "(美)萱野",
               "age": "牡3",
@@ -3329,16 +3339,6 @@
               "role": "補欠",
               "jockey": "佐々木大",
               "trainer": "(栗)藤岡健",
-              "age": "牡3",
-              "weight": "57"
-            },
-            {
-              "horseNumber": 10,
-              "horseName": "バリオス",
-              "pt": 71,
-              "role": "補欠",
-              "jockey": "西村淳",
-              "trainer": "(栗)武幸",
               "age": "牡3",
               "weight": "57"
             },
@@ -3373,23 +3373,23 @@
               "weight": "57"
             },
             {
-              "horseNumber": 4,
-              "horseName": "ポッドクロス",
-              "pt": 80,
+              "horseNumber": 5,
+              "horseName": "レイヒストリコ",
+              "pt": 78,
               "role": "連下最上位",
-              "jockey": "荻野極",
-              "trainer": "(美)大竹",
+              "jockey": "団野大",
+              "trainer": "(美)黒岩",
               "age": "牡3",
               "weight": "57"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "13-8.7.4.5.1.6(抑え3.9.10.11)",
-              "8-13.7.4.5.1.6(抑え3.9.10.11)"
+              "13-8.7.5.4.1.10(抑え6.3.9.11)",
+              "7-13.8.5.4.1.10(抑え6.3.9.11)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.028Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -3413,33 +3413,23 @@
               "weight": "58"
             },
             {
-              "horseNumber": 10,
-              "horseName": "ライジンマル",
-              "pt": 88,
-              "role": "対抗",
-              "jockey": "木幡初",
-              "trainer": "(美)竹内",
-              "age": "セン5",
-              "weight": "58"
-            },
-            {
               "horseNumber": 11,
               "horseName": "ピコシー",
               "pt": 83,
-              "role": "単穴",
+              "role": "対抗",
               "jockey": "岩田康",
               "trainer": "(美)奥村武",
               "age": "牡4",
               "weight": "58"
             },
             {
-              "horseNumber": 3,
-              "horseName": "オリーブグリーン",
-              "pt": 79,
-              "role": "連下",
-              "jockey": "西村淳",
-              "trainer": "(栗)矢作",
-              "age": "牡4",
+              "horseNumber": 10,
+              "horseName": "ライジンマル",
+              "pt": 88,
+              "role": "単穴",
+              "jockey": "木幡初",
+              "trainer": "(美)竹内",
+              "age": "セン5",
               "weight": "58"
             },
             {
@@ -3463,6 +3453,26 @@
               "weight": "58"
             },
             {
+              "horseNumber": 8,
+              "horseName": "フジレイメイ",
+              "pt": 72,
+              "role": "連下",
+              "jockey": "松岡正",
+              "trainer": "(美)小笠",
+              "age": "牡4",
+              "weight": "58"
+            },
+            {
+              "horseNumber": 3,
+              "horseName": "オリーブグリーン",
+              "pt": 79,
+              "role": "補欠",
+              "jockey": "西村淳",
+              "trainer": "(栗)矢作",
+              "age": "牡4",
+              "weight": "58"
+            },
+            {
               "horseNumber": 4,
               "horseName": "エンプレスフレーム",
               "pt": 72,
@@ -3471,16 +3481,6 @@
               "trainer": "(美)上原博",
               "age": "牝4",
               "weight": "56"
-            },
-            {
-              "horseNumber": 8,
-              "horseName": "フジレイメイ",
-              "pt": 72,
-              "role": "補欠",
-              "jockey": "松岡正",
-              "trainer": "(美)小笠",
-              "age": "牡4",
-              "weight": "58"
             },
             {
               "horseNumber": 14,
@@ -3555,11 +3555,11 @@
           ],
           "bettingLines": {
             "umatan": [
-              "6-10.11.5.3.13.9(抑え4.8.14)",
-              "10-6.11.5.3.13.9(抑え4.8.14)"
+              "6-10.11.5.13.9.8(抑え3.4.14)",
+              "11-6.10.5.13.9.8(抑え3.4.14)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.028Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -3573,14 +3573,14 @@
           },
           "horses": [
             {
-              "horseNumber": 10,
-              "horseName": "ケイアイセナ",
-              "pt": 87,
+              "horseNumber": 2,
+              "horseName": "ミニトランザット",
+              "pt": 82,
               "role": "本命",
-              "jockey": "津村明",
-              "trainer": "(栗)平田",
-              "age": "牡7",
-              "weight": "57.5"
+              "jockey": "西村淳",
+              "trainer": "(栗)杉山佳",
+              "age": "牡4",
+              "weight": "56"
             },
             {
               "horseNumber": 16,
@@ -3593,24 +3593,24 @@
               "weight": "57"
             },
             {
-              "horseNumber": 2,
-              "horseName": "ミニトランザット",
-              "pt": 82,
+              "horseNumber": 8,
+              "horseName": "ファーヴェント",
+              "pt": 80,
               "role": "単穴",
-              "jockey": "西村淳",
-              "trainer": "(栗)杉山佳",
-              "age": "牡4",
-              "weight": "56"
+              "jockey": "横山武",
+              "trainer": "(栗)藤原英",
+              "age": "牡5",
+              "weight": "57"
             },
             {
-              "horseNumber": 14,
-              "horseName": "ジュンブロッサム",
-              "pt": 78,
+              "horseNumber": 10,
+              "horseName": "ケイアイセナ",
+              "pt": 87,
               "role": "連下",
-              "jockey": "荻野極",
-              "trainer": "(栗)友道",
+              "jockey": "津村明",
+              "trainer": "(栗)平田",
               "age": "牡7",
-              "weight": "58.5"
+              "weight": "57.5"
             },
             {
               "horseNumber": 13,
@@ -3723,23 +3723,23 @@
               "weight": "57.5"
             },
             {
-              "horseNumber": 8,
-              "horseName": "ファーヴェント",
-              "pt": 80,
+              "horseNumber": 14,
+              "horseName": "ジュンブロッサム",
+              "pt": 78,
               "role": "連下最上位",
-              "jockey": "横山武",
-              "trainer": "(栗)藤原英",
-              "age": "牡5",
-              "weight": "57"
+              "jockey": "荻野極",
+              "trainer": "(栗)友道",
+              "age": "牡7",
+              "weight": "58.5"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "10-16.2.8.14.13.5(抑え1.15.3.4.11)",
-              "16-10.2.8.14.13.5(抑え1.15.3.4.11)"
+              "2-16.8.14.10.13.5(抑え1.15.3.4.11)",
+              "16-2.8.14.10.13.5(抑え1.15.3.4.11)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.028Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         },
         {
           "raceInfo": {
@@ -3773,22 +3773,12 @@
               "weight": "58"
             },
             {
-              "horseNumber": 3,
-              "horseName": "サンドブラスト",
-              "pt": 82,
+              "horseNumber": 14,
+              "horseName": "マクミランテソーロ",
+              "pt": 81,
               "role": "単穴",
-              "jockey": "丹内祐",
-              "trainer": "(美)鈴木慎",
-              "age": "牡5",
-              "weight": "58"
-            },
-            {
-              "horseNumber": 6,
-              "horseName": "ビーコング",
-              "pt": 80,
-              "role": "連下",
-              "jockey": "横山武",
-              "trainer": "(美)小手川",
+              "jockey": "菊沢一",
+              "trainer": "(美)田中剛",
               "age": "牡5",
               "weight": "58"
             },
@@ -3816,11 +3806,21 @@
               "horseNumber": 11,
               "horseName": "ドナカルナバル",
               "pt": 72,
-              "role": "補欠",
+              "role": "連下",
               "jockey": "江田照",
               "trainer": "(美)高木登",
               "age": "牝4",
               "weight": "56"
+            },
+            {
+              "horseNumber": 6,
+              "horseName": "ビーコング",
+              "pt": 80,
+              "role": "補欠",
+              "jockey": "横山武",
+              "trainer": "(美)小手川",
+              "age": "牡5",
+              "weight": "58"
             },
             {
               "horseNumber": 15,
@@ -3903,23 +3903,23 @@
               "weight": "58"
             },
             {
-              "horseNumber": 14,
-              "horseName": "マクミランテソーロ",
-              "pt": 81,
+              "horseNumber": 3,
+              "horseName": "サンドブラスト",
+              "pt": 82,
               "role": "連下最上位",
-              "jockey": "菊沢一",
-              "trainer": "(美)田中剛",
+              "jockey": "丹内祐",
+              "trainer": "(美)鈴木慎",
               "age": "牡5",
               "weight": "58"
             }
           ],
           "bettingLines": {
             "umatan": [
-              "2-13.3.14.6.1.7(抑え11.15.9.10)",
-              "13-2.3.14.6.1.7(抑え11.15.9.10)"
+              "2-13.3.14.1.7.11(抑え6.15.9.10)",
+              "13-2.3.14.1.7.11(抑え6.15.9.10)"
             ]
           },
-          "generatedAt": "2026-04-03T13:04:34.028Z"
+          "generatedAt": "2026-04-17T13:43:52.897Z"
         }
       ]
     }
