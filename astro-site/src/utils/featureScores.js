@@ -17,6 +17,47 @@ function extractDistance(value) {
   return m ? parseInt(m[1]) : 0;
 }
 
+/**
+ * レースタイムから距離を推定する（JRA racebook pastRaces に distance がない場合のフォールバック）
+ * タイム形式: "1.24.4" (分.秒.コンマ) or "59.8" (秒.コンマ)
+ * 精度は ±200m 程度のため、calcDistanceFitness の ±200m 許容範囲で機能する
+ */
+function estimateDistanceFromTime(timeStr) {
+  if (!timeStr) return 0;
+  const t = String(timeStr);
+  let totalSeconds = 0;
+  // "1.24.4" → 1分24.4秒 = 84.4秒
+  const minsMatch = t.match(/^(\d+)\.(\d{2})\.(\d)$/);
+  if (minsMatch) {
+    totalSeconds = parseInt(minsMatch[1]) * 60 + parseInt(minsMatch[2]) + parseInt(minsMatch[3]) * 0.1;
+  } else {
+    // "59.8" → 59.8秒
+    const secsMatch = t.match(/^(\d{2})\.(\d)$/);
+    if (secsMatch) {
+      totalSeconds = parseInt(secsMatch[1]) + parseInt(secsMatch[2]) * 0.1;
+    } else {
+      return 0;
+    }
+  }
+  // タイムから距離を推定（JRA平均ペース基準）
+  // ~58-62秒 → 1000m, ~70-74秒 → 1200m, ~82-86秒 → 1400m,
+  // ~94-98秒 → 1600m, ~106-112秒 → 1800m, ~118-124秒 → 2000m,
+  // ~130-138秒 → 2200m, ~142-150秒 → 2400m, ~168-180秒 → 2800-3000m+
+  if (totalSeconds < 55) return 0; // 異常値
+  if (totalSeconds < 65) return 1000;
+  if (totalSeconds < 77) return 1200;
+  if (totalSeconds < 89) return 1400;
+  if (totalSeconds < 101) return 1600;
+  if (totalSeconds < 115) return 1800;
+  if (totalSeconds < 127) return 2000;
+  if (totalSeconds < 140) return 2200;
+  if (totalSeconds < 155) return 2400;
+  if (totalSeconds < 170) return 2600;
+  if (totalSeconds < 185) return 3000;
+  if (totalSeconds < 220) return 3200;
+  return 3600;
+}
+
 function finishToScore(rank) {
   if (!rank || rank <= 0) return 0;
   if (rank === 1) return 100;
@@ -82,17 +123,57 @@ export function calcStaminaRating(recentRaces) {
   return Math.min(100, Math.max(20, score));
 }
 
+/**
+ * JRA racebook 近走の venue 形式（"4東10.18"）から場名略称1文字を抽出し、
+ * 正式名称に展開するマップ。中 → 中山/中京 は曖昧なため両方をマッチ対象とする。
+ */
+const VENUE_ABBREV_MAP = {
+  '東': '東京', '京': '京都', '阪': '阪神',
+  '小': '小倉', '新': '新潟', '福': '福島', '札': '札幌', '函': '函館',
+  // '中' → 中山 or 中京（曖昧）。extractVenueName で 1文字 "中" を返し、比較側で先頭一致
+  // 南関・地方
+  '大': '大井', '川': '川崎', '船': '船橋', '浦': '浦和',
+  '門': '門別', '盛': '盛岡', '水': '水沢', '金': '金沢',
+  '笠': '笠松', '名': '名古屋', '園': '園田', '姫': '姫路',
+  '高': '高知', '佐': '佐賀', '帯': '帯広',
+};
+
+/**
+ * 近走venueから場名を抽出する
+ * - "大井 3.24" → "大井"     (南関テキスト形式: スペース区切り)
+ * - "4東10.18"  → "東京"     (JRA XML形式: 回次+場名1字+日付)
+ * - "東京"      → "東京"     (そのまま)
+ */
+function extractVenueName(rawVenue) {
+  if (!rawVenue) return '';
+  // 南関テキスト形式: "大井 3.24" → スペース前を取得
+  if (/\s/.test(rawVenue)) return rawVenue.split(/\s+/)[0];
+  // JRA XML形式: "4東10.18" → 数字+漢字1文字+数字... のパターン
+  const jraMatch = rawVenue.match(/^\d([^\d])/);
+  if (jraMatch) {
+    const abbrev = jraMatch[1];
+    // "中" は中山/中京で曖昧 → そのまま返す（比較側で先頭一致を使う）
+    return VENUE_ABBREV_MAP[abbrev] || abbrev;
+  }
+  // その他: そのまま返す
+  return rawVenue;
+}
+
 export function calcTrackCompatibility(recentRaces, currentVenue) {
   if (!recentRaces || recentRaces.length === 0) return 50;
-  // currentVenue: "大井", "東京競馬" etc. → 比較用に"競馬"を除去
+  // currentVenue: "大井", "東京競馬", "福島" etc. → 比較用に"競馬"を除去
   const normalizedCurrentVenue = (currentVenue || '').replace('競馬', '');
   if (!normalizedCurrentVenue) return 50;
   let sameVenue = 0, sameVenueGood = 0;
   for (const r of recentRaces) {
-    // venue: "大井 3.24" or "大井" → スペース前を取得して比較
-    const rawVenue = r.venue || '';
-    const trackName = rawVenue.split(/\s+/)[0]; // "大井 3.24" → "大井"
-    if (trackName && trackName.includes(normalizedCurrentVenue)) {
+    const trackName = extractVenueName(r.venue || '');
+    if (!trackName) continue;
+    // "中" の曖昧対応: "中山" の先頭1文字 "中" で比較、
+    // または trackName="東京" と currentVenue="東京" の完全一致/包含
+    const isMatch = trackName.includes(normalizedCurrentVenue)
+      || normalizedCurrentVenue.includes(trackName)
+      || (trackName.length === 1 && normalizedCurrentVenue.startsWith(trackName));
+    if (isMatch) {
       sameVenue++;
       const rank = r.rank || r.finish;
       if (rank && rank <= 3) sameVenueGood++;
@@ -109,8 +190,8 @@ export function calcDistanceFitness(recentRaces, currentDistance) {
 
   let sameDist = 0, sameDistGood = 0;
   for (const r of recentRaces) {
-    // distanceMeters (number) > distance (string/number) > raceName から距離を抽出
-    const rDist = r.distanceMeters || extractDistance(r.distance) || extractDistance(r.raceName);
+    // distanceMeters (number) > distance (string/number) > raceName > time推定 から距離を抽出
+    const rDist = r.distanceMeters || extractDistance(r.distance) || extractDistance(r.raceName) || estimateDistanceFromTime(r.time);
     if (rDist && Math.abs(rDist - targetDist) <= 200) {
       sameDist++;
       const rank = r.rank || r.finish;
@@ -144,26 +225,12 @@ export function generateAdvancedMetrics(horse, allHorses, raceInfo) {
   const venue = raceInfo?.venue || '';
   const distance = raceInfo?.distance || raceInfo?.distanceMeters || '';
 
-  // DEBUG: 特徴量入力データの確認
-  console.log('[FeatureScore]', horse.horseName || horse.name, 'pastRaces:', recent?.length,
-              'distanceMeters:', recent?.[0]?.distanceMeters,
-              'distance:', recent?.[0]?.distance,
-              'raceName:', recent?.[0]?.raceName,
-              'finish:', recent?.[0]?.rank || recent?.[0]?.finish,
-              'raceInfo.distance:', distance,
-              'raceInfo.venue:', venue);
-
   const formTrendRaw = calcFormTrend(recent);
   const speedIndex = calcSpeedIndex(recent);
   const staminaRating = calcStaminaRating(recent);
   const trackCompatibility = calcTrackCompatibility(recent, venue);
   const distanceFitness = calcDistanceFitness(recent, distance);
   const jockeyFactor = calcJockeyFactor(horse, allHorses);
-
-  // DEBUG: 各特徴量の算出結果
-  console.log('[FeatureScore]', horse.horseName || horse.name, 'results:',
-              'speed=', speedIndex, 'stamina=', staminaRating, 'form=', formTrendRaw,
-              'track=', trackCompatibility, 'dist=', distanceFitness, 'jockey=', jockeyFactor);
 
   const featureAvg = (speedIndex * 0.25 + (formTrendRaw + 50) * 0.3 + staminaRating * 0.15 +
     trackCompatibility * 0.1 + distanceFitness * 0.1 + jockeyFactor * 0.1) / 100 * 40;
