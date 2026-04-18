@@ -59,18 +59,30 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           DATE="${{ steps.date.outputs.date }}"
+          YEAR="${DATE:0:4}"
+          MONTH="${DATE:5:2}"
+          BASE="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/results/${YEAR}/${MONTH}"
 
-          # keiba-data-sharedに結果データがあるかチェック
-          RESULT_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/results/${DATE:0:4}/${DATE:5:2}/${DATE}.json"
+          # per-venueファイル（FKS/HAN/NAK/TOK/KYO/CHU/KOK/NII/SAP/HKD）の存在を確認
+          # 統合JSON(YYYY-MM-DD.json)は使用しない
+          VENUE_CODES=("FKS" "HAN" "NAK" "TOK" "KYO" "CHU" "KOK" "NII" "SAP" "HKD")
+          FOUND_VENUES=()
 
-          echo "🔍 Checking for JRA results: $RESULT_URL"
+          for code in "${VENUE_CODES[@]}"; do
+            URL="${BASE}/${DATE}-${code}.json"
+            if curl -sfI "$URL" > /dev/null; then
+              FOUND_VENUES+=("$code")
+            fi
+          done
 
-          if curl -sf "$RESULT_URL" > /tmp/results.json; then
-            echo "✅ Results found in keiba-data-shared"
+          EXPECTED_VENUES=${#FOUND_VENUES[@]}
+          echo "🔍 per-venue検索結果: ${EXPECTED_VENUES}会場 (${FOUND_VENUES[*]})"
 
-            # keiba-data-sharedの会場数を取得
-            EXPECTED_VENUES=$(cat /tmp/results.json | node -e "const data = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8')); const venues = [...new Set(data.races.map(r => r.venue))]; console.log(venues.length);")
-            echo "   Expected venues: $EXPECTED_VENUES"
+          if [ "$EXPECTED_VENUES" -eq 0 ]; then
+            echo "⏭️  No JRA results in keiba-data-shared yet (全会場404)"
+            echo "has_missing=false" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Results found in keiba-data-shared: $EXPECTED_VENUES venues"
 
             # アーカイブに既に存在するかチェック
             if grep -q "\"date\": \"$DATE\"" src/data/archiveResultsJra.json; then
@@ -78,22 +90,17 @@ jobs:
               ARCHIVED_VENUES=$(node -e "const data = JSON.parse(require('fs').readFileSync('src/data/archiveResultsJra.json', 'utf8')); const entry = data.find(e => e.date === '$DATE'); console.log(entry ? entry.venues.length : 0);")
               echo "   Archived venues: $ARCHIVED_VENUES"
 
-              # 会場数が一致するかチェック
               if [ "$ARCHIVED_VENUES" -ge "$EXPECTED_VENUES" ]; then
                 echo "⏭️  Already processed with all venues: $DATE"
                 echo "has_missing=false" >> $GITHUB_OUTPUT
               else
                 echo "📥 Missing venues detected (archived: $ARCHIVED_VENUES, expected: $EXPECTED_VENUES)"
-                echo "   Reimporting to include all venues"
                 echo "has_missing=true" >> $GITHUB_OUTPUT
               fi
             else
               echo "📥 Missing from archive: $DATE"
               echo "has_missing=true" >> $GITHUB_OUTPUT
             fi
-          else
-            echo "⏭️  No results in keiba-data-shared yet"
-            echo "has_missing=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Import missing results

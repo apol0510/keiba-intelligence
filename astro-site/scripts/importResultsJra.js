@@ -101,67 +101,15 @@ async function sendAlert(type, date, details = {}, metadata = {}) {
 }
 
 /**
- * keiba-data-sharedから結果データを取得
- * 統合ファイルがない場合は会場別ファイルをマージ
+ * keiba-data-sharedから結果データを取得（per-venue方式）
+ * 統合JSON(YYYY-MM-DD.json)は使わず、会場別ファイルのみを正としてマージする
  */
 async function fetchSharedResults(date, venue = 'jra') {
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
   const [year, month] = date.split('-');
-  const owner = 'apol0510';
-  const repo = 'keiba-data-shared';
-  const path = `${venue}/results/${year}/${month}/${date}.json`;
 
-  console.log(`📡 keiba-data-sharedから取得中: ${path}`);
-
-  // まず統合ファイルを試す
-  try {
-    // ローカル実行時（GITHUB_TOKENなし）: raw.githubusercontent.comを使用（公開リポジトリ）
-    if (!GITHUB_TOKEN) {
-      console.log(`   ローカル実行モード: raw.githubusercontent.comからダウンロード`);
-      const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
-      const response = await fetch(rawUrl);
-
-      if (response.ok) {
-        const content = await response.text();
-        const results = JSON.parse(content);
-        console.log(`✅ 取得成功: ${path}`);
-        return results;
-      }
-      // 404の場合は会場別ファイルにフォールバック
-      if (response.status !== 404) {
-        throw new Error(`結果データの取得に失敗: ${response.status} ${response.statusText}`);
-      }
-    } else {
-      // GitHub Actions実行時: GitHub API経由（レート制限回避）
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-
-      const response = await fetch(apiUrl, {
-        headers: {
-          'Authorization': `token ${GITHUB_TOKEN}`,
-          'Accept': 'application/vnd.github.v3+json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const content = Buffer.from(data.content, 'base64').toString('utf-8');
-        console.log(`✅ 取得成功: ${path}`);
-        return JSON.parse(content);
-      }
-      // 404の場合は会場別ファイルにフォールバック
-      if (response.status !== 404) {
-        throw new Error(`結果データの取得に失敗: ${response.status} ${response.statusText}`);
-      }
-    }
-
-    // 統合ファイルがない場合、会場別ファイルをマージ
-    console.log(`   統合ファイルが見つかりません。会場別ファイルを検索します...`);
-    return await fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN);
-
-  } catch (error) {
-    // ネットワークエラー等
-    throw error;
-  }
+  console.log(`📡 keiba-data-sharedから取得中（per-venue方式）: ${date}`);
+  return await fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN);
 }
 
 /**
@@ -170,7 +118,8 @@ async function fetchSharedResults(date, venue = 'jra') {
 async function fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN) {
   const owner = 'apol0510';
   const repo = 'keiba-data-shared';
-  const venueCodesJRA = ['TOK', 'KYO', 'HAN', 'NAK', 'CHU', 'KOK', 'NII', 'FUK', 'SAP', 'HAK'];
+  // venue-codes.tsと一致させること: 福島=FKS, 函館=HKD
+  const venueCodesJRA = ['TOK', 'KYO', 'HAN', 'NAK', 'CHU', 'KOK', 'NII', 'FKS', 'SAP', 'HKD'];
 
   const venues = [];
   let allRaces = [];
@@ -217,9 +166,10 @@ async function fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN) {
   }
 
   if (allRaces.length === 0) {
-    throw new Error(`結果データが見つかりません: ${date}（統合ファイル・会場別ファイルともに存在しない）`);
+    throw new Error(`結果データが見つかりません: ${date}（全会場の per-venue ファイル404）`);
   }
 
+  console.log(`Found JRA results: ${venues.length} venues`);
   console.log(`✅ 会場別ファイルからマージ完了: ${allRaces.length}レース（${venues.join('・')}）`);
 
   // 統合フォーマットで返す
