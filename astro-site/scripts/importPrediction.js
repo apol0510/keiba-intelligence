@@ -329,18 +329,26 @@ async function fetchRacebookPastRaces(date, category = 'nankan', predHorseNames 
     const jsonFiles = files.filter(f => f.name.endsWith('.json') && /^\d{4}-\d{2}-\d{2}-[A-Za-z0-9]+\.json$/.test(f.name));
     if (jsonFiles.length === 0) return null;
 
-    // 馬名・レース名情報が無い場合は従来動作（日付ファイル名一致）にフォールバック
-    const canScore = predHorseNames instanceof Set && predHorseNames.size > 0;
-    if (!canScore) {
-      console.warn(`[RACEBOOK-PAST] ⚠️ 予想馬名未提供 → ファイル名一致モード`);
-      const dateFiles = jsonFiles.filter(f => f.name.startsWith(`${date}-`));
+    // 同日付のracebookファイルが存在すればそれを採用（ファイル名 = 信頼可能な証拠）
+    // 内容ベース照合の前にショートカットし、予想より先に他会場racebookだけ存在して
+    // 低スコアで誤って失敗するのを防ぐ
+    const sameDateFiles = jsonFiles.filter(f => f.name.startsWith(`${date}-`));
+    if (sameDateFiles.length > 0) {
+      console.log(`✅ [RACEBOOK-PAST] 同日付ファイル ${sameDateFiles.length}件を採用: ${sameDateFiles.map(f => f.name).join(', ')}`);
       const map = new Map();
-      for (const file of dateFiles) {
+      for (const file of sameDateFiles) {
         const rbData = await fetchRacebookFile(dirPath, file.name, owner, repo, GITHUB_TOKEN);
         if (rbData) buildHorseDataMapFromRacebook(rbData, map);
       }
-      console.log(`[RACEBOOK-PAST] 名前一致モード: ${map.size}頭取得`);
+      console.log(`✅ [RACEBOOK-PAST] 同日付モード: ${map.size}頭取得`);
       return map.size > 0 ? map : null;
+    }
+
+    // 馬名・レース名情報が無い場合は従来動作（日付ファイル名一致）にフォールバック
+    const canScore = predHorseNames instanceof Set && predHorseNames.size > 0;
+    if (!canScore) {
+      console.warn(`[RACEBOOK-PAST] ⚠️ 予想馬名未提供 → 同日付ファイルなしで終了`);
+      return null;
     }
 
     // venueコード別にグループ化
@@ -416,26 +424,25 @@ async function fetchRacebookPastRaces(date, category = 'nankan', predHorseNames 
       }
     }
 
-    // 予想データの会場が1件でもracebookと照合できなければ import を止める
+    // 1件も照合できなかった場合: 同日付racebookが未保存の可能性が高いため
+    // importを中断せず、recentRaces無しで継続（特徴量は一部デフォルト値になるが import自体は成功させる）
     if (adoptedCount === 0) {
-      console.error(`\n❌ [ERROR] racebook一致候補なし → import中断`);
-      console.error(`   予想: ${totalHorseCount}頭 / ${totalRaceCount}レース`);
-      console.error(`   比較したファイル:`);
+      console.warn(`\n⚠️  [RACEBOOK-PAST] 同日付ファイルなし＋内容一致率70%未満 → recentRaces無しで続行`);
+      console.warn(`   予想: ${totalHorseCount}頭 / ${totalRaceCount}レース`);
+      console.warn(`   比較したファイル:`);
       for (const fv of failedVenues) {
-        console.error(`   [venue=${fv.venueCode}] bestScore=${(fv.bestScore * 100).toFixed(0)}% diff=${(fv.diff * 100).toFixed(0)}pt`);
+        console.warn(`   [venue=${fv.venueCode}] bestScore=${(fv.bestScore * 100).toFixed(0)}% diff=${(fv.diff * 100).toFixed(0)}pt`);
         for (const c of fv.candidates) {
-          console.error(`     - ${c.filename}: horse=${c.horseMatch}/${totalHorseCount} race=${c.raceMatch}/${totalRaceCount} score=${(c.score * 100).toFixed(0)}%`);
+          console.warn(`     - ${c.filename}: horse=${c.horseMatch}/${totalHorseCount} race=${c.raceMatch}/${totalRaceCount} score=${(c.score * 100).toFixed(0)}%`);
         }
       }
-      throw new Error(`racebook照合失敗: 予想と一致率70%以上のracebookが見つかりません（対象月: ${dirPath}）`);
+      return null;
     }
 
     console.log(`✅ [RACEBOOK-PAST] ${horseDataMap.size}頭のpastRacesを取得 (${adoptedCount}会場採用)`);
     return horseDataMap.size > 0 ? horseDataMap : null;
   } catch (err) {
     // fetch系のネットワークエラーは継続可能としてnullを返す
-    // ただし照合失敗（明示的throw）は上位に伝播させる
-    if (err.message && err.message.startsWith('racebook照合失敗')) throw err;
     console.warn('[RACEBOOK-PAST] 取得エラー:', err.message);
     return null;
   }
