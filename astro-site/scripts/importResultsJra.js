@@ -405,13 +405,22 @@ function saveArchive(date, venue, raceResults) {
   const hitRate = totalRaces > 0 ? (hitRaces / totalRaces * 100).toFixed(1) : '0.0';
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 払戻金計算（2段階調整方式）
+  // 払戻金計算（4段階可変点数方式・実レース数ベース）
+  //   totalPayout >= races × 12 × 100 → 12点
+  //   totalPayout >= races × 10 × 100 → 10点
+  //   totalPayout >= races ×  8 × 100 → 8点
+  //   totalPayout >= races ×  6 × 100 → 6点
+  //   それ以下 → 6点（下限・マイナス受容）
   // 詳細: BET_POINT_LOGIC.md 参照
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  // 第1段階: 基本8点で仮計算
-  let betPointsPerRace = 8;
-  let betAmount = totalRaces * betPointsPerRace * 100; // 8点 × 100円 = 800円/レース
+  function getBetPoints(totalPayout, races) {
+    if (races <= 0) return 6;
+    if (totalPayout >= races * 12 * 100) return 12;
+    if (totalPayout >= races * 10 * 100) return 10;
+    if (totalPayout >= races *  8 * 100) return 8;
+    if (totalPayout >= races *  6 * 100) return 6;
+    return 6;
+  }
 
   const totalPayout = raceResults.reduce((sum, race) => {
     if (race.isHit && race.umatan.payout) {
@@ -422,15 +431,11 @@ function saveArchive(date, venue, raceResults) {
     return sum;
   }, 0);
 
-  let returnRate = betAmount > 0 ? ((totalPayout / betAmount) * 100) : 0;
+  const betPointsPerRace = getBetPoints(totalPayout, totalRaces);
+  const betAmount = totalRaces * betPointsPerRace * 100;
+  const returnRate = betAmount > 0 ? ((totalPayout / betAmount) * 100) : 0;
 
-  // 第2段階: 回収率300%超なら12点で再計算
-  if (returnRate > 300) {
-    betPointsPerRace = 12;
-    betAmount = totalRaces * betPointsPerRace * 100; // 12点 × 100円 = 1200円/レース
-    returnRate = betAmount > 0 ? ((totalPayout / betAmount) * 100) : 0;
-    console.log(`\n📊 回収率調整: 8点 → 12点（回収率が300%超のため）`);
-  }
+  console.log(`\n📊 買い目点数判定: ${totalRaces}R × ${betPointsPerRace}点 = ${betAmount.toLocaleString()}円 / 払戻 ${totalPayout.toLocaleString()}円 → 回収率 ${returnRate.toFixed(1)}%`);
 
   // 最終的な回収率（小数点1桁）
   const finalReturnRate = returnRate.toFixed(1);
@@ -448,9 +453,12 @@ function saveArchive(date, venue, raceResults) {
     missRaces: totalRaces - hitRaces,
     hitRate: parseFloat(hitRate),
     betAmount,
-    betPointsPerRace, // 追加: 実際の買い目点数を記録
+    betPointsPerRace, // 1レースあたりの買い目点数
+    totalBetPoints: totalRaces * betPointsPerRace, // 合計買い目点数
+    totalInvestment: betAmount, // 合計投資額（= betAmount のエイリアス）
     totalPayout,
     returnRate: parseFloat(finalReturnRate),
+    recoveryRate: parseFloat(finalReturnRate), // 回収率（returnRate と同値）
     races: raceResults,
     verifiedAt: new Date().toISOString()
   };
