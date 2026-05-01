@@ -115,15 +115,18 @@ export const prerender = true;
     font-size: 0.9rem;
   }
 
-  /* ===== ステータスカード ===== */
+  /* ===== ステータスカード（glassmorphism） ===== */
   .status-card {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.08) 100%);
-    border: 1px solid rgba(59, 130, 246, 0.25);
-    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(147, 197, 253, 0.18) 0%, rgba(196, 181, 253, 0.14) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 20px;
     padding: 28px;
-    margin-bottom: 28px;
+    margin-bottom: 24px;
     position: relative;
     overflow: hidden;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   .status-card::before {
@@ -188,9 +191,12 @@ export const prerender = true;
   }
 
   .detail-item {
-    background: rgba(255, 255, 255, 0.04);
-    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
     padding: 14px 16px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 
   .detail-item .detail-label {
@@ -205,35 +211,38 @@ export const prerender = true;
     color: var(--text-primary);
   }
 
-  /* ===== セクション（カード化） ===== */
+  /* ===== セクション（glassmorphism カード化） ===== */
   .section-block {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.05) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 20px;
     padding: 24px;
     margin-bottom: 20px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
 
   .section-title {
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 700;
-    color: var(--text-secondary);
+    color: #f1f5f9;
     margin-bottom: 16px;
     padding-bottom: 12px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     letter-spacing: 0.03em;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   }
 
   .section-title::before {
     content: '';
     width: 4px;
-    height: 16px;
-    background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+    height: 18px;
+    background: linear-gradient(180deg, #60a5fa, #c4b5fd);
     border-radius: 2px;
+    box-shadow: 0 0 8px rgba(96, 165, 250, 0.6);
   }
 
   /* ===== 予想ページカード ===== */
@@ -271,28 +280,33 @@ export const prerender = true;
     color: rgba(255, 255, 255, 0.8);
   }
 
+  .pred-card {
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+  }
+
   .pred-card.nankan {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.28) 0%, rgba(5, 150, 105, 0.14) 100%);
-    border: 1px solid rgba(16, 185, 129, 0.55);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(16, 185, 129, 0.08) inset;
+    background: linear-gradient(135deg, rgba(110, 231, 183, 0.28) 0%, rgba(167, 243, 208, 0.18) 100%);
+    border: 1px solid rgba(167, 243, 208, 0.45);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.18);
   }
   .pred-card.nankan:hover {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.4) 0%, rgba(5, 150, 105, 0.22) 100%);
-    border-color: rgba(16, 185, 129, 0.75);
+    background: linear-gradient(135deg, rgba(110, 231, 183, 0.4) 0%, rgba(167, 243, 208, 0.28) 100%);
+    border-color: rgba(167, 243, 208, 0.7);
     transform: translateY(-3px);
-    box-shadow: 0 10px 28px rgba(16, 185, 129, 0.25);
+    box-shadow: 0 14px 36px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25);
   }
 
   .pred-card.jra {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.28) 0%, rgba(37, 99, 235, 0.14) 100%);
-    border: 1px solid rgba(59, 130, 246, 0.55);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(59, 130, 246, 0.08) inset;
+    background: linear-gradient(135deg, rgba(147, 197, 253, 0.28) 0%, rgba(196, 181, 253, 0.18) 100%);
+    border: 1px solid rgba(196, 181, 253, 0.45);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.18);
   }
   .pred-card.jra:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.4) 0%, rgba(37, 99, 235, 0.22) 100%);
-    border-color: rgba(59, 130, 246, 0.75);
+    background: linear-gradient(135deg, rgba(147, 197, 253, 0.4) 0%, rgba(196, 181, 253, 0.28) 100%);
+    border-color: rgba(196, 181, 253, 0.7);
     transform: translateY(-3px);
-    box-shadow: 0 10px 28px rgba(59, 130, 246, 0.25);
+    box-shadow: 0 14px 36px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25);
   }
 
   .pred-card-icon {
@@ -307,12 +321,14 @@ export const prerender = true;
   }
 
   .pred-card.nankan .pred-card-icon {
-    background: rgba(16, 185, 129, 0.3);
-    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4);
+    background: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
   }
   .pred-card.jra .pred-card-icon {
-    background: rgba(59, 130, 246, 0.3);
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
+    background: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
   }
 
   .pred-card-title {
@@ -346,34 +362,37 @@ export const prerender = true;
     align-items: center;
     gap: 12px;
     padding: 14px 16px;
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.10) 0%, rgba(255, 255, 255, 0.04) 100%);
-    border: 1px solid rgba(16, 185, 129, 0.22);
-    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(167, 243, 208, 0.18) 0%, rgba(255, 255, 255, 0.06) 100%);
+    border: 1px solid rgba(167, 243, 208, 0.3);
+    border-radius: 14px;
     font-size: 0.9rem;
-    color: var(--text-primary);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    color: #f1f5f9;
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
     transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
   .feature-item:hover {
     transform: translateY(-2px);
-    border-color: rgba(16, 185, 129, 0.45);
-    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.15);
+    border-color: rgba(167, 243, 208, 0.55);
+    box-shadow: 0 8px 22px rgba(16, 185, 129, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 
   .feature-item .feature-check {
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(16, 185, 129, 0.25);
-    border: 1px solid rgba(16, 185, 129, 0.5);
+    background: linear-gradient(135deg, #6ee7b7, #34d399);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
-    color: #10b981;
+    color: #064e3b;
     font-size: 0.85rem;
-    font-weight: 700;
+    font-weight: 800;
     flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(52, 211, 153, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
   }
 
   /* ===== アップグレード ===== */
