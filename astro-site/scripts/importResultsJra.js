@@ -227,6 +227,25 @@ function calculateBettingPoints(bettingLine) {
 }
 
 /**
+ * raceName を表示用に正規化
+ *   「京都3レース」「京都3」→「京都3R」
+ *   「比良山特別」「湘南ステークス」→ そのまま
+ *   未指定 → 「{venue}{number}R」
+ */
+function normalizeRaceName(raceName, venue, raceNumber) {
+  const v = venue || '';
+  const n = raceNumber;
+  const fallback = `${v}${n}R`;
+  if (!raceName) return fallback;
+  const trimmed = String(raceName).trim();
+  if (!trimmed) return fallback;
+  // 「京都3レース」「京都3R」「京都3」のような会場名+番号系表記は正規化
+  const generic = new RegExp(`^${v}\\s*${n}\\s*(R|レース)?$`);
+  if (generic.test(trimmed)) return fallback;
+  return trimmed;
+}
+
+/**
  * 馬単の的中判定
  */
 function checkUmatanHit(bettingLine, result) {
@@ -357,9 +376,12 @@ function verifyResults(prediction, results) {
     const payoutAmount = umatanPayout?.payout || null;
     const payoutCombination = umatanPayout?.combination || null;
 
+    // raceName 正規化: 「京都3レース」→「京都3R」のような単純表記に統一（特別競走名はそのまま）
+    const normalizedRaceName = normalizeRaceName(race.raceName, raceVenue, normalizedRaceNumber);
+
     raceResults.push({
       raceNumber,
-      raceName: race.raceName,
+      raceName: normalizedRaceName,
       venue: raceVenue, // 会場情報を追加
       result: {
         first: { number: first.number, name: first.name },

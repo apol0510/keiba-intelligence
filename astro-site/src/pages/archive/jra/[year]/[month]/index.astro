@@ -26,11 +26,13 @@ try {
     const fileContent = readFileSync(archivePath, 'utf-8');
     const allData = JSON.parse(fileContent);
 
-    // 該当月のデータを抽出
-    monthData = allData.filter(entry => {
-      const [entryYear, entryMonth] = entry.date.split('-');
-      return entryYear === year && entryMonth === month;
-    });
+    // 該当月のデータを抽出（日付降順）
+    monthData = allData
+      .filter(entry => {
+        const [entryYear, entryMonth] = entry.date.split('-');
+        return entryYear === year && entryMonth === month;
+      })
+      .sort((a, b) => b.date.localeCompare(a.date));
 
     // 月間統計を計算
     monthData.forEach(entry => {
@@ -147,10 +149,15 @@ const pageDescription = monthData.length > 0
 
                     return hitRaces.map((race) => {
                       const payout = race.umatan?.payout || 0;
+                      const raceLabel = `${race.venue}${race.raceNumber}R`;
+                      // raceNameが「京都3R」「京都3レース」のような会場名+番号表記の場合は特別競走名なしと判定
+                      const rawName = (race.raceName || '').trim();
+                      const genericPattern = new RegExp(`^${race.venue}${race.raceNumber}\\s*(R|レース)$`);
+                      const specialtyName = rawName && !genericPattern.test(rawName) ? rawName : '';
                       return (
                         <div class="race-line hit">
-                          <span class="race-number">{race.venue}{race.raceNumber}レース</span>
-                          <span class="race-name">{race.raceName}</span>
+                          <span class="race-number">{raceLabel}</span>
+                          {specialtyName && <span class="race-name">{specialtyName}</span>}
                           <span class="hit-badge">✅ 的中</span>
                           {payout > 0 && (
                             <span class="payout">¥{payout.toLocaleString()}</span>
