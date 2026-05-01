@@ -251,7 +251,8 @@ export const prerender = true;
     gap: 16px;
   }
 
-  .pred-card {
+  /* JS innerHTMLで挿入される要素はscoping属性を持たないため :global() で属性要件を外す */
+  .prediction-cards :global(.pred-card) {
     display: flex;
     align-items: center;
     gap: 14px;
@@ -268,7 +269,7 @@ export const prerender = true;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 
-  .pred-card::after {
+  .prediction-cards :global(.pred-card::after) {
     content: '→';
     position: absolute;
     right: 18px;
@@ -279,25 +280,25 @@ export const prerender = true;
     transition: right 0.2s ease, color 0.2s ease;
   }
 
-  .pred-card:hover {
+  .prediction-cards :global(.pred-card:hover) {
     transform: translateY(-2px);
     border-color: rgba(255, 255, 255, 0.28);
     background: rgba(255, 255, 255, 0.10);
   }
-  .pred-card:hover::after {
+  .prediction-cards :global(.pred-card:hover::after) {
     right: 14px;
     color: rgba(255, 255, 255, 0.9);
   }
 
   /* 会場別アクセント（左側のみ・控えめ） */
-  .pred-card.nankan {
+  .prediction-cards :global(.pred-card.nankan) {
     border-left: 3px solid rgba(110, 231, 183, 0.65);
   }
-  .pred-card.jra {
+  .prediction-cards :global(.pred-card.jra) {
     border-left: 3px solid rgba(147, 197, 253, 0.65);
   }
 
-  .pred-card-icon {
+  .prediction-cards :global(.pred-card-icon) {
     font-size: 1.6rem;
     width: 44px;
     height: 44px;
@@ -311,7 +312,7 @@ export const prerender = true;
   }
 
   /* テキスト部分のプレート（さらに内側カード） */
-  .pred-card-body {
+  .prediction-cards :global(.pred-card-body) {
     flex: 1;
     min-width: 0;
     background: rgba(15, 23, 42, 0.45);
@@ -321,19 +322,19 @@ export const prerender = true;
     padding-right: 28px;
   }
 
-  .pred-card-title {
+  .prediction-cards :global(.pred-card-title) {
     font-size: 1rem;
     font-weight: 700;
     color: #f8fafc;
     margin-bottom: 2px;
   }
 
-  .pred-card-sub {
+  .prediction-cards :global(.pred-card-sub) {
     font-size: 0.8rem;
     color: rgba(241, 245, 249, 0.78);
   }
 
-  .pred-card-desc {
+  .prediction-cards :global(.pred-card-desc) {
     font-size: 0.76rem;
     color: rgba(241, 245, 249, 0.6);
     margin-top: 4px;
@@ -346,7 +347,8 @@ export const prerender = true;
     gap: 10px;
   }
 
-  .feature-item {
+  /* JS innerHTMLで挿入される要素はscoping属性を持たないため :global() で属性要件を外す */
+  .features-grid :global(.feature-item) {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -360,13 +362,13 @@ export const prerender = true;
     transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
   }
 
-  .feature-item:hover {
+  .features-grid :global(.feature-item:hover) {
     transform: translateY(-1px);
     border-color: rgba(255, 255, 255, 0.25);
     background: rgba(255, 255, 255, 0.09);
   }
 
-  .feature-item .feature-check {
+  .features-grid :global(.feature-item .feature-check) {
     width: 22px;
     height: 22px;
     display: inline-flex;
@@ -382,7 +384,7 @@ export const prerender = true;
   }
 
   /* テキスト部分のプレート（さらに内側カード） */
-  .feature-item .feature-text {
+  .features-grid :global(.feature-item .feature-text) {
     flex: 1;
     min-width: 0;
     background: rgba(15, 23, 42, 0.4);
