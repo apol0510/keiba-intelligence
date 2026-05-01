@@ -227,6 +227,19 @@ function calculateBettingPoints(bettingLine) {
 }
 
 /**
+ * 会場名+番号のみ表記（「京都3レース」「東京1R」「京都3」等）を判定
+ */
+function isGenericVenueRaceName(raceName, venue, raceNumber) {
+  if (!raceName) return true;
+  const v = venue || '';
+  const n = raceNumber;
+  const trimmed = String(raceName).trim();
+  if (!trimmed) return true;
+  const generic = new RegExp(`^${v}\\s*${n}\\s*(R|レース)?$`);
+  return generic.test(trimmed);
+}
+
+/**
  * raceName を表示用に正規化
  *   「京都3レース」「京都3」→「京都3R」
  *   「比良山特別」「湘南ステークス」→ そのまま
@@ -236,13 +249,46 @@ function normalizeRaceName(raceName, venue, raceNumber) {
   const v = venue || '';
   const n = raceNumber;
   const fallback = `${v}${n}R`;
-  if (!raceName) return fallback;
-  const trimmed = String(raceName).trim();
-  if (!trimmed) return fallback;
-  // 「京都3レース」「京都3R」「京都3」のような会場名+番号系表記は正規化
-  const generic = new RegExp(`^${v}\\s*${n}\\s*(R|レース)?$`);
-  if (generic.test(trimmed)) return fallback;
-  return trimmed;
+  if (isGenericVenueRaceName(raceName, v, n)) return fallback;
+  return String(raceName).trim();
+}
+
+/**
+ * displayName を生成
+ *   優先順:
+ *     1. 特別競走名（race.raceName が会場名+番号系でない正式名）
+ *     2. 条件戦名（race.raceClass / race.raceCondition / race.raceSubtitle）
+ *     3. fallback: 「{venue}{number}R」
+ */
+function buildDisplayName(race, venue, raceNumber) {
+  const v = venue || '';
+  const n = raceNumber;
+  const fallback = `${v}${n}R`;
+
+  // ① 正式レース名
+  const rawName = race.raceName ? String(race.raceName).trim() : '';
+  if (rawName && !isGenericVenueRaceName(rawName, v, n)) {
+    return rawName;
+  }
+
+  // ② 条件戦名（複数フィールド候補）
+  const candidates = [
+    race.raceClass,
+    race.raceCondition,
+    race.raceSubtitle,
+    race.title,
+    race.name
+  ];
+  for (const c of candidates) {
+    if (!c) continue;
+    const t = String(c).trim();
+    if (!t) continue;
+    if (isGenericVenueRaceName(t, v, n)) continue;
+    return t;
+  }
+
+  // ③ fallback
+  return fallback;
 }
 
 /**
@@ -378,10 +424,13 @@ function verifyResults(prediction, results) {
 
     // raceName 正規化: 「京都3レース」→「京都3R」のような単純表記に統一（特別競走名はそのまま）
     const normalizedRaceName = normalizeRaceName(race.raceName, raceVenue, normalizedRaceNumber);
+    // displayName: 特別競走名 > 条件戦名 > 「{venue}{number}R」
+    const displayName = buildDisplayName(race, raceVenue, normalizedRaceNumber);
 
     raceResults.push({
       raceNumber,
       raceName: normalizedRaceName,
+      displayName,
       venue: raceVenue, // 会場情報を追加
       result: {
         first: { number: first.number, name: first.name },

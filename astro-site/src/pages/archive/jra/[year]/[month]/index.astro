@@ -150,18 +150,20 @@ const pageDescription = monthData.length > 0
                     return hitRaces.map((race) => {
                       const payout = race.umatan?.payout || 0;
                       const raceLabel = `${race.venue}${race.raceNumber}R`;
-                      // raceNameが「京都3R」「京都3レース」のような会場名+番号表記の場合は特別競走名なしと判定
-                      const rawName = (race.raceName || '').trim();
-                      const genericPattern = new RegExp(`^${race.venue}${race.raceNumber}\\s*(R|レース)$`);
-                      const specialtyName = rawName && !genericPattern.test(rawName) ? rawName : '';
+                      // displayName: 特別競走名 or 条件戦名 or 会場名+番号
+                      // raceLabel と同一なら中央カラムは空（重複表示しない）
+                      const dn = (race.displayName || '').trim();
+                      const subName = dn && dn !== raceLabel ? dn : '';
                       return (
-                        <div class="race-line hit">
+                        <div class="race-row hit">
                           <span class="race-number">{raceLabel}</span>
-                          {specialtyName && <span class="race-name">{specialtyName}</span>}
-                          <span class="hit-badge">✅ 的中</span>
-                          {payout > 0 && (
-                            <span class="payout">¥{payout.toLocaleString()}</span>
-                          )}
+                          <span class="race-name">{subName}</span>
+                          <span class="race-result">
+                            <span class="hit-badge">✅ 的中</span>
+                            {payout > 0 && (
+                              <span class="payout">¥{payout.toLocaleString()}</span>
+                            )}
+                          </span>
                         </div>
                       );
                     });
@@ -371,10 +373,11 @@ const pageDescription = monthData.length > 0
     gap: var(--spacing-sm);
   }
 
-  .race-line {
-    display: flex;
+  .race-row {
+    display: grid;
+    grid-template-columns: 110px 1fr 180px;
     align-items: center;
-    gap: var(--spacing-md);
+    gap: 16px;
     padding: var(--spacing-md) var(--spacing-lg);
     background: linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, rgba(0, 0, 0, 0.2) 100%);
     border-radius: var(--radius-md);
@@ -387,13 +390,23 @@ const pageDescription = monthData.length > 0
     .race-number {
       font-weight: 700;
       color: #60a5fa;
-      min-width: 50px;
     }
 
     .race-name {
-      flex: 1;
-      color: var(--text-secondary);
+      min-height: 1em; /* 空でも高さ確保 */
+      color: #94a3b8;
       font-size: 0.9375rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .race-result {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      white-space: nowrap;
     }
 
     .hit-badge {
@@ -406,7 +419,6 @@ const pageDescription = monthData.length > 0
       font-weight: 800;
       color: #10b981;
       font-size: 1.125rem;
-      margin-left: var(--spacing-sm);
     }
   }
 
@@ -467,21 +479,21 @@ const pageDescription = monthData.length > 0
       gap: var(--spacing-xs);
     }
 
-    .race-line {
-      flex-wrap: wrap;
-      gap: var(--spacing-sm);
-
-      .race-number {
-        min-width: auto;
-      }
+    .race-row {
+      grid-template-columns: 80px 1fr auto;
+      gap: 10px;
+      padding: var(--spacing-sm) var(--spacing-md);
 
       .race-name {
-        flex: 1 1 100%;
-        order: 2;
+        font-size: 0.875rem;
+      }
+
+      .race-result {
+        gap: 8px;
       }
 
       .payout {
-        margin-left: 0;
+        font-size: 1rem;
       }
     }
   }
