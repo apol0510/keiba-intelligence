@@ -163,7 +163,7 @@ const jsonLd = {
     <nav class="breadcrumb">
       <a href="/">ホーム</a>
       <span>›</span>
-      <a href={type === 'jra' ? '/archive-jra' : '/archive'}>的中実績</a>
+      <a href={type === 'jra' ? '/archive/jra' : '/archive'}>的中実績</a>
       <span>›</span>
       <a href={`/results/${year}/${month}`}>{year}年{month}月</a>
       <span>›</span>
@@ -290,7 +290,7 @@ const jsonLd = {
         <a href={`/results/${year}/${month}`} class="link-card">
           📅 {year}年{month}月の実績一覧
         </a>
-        <a href={type === 'jra' ? '/archive-jra' : '/archive'} class="link-card">
+        <a href={type === 'jra' ? '/archive/jra' : '/archive'} class="link-card">
           📊 全期間の実績
         </a>
         <a href={type === 'jra' ? '/prediction-jra' : '/prediction'} class="link-card">

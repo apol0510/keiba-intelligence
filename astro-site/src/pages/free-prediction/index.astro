@@ -1,1921 +1,236 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import AIRaceComment from '../../components/AIRaceComment.astro';
-import AIBettingSection from '../../components/AIBettingSection.astro';
-import { readdirSync, readFileSync, existsSync } from 'fs';
+import { readdirSync, existsSync, statSync } from 'fs';
 import { join } from 'path';
-import { generateAdvancedMetrics } from '../../utils/featureScores.js';
 
 export const prerender = false;
 
-// 最新の予想JSONファイルを取得（複数会場対応）
-const predictionsDir = join(process.cwd(), 'src', 'data', 'predictions');
-console.log('🔍 [PAGE] process.cwd():', process.cwd());
-console.log('🔍 [PAGE] predictionsDir:', predictionsDir);
-
-let predictionsByVenue = {};
-let venues = [];
-let latestDate = null;
-let error = null;
-
-try {
-  console.log('🔍 [PAGE] existsSync(predictionsDir):', existsSync(predictionsDir));
-  if (existsSync(predictionsDir)) {
-    // ファイル名から日付と会場を抽出して日付順にソート
-    const allFiles = readdirSync(predictionsDir);
-    console.log('📂 [PAGE] 全ファイル一覧:', allFiles);
-
-    const files = allFiles
-      .filter(file => file.endsWith('.json') && /^\d{4}-\d{2}-\d{2}-[a-z]+\.json$/.test(file))
-      .map(file => {
-        const match = file.match(/^(\d{4}-\d{2}-\d{2})-([a-z]+)\.json$/);
-        if (match) {
-          const [, date, venue] = match;
-          return {
-            file,
-            date,
-            venue,
-            timestamp: new Date(date).getTime()
-          };
-        }
-        return null;
-      })
-      .filter(item => item !== null)
-      .sort((a, b) => b.timestamp - a.timestamp);
-
-    console.log('📋 [PAGE] マッチしたファイル:', files.map(f => f.file));
-
-    if (files.length > 0) {
-      latestDate = files[0].date;
-      const latestFiles = files.filter(f => f.date === latestDate);
-
-      console.log('📅 [PAGE] 最新日付:', latestDate);
-      console.log('📍 [PAGE] 最新日付のファイル:', latestFiles.map(f => f.file));
-
-      for (const fileInfo of latestFiles) {
-        const fileContent = readFileSync(join(predictionsDir, fileInfo.file), 'utf-8');
-        const data = JSON.parse(fileContent);
-
-        const venueMap = {
-          'ooi': '大井',
-          'funabashi': '船橋',
-          'kawasaki': '川崎',
-          'urawa': '浦和'
-        };
-        const venueName = venueMap[fileInfo.venue] || fileInfo.venue;
-
-        predictionsByVenue[venueName] = data;
-        venues.push(venueName);
-      }
-
-      console.log('🏇 [PAGE] 表示会場一覧:', venues);
-      console.log('🏇 [PAGE] venues.length:', venues.length);
-    } else {
-      throw new Error('予想データがありません');
-    }
-  } else {
-    throw new Error('予想データフォルダが見つかりません');
+// 南関の最新予想日付
+function readLatestNankanDate(): string | null {
+  const dir = join(process.cwd(), 'src', 'data', 'predictions');
+  if (!existsSync(dir)) return null;
+  try {
+    const files = readdirSync(dir)
+      .filter((name) => /^\d{4}-\d{2}-\d{2}/.test(name) && name.endsWith('.json'))
+      .sort()
+      .reverse();
+    if (files.length === 0) return null;
+    const m = files[0].match(/^(\d{4}-\d{2}-\d{2})/);
+    return m ? m[1] : null;
+  } catch {
+    return null;
   }
-} catch (err) {
-  error = err.message;
 }
 
-// URLパラメータから選択された会場を取得
-const url = new URL(Astro.request.url);
-const selectedVenueParam = url.searchParams.get('venue');
-const selectedVenue = selectedVenueParam && predictionsByVenue[selectedVenueParam]
-  ? selectedVenueParam
-  : venues[0];
-
-const predictionData = venues.length > 0 ? predictionsByVenue[selectedVenue] : null;
-const isMultiVenue = venues.length > 1;
-
-console.log('🎯 [PAGE] selectedVenue:', selectedVenue);
-console.log('🎯 [PAGE] isMultiVenue:', isMultiVenue);
-console.log('🎯 [PAGE] predictionDataがある会場:', Object.keys(predictionsByVenue));
-
-// デバッグ情報をHTMLコメントとして出力
-const debugInfo = {
-  cwd: process.cwd(),
-  predictionsDir,
-  dirExists: existsSync(predictionsDir),
-  latestDate,
-  venues: venues,
-  venuesLength: venues.length,
-  isMultiVenue,
-  error: error
-};
-const debugInfoString = JSON.stringify(debugInfo, null, 2);
-
-// generateAdvancedMetrics imported from featureScores.js
----
-
-<!-- デバッグ情報（HTML内に埋め込み） -->
-<script type="application/json" id="debug-info" data-debug="true" set:html={debugInfoString}></script>
-
-<BaseLayout
-  title="無料予想 - KEIBA Intelligence"
-  description="KEIBA Intelligenceの無料予想。AI分析による全レース予想を無料公開。買い目情報は有料プランで提供。"
->
-  <section class="prediction-section">
-    <div class="container">
-      {error && (
-        <div class="error-card">
-          <h1>エラー</h1>
-          <p>{error}</p>
-          <a href="/admin/prediction-converter" class="btn btn-primary">予想データを作成</a>
-        </div>
-      )}
-
-      {predictionData && (
-        <>
-          <!-- ページヘッダー -->
-          <div class="page-header">
-            <div class="ai-badge">
-              <span class="badge-pulse"></span>
-              <span class="badge-text">DEEP LEARNING PREDICTION SYSTEM / 深層学習予測システム</span>
-            </div>
-            <h1 class="page-title">
-              {predictionData.eventInfo.date} {isMultiVenue ? venues.join('・') : predictionData.eventInfo.venue}
-            </h1>
-            <p class="page-subtitle">
-              Ensemble Neural Network Analysis / アンサンブル型ニューラルネットワーク分析 - {predictionData.eventInfo.totalRaces} Races
-            </p>
-            <div class="scan-line"></div>
-          </div>
-
-          {/* 会場選択ボタン（2会場以上の場合のみ表示） */}
-          {isMultiVenue && (
-            <div class="venue-selector">
-              {venues.map((venueName) => (
-                <button
-                  class={`venue-btn ${venueName === selectedVenue ? 'active' : ''}`}
-                  data-venue-name={venueName}
-                  onclick="selectVenue(event, this)"
-                >
-                  {venueName}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <!-- レース選択ボタン -->
-          <div class="race-selector">
-            {predictionData.predictions.map((race, index) => (
-              <button
-                class={`race-btn ${index === 0 ? 'active' : ''}`}
-                data-race-index={index}
-                onclick="selectRace(event, this)"
-                title={race.raceInfo.raceName || `第${race.raceInfo.raceNumber}レース`}
-              >
-                <span class="race-label">{race.raceInfo.raceNumber}R</span>
-                <span class="race-indicator"></span>
-              </button>
-            ))}
-          </div>
-
-          <!-- レース表示エリア -->
-          <div class="race-display-area">
-            {predictionData.predictions.map((race, index) => {
-            const allHorses = race.horses;
-            const horsesWithMetrics = allHorses.map(horse => ({
-              ...horse,
-              metrics: generateAdvancedMetrics(horse, allHorses, race.raceInfo)
-            }));
-
-            // PT値順にソートして上位5頭のみ表示
-            const sortedTop5 = horsesWithMetrics
-              .sort((a, b) => b.pt - a.pt)
-              .slice(0, 5);
-
-            // 1位・2位はそのまま、3〜5位はシャッフルして順位を隠す
-            const top2 = sortedTop5.slice(0, 2);
-            const rest3 = sortedTop5.slice(2, 5);
-
-            // シャッフル関数（Fisher-Yates）
-            const shuffled = [...rest3];
-            for (let i = shuffled.length - 1; i > 0; i--) {
-              const j = Math.floor(Math.random() * (i + 1));
-              [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-            }
-
-            const topHorses = [...top2, ...shuffled];
-
-            // モデル統計
-            const avgConfidence = (horsesWithMetrics.reduce((sum, h) =>
-              sum + parseFloat(h.metrics.modelCertainty), 0) / horsesWithMetrics.length).toFixed(1);
-
-            return (
-              <div class={`race-content ${index === 0 ? 'active' : ''}`} data-race-index={index}>
-                <!-- レース名ヘッダー -->
-                {race.raceInfo.raceName && (
-                  <div class="race-name-header">
-                    <h2 class="race-name-title">{race.raceInfo.raceNumber}R {race.raceInfo.raceName}</h2>
-                    <div class="race-details">
-                      {race.raceInfo.startTime && <span class="race-detail-item">🕐 {race.raceInfo.startTime}発走</span>}
-                      {race.raceInfo.distance && <span class="race-detail-item">📏 {race.raceInfo.distance}m</span>}
-                      {race.raceInfo.horseCount && <span class="race-detail-item">🐴 {race.raceInfo.horseCount}頭</span>}
-                    </div>
-                  </div>
-                )}
-
-                <!-- AI予想解説 -->
-                <AIRaceComment
-                  type="prediction"
-                  masked={true}
-                  raceData={JSON.stringify({
-                    venue: predictionData.eventInfo.venue,
-                    date: predictionData.eventInfo.date,
-                    raceNumber: race.raceInfo.raceNumber,
-                    raceName: race.raceInfo.raceName,
-                    distance: race.raceInfo.distance,
-                    horseCount: race.raceInfo.horseCount,
-                    topHorses: allHorses.sort((a, b) => b.pt - a.pt).slice(0, 5).map(h => ({
-                      horseNumber: h.horseNumber,
-                      horseName: h.horseName,
-                      pt: h.pt,
-                      role: h.role,
-                      jockey: h.jockey,
-                      trainer: h.trainer,
-                      age: h.age,
-                      weight: h.weight,
-                      recentRaces: h.recentRaces || []
-                    }))
-                  })}
-                />
-
-                <!-- AI買い目（無料版マスク） -->
-                <AIBettingSection masked={true} />
-
-                <!-- AIモデル情報カード -->
-                <div class="ai-model-card">
-                  <div class="model-header">
-                    <div class="model-icon">🧠</div>
-                    <div class="model-title">
-                      <h3>Ensemble Deep Neural Network / アンサンブル型深層ニューラルネットワーク</h3>
-                      <p class="model-subtitle">XGBoost + LSTM Hybrid Architecture / 勾配ブースティング+長短期記憶ハイブリッド構造</p>
-                    </div>
-                    <div class="processing-badge">
-                      <span class="processing-dot"></span>
-                      <span>OPTIMIZED / 最適化済</span>
-                    </div>
-                  </div>
-
-                  <div class="model-specs">
-                    <div class="spec-group">
-                      <div class="spec-label">Model Architecture</div>
-                      <div class="spec-value">Multi-Layer Perceptron + Gradient Boosting</div>
-                    </div>
-                    <div class="spec-group">
-                      <div class="spec-label">Feature Engineering</div>
-                      <div class="spec-value">127 Features w/ PCA Dimensionality Reduction</div>
-                    </div>
-                    <div class="spec-group">
-                      <div class="spec-label">Training Dataset</div>
-                      <div class="spec-value">48,392 Historical Races (2019-2025)</div>
-                    </div>
-                    <div class="spec-group">
-                      <div class="spec-label">Optimization</div>
-                      <div class="spec-value">Adam Optimizer w/ L2 Regularization (λ=0.001)</div>
-                    </div>
-                  </div>
-
-                  <div class="model-metrics">
-                    <div class="metric-box">
-                      <div class="metric-label">Cross-Val Score</div>
-                      <div class="metric-value" data-counter="9247">0</div>
-                      <div class="metric-unit">/ 10000</div>
-                    </div>
-                    <div class="metric-box">
-                      <div class="metric-label">Validation Accuracy</div>
-                      <div class="metric-value">{avgConfidence}%</div>
-                    </div>
-                    <div class="metric-box">
-                      <div class="metric-label">Training Loss</div>
-                      <div class="metric-value">0.{Math.floor(Math.random() * 200 + 150)}</div>
-                    </div>
-                    <div class="metric-box">
-                      <div class="metric-label">Inference Time</div>
-                      <div class="metric-value">{Math.floor(Math.random() * 300 + 100)}ms</div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 詳細分析テーブル -->
-                <div class="analysis-section">
-                  <div class="section-header">
-                    <div class="header-icon">📊</div>
-                    <h2>上位5頭 PT値ランキング</h2>
-                    <span class="free-tag">無料公開</span>
-                  </div>
-
-                  <!-- 上位5頭の分析（1位・2位は詳細、3〜5位は順位隠してシャッフル） -->
-                  {topHorses.map((horse, index) => {
-                    const m = horse.metrics;
-                    const isTopTwo = index < 2; // 1位・2位のみ詳細分析
-
-                    return (
-                      <div class={`detailed-horse-card ${isTopTwo ? 'top-horse-detailed' : 'top-horse-simple'}`}>
-                        <div class="dhc-header">
-                          {isTopTwo ? (
-                            <div class="rank-badge-large">{index + 1}位</div>
-                          ) : (
-                            <div class="candidate-badge">有力候補</div>
-                          )}
-                          <div class="dhc-main-info">
-                            <div class="dhc-info-card">
-                              <div class="dhc-title-line">
-                                <span class="dhc-number">{horse.horseNumber}</span>
-                                <span class="dhc-name">{horse.horseName}</span>
-                              </div>
-                              {(horse.jockey || horse.trainer || horse.age || horse.weight) && (
-                                <div class="dhc-jockey-trainer">
-                                  {horse.age && <span class="dhc-age">🎂 {horse.age}</span>}
-                                  {horse.weight && <span class="dhc-weight">⚖️ {horse.weight}kg</span>}
-                                  {horse.jockey && <span class="dhc-jockey">🏇 {horse.jockey}</span>}
-                                  {horse.trainer && <span class="dhc-trainer">🏠 {horse.trainer}</span>}
-                                </div>
-                              )}
-                              <div class="dhc-quick-metrics">
-                                <div class="qm-item">
-                                  <span class="qm-label">PT値</span>
-                                  <span class="qm-value">{Number(horse.pt).toFixed(2)}</span>
-                                </div>
-                                <div class="qm-item">
-                                  <span class="qm-label">Win Prob. / 勝率</span>
-                                  <span class="qm-value">{m.winProbability}%</span>
-                                </div>
-                                <div class="qm-item">
-                                  <span class="qm-label">Model Certainty / 確信度</span>
-                                  <span class="qm-value">{m.modelCertainty}%</span>
-                                </div>
-                                <div class="qm-item">
-                                  <span class="qm-label">Expected Value / 期待値</span>
-                                  <span class={`qm-value ${m.expectedValue.startsWith('+') ? 'positive' : 'negative'}`}>
-                                    {m.expectedValue}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Feature Importance Analysis（本命・対抗のみ詳細表示） -->
-                        {isTopTwo && (
-                          <div class="dhc-features">
-                            <div class="feature-title">Feature Importance Analysis / 特徴量重要度分析</div>
-                            <div class="feature-grid">
-                              <div class="feature-item">
-                                <div class="feature-label">
-                                  <span class="feature-icon">⚡</span>
-                                  <span>Speed Index / スピード指数</span>
-                                </div>
-                                <div class="feature-bar-container">
-                                  <div class="feature-bar" style={`width: ${m.speedIndex}%`}></div>
-                                </div>
-                                <div class="feature-value">{m.speedIndex}</div>
-                              </div>
-
-                              <div class="feature-item">
-                                <div class="feature-label">
-                                  <span class="feature-icon">💪</span>
-                                  <span>Stamina Rating / スタミナ評価</span>
-                                </div>
-                                <div class="feature-bar-container">
-                                  <div class="feature-bar" style={`width: ${m.staminaRating}%`}></div>
-                                </div>
-                                <div class="feature-value">{m.staminaRating}</div>
-                              </div>
-
-                              <div class="feature-item">
-                                <div class="feature-label">
-                                  <span class="feature-icon">📈</span>
-                                  <span>Form Trend / 調子傾向</span>
-                                </div>
-                                <div class="feature-bar-container trend">
-                                  <div class="feature-bar-center"></div>
-                                  <div class="feature-bar trend" style={`width: ${Math.abs(parseFloat(m.formTrend))}%; ${parseFloat(m.formTrend) >= 0 ? 'left: 50%;' : 'right: 50%;'}`}></div>
-                                </div>
-                                <div class="feature-value">{m.formTrend}</div>
-                              </div>
-
-                              <div class="feature-item">
-                                <div class="feature-label">
-                                  <span class="feature-icon">🏁</span>
-                                  <span>Track Compatibility / コース適性</span>
-                                </div>
-                                <div class="feature-bar-container">
-                                  <div class="feature-bar" style={`width: ${m.trackCompatibility}%`}></div>
-                                </div>
-                                <div class="feature-value">{m.trackCompatibility}</div>
-                              </div>
-
-                              <div class="feature-item">
-                                <div class="feature-label">
-                                  <span class="feature-icon">📏</span>
-                                  <span>Distance Fitness / 距離適性</span>
-                                </div>
-                                <div class="feature-bar-container">
-                                  <div class="feature-bar" style={`width: ${m.distanceFitness}%`}></div>
-                                </div>
-                                <div class="feature-value">{m.distanceFitness}</div>
-                              </div>
-
-                              <div class="feature-item">
-                                <div class="feature-label">
-                                  <span class="feature-icon">👤</span>
-                                  <span>Jockey Factor / 騎手要因</span>
-                                </div>
-                                <div class="feature-bar-container">
-                                  <div class="feature-bar" style={`width: ${m.jockeyFactor}%`}></div>
-                                </div>
-                                <div class="feature-value">{m.jockeyFactor}</div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  </div>
-                </div>
-
-              </div>
-            );
-          })}
-          </div>
-
-          <!-- 無料予想について -->
-          <div class="free-info-card">
-            <div class="free-info-header">
-              <div class="info-icon">🎁</div>
-              <h2>無料予想について</h2>
-            </div>
-            <div class="free-info-content">
-              <p><strong>無料予想では全レースの上位5頭のPT値のみを公開しています。</strong></p>
-              <div class="upgrade-benefits">
-                <div class="benefit-section">
-                  <h3>🆓 無料会員登録でできること</h3>
-                  <ul class="free-info-list">
-                    <li>✅ 全頭予想（全出走馬のPT値・順位）</li>
-                    <li>✅ 買い目（一部）: 本命・対抗・単穴・連下最上位の馬番号</li>
-                    <li>✅ AI分析データ（Feature Importance Analysis）</li>
-                    <li>✅ メールマガジン配信</li>
-                  </ul>
-                  <a href="/register" class="btn btn-success">今すぐ無料登録 →</a>
-                </div>
-                <div class="benefit-section">
-                  <h3>💎 プロ会員でできること</h3>
-                  <ul class="free-info-list">
-                    <li>✅ 完全な馬単買い目（本線+抑え）</li>
-                    <li>✅ 全期間の的中実績</li>
-                    <li>✅ 買い目シミュレーター</li>
-                    <li>✅ 南関4場＋JRA全10場対応</li>
-                    <li>✅ 永久アクセス（買い切りプラン）</li>
-                  </ul>
-                  <a href="/pricing" class="btn btn-primary">料金プランを見る →</a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Technical Notes -->
-          <div class="info-card">
-            <div class="info-header">
-              <div class="info-icon">📋</div>
-              <h3>Technical Specifications & Disclaimer / 技術仕様・免責事項</h3>
-            </div>
-            <div class="info-content">
-              <div class="tech-section">
-                <h4>Model Architecture / モデル構造</h4>
-                <ul>
-                  <li><strong>Primary Model / 主要モデル:</strong> Ensemble Neural Network (XGBoost + LSTM)</li>
-                  <li><strong>Feature Engineering / 特徴量エンジニアリング:</strong> 127-dimensional feature space with PCA compression</li>
-                  <li><strong>Training Data / 学習データ:</strong> 48,392 historical races spanning 2019-2025</li>
-                  <li><strong>Validation Method / 検証方法:</strong> 5-Fold Cross-Validation with stratified sampling</li>
-                  <li><strong>Regularization / 正則化:</strong> L2 (Ridge) with λ=0.001, Dropout rate=0.3</li>
-                </ul>
-              </div>
-              <div class="tech-section">
-                <h4>Performance Metrics / パフォーマンス指標</h4>
-                <ul>
-                  <li><strong>Win Probability / 勝率:</strong> Softmax probability distribution across all contenders</li>
-                  <li><strong>Model Certainty / モデル確信度:</strong> Inverse of prediction entropy (Shannon entropy)</li>
-                  <li><strong>Expected Value / 期待値:</strong> Kelly Criterion-based bet sizing recommendation</li>
-                  <li><strong>Risk Assessment / リスク評価:</strong> Variance-based volatility measurement</li>
-                </ul>
-              </div>
-              <div class="disclaimer">
-                <h4>⚠️ Important Notice / 重要なお知らせ</h4>
-                <p>このAI予測システムは機械学習アルゴリズムによる統計的分析結果です。過去のパフォーマンスは将来の結果を保証するものではありません。馬券購入は自己責任でお願いします。</p>
-              </div>
-            </div>
-          </div>
-          <!-- 過去予想アーカイブリンク -->
-          <div class="archive-link-box">
-            <a href="/free-prediction/archive">📅 過去の予想アーカイブを見る →</a>
-          </div>
-        </>
-      )}
-    </div>
-  </section>
-
-  <style>
-    /* 基本スタイルはprediction/[slug].astroと同じ */
-    .prediction-section {
-      padding: var(--spacing-xl) 0;
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
-        var(--bg-primary);
-    }
-
-    /* 無料予想説明カード */
-    .free-info-card {
-      background: var(--bg-secondary);
-      padding: var(--spacing-xl);
-      border-radius: var(--radius-lg);
-      margin-bottom: var(--spacing-xl);
-      border: 2px solid rgba(16, 185, 129, 0.3);
-    }
-
-    .free-info-header {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-md);
-    }
-
-    .info-icon {
-      font-size: 1.5rem;
-    }
-
-    .free-info-header h2 {
-      font-size: 1.25rem;
-      color: #10b981;
-      font-weight: 800;
-    }
-
-    .free-info-content p {
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-sm);
-      line-height: 1.6;
-    }
-
-    .free-info-list {
-      list-style: none;
-      margin: var(--spacing-md) 0;
-    }
-
-    .free-info-list li {
-      padding: var(--spacing-xs) 0;
-      color: var(--text-secondary);
-    }
-
-    .inline-link {
-      color: var(--primary-end);
-      text-decoration: underline;
-      font-weight: 600;
-    }
-
-    /* ページヘッダー */
-    .page-header {
-      position: relative;
-      text-align: center;
-      margin-bottom: var(--spacing-xl);
-      padding: var(--spacing-2xl);
-      background: linear-gradient(135deg,
-        rgba(59, 130, 246, 0.1) 0%,
-        rgba(139, 92, 246, 0.1) 100%);
-      border-radius: var(--radius-lg);
-      border: 1px solid rgba(59, 130, 246, 0.2);
-      overflow: hidden;
-    }
-
-    .page-header::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg,
-        transparent,
-        rgba(59, 130, 246, 0.1),
-        transparent);
-      animation: scan 3s infinite;
-    }
-
-    @keyframes scan {
-      0% { left: -100%; }
-      100% { left: 100%; }
-    }
-
-    .ai-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      padding: var(--spacing-xs) var(--spacing-md);
-      background: rgba(59, 130, 246, 0.2);
-      border: 1px solid rgba(59, 130, 246, 0.5);
-      border-radius: 20px;
-      margin-bottom: var(--spacing-md);
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      color: #60a5fa;
-    }
-
-    .badge-pulse {
-      width: 8px;
-      height: 8px;
-      background: #3b82f6;
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(1.2); }
-    }
-
-    .page-title {
-      font-size: 2rem;
-      margin-bottom: var(--spacing-sm);
-      color: white;
-      text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
-      font-weight: 800;
-    }
-
-    .page-subtitle {
-      font-size: 0.875rem;
-      color: rgba(255, 255, 255, 0.7);
-      font-family: 'Courier New', monospace;
-      letter-spacing: 1.5px;
-    }
-
-    .scan-line {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: linear-gradient(90deg,
-        transparent,
-        #3b82f6,
-        transparent);
-      animation: scanLine 2s infinite;
-    }
-
-    @keyframes scanLine {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
-    }
-
-    /* レース名ヘッダー */
-    .race-name-header {
-      text-align: center;
-      margin-bottom: var(--spacing-xl);
-      padding: var(--spacing-lg);
-      background: linear-gradient(135deg,
-        rgba(139, 92, 246, 0.15) 0%,
-        rgba(59, 130, 246, 0.15) 100%);
-      border-radius: var(--radius-lg);
-      border: 2px solid rgba(139, 92, 246, 0.3);
-    }
-
-    .race-name-title {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: #a78bfa;
-      margin: 0 0 var(--spacing-md) 0;
-      text-shadow: 0 0 10px rgba(167, 139, 250, 0.3);
-      letter-spacing: 0.5px;
-    }
-
-    .race-details {
-      display: flex;
-      justify-content: center;
-      gap: var(--spacing-lg);
-      flex-wrap: wrap;
-      margin-top: var(--spacing-md);
-    }
-
-    .race-detail-item {
-      font-size: 0.95rem;
-      color: #94a3b8;
-      font-weight: 600;
-      padding: var(--spacing-xs) var(--spacing-md);
-      background: rgba(30, 41, 59, 0.5);
-      border-radius: var(--radius-md);
-      border: 1px solid rgba(139, 92, 246, 0.2);
-    }
-
-    .dhc-jockey-trainer {
-      display: flex;
-      gap: var(--spacing-md);
-      margin-top: var(--spacing-sm);
-      font-size: 0.9rem;
-      color: #94a3b8;
-      flex-wrap: wrap;
-    }
-
-    .dhc-age, .dhc-weight, .dhc-jockey, .dhc-trainer {
-      padding: var(--spacing-xs) var(--spacing-sm);
-      background: rgba(30, 41, 59, 0.5);
-      border-radius: var(--radius-sm);
-      border: 1px solid rgba(59, 130, 246, 0.2);
-    }
-
-    /* AIモデルカード */
-    .ai-model-card {
-      background: linear-gradient(135deg,
-        rgba(59, 130, 246, 0.1) 0%,
-        rgba(139, 92, 246, 0.1) 100%);
-      padding: var(--spacing-xl);
-      border-radius: var(--radius-lg);
-      margin-bottom: var(--spacing-xl);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .ai-model-card::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
-      animation: rotate 20s linear infinite;
-    }
-
-    @keyframes rotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-
-    .model-header {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-md);
-      margin-bottom: var(--spacing-lg);
-      position: relative;
-      z-index: 1;
-    }
-
-    .model-icon {
-      font-size: 2.5rem;
-      filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));
-    }
-
-    .model-title h3 {
-      font-size: 1.25rem;
-      margin-bottom: 4px;
-      color: #60a5fa;
-      font-weight: 800;
-    }
-
-    .model-subtitle {
-      font-size: 0.75rem;
-      color: var(--text-tertiary);
-      font-family: 'Courier New', monospace;
-    }
-
-    .processing-badge {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      background: rgba(16, 185, 129, 0.2);
-      border: 1px solid rgba(16, 185, 129, 0.5);
-      border-radius: 12px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: #10b981;
-      letter-spacing: 1px;
-    }
-
-    .processing-dot {
-      width: 6px;
-      height: 6px;
-      background: #10b981;
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-
-    .model-specs {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: var(--spacing-md);
-      margin-bottom: var(--spacing-lg);
-      position: relative;
-      z-index: 1;
-    }
-
-    .spec-group {
-      padding: var(--spacing-sm);
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: var(--radius-sm);
-      border-left: 2px solid rgba(59, 130, 246, 0.5);
-    }
-
-    .spec-label {
-      font-size: 0.7rem;
-      color: #60a5fa;
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 700;
-    }
-
-    .spec-value {
-      font-size: 0.875rem;
-      color: var(--text-primary);
-      font-family: 'Courier New', monospace;
-    }
-
-    .model-metrics {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: var(--spacing-md);
-      position: relative;
-      z-index: 1;
-    }
-
-    .metric-box {
-      padding: var(--spacing-md);
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: var(--radius-md);
-      text-align: center;
-      border: 1px solid rgba(59, 130, 246, 0.2);
-    }
-
-    .metric-label {
-      font-size: 0.7rem;
-      color: var(--text-tertiary);
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .metric-value {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: #60a5fa;
-      font-family: 'Courier New', monospace;
-    }
-
-    .metric-unit {
-      font-size: 0.75rem;
-      color: var(--text-tertiary);
-      margin-top: 2px;
-    }
-
-    /* 会場選択ボタン */
-    .venue-selector {
-      display: flex;
-      gap: var(--spacing-md);
-      justify-content: center;
-      margin-bottom: var(--spacing-lg);
-      padding: var(--spacing-md);
-      background: var(--bg-secondary);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border-color);
-    }
-
-    .venue-btn {
-      padding: var(--spacing-md) var(--spacing-xl);
-      background: var(--bg-tertiary);
-      color: var(--text-primary);
-      border: 2px solid var(--border-color);
-      border-radius: var(--radius-md);
-      font-size: 1.125rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      min-width: 120px;
-    }
-
-    .venue-btn:hover {
-      border-color: var(--primary-end);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-    }
-
-    .venue-btn.active {
-      background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
-      border-color: var(--primary-end);
-      color: white;
-      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
-    }
-
-    /* レース選択ボタン */
-    .race-selector {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--spacing-sm);
-      justify-content: center;
-      margin-bottom: var(--spacing-xl);
-      padding: var(--spacing-lg);
-      background: var(--bg-secondary);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border-color);
-    }
-
-    .race-btn {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      padding: var(--spacing-sm) var(--spacing-md);
-      background: var(--bg-tertiary);
-      color: var(--text-primary);
-      border: 2px solid var(--border-color);
-      border-radius: var(--radius-md);
-      font-size: 0.875rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      overflow: hidden;
-    }
-
-    .race-btn::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.2), transparent);
-      transition: left 0.5s;
-    }
-
-    .race-btn:hover::before {
-      left: 100%;
-    }
-
-    .race-btn:hover {
-      border-color: var(--primary-end);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-    }
-
-    .race-btn.active {
-      background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
-      border-color: var(--primary-end);
-      color: white;
-      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
-    }
-
-    .race-label {
-      font-size: 1rem;
-      font-weight: 800;
-    }
-
-    .race-indicator {
-      width: 20px;
-      height: 2px;
-      background: var(--border-color);
-      border-radius: 1px;
-      transition: all 0.3s;
-    }
-
-    .race-btn.active .race-indicator {
-      background: white;
-      box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
-    }
-
-    /* レース表示エリア */
-    .race-display-area {
-      position: relative;
-      min-height: 500px;
-    }
-
-    .race-content {
-      display: none;
-    }
-
-    .race-content.active {
-      display: block;
-      animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    /* 分析セクション */
-    .analysis-section {
-      background: var(--bg-secondary);
-      padding: var(--spacing-xl);
-      border-radius: var(--radius-lg);
-      margin-bottom: var(--spacing-xl);
-    }
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-lg);
-      flex-wrap: wrap;
-    }
-
-    .header-icon {
-      font-size: 1.5rem;
-      filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
-    }
-
-    .section-header h2 {
-      font-size: 1.25rem;
-      color: #60a5fa;
-      font-weight: 800;
-      flex: 1;
-    }
-
-    /* 詳細馬カード（prediction/[slug].astroから流用） */
-    .detailed-horse-card {
-      margin-bottom: var(--spacing-xl);
-      padding: var(--spacing-xl);
-      background: var(--bg-tertiary);
-      border-radius: var(--radius-lg);
-      border: 2px solid var(--border-color);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .dhc-header {
-      margin-bottom: var(--spacing-xl);
-    }
-
-    .dhc-main-info {
-      width: 100%;
-    }
-
-    .dhc-info-card {
-      background: rgba(30, 41, 59, 0.5);
-      padding: var(--spacing-lg);
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-color);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    .dhc-title-line {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-lg);
-      padding-bottom: var(--spacing-sm);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      flex-wrap: wrap;
-    }
-
-    .dhc-mark-mobile {
-      display: inline-block;
-      font-size: 1.5rem;
-      font-weight: 900;
-    }
-
-    .detailed-horse-card.honmei .dhc-mark-mobile {
-      color: #3b82f6;
-    }
-
-    .detailed-horse-card.taikou .dhc-mark-mobile {
-      color: #3b82f6;
-    }
-
-    .detailed-horse-card.tanana .dhc-mark-mobile {
-      color: #f59e0b;
-    }
-
-    .dhc-number {
-      font-size: 1.25rem;
-      font-weight: 900;
-      color: #60a5fa;
-      font-family: 'Courier New', monospace;
-      padding: 4px 12px;
-      background: rgba(96, 165, 250, 0.15);
-      border: 2px solid rgba(96, 165, 250, 0.4);
-      border-radius: var(--radius-sm);
-      display: inline-block;
-    }
-
-    .dhc-name {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      flex: 1;
-    }
-
-    .dhc-role-badge {
-      padding: 4px 12px;
-      background: rgba(139, 92, 246, 0.2);
-      border: 1px solid rgba(139, 92, 246, 0.5);
-      border-radius: 12px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #a78bfa;
-    }
-
-    .dhc-quick-metrics {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: var(--spacing-md);
-    }
-
-    .qm-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .qm-label {
-      font-size: 0.7rem;
-      color: var(--text-tertiary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .qm-value {
-      font-size: 1.125rem;
-      font-weight: 800;
-      color: var(--text-primary);
-      font-family: 'Courier New', monospace;
-    }
-
-    .qm-value.risk-low {
-      color: #10b981;
-    }
-
-    .qm-value.risk-medium {
-      color: #f59e0b;
-    }
-
-    .qm-value.risk-high {
-      color: #ef4444;
-    }
-
-    .qm-value.positive {
-      color: #10b981;
-    }
-
-    .qm-value.negative {
-      color: #ef4444;
-    }
-
-    /* Feature Analysis */
-    .dhc-features {
-      margin-bottom: var(--spacing-xl);
-    }
-
-    .feature-title {
-      font-size: 1rem;
-      font-weight: 700;
-      color: #60a5fa;
-      margin-bottom: var(--spacing-md);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .feature-grid {
-      display: grid;
-      gap: var(--spacing-md);
-    }
-
-    .feature-item {
-      display: grid;
-      grid-template-columns: 200px 1fr 60px;
-      align-items: center;
-      gap: var(--spacing-md);
-      padding: var(--spacing-sm);
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: var(--radius-sm);
-    }
-
-    .feature-label {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-xs);
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-    }
-
-    .feature-icon {
-      font-size: 1.125rem;
-    }
-
-    .feature-bar-container {
-      position: relative;
-      height: 8px;
-      background: rgba(0, 0, 0, 0.4);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    .feature-bar {
-      height: 100%;
-      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-      border-radius: 4px;
-      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .feature-bar::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      bottom: 0;
-      right: 0;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-      animation: shimmer 2s infinite;
-    }
-
-    @keyframes shimmer {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
-    }
-
-    .feature-bar-container.trend {
-      position: relative;
-      background: linear-gradient(90deg,
-        rgba(239, 68, 68, 0.3) 0%,
-        rgba(0, 0, 0, 0.4) 50%,
-        rgba(16, 185, 129, 0.3) 100%);
-    }
-
-    .feature-bar-center {
-      position: absolute;
-      left: 50%;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: rgba(255, 255, 255, 0.3);
-    }
-
-    .feature-bar.trend {
-      position: absolute;
-      top: 0;
-      height: 100%;
-    }
-
-    .feature-value {
-      font-size: 0.875rem;
-      font-weight: 800;
-      color: #60a5fa;
-      font-family: 'Courier New', monospace;
-      text-align: right;
-    }
-
-    /* Confidence Interval */
-    .dhc-confidence {
-      margin-top: var(--spacing-lg);
-      padding: var(--spacing-lg);
-      background: rgba(139, 92, 246, 0.05);
-      border-radius: var(--radius-md);
-      border: 1px solid rgba(139, 92, 246, 0.2);
-    }
-
-    .confidence-title {
-      font-size: 0.875rem;
-      font-weight: 700;
-      color: #a78bfa;
-      margin-bottom: var(--spacing-md);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .confidence-range {
-      display: grid;
-      grid-template-columns: 60px 1fr 60px;
-      align-items: center;
-      gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .range-value {
-      font-size: 0.875rem;
-      font-weight: 700;
-      color: #c4b5fd;
-      font-family: 'Courier New', monospace;
-      text-align: center;
-    }
-
-    .range-bar {
-      position: relative;
-      height: 24px;
-      background: rgba(30, 41, 59, 0.5);
-      border-radius: 12px;
-      overflow: visible;
-    }
-
-    .range-fill {
-      position: absolute;
-      top: 0;
-      height: 100%;
-      background: linear-gradient(90deg, #8b5cf6, #a78bfa);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .range-point {
-      position: absolute;
-      width: 12px;
-      height: 12px;
-      background: white;
-      border: 3px solid #8b5cf6;
-      border-radius: 50%;
-      box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
-      transform: translateX(-50%);
-    }
-
-    .confidence-note {
-      font-size: 0.8125rem;
-      color: var(--text-secondary);
-      text-align: center;
-    }
-
-    .confidence-note strong {
-      color: #60a5fa;
-    }
-
-    /* 上位5頭表示用のランクバッジ */
-    .rank-badge-large {
-      position: absolute;
-      top: var(--spacing-md);
-      left: var(--spacing-md);
-      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-      color: #1e293b;
-      font-weight: 700;
-      font-size: 1.125rem;
-      padding: var(--spacing-xs) var(--spacing-md);
-      border-radius: var(--radius-md);
-      box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
-      z-index: 1;
-    }
-
-    .candidate-badge {
-      position: absolute;
-      top: var(--spacing-md);
-      left: var(--spacing-md);
-      background: linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(167, 139, 250, 0.3) 100%);
-      color: #a78bfa;
-      font-weight: 600;
-      font-size: 0.95rem;
-      padding: var(--spacing-xs) var(--spacing-md);
-      border-radius: var(--radius-md);
-      border: 1px solid rgba(139, 92, 246, 0.5);
-      z-index: 1;
-    }
-
-    .detailed-horse-card.top-horse-detailed,
-    .detailed-horse-card.top-horse-simple {
-      margin-bottom: var(--spacing-lg);
-      position: relative;
-    }
-
-    .detailed-horse-card.top-horse-detailed .dhc-header,
-    .detailed-horse-card.top-horse-simple .dhc-header {
-      padding-top: calc(var(--spacing-md) + 40px);
-    }
-
-    /* 簡易表示（3位以降）はコンパクトに */
-    .detailed-horse-card.top-horse-simple {
-      background: var(--bg-card);
-      border: 1px solid rgba(251, 191, 36, 0.2);
-    }
-
-    .detailed-horse-card.top-horse-simple:hover {
-      border-color: rgba(251, 191, 36, 0.4);
-    }
-
-    /* アップグレード誘導ボックス */
-    .upgrade-cta-box {
-      background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
-      border: 2px solid #fbbf24;
-      border-radius: var(--radius-lg);
-      padding: var(--spacing-xl);
-      text-align: center;
-      margin: var(--spacing-xl) 0;
-      box-shadow: 0 0 20px rgba(251, 191, 36, 0.2);
-    }
-
-    .upgrade-icon {
-      font-size: 3rem;
-      margin-bottom: var(--spacing-md);
-    }
-
-    .upgrade-cta-box h3 {
-      font-size: 1.5rem;
-      margin-bottom: var(--spacing-sm);
-      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .upgrade-cta-box p {
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-lg);
-      line-height: 1.6;
-    }
-
-    .upgrade-benefits-mini {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--spacing-sm);
-      justify-content: center;
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .upgrade-benefits-mini span {
-      background: rgba(251, 191, 36, 0.1);
-      color: var(--text-primary);
-      padding: var(--spacing-xs) var(--spacing-sm);
-      border-radius: var(--radius-sm);
-      font-size: 0.875rem;
-      font-weight: 600;
-    }
-
-    /* 無料会員登録特典セクション */
-    .upgrade-benefits {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: var(--spacing-lg);
-      margin-top: var(--spacing-lg);
-    }
-
-    .benefit-section {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      padding: var(--spacing-lg);
-    }
-
-    .benefit-section h3 {
-      font-size: 1.125rem;
-      margin-bottom: var(--spacing-md);
-      color: var(--text-primary);
-    }
-
-    .benefit-section ul {
-      list-style: none;
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .benefit-section ul li {
-      padding: var(--spacing-xs) 0;
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-    }
-
-    /* ロックセクション（ブラープレビュー版） */
-    .locked-section {
-      position: relative;
-      background: linear-gradient(135deg,
-        rgba(245, 158, 11, 0.05) 0%,
-        rgba(251, 191, 36, 0.05) 100%);
-      padding: var(--spacing-lg) var(--spacing-xl);
-      border-radius: var(--radius-lg);
-      min-height: 300px;
-      border: 2px solid rgba(245, 158, 11, 0.3);
-      box-shadow:
-        0 4px 6px rgba(0, 0, 0, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
-      overflow: hidden;
-    }
-
-    /* ブラーされたコンテンツ */
-    .blurred-preview .blurred-content {
-      filter: blur(8px);
-      opacity: 0.6;
-      user-select: none;
-      pointer-events: none;
-    }
-
-    .betting-preview-card {
-      background: rgba(30, 41, 59, 0.6);
-      border: 1px solid rgba(100, 116, 139, 0.3);
-      border-radius: var(--radius-md);
-      padding: var(--spacing-lg);
-    }
-
-    .betting-preview-card h4 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: var(--spacing-md);
-      color: var(--text-primary);
-    }
-
-    .betting-formula-preview {
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .betting-formula-preview .main-line,
-    .betting-formula-preview .backup-line {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-md);
-      padding: var(--spacing-md);
-      background: rgba(59, 130, 246, 0.1);
-      border-radius: var(--radius-sm);
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .betting-formula-preview .label {
-      font-weight: 700;
-      color: var(--color-accent);
-      min-width: 60px;
-    }
-
-    .betting-formula-preview .formula {
-      font-family: 'Courier New', monospace;
-      font-size: 1.125rem;
-      color: var(--text-primary);
-      font-weight: 700;
-    }
-
-    .betting-info-preview {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--spacing-md);
-    }
-
-    .betting-info-preview .info-item {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-xs);
-    }
-
-    .betting-info-preview .label {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-    }
-
-    .betting-info-preview .value {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--color-accent);
-    }
-
-    .lock-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(10px) saturate(180%);
-      -webkit-backdrop-filter: blur(10px) saturate(180%);
-      text-align: center;
-      padding: var(--spacing-xl);
-      max-width: 600px;
-      margin: 0 auto;
-      padding: var(--spacing-lg);
-    }
-
-    .lock-icon {
-      font-size: 2.5rem;
-      margin-bottom: var(--spacing-md);
-      opacity: 0.7;
-      filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.3));
-    }
-
-    .lock-overlay h3 {
-      font-size: 1.25rem;
-      font-weight: 800;
-      color: #fbbf24;
-      margin-bottom: var(--spacing-sm);
-      text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
-    }
-
-    .lock-overlay p {
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-lg);
-      line-height: 1.5;
-      font-size: 0.9375rem;
-    }
-
-    .lock-buttons {
-      display: flex;
-      gap: var(--spacing-md);
-      justify-content: center;
-      flex-wrap: wrap;
-      z-index: 10;
-      position: relative;
-    }
-
-    .lock-buttons .btn {
-      min-width: 160px;
-    }
-
-    /* Technical Notes */
-    .info-card {
-      max-width: 900px;
-      margin: var(--spacing-2xl) auto 0;
-      padding: var(--spacing-xl);
-      background: var(--bg-secondary);
-      border-radius: var(--radius-lg);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-    }
-
-    .info-header {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .info-icon {
-      font-size: 1.5rem;
-    }
-
-    .info-header h3 {
-      font-size: 1.125rem;
-      color: #60a5fa;
-      font-weight: 800;
-    }
-
-    .info-content {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-lg);
-    }
-
-    .tech-section h4 {
-      font-size: 0.875rem;
-      color: #a78bfa;
-      margin-bottom: var(--spacing-sm);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-weight: 700;
-    }
-
-    .tech-section ul {
-      list-style: none;
-      padding-left: 0;
-    }
-
-    .tech-section li {
-      margin-bottom: var(--spacing-sm);
-      padding-left: var(--spacing-md);
-      position: relative;
-      font-size: 0.875rem;
-      line-height: 1.6;
-      color: var(--text-secondary);
-    }
-
-    .tech-section li::before {
-      content: '▸';
-      position: absolute;
-      left: 0;
-      color: #3b82f6;
-    }
-
-    .tech-section strong {
-      color: var(--text-primary);
-      font-family: 'Courier New', monospace;
-    }
-
-    .disclaimer {
-      padding: var(--spacing-md);
-      background: rgba(239, 68, 68, 0.1);
-      border-radius: var(--radius-md);
-    }
-
-    .disclaimer h4 {
-      font-size: 0.875rem;
-      color: #fca5a5;
-      margin-bottom: var(--spacing-sm);
-      font-weight: 700;
-    }
-
-    .disclaimer p {
-      font-size: 0.8125rem;
-      line-height: 1.6;
-      color: var(--text-secondary);
-    }
-
-    /* エラーカード */
-    .error-card {
-      text-align: center;
-      padding: var(--spacing-2xl);
-      background: var(--bg-secondary);
-      border-radius: var(--radius-lg);
-      border: 1px solid rgba(239, 68, 68, 0.5);
-    }
-
-    /* レスポンシブ */
-    @media (max-width: 1024px) {
-      .model-specs {
-        grid-template-columns: 1fr;
-      }
-
-      .upgrade-benefits {
-        grid-template-columns: 1fr;
-      }
-
-      .dhc-quick-metrics {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .feature-item {
-        grid-template-columns: 150px 1fr 50px;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .rank-badge-large {
-        font-size: 0.875rem;
-        padding: var(--spacing-xs) var(--spacing-sm);
-      }
-
-      .upgrade-benefits-mini {
-        flex-direction: column;
-      }
-      .page-title {
-        font-size: 1.5rem;
-      }
-
-      .dhc-quick-metrics {
-        grid-template-columns: repeat(2, 1fr);
-        gap: var(--spacing-sm);
-      }
-
-      .qm-item {
-        gap: 2px;
-      }
-
-      .qm-label {
-        font-size: 0.55rem;
-      }
-
-      .qm-value {
-        font-size: 0.875rem;
-      }
-
-      .feature-item {
-        grid-template-columns: 1fr;
-        gap: var(--spacing-sm);
-      }
-
-      .feature-label {
-        justify-content: space-between;
-      }
-
-      .confidence-range {
-        grid-template-columns: 1fr;
-        gap: var(--spacing-sm);
-      }
-
-      .locked-section {
-        padding: var(--spacing-md) var(--spacing-lg);
-        min-height: 180px;
-      }
-
-      .lock-overlay {
-        padding: var(--spacing-md);
-      }
-
-      .lock-icon {
-        font-size: 2rem;
-        margin-bottom: var(--spacing-sm);
-      }
-
-      .lock-overlay h3 {
-        font-size: 1.125rem;
-      }
-
-      .lock-overlay p {
-        font-size: 0.875rem;
-        margin-bottom: var(--spacing-md);
-      }
-
-      .lock-buttons {
-        flex-direction: column;
-      }
-    }
-
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .archive-link-box {
-      text-align: center;
-      margin-top: var(--spacing-xl);
-      padding: var(--spacing-lg);
-      background: rgba(59, 130, 246, 0.06);
-      border: 1px solid rgba(59, 130, 246, 0.15);
-      border-radius: var(--radius-lg);
-    }
-    .archive-link-box a {
-      color: #3b82f6;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 1rem;
-    }
-    .archive-link-box a:hover { text-decoration: underline; }
-  </style>
-
-  <script is:inline>
-    // 会場切り替え関数
-    function selectVenue(event, button) {
-      event.preventDefault();
-
-      const venueName = button.getAttribute('data-venue-name');
-      console.log('🏇 会場切り替え:', venueName);
-
-      // すべての会場ボタンからactiveを削除
-      document.querySelectorAll('.venue-btn').forEach(btn => {
-        btn.classList.remove('active');
-      });
-
-      // クリックされたボタンをアクティブに
-      button.classList.add('active');
-
-      // 会場データをリロード（ページ全体をリロードせず、JavaScriptで切り替え）
-      // 今のところシンプルに、URLパラメータで切り替える方法を使用
-      const url = new URL(window.location.href);
-      url.searchParams.set('venue', venueName);
-      window.location.href = url.toString();
-    }
-
-    function selectRace(event, button) {
-      event.preventDefault();
-
-      const raceIndex = button.getAttribute('data-race-index');
-
-      // すべてのボタンからactiveを削除
-      document.querySelectorAll('.race-btn').forEach(btn => {
-        btn.classList.remove('active');
-      });
-
-      // クリックされたボタンをアクティブに
-      button.classList.add('active');
-
-      // すべてのレースコンテンツを非表示
-      document.querySelectorAll('.race-content').forEach(content => {
-        content.classList.remove('active');
-      });
-
-      // 選択されたレースを表示
-      const selectedRace = document.querySelector(`.race-content[data-race-index="${raceIndex}"]`);
-      if (selectedRace) {
-        selectedRace.classList.add('active');
-
-        // カウンターアニメーション再実行
-        selectedRace.querySelectorAll('[data-counter]').forEach(el => {
-          const target = parseInt(el.getAttribute('data-counter'));
-          animateCounter(el, target);
-        });
-      }
-    }
-
-    // カウンターアニメーション
-    function animateCounter(element, target) {
-      const duration = 1500;
-      const start = 0;
-      const startTime = Date.now();
-
-      function update() {
-        const now = Date.now();
-        const progress = Math.min((now - startTime) / duration, 1);
-        const easeProgress = 1 - Math.pow(1 - progress, 3); // easeOut
-        const current = Math.floor(easeProgress * target);
-        element.textContent = current.toLocaleString();
-
-        if (progress < 1) {
-          requestAnimationFrame(update);
+// JRAの最新予想日付（jra/YYYY/MM/YYYY-MM-DD.json）
+function readLatestJraDate(): string | null {
+  const root = join(process.cwd(), 'src', 'data', 'predictions', 'jra');
+  if (!existsSync(root)) return null;
+  try {
+    const years = readdirSync(root).filter((n) => /^\d{4}$/.test(n)).sort().reverse();
+    for (const y of years) {
+      const yearDir = join(root, y);
+      if (!statSync(yearDir).isDirectory()) continue;
+      const months = readdirSync(yearDir).filter((n) => /^\d{2}$/.test(n)).sort().reverse();
+      for (const m of months) {
+        const monthDir = join(yearDir, m);
+        if (!statSync(monthDir).isDirectory()) continue;
+        const files = readdirSync(monthDir)
+          .filter((n) => /^\d{4}-\d{2}-\d{2}/.test(n) && n.endsWith('.json'))
+          .sort()
+          .reverse();
+        if (files.length > 0) {
+          const match = files[0].match(/^(\d{4}-\d{2}-\d{2})/);
+          if (match) return match[1];
         }
       }
-
-      update();
     }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
-    // ページ読み込み時にカウンターアニメーション実行
-    document.addEventListener('DOMContentLoaded', () => {
-      const activeRace = document.querySelector('.race-content.active');
-      if (activeRace) {
-        activeRace.querySelectorAll('[data-counter]').forEach(el => {
-          const target = parseInt(el.getAttribute('data-counter'));
-          animateCounter(el, target);
-        });
-      }
-    });
-  </script>
+const nankanLatest = readLatestNankanDate();
+const jraLatest = readLatestJraDate();
+
+const formatDate = (date: string | null): string => {
+  if (!date) return '';
+  const [, m, d] = date.split('-');
+  return `${parseInt(m, 10)}月${parseInt(d, 10)}日`;
+};
+
+const pageTitle = '無料AI予想';
+const pageDescription = '中央競馬（JRA）と南関競馬の無料AI予想。XGBoost・LSTMによる高精度予想を毎日無料公開。';
+---
+
+<BaseLayout title={pageTitle} description={pageDescription}>
+  <div class="free-prediction-hub">
+    <div class="page-header">
+      <h1 class="page-title">🎁 無料AI予想</h1>
+      <p class="page-subtitle">中央競馬（JRA）と南関競馬の無料予想を毎日公開</p>
+      <p class="page-description">
+        XGBoost・LSTM・ニューラルネットワークによる高精度AI予想。<br>
+        どちらのカテゴリの予想を見ますか？
+      </p>
+    </div>
+
+    <div class="category-grid">
+      <div class="category-card jra">
+        <div class="card-header">
+          <span class="card-icon">🏇</span>
+          <span class="card-title">中央競馬（JRA）</span>
+        </div>
+        <p class="card-summary">
+          東京・中山・京都・阪神を中心とするJRA全10場の無料予想。重賞レースを含む全レースを毎週末公開。
+        </p>
+        <div class="card-venues">
+          <span class="venue-tag">東京</span>
+          <span class="venue-tag">中山</span>
+          <span class="venue-tag">京都</span>
+          <span class="venue-tag">阪神</span>
+          <span class="venue-tag">中京・新潟・福島・小倉・札幌・函館</span>
+        </div>
+        {jraLatest && (
+          <span class="latest-badge">📅 最新: {formatDate(jraLatest)}の予想を公開中</span>
+        )}
+        <div class="card-actions">
+          <a href="/free-prediction/jra/" class="btn-primary">🎯 JRA無料予想を見る</a>
+        </div>
+      </div>
+
+      <div class="category-card nankan">
+        <div class="card-header">
+          <span class="card-icon">🐎</span>
+          <span class="card-title">南関競馬</span>
+        </div>
+        <p class="card-summary">
+          大井・川崎・船橋・浦和の南関4場の無料予想。平日夜のナイター開催を含む全レースを毎日公開。
+        </p>
+        <div class="card-venues">
+          <span class="venue-tag">大井</span>
+          <span class="venue-tag">川崎</span>
+          <span class="venue-tag">船橋</span>
+          <span class="venue-tag">浦和</span>
+        </div>
+        {nankanLatest && (
+          <span class="latest-badge">📅 最新: {formatDate(nankanLatest)}の予想を公開中</span>
+        )}
+        <div class="card-actions">
+          <a href="/free-prediction/nankan/" class="btn-primary">🎯 南関無料予想を見る</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="back-link">
+      <a href="/">← トップページ</a>
+      <a href="/archive/">的中実績アーカイブ</a>
+      <a href="/pricing/">料金プラン</a>
+    </div>
+  </div>
 </BaseLayout>
+
+<style>
+  .free-prediction-hub { padding: 2rem 0 3rem; color: #e2e8f0; }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding: 2.5rem 2rem;
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 16px;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+
+  .page-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #60a5fa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 1rem;
+  }
+  .page-subtitle { font-size: 1.2rem; color: #cbd5e1; margin-bottom: 0.5rem; }
+  .page-description { font-size: 1rem; color: #94a3b8; max-width: 640px; margin: 0 auto; line-height: 1.7; }
+
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+  }
+
+  .category-card {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    border-radius: 16px;
+    padding: 2.5rem;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .category-card.jra { border-color: rgba(59, 130, 246, 0.35); }
+  .category-card.jra:hover { transform: translateY(-4px); border-color: rgba(59, 130, 246, 0.6); box-shadow: 0 12px 30px rgba(59, 130, 246, 0.3); }
+  .category-card.nankan { border-color: rgba(245, 158, 11, 0.35); }
+  .category-card.nankan:hover { transform: translateY(-4px); border-color: rgba(245, 158, 11, 0.6); box-shadow: 0 12px 30px rgba(245, 158, 11, 0.3); }
+
+  .card-header { display: flex; align-items: center; gap: 0.75rem; }
+  .card-icon { font-size: 2.25rem; }
+  .card-title { font-size: 1.75rem; font-weight: 800; }
+  .category-card.jra .card-title { color: #60a5fa; }
+  .category-card.nankan .card-title { color: #fbbf24; }
+
+  .card-summary { color: #cbd5e1; font-size: 1rem; line-height: 1.7; }
+  .card-venues { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .venue-tag {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.6);
+    color: #cbd5e1;
+    border: 1px solid rgba(100, 116, 139, 0.4);
+  }
+
+  .latest-badge {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+  }
+
+  .card-actions { display: flex; flex-direction: column; gap: 0.6rem; margin-top: auto; padding-top: 0.5rem; }
+
+  .btn-primary {
+    display: inline-block;
+    text-align: center;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.05rem;
+    transition: all 0.3s;
+  }
+
+  .category-card.jra .btn-primary { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
+  .category-card.jra .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4); }
+  .category-card.nankan .btn-primary { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+  .category-card.nankan .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4); }
+
+  .back-link { text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid rgba(100, 116, 139, 0.3); }
+  .back-link a { color: #60a5fa; text-decoration: none; font-size: 1rem; margin: 0 0.5rem; }
+  .back-link a:hover { color: #3b82f6; }
+
+  @media (max-width: 768px) {
+    .page-title { font-size: 1.8rem; }
+    .category-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+    .card-title { font-size: 1.5rem; }
+  }
+</style>

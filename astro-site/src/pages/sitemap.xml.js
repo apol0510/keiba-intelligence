@@ -10,7 +10,7 @@ export async function GET() {
     { url: '/pricing', priority: '0.9', changefreq: 'weekly' },
     { url: '/results', priority: '0.9', changefreq: 'daily' },
     { url: '/free-prediction', priority: '0.8', changefreq: 'daily' },
-    { url: '/free-prediction-jra', priority: '0.8', changefreq: 'daily' },
+    { url: '/free-prediction/jra', priority: '0.8', changefreq: 'daily' },
     { url: '/login', priority: '0.5', changefreq: 'monthly' },
   ];
 
@@ -127,7 +127,7 @@ export async function GET() {
             .forEach(f => {
               const date = f.replace('.json', '');
               dynamicPages.push({
-                url: `/free-prediction-jra/${date}`,
+                url: `/free-prediction/jra/${date}`,
                 priority: '0.7',
                 changefreq: 'never',
                 lastmod: date,
@@ -135,7 +135,7 @@ export async function GET() {
             });
         }
       }
-      dynamicPages.push({ url: '/free-prediction-jra/archive', priority: '0.7', changefreq: 'weekly' });
+      dynamicPages.push({ url: '/free-prediction/jra/archive', priority: '0.7', changefreq: 'weekly' });
     }
   } catch (error) {
     console.error('Error generating JRA prediction sitemap URLs:', error);

@@ -80,3 +80,62 @@
 # SENDGRID_API_KEY
 # BREVO_API_KEY
 # THRIVECART_WEBHOOK_SECRET
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# URL 再編 (中央/南関を /archive 配下・/free-prediction 配下の対称階層へ)
+# 旧URLは 301 で新URLへ恒久移動
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# --- archive: /archive-jra/* → /archive/jra/:splat ---
+[[redirects]]
+  from = "/archive-jra/*"
+  to = "/archive/jra/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/archive-jra"
+  to = "/archive/jra/"
+  status = 301
+  force = true
+
+# --- archive 南関: /archive/{year}/* → /archive/nankan/{year}/:splat ---
+[[redirects]]
+  from = "/archive/2024/*"
+  to = "/archive/nankan/2024/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/archive/2025/*"
+  to = "/archive/nankan/2025/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/archive/2026/*"
+  to = "/archive/nankan/2026/:splat"
+  status = 301
+  force = true
+
+# --- free-prediction 中央: /free-prediction-jra/* → /free-prediction/jra/:splat ---
+[[redirects]]
+  from = "/free-prediction-jra/*"
+  to = "/free-prediction/jra/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/free-prediction-jra"
+  to = "/free-prediction/jra/"
+  status = 301
+  force = true
+
+# --- free-prediction 南関: 旧 /free-prediction（南関単体ページ）→ /free-prediction/nankan/ ---
+# 注: /free-prediction/ (新ハブ) と /free-prediction/jra/, /free-prediction/nankan/ は別物
+# 旧南関個別記事 /free-prediction/{slug} は /free-prediction/nankan/{slug} に
+[[redirects]]
+  from = "/free-prediction/archive"
+  to = "/free-prediction/nankan/archive"
+  status = 301
+  force = true

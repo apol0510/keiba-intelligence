@@ -1,12 +1,12 @@
 ---
 // Force rebuild: 2026-02-27
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import AIRaceComment from '../../components/AIRaceComment.astro';
-import AIBettingSection from '../../components/AIBettingSection.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import AIRaceComment from '../../../components/AIRaceComment.astro';
+import AIBettingSection from '../../../components/AIBettingSection.astro';
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
-import { sortHorsesByRole } from '../utils/sortHorsesByRole.js';
-import { generateAdvancedMetrics } from '../../utils/featureScores.js';
+import { sortHorsesByRole } from '../../../utils/sortHorsesByRole.js';
+import { generateAdvancedMetrics } from '../../../utils/featureScores.js';
 
 export const prerender = false;
 
@@ -426,7 +426,7 @@ try {
 
           <!-- 過去予想アーカイブリンク -->
           <div class="archive-link-box">
-            <a href="/free-prediction-jra/archive">📅 過去の予想アーカイブを見る →</a>
+            <a href="/free-prediction/jra/archive">📅 過去の予想アーカイブを見る →</a>
           </div>
         </>
       )}

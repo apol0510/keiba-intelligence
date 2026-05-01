@@ -1,5 +1,5 @@
 ---
-import BaseLayout from '../../../layouts/BaseLayout.astro';
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
@@ -160,7 +160,7 @@ const pageDescription = yearData.length > 0
                   <div class="highlight-label">最高回収率の月</div>
                   <div class="highlight-value">{yearStats.bestMonth.returnRate}%</div>
                   <div class="highlight-date">
-                    <a href={`/archive/${year}/${yearStats.bestMonth.month}`}>
+                    <a href={`/archive/nankan/${year}/${yearStats.bestMonth.month}`}>
                       {year}年{yearStats.bestMonth.month}月
                     </a>
                   </div>
@@ -170,7 +170,7 @@ const pageDescription = yearData.length > 0
                   <div class="highlight-label">最低回収率の月</div>
                   <div class="highlight-value">{yearStats.worstMonth.returnRate}%</div>
                   <div class="highlight-date">
-                    <a href={`/archive/${year}/${yearStats.worstMonth.month}`}>
+                    <a href={`/archive/nankan/${year}/${yearStats.worstMonth.month}`}>
                       {year}年{yearStats.worstMonth.month}月
                     </a>
                   </div>
@@ -185,7 +185,7 @@ const pageDescription = yearData.length > 0
             <div class="monthly-grid">
               {Object.values(monthlyStats).sort((a, b) => b.month.localeCompare(a.month)).map((month) => (
                 <a
-                  href={`/archive/${year}/${month.month}`}
+                  href={`/archive/nankan/${year}/${month.month}`}
                   class="month-card"
                 >
                   <div class="month-header">

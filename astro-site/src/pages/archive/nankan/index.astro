@@ -1,12 +1,12 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 export const prerender = false;
 
-// archiveResultsJra.jsonから全データを取得
-const archivePath = join(process.cwd(), 'src', 'data', 'archiveResultsJra.json');
+// archiveResults.jsonから全データを取得
+const archivePath = join(process.cwd(), 'src', 'data', 'archiveResults.json');
 let allMonths: Array<{
   year: string;
   month: string;
@@ -50,8 +50,8 @@ try {
         totalPayout += entry.totalPayout;
       });
 
-      const hitRate = totalRaces > 0 ? ((totalHitRaces / totalRaces) * 100).toFixed(1) : '0.0';
-      const returnRate = totalBetAmount > 0 ? ((totalPayout / totalBetAmount) * 100).toFixed(1) : '0.0';
+      const hitRate = totalRaces > 0 ? Number(((totalHitRaces / totalRaces) * 100).toFixed(1)) : 0;
+      const returnRate = totalBetAmount > 0 ? Number(((totalPayout / totalBetAmount) * 100).toFixed(1)) : 0;
 
       allMonths.push({
         year,
@@ -78,7 +78,7 @@ try {
 }
 
 const pageTitle = '的中実績アーカイブ';
-const pageDescription = `中央競馬（JRA）の的中実績アーカイブ。月ごとの予想結果と配当金額を全件開示し、AIモデルの判定精度を実データでご確認いただけます。`;
+const pageDescription = `南関競馬の的中実績アーカイブ。月ごとの予想結果と配当金額を全件開示し、AIモデルの判定精度を実データでご確認いただけます。`;
 ---
 
 <BaseLayout title={pageTitle} description={pageDescription}>
@@ -109,7 +109,7 @@ const pageDescription = `中央競馬（JRA）の的中実績アーカイブ。�
       ) : (
         <section class="months-grid">
           {allMonths.map((monthData) => (
-            <a href={`/archive-jra/${monthData.year}/${monthData.month}/`} class="month-card">
+            <a href={`/archive/nankan/${monthData.year}/${monthData.month}/`} class="month-card">
               <div class="month-header">
                 <h2 class="month-title">{monthData.displayMonth}</h2>
                 <div class="month-badge">{monthData.daysCount}日開催</div>
@@ -128,11 +128,11 @@ const pageDescription = `中央競馬（JRA）の的中実績アーカイブ。�
                 </div>
                 <div class="stat-item">
                   <div class="stat-label">的中レース</div>
-                  <div class="stat-value">{monthData.totalHitRaces}/{monthData.totalRaces}レース</div>
+                  <div class="stat-value">{monthData.totalHitRaces}/{monthData.totalRaces}R</div>
                 </div>
                 <div class="stat-item">
                   <div class="stat-label">合計配当</div>
-                  <div class="stat-value profit">¥{monthData.totalPayout.toLocaleString()}</div>
+                  <div class="stat-value profit">¥{(Number(monthData.totalPayout) || 0).toLocaleString()}</div>
                 </div>
               </div>
 

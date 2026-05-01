@@ -1,5 +1,5 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -45,8 +45,8 @@ const months = Object.keys(byMonth).sort().reverse();
       <p class="subtitle">全{files.length}開催分のAI予想アーカイブ</p>
 
       <div class="archive-nav">
-        <a href="/free-prediction" class="nav-link">← 最新予想に戻る</a>
-        <a href="/free-prediction-jra/archive" class="nav-link">中央競馬（JRA）の過去予想 →</a>
+        <a href="/free-prediction/nankan" class="nav-link">← 最新予想に戻る</a>
+        <a href="/free-prediction/jra/archive" class="nav-link">中央競馬（JRA）の過去予想 →</a>
       </div>
 
       {months.map(monthKey => {
@@ -57,7 +57,7 @@ const months = Object.keys(byMonth).sort().reverse();
             <h2>{y}年{parseInt(m)}月 <span class="count">({items.length}開催)</span></h2>
             <div class="card-grid">
               {items.map(item => (
-                <a href={`/free-prediction/${item.slug}`} class="archive-card">
+                <a href={`/free-prediction/nankan/${item.slug}`} class="archive-card">
                   <div class="card-date">{parseInt(item.month)}/{parseInt(item.day)}</div>
                   <div class="card-venue">{item.venue}</div>
                   <div class="card-races">{item.totalRaces}R</div>

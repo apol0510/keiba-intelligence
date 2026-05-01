@@ -1,7 +1,7 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import AIRaceComment from '../../components/AIRaceComment.astro';
-import AIBettingSection from '../../components/AIBettingSection.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import AIRaceComment from '../../../components/AIRaceComment.astro';
+import AIBettingSection from '../../../components/AIBettingSection.astro';
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -171,11 +171,11 @@ const displayDate = `${dateParts[0]}年${parseInt(dateParts[1])}月${parseInt(da
 
     <!-- ナビゲーション -->
     <div class="nav-links">
-      <a href="/free-prediction/archive" class="nav-link">
+      <a href="/free-prediction/nankan/archive" class="nav-link">
         <span class="nav-icon">📋</span>
         <span>過去の予想一覧</span>
       </a>
-      <a href="/free-prediction" class="nav-link nav-link-primary">
+      <a href="/free-prediction/nankan" class="nav-link nav-link-primary">
         <span class="nav-icon">🏇</span>
         <span>最新予想</span>
       </a>
