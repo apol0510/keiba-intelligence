@@ -348,22 +348,33 @@ export const prerender = true;
     backdrop-filter: blur(8px);
   }
 
+  .pred-card-body {
+    flex: 1;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    padding: 12px 16px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  }
+
   .pred-card-title {
     font-size: 1.05rem;
     font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 2px;
+    color: #ffffff;
+    margin-bottom: 4px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   }
 
   .pred-card-sub {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
+    font-size: 0.82rem;
+    color: rgba(241, 245, 249, 0.92);
   }
 
   .pred-card-desc {
     font-size: 0.78rem;
-    color: var(--text-secondary);
-    opacity: 0.85;
+    color: rgba(241, 245, 249, 0.78);
     margin-top: 4px;
   }
 
@@ -417,6 +428,20 @@ export const prerender = true;
     font-weight: 800;
     flex-shrink: 0;
     box-shadow: 0 2px 8px rgba(52, 211, 153, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+
+  .feature-item .feature-text {
+    flex: 1;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: #ffffff;
+    font-weight: 600;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   }
 
   /* ===== アップグレード ===== */
@@ -700,7 +725,7 @@ export const prerender = true;
     quickLinksContent.innerHTML = links.map(l => `
       <a href="${l.href}" class="pred-card ${l.cls}">
         <div class="pred-card-icon">${l.icon}</div>
-        <div>
+        <div class="pred-card-body">
           <div class="pred-card-title">${l.title}</div>
           <div class="pred-card-sub">${l.sub}</div>
           ${l.desc ? `<div class="pred-card-desc">${l.desc}</div>` : ''}
@@ -714,7 +739,7 @@ export const prerender = true;
     featuresGrid.innerHTML = cfg.features.map(f => `
       <div class="feature-item">
         <span class="feature-check">✓</span>
-        <span>${f}</span>
+        <span class="feature-text">${f}</span>
       </div>
     `).join('');
 
