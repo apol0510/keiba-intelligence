@@ -142,7 +142,7 @@ exports.handler = async (event, context) => {
 
     return {
       statusCode: 200,
-      headers,
+      headers: { ...headers, 'Cache-Control': 'public, max-age=86400, s-maxage=86400' },
       body: JSON.stringify({ success: true, comment })
     };
 

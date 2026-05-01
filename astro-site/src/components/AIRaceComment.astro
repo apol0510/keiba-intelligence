@@ -394,6 +394,37 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
     window._aiCommentInitialized = true;
     window._aiCommentCache = {};
     window._aiCommentLoaded = new Set();
+    window._aiCommentInflight = {};
+
+    const STORAGE_PREFIX = 'aiComment:v1:';
+    const STORAGE_TTL_MS = 24 * 60 * 60 * 1000;
+
+    function readPersistedComment(cacheKey) {
+      try {
+        const raw = localStorage.getItem(STORAGE_PREFIX + cacheKey);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed.comment !== 'string' || typeof parsed.timestamp !== 'number') return null;
+        if (Date.now() - parsed.timestamp > STORAGE_TTL_MS) {
+          try { localStorage.removeItem(STORAGE_PREFIX + cacheKey); } catch (e) {}
+          return null;
+        }
+        return parsed.comment;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function writePersistedComment(cacheKey, comment) {
+      try {
+        localStorage.setItem(STORAGE_PREFIX + cacheKey, JSON.stringify({
+          comment,
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        // QuotaExceededError等は無視（次回fetchで取得し直す）
+      }
+    }
 
     document.addEventListener('click', async (e) => {
       const header = e.target.closest('.ai-comment-header');
@@ -421,9 +452,19 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
 
       if (isOpen && !window._aiCommentLoaded.has(cacheKey)) {
         const isMasked = section.dataset.masked === 'true';
-        // キャッシュチェック
+
+        // L1: メモリキャッシュ
         if (window._aiCommentCache[cacheKey]) {
           renderAIComment(textEl, window._aiCommentCache[cacheKey], isMasked, type);
+          window._aiCommentLoaded.add(cacheKey);
+          return;
+        }
+
+        // L2: localStorage 永続キャッシュ（24h TTL）
+        const persisted = readPersistedComment(cacheKey);
+        if (persisted) {
+          window._aiCommentCache[cacheKey] = persisted;
+          renderAIComment(textEl, persisted, isMasked, type);
           window._aiCommentLoaded.add(cacheKey);
           return;
         }
@@ -431,26 +472,38 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
         loading.style.display = 'flex';
         textEl.textContent = '';
 
-        try {
-          const res = await fetch('/.netlify/functions/gemini-race-analysis', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type, raceData })
-          });
-          const data = await res.json();
-          loading.style.display = 'none';
+        // L3: in-flight ガード（同cacheKeyの並行fetchを共有）
+        let promise = window._aiCommentInflight[cacheKey];
+        if (!promise) {
+          promise = (async () => {
+            try {
+              const res = await fetch('/.netlify/functions/gemini-race-analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type, raceData })
+              });
+              const data = await res.json();
+              if (data.success && data.comment) {
+                window._aiCommentCache[cacheKey] = data.comment;
+                writePersistedComment(cacheKey, data.comment);
+                return data.comment;
+              }
+              return null;
+            } catch (err) {
+              return null;
+            } finally {
+              delete window._aiCommentInflight[cacheKey];
+            }
+          })();
+          window._aiCommentInflight[cacheKey] = promise;
+        }
 
-          if (data.success && data.comment) {
-            console.log('[AI Comment] API response length:', data.comment.length, 'chars');
-            window._aiCommentCache[cacheKey] = data.comment;
-            const isMasked = section.dataset.masked === 'true';
-            renderAIComment(textEl, data.comment, isMasked, type);
-          } else {
-            textEl.textContent = 'AI解説を取得できませんでした。';
-            textEl.classList.add('error');
-          }
-        } catch (err) {
-          loading.style.display = 'none';
+        const comment = await promise;
+        loading.style.display = 'none';
+        if (comment) {
+          console.log('[AI Comment] API response length:', comment.length, 'chars');
+          renderAIComment(textEl, comment, isMasked, type);
+        } else {
           textEl.textContent = 'AI解説を取得できませんでした。';
           textEl.classList.add('error');
         }
