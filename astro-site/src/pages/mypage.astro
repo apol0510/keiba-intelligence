@@ -307,6 +307,13 @@ export const prerender = true;
     color: var(--text-secondary);
   }
 
+  .pred-card-desc {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    opacity: 0.85;
+    margin-top: 4px;
+  }
+
   /* ===== 機能グリッド ===== */
   .features-grid {
     display: grid;
@@ -598,15 +605,15 @@ export const prerender = true;
     const links = [];
 
     if (plan === 'free-registered') {
-      links.push({ href: '/free-prediction', cls: 'nankan', icon: '🏇', title: '南関予想（無料）', sub: '大井・川崎・船橋・浦和' });
-      links.push({ href: '/free-prediction/jra', cls: 'jra', icon: '🐎', title: '中央予想（無料）', sub: 'JRA全10場' });
+      links.push({ href: '/free-prediction/jra', cls: 'jra', icon: '🐎', title: '中央予想（無料）', sub: 'JRA全10場', desc: '中央競馬AI分析（高配当狙い）' });
+      links.push({ href: '/free-prediction', cls: 'nankan', icon: '🏇', title: '南関予想（無料）', sub: '大井・川崎・船橋・浦和', desc: '地方競馬AI分析（安定型）' });
     } else if (venueAccess === 'nankan') {
-      links.push({ href: '/prediction', cls: 'nankan', icon: '🏇', title: '南関予想', sub: '大井・川崎・船橋・浦和' });
+      links.push({ href: '/prediction/nankan', cls: 'nankan', icon: '🏇', title: '南関予想', sub: '大井・川崎・船橋・浦和', desc: '地方競馬AI分析（安定型）' });
     } else if (venueAccess === 'jra') {
-      links.push({ href: '/prediction-jra', cls: 'jra', icon: '🐎', title: '中央予想', sub: 'JRA全10場' });
+      links.push({ href: '/prediction/jra', cls: 'jra', icon: '🐎', title: '中央予想', sub: 'JRA全10場', desc: '中央競馬AI分析（高配当狙い）' });
     } else {
-      links.push({ href: '/prediction', cls: 'nankan', icon: '🏇', title: '南関予想', sub: '大井・川崎・船橋・浦和' });
-      links.push({ href: '/prediction-jra', cls: 'jra', icon: '🐎', title: '中央予想', sub: 'JRA全10場' });
+      links.push({ href: '/prediction/jra', cls: 'jra', icon: '🐎', title: '中央予想', sub: 'JRA全10場', desc: '中央競馬AI分析（高配当狙い）' });
+      links.push({ href: '/prediction/nankan', cls: 'nankan', icon: '🏇', title: '南関予想', sub: '大井・川崎・船橋・浦和', desc: '地方競馬AI分析（安定型）' });
     }
 
     quickLinksContent.innerHTML = links.map(l => `
@@ -615,6 +622,7 @@ export const prerender = true;
         <div>
           <div class="pred-card-title">${l.title}</div>
           <div class="pred-card-sub">${l.sub}</div>
+          ${l.desc ? `<div class="pred-card-desc">${l.desc}</div>` : ''}
         </div>
       </a>
     `).join('');

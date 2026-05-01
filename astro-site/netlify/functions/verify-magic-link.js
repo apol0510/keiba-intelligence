@@ -170,11 +170,14 @@ exports.handler = async (event) => {
     const planType = currentPlanType.toLowerCase();
     let redirectTo = '/free-prediction'; // デフォルト: 無料予想ページ
     if (planType === 'pro' || planType === 'pro-plus' || planType === 'light') {
-      // 会場別リダイレクト: JRAのみユーザーはJRA予想ページへ
+      // 会場別リダイレクト
       if (venueAccess === 'jra') {
-        redirectTo = '/prediction-jra';
+        redirectTo = '/prediction/jra';
+      } else if (venueAccess === 'nankan') {
+        redirectTo = '/prediction/nankan';
       } else {
-        redirectTo = '/prediction';
+        // 'all' など両会場アクセス可: マイページから選ばせる（JRAへ辿りやすくする）
+        redirectTo = '/mypage';
       }
     }
 

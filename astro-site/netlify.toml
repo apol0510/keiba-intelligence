@@ -139,3 +139,24 @@
   to = "/free-prediction/nankan/archive"
   status = 301
   force = true
+
+# --- prediction (有料): /prediction-jra/* → /prediction/jra/:splat ---
+[[redirects]]
+  from = "/prediction-jra/*"
+  to = "/prediction/jra/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/prediction-jra"
+  to = "/prediction/jra"
+  status = 301
+  force = true
+
+# --- prediction (有料) 南関: 旧 /prediction（南関単体ページ）→ /prediction/nankan ---
+# 注: /prediction/{slug}（個別レース詳細）は維持。/prediction (裸URL) のみリダイレクト
+[[redirects]]
+  from = "/prediction"
+  to = "/prediction/nankan"
+  status = 301
+  force = true
