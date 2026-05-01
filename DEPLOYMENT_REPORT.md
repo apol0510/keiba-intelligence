@@ -37,12 +37,12 @@
 | ページ | URL | 状態 |
 |--------|-----|------|
 | トップ | / | ✅ |
-| 無料予想（南関） | /free-prediction/ | ✅ |
-| 無料予想（中央） | /free-prediction-jra/ | ✅ |
-| 有料予想（南関） | /prediction/ | ✅ |
-| 有料予想（中央） | /prediction-jra/ | ✅ |
-| 的中実績（南関） | /archive/ | ✅ |
-| 的中実績（中央） | /archive-jra/ | ✅ |
+| 無料予想（南関） | /free-prediction/nankan/ | ✅ |
+| 無料予想（中央） | /free-prediction/jra/ | ✅ |
+| 有料予想（南関） | /prediction/nankan/ | ✅ |
+| 有料予想（中央） | /prediction/jra/ | ✅ |
+| 的中実績（南関） | /archive/nankan/ | ✅ |
+| 的中実績（中央） | /archive/jra/ | ✅ |
 | 料金プラン | /pricing/ | ✅ |
 | ログイン | /login/ | ✅ |
 

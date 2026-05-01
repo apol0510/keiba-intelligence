@@ -542,7 +542,7 @@ simpleAdjustForJRA() - 簡易調整
   ↓
 買い目生成（2ライン固定）
   ↓
-表示（/prediction-jra）
+表示（/prediction/jra）
 ```
 
 ---

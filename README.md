@@ -126,8 +126,8 @@ npm run test:validation          # データ検証テスト
 
 ### Phase 2: コア機能実装（100%完了 ✅）
 - [x] 料金プランページ（/pricing）
-- [x] 無料予想ページ（/free-prediction, /free-prediction-jra）
-- [x] 有料予想ページ（/prediction, /prediction-jra）
+- [x] 無料予想ページ（/free-prediction/nankan, /free-prediction/jra）
+- [x] 有料予想ページ（/prediction/nankan, /prediction/jra）
 - [x] ~~PayPal Webhook実装~~ → 銀行振り込み自動化に変更
 - [x] ~~Zapier連携~~ → Netlify Functions直接実装（コスト削減$73.50/月）
 - [x] メルマガ配信システム（SendGrid Marketing Campaigns）

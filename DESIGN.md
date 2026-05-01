@@ -635,8 +635,8 @@ THRIVECART_WEBHOOK_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 4. ✅ ~~Zapier Zap作成~~ → Netlify Functions直接実装（コスト削減$73.50/月）
 5. ✅ SendGrid設定完了
 6. ✅ Airtableテーブル作成（5テーブル）
-7. ✅ 無料予想ページ作成（/free-prediction, /free-prediction-jra）
-8. ✅ 有料予想ページ作成（/prediction, /prediction-jra）
+7. ✅ 無料予想ページ作成（/free-prediction/nankan, /free-prediction/jra）
+8. ✅ 有料予想ページ作成（/prediction/nankan, /prediction/jra）
 9. ✅ Gemini AIチャットボット実装（全ページ）
 
 ### Phase 3: 自動化システム実装（100%完了 ✅）

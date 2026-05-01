@@ -8,8 +8,8 @@
 ## 📋 問題の詳細
 
 ### 発生箇所
-- `/free-prediction-jra`（中央競馬無料予想ページ）
-- `/prediction-jra`（中央競馬有料予想ページ）
+- `/free-prediction/jra`（中央競馬無料予想ページ）
+- `/prediction/jra`（中央競馬有料予想ページ）
 
 ### 原因
 **PT値順でソート**していたため、JSONデータで配列の最後に記載されている「連下最上位」が上位に表示されていた。
@@ -218,8 +218,8 @@ if (本命 !== 1 || 対抗 !== 1 || 単穴 > 1 || 連下最上位 > 1) {
    ```
 
 2. **全ページ確認**:
-   - `/free-prediction-jra`（阪神1R、小倉3Rなど）
-   - `/prediction-jra`（有料版）
+   - `/free-prediction/jra`（阪神1R、小倉3Rなど）
+   - `/prediction/jra`（有料版）
    - `/results`（過去結果）
    - `/archive/` 系ページ
 
