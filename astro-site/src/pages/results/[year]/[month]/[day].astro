@@ -35,6 +35,39 @@ export async function getStaticPaths() {
 const { entry, type } = Astro.props;
 const { year, month, day } = Astro.params;
 
+// ── 文字化け検出 + クリーン名抽出 ─────────────────────────────────
+// JV-Link 由来の lossy CP1252+ASCII fold で馬名・レース名が
+// "?@?@" / "鬟ｯ逶..." のように壊れているケースに備え、画面表示前にフィルタする。
+const HORSE_NAME_MOJIBAKE_MARKERS = ['鬟','逶','蛻','繝','縺','豁','譌','蜻','荵','窶','繧','繪','繡','繞','繦','譖','謇','蛟','蛛','蜈','�'];
+function isMojibakeText(s: any): boolean {
+  if (!s) return false;
+  const t = String(s);
+  for (const m of HORSE_NAME_MOJIBAKE_MARKERS) {
+    if (t.indexOf(m) >= 0) return true;
+  }
+  const qatPairs = t.match(/\?@/g);
+  if (qatPairs && qatPairs.length >= 2) return true;
+  if (/\?{3,}/.test(t)) return true;
+  if (/@{3,}/.test(t)) return true;
+  return false;
+}
+/** 表示用に馬名をクリーン化。文字化けなら空文字を返す（ "番号" のみ表示するため） */
+function cleanHorseName(name: any): string {
+  if (!name) return '';
+  const t = String(name).trim();
+  if (!t) return '';
+  if (isMojibakeText(t)) return '';
+  return t;
+}
+/** 表示用にレース名をクリーン化。文字化けなら空文字 */
+function cleanRaceName(name: any): string {
+  if (!name) return '';
+  const t = String(name).trim();
+  if (!t) return '';
+  if (isMojibakeText(t)) return '';
+  return t;
+}
+
 // 予想データから役割情報（本命・対抗等）を取得
 const venueToFile: Record<string, string> = { '大井': 'ooi', '川崎': 'kawasaki', '船橋': 'funabashi', '浦和': 'urawa' };
 const predictionRoles: Record<string, Array<{horseNumber: number, horseName: string, role: string}>> = {};
@@ -198,12 +231,20 @@ const jsonLd = {
     <section class="races-section">
       <h2>📋 全{entry.totalRaces}レース結果</h2>
 
-      {(entry.raceResults || entry.races || []).map((race) => (
+      {(entry.raceResults || entry.races || []).map((race) => {
+        // 表示名と馬名のクリーン化（文字化けを画面に出さない）
+        const raceDisplayName = race.displayName
+          || cleanRaceName(race.raceName)
+          || `${race.venue || ''}${race.raceNumber}R`;
+        const firstName = cleanHorseName(race.result?.first?.name);
+        const secondName = cleanHorseName(race.result?.second?.name);
+        const thirdName = cleanHorseName(race.result?.third?.name);
+        return (
         <div class={`race-card ${race.honmeiHit || race.isHit ? 'hit' : 'miss'}`}>
           <div class="race-header">
             <div class="race-info">
               <span class="race-number">{race.raceNumber}R</span>
-              <span class="race-name">{race.raceName}</span>
+              <span class="race-name">{raceDisplayName}</span>
               {race.venue && <span class="race-venue">{race.venue}</span>}
             </div>
             <div class={`race-result-badge ${race.honmeiHit || race.isHit ? 'hit' : 'miss'}`}>
@@ -217,15 +258,15 @@ const jsonLd = {
               <h4>レース結果</h4>
               <div class="result-line">
                 <span class="position">1着</span>
-                <span class="horse">{race.winner || race.result?.first?.number}番{race.result?.first?.name ? ` ${race.result.first.name}` : ''}</span>
+                <span class="horse">{race.winner || race.result?.first?.number}番{firstName ? ` ${firstName}` : ''}</span>
               </div>
               <div class="result-line">
                 <span class="position">2着</span>
-                <span class="horse">{race.second || race.result?.second?.number}番{race.result?.second?.name ? ` ${race.result.second.name}` : ''}</span>
+                <span class="horse">{race.second || race.result?.second?.number}番{secondName ? ` ${secondName}` : ''}</span>
               </div>
               <div class="result-line">
                 <span class="position">3着</span>
-                <span class="horse">{race.third || race.result?.third?.number}番{race.result?.third?.name ? ` ${race.result.third.name}` : ''}</span>
+                <span class="horse">{race.third || race.result?.third?.number}番{thirdName ? ` ${thirdName}` : ''}</span>
               </div>
               <div class="hit-summary">
                 {race.honmeiHit && <span class="hit-badge">本命的中</span>}
@@ -267,12 +308,12 @@ const jsonLd = {
               venue: race.venue || entry.venue,
               date: entry.date,
               raceNumber: race.raceNumber,
-              raceName: race.raceName,
+              raceName: raceDisplayName,
               isHit: race.isHit || race.honmeiHit || false,
-              result: race.result || {
-                first: { number: race.winner || '?', name: '' },
-                second: { number: race.second || '?', name: '' },
-                third: { number: race.third || '?', name: '' }
+              result: {
+                first: { number: race.winner || race.result?.first?.number || '?', name: firstName },
+                second: { number: race.second || race.result?.second?.number || '?', name: secondName },
+                third: { number: race.third || race.result?.third?.number || '?', name: thirdName }
               },
               umatanCombination: race.umatan?.combination || race.payouts?.umatan?.[0]?.combination || '',
               payout: race.umatan?.payout || race.payouts?.umatan?.[0]?.payout || 0,
@@ -280,7 +321,8 @@ const jsonLd = {
             })}
           />
         </div>
-      ))}
+        );
+      })}
     </section>
 
     <!-- 関連リンク -->
