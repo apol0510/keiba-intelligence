@@ -89,9 +89,9 @@ jobs:
 
           git commit -m "$COMMIT_MSG
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
+          🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-Co-Authored-By: Claude <noreply@anthropic.com>"
+          Co-Authored-By: Claude <noreply@anthropic.com>"
 
           # rebase で main と同期しつつ push
           for i in 1 2 3; do
