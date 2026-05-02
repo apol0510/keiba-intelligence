@@ -1,5 +1,9 @@
 name: Import JRA Live Results (Dispatch)
 
+# repository_dispatch (jra-live-results-updated) を keiba-data-shared-admin から受信し、
+# keiba-data-shared/jra/live-results/YYYY/MM/YYYY-MM-DD.json を取り込む。
+# 速報結果用 workflow (確定データ用 import-results-jra.yml とは分離)。
+
 on:
   repository_dispatch:
     types: [jra-live-results-updated]
