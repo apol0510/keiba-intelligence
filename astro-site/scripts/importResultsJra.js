@@ -256,8 +256,9 @@ function normalizeRaceName(raceName, venue, raceNumber) {
 /**
  * displayName を生成
  *   優先順:
- *     1. 特別競走名（race.raceName が会場名+番号系でない正式名）
- *     2. 条件戦名（race.raceClass / race.raceCondition / race.raceSubtitle）
+ *     1. 特別競走名・正式raceName（race.raceName が会場名+番号系でない場合）
+ *     2. 条件戦名（race.raceConditionName: keiba-data-shared-admin の jvlink-mapper が出力。
+ *                  互換: race.raceClass / race.raceCondition / race.raceSubtitle / title / name）
  *     3. fallback: 「{venue}{number}R」
  */
 function buildDisplayName(race, venue, raceNumber) {
@@ -271,8 +272,9 @@ function buildDisplayName(race, venue, raceNumber) {
     return rawName;
   }
 
-  // ② 条件戦名（複数フィールド候補）
+  // ② 条件戦名（最優先は raceConditionName。それ以外は互換フィールド）
   const candidates = [
+    race.raceConditionName,
     race.raceClass,
     race.raceCondition,
     race.raceSubtitle,
@@ -426,11 +428,14 @@ function verifyResults(prediction, results) {
     const normalizedRaceName = normalizeRaceName(race.raceName, raceVenue, normalizedRaceNumber);
     // displayName: 特別競走名 > 条件戦名 > 「{venue}{number}R」
     const displayName = buildDisplayName(race, raceVenue, normalizedRaceNumber);
+    // 条件戦名を archive にも保持しておく（後から表示変更しても再インポート不要にする）
+    const raceConditionName = race.raceConditionName ? String(race.raceConditionName).trim() : null;
 
     raceResults.push({
       raceNumber,
       raceName: normalizedRaceName,
       displayName,
+      raceConditionName,
       venue: raceVenue, // 会場情報を追加
       result: {
         first: { number: first.number, name: first.name },
