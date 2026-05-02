@@ -69,8 +69,20 @@ jobs:
       - name: Check for changes
         id: git-check
         run: |
-          git add src/data/jraLiveResults/
-          git diff --staged --exit-code -- src/data/jraLiveResults/ || echo "changed=true" >> $GITHUB_OUTPUT
+          # ディレクトリが存在しない場合は live 不要 (確定データ済み or 初期化前) として扱う。
+          # import script が確定データありで live を意図的に削除すると、その削除が
+          # 既に main に反映されている状態で次回起動するとディレクトリ自体が無い。
+          if [ ! -d src/data/jraLiveResults ]; then
+            echo "ℹ️ src/data/jraLiveResults 不在 → 変更なし扱い (live不要 or 確定済み)"
+            exit 0
+          fi
+          # -A で削除も含めて全変更を検知
+          git add -A src/data/jraLiveResults/
+          if git diff --staged --quiet -- src/data/jraLiveResults/; then
+            echo "ℹ️ src/data/jraLiveResults/ に差分なし"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Commit and push changes
         if: steps.git-check.outputs.changed == 'true'
