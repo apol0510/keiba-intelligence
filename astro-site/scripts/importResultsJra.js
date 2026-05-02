@@ -15,6 +15,54 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = join(__dirname, '..');
 
+// ── 特別競走名マスタ ──────────────────────────────────────────
+// JV-Link 取り込み時に raceName が文字化け（鬟/逶/蛻/繝 等）または空だった
+// 場合に、UI 表示用の displayName をこのマスタから補完する。
+// キー形式: YYYY-MM-DD-{venueCode}-{raceNumber}  例: 2026-04-26-KYO-9
+let SPECIALTY_RACE_MASTER = {};
+try {
+  const masterPath = join(projectRoot, 'src', 'data', 'specialty-race-master.json');
+  if (existsSync(masterPath)) {
+    const raw = JSON.parse(readFileSync(masterPath, 'utf-8'));
+    // 「_」始まりキーは説明用（_comment 等）なので除外
+    SPECIALTY_RACE_MASTER = Object.fromEntries(
+      Object.entries(raw).filter(([k]) => !k.startsWith('_'))
+    );
+  }
+} catch (e) {
+  console.warn(`⚠️  specialty-race-master.json 読み込み失敗（補完なしで継続）: ${e.message}`);
+}
+
+// JRA 会場名 → 3文字コード
+const JRA_VENUE_TO_CODE = {
+  '東京': 'TOK', '中山': 'NAK', '京都': 'KYO', '阪神': 'HAN',
+  '中京': 'CHU', '小倉': 'KOK', '新潟': 'NII', '福島': 'FKS',
+  '札幌': 'SAP', '函館': 'HKD',
+};
+function venueToCode(venue) {
+  return JRA_VENUE_TO_CODE[venue] || venue || '';
+}
+
+/**
+ * 文字化け文字列か判定。SJIS-as-UTF-8 / UTF-8-as-SJIS の典型化け文字、
+ * 連続する "?" / "?@" 等を検出する。
+ */
+const MOJIBAKE_MARKERS = ['鬟', '逶', '蛻', '繝', '縺', '豁', '譌', '蜻', '荵', '窶', '繧', '繪', '繡', '繞', '繦', '譖', '謇', '蛟', '蛛', '蜈', '�'];
+function isMojibakeName(s) {
+  if (!s) return false;
+  const t = String(s);
+  for (const m of MOJIBAKE_MARKERS) {
+    if (t.indexOf(m) >= 0) return true;
+  }
+  // "?@" 連続 (SJIS 全角空白 0x81 0x40 が CP1252 経由で崩れたパターン)
+  const qatMatches = t.match(/\?@/g);
+  if (qatMatches && qatMatches.length >= 2) return true;
+  // "?" や "@" の連続 3文字以上
+  if (/\?{3,}/.test(t)) return true;
+  if (/@{3,}/.test(t)) return true;
+  return false;
+}
+
 // アラートメール送信URL（Netlify Function）
 const ALERT_ENDPOINT = process.env.ALERT_ENDPOINT || 'https://keiba-intelligence.netlify.app/.netlify/functions/send-alert';
 const IS_CI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
@@ -254,42 +302,69 @@ function normalizeRaceName(raceName, venue, raceNumber) {
 }
 
 /**
+ * 文字列が「クリーン」かを判定（補完判定用）。
+ *   - 空でない、会場+番号 generic 表記でない、文字化けマーカー無し
+ */
+function isCleanRaceName(s, venue, raceNumber) {
+  if (!s) return false;
+  const t = String(s).trim();
+  if (!t) return false;
+  if (isGenericVenueRaceName(t, venue, raceNumber)) return false;
+  if (isMojibakeName(t)) return false;
+  return true;
+}
+
+/**
  * displayName を生成
- *   優先順:
- *     1. 特別競走名・正式raceName（race.raceName が会場名+番号系でない場合）
- *     2. 条件戦名（race.raceConditionName: keiba-data-shared-admin の jvlink-mapper が出力。
- *                  互換: race.raceClass / race.raceCondition / race.raceSubtitle / title / name）
- *     3. fallback: 「{venue}{number}R」
+ *   補完優先順:
+ *     ① raceName（クリーンな正式競走名）
+ *     ② 特別競走名マスタ（specialty-race-master.json: JV-Link 文字化けで raceName が
+ *        破損した既知の特別競走を date+venueCode+raceNumber で復元）
+ *     ③ raceSubtitle（クリーン）
+ *     ④ raceConditionName（条件戦名: 「3歳未勝利」等。通常戦の表示用）
+ *     ⑤ raceClass / raceCondition / title / name（互換フィールド）
+ *     ⑥ fallback: 「{venue}{number}R」
+ *
+ *   ② を ④ より前に置く理由:
+ *     特別競走では raceConditionName が「4歳上1勝クラス」等のクラス情報を持つが、
+ *     ユーザーには specialty 名（"比良山特別" 等）を出したい。マスタヒットすれば
+ *     それを優先し、マスタに無い通常戦は ④ で raceConditionName を出す。
  */
 function buildDisplayName(race, venue, raceNumber) {
   const v = venue || '';
   const n = raceNumber;
   const fallback = `${v}${n}R`;
 
-  // ① 正式レース名
-  const rawName = race.raceName ? String(race.raceName).trim() : '';
-  if (rawName && !isGenericVenueRaceName(rawName, v, n)) {
-    return rawName;
+  // ① raceName（クリーン）
+  if (isCleanRaceName(race.raceName, v, n)) {
+    return String(race.raceName).trim();
   }
 
-  // ② 条件戦名（最優先は raceConditionName。それ以外は互換フィールド）
-  const candidates = [
-    race.raceConditionName,
-    race.raceClass,
-    race.raceCondition,
-    race.raceSubtitle,
-    race.title,
-    race.name
-  ];
-  for (const c of candidates) {
-    if (!c) continue;
-    const t = String(c).trim();
-    if (!t) continue;
-    if (isGenericVenueRaceName(t, v, n)) continue;
-    return t;
+  // ② 特別競走名マスタ
+  const date = race.date ? String(race.date).trim() : '';
+  const venueCode = venueToCode(v);
+  if (date && venueCode && n != null) {
+    const masterKey = `${date}-${venueCode}-${n}`;
+    const masterName = SPECIALTY_RACE_MASTER[masterKey];
+    if (masterName) return String(masterName).trim();
   }
 
-  // ③ fallback
+  // ③ raceSubtitle
+  if (isCleanRaceName(race.raceSubtitle, v, n)) {
+    return String(race.raceSubtitle).trim();
+  }
+
+  // ④ raceConditionName
+  if (isCleanRaceName(race.raceConditionName, v, n)) {
+    return String(race.raceConditionName).trim();
+  }
+
+  // ⑤ 互換フィールド
+  for (const c of [race.raceClass, race.raceCondition, race.title, race.name]) {
+    if (isCleanRaceName(c, v, n)) return String(c).trim();
+  }
+
+  // ⑥ fallback
   return fallback;
 }
 
@@ -424,10 +499,13 @@ function verifyResults(prediction, results) {
     const payoutAmount = umatanPayout?.payout || null;
     const payoutCombination = umatanPayout?.combination || null;
 
-    // raceName 正規化: 「京都3レース」→「京都3R」のような単純表記に統一（特別競走名はそのまま）
-    const normalizedRaceName = normalizeRaceName(race.raceName, raceVenue, normalizedRaceNumber);
-    // displayName: 特別競走名 > 条件戦名 > 「{venue}{number}R」
+    // displayName: 特別競走名 > master > raceSubtitle > raceConditionName > 「{venue}{number}R」
     const displayName = buildDisplayName(race, raceVenue, normalizedRaceNumber);
+    // raceName 正規化: 「京都3レース」→「京都3R」、ただし文字化け検出時は displayName を採用
+    let normalizedRaceName = normalizeRaceName(race.raceName, raceVenue, normalizedRaceNumber);
+    if (isMojibakeName(normalizedRaceName)) {
+      normalizedRaceName = displayName;
+    }
     // 条件戦名を archive にも保持しておく（後から表示変更しても再インポート不要にする）
     const raceConditionName = race.raceConditionName ? String(race.raceConditionName).trim() : null;
 
