@@ -190,21 +190,13 @@ const pageDescription = monthData.length > 0
               </div>
               <div class="summary-card">
                 <div class="summary-label">月間回収率</div>
-                {monthStats.hasLive && Number(monthStats.totalPayout) === 0 ? (
-                  <div class="summary-value pending">確定待ち</div>
-                ) : (
-                  <div class={`summary-value ${parseFloat(monthStats.returnRate) >= 100 ? 'profit' : 'loss'}`}>
-                    {monthStats.returnRate}%
-                  </div>
-                )}
+                <div class={`summary-value ${parseFloat(monthStats.returnRate) >= 100 ? 'profit' : 'loss'}`}>
+                  {monthStats.returnRate}%
+                </div>
               </div>
               <div class="summary-card">
                 <div class="summary-label">月間合計配当</div>
-                {monthStats.hasLive && Number(monthStats.totalPayout) === 0 ? (
-                  <div class="summary-value pending">確定待ち</div>
-                ) : (
-                  <div class="summary-value payout-yen">¥{monthStats.totalPayout.toLocaleString()}</div>
-                )}
+                <div class="summary-value payout-yen">¥{monthStats.totalPayout.toLocaleString()}</div>
               </div>
             </div>
             <div class="summary-detail">
@@ -235,9 +227,7 @@ const pageDescription = monthData.length > 0
                     {dayData.totalPayout > 0 && (
                       <span class="stat payout-yen">配当 ¥{dayData.totalPayout.toLocaleString()}</span>
                     )}
-                    {dayData.live ? (
-                      <span class="stat pending">回収率 確定待ち</span>
-                    ) : (
+                    {!dayData.live && (
                       <span class={`stat ${dayData.returnRate >= 100 ? 'profit' : 'loss'}`}>
                         回収率 {dayData.returnRate}%
                       </span>
