@@ -1,9 +1,9 @@
 ---
 import BaseLayout from '../../../../../layouts/BaseLayout.astro';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { sortRacesByVenueAndNumber } from '../../../../../utils/sortRaces.js';
-import { judgeLiveHit, VENUE_CODE_TO_NAME } from '../../../../../utils/jraLiveHitJudge.js';
+import { judgeLiveHit, VENUE_CODE_TO_NAME, synthesizeEntryFromLive } from '../../../../../utils/jraLiveHitJudge.js';
 
 export const prerender = false;
 
@@ -105,6 +105,31 @@ try {
     for (const entry of monthData) {
       tryEnrichWithLive(entry);
       if (entry.live) monthStats.hasLive = true;
+    }
+
+    // archive entry が無い日でも live があれば合成して追加
+    const liveDir = join(process.cwd(), 'src', 'data', 'jraLiveResults');
+    if (existsSync(liveDir)) {
+      const liveFiles = readdirSync(liveDir);
+      for (const f of liveFiles) {
+        const m = f.match(/^(\d{4})-(\d{2})-(\d{2})\.json$/);
+        if (!m || m[1] !== year || m[2] !== month) continue;
+        const date = `${m[1]}-${m[2]}-${m[3]}`;
+        if (monthData.some((e) => e.date === date)) continue; // 既に archive entry あり
+        let live, pred;
+        try { live = JSON.parse(readFileSync(join(liveDir, f), 'utf-8')); } catch { continue; }
+        const predPath = join(process.cwd(), 'src', 'data', 'predictions', 'jra', m[1], m[2], `${date}.json`);
+        if (existsSync(predPath)) {
+          try { pred = JSON.parse(readFileSync(predPath, 'utf-8')); } catch {}
+        }
+        const synth = synthesizeEntryFromLive(date, live, pred);
+        if (synth) {
+          monthData.push(synth);
+          monthStats.hasLive = true;
+        }
+      }
+      // 合成エントリ追加後、日付降順で再ソート
+      monthData.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     }
 
     // 月間統計を計算 (live補正後)

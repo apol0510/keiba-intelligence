@@ -109,3 +109,87 @@ export const VENUE_CODE_TO_NAME = {
   HAK: '函館',
   HKD: '函館', // alt code
 };
+
+/**
+ * archive entry を broken (totalPayout=0 + returnRate=0) と判定。
+ */
+export function isBrokenEntry(entry) {
+  if (!entry) return false;
+  return (Number(entry.totalPayout) || 0) === 0
+      && (Number(entry.returnRate) || 0) === 0;
+}
+
+/**
+ * 予想データを venue+raceNumber でインデックス化。
+ */
+export function buildPredictionIndex(predData) {
+  const idx = new Map();
+  for (const v of (predData?.venues || [])) {
+    for (const r of (v.predictions || [])) {
+      const venueName = v.venue || r.raceInfo?.venue;
+      const raceNum = r.raceInfo?.raceNumber;
+      if (venueName && raceNum != null) {
+        idx.set(`${venueName}-${raceNum}`, r);
+      }
+    }
+  }
+  return idx;
+}
+
+/**
+ * live + 予想データから 暫定 archive entry を合成。
+ * archiveResultsJra に該当日のエントリが無いとき、画面に live ベースで表示するために使う。
+ *
+ * @param {string} date YYYY-MM-DD
+ * @param {object} liveData jraLiveResults/{date}.json の内容
+ * @param {object} predData predictions/jra/{yyyy}/{mm}/{date}.json の内容
+ * @returns {object} archive entry 互換オブジェクト (live: true フラグ付き)
+ */
+export function synthesizeEntryFromLive(date, liveData, predData) {
+  if (!liveData || !Array.isArray(liveData.venues)) return null;
+  const predIndex = predData ? buildPredictionIndex(predData) : new Map();
+
+  let hits = 0;
+  let total = 0;
+  const races = [];
+  const venueNames = [];
+
+  for (const lv of liveData.venues) {
+    const venueName = VENUE_CODE_TO_NAME[lv.venueCode] || lv.venueName;
+    if (!venueName) continue;
+    if (!venueNames.includes(venueName)) venueNames.push(venueName);
+    for (const lr of (lv.races || [])) {
+      const predRace = predIndex.get(`${venueName}-${lr.raceNumber}`);
+      const judge = judgeLiveHit(lr, predRace);
+      total++;
+      if (judge.isHit) hits++;
+      races.push({
+        raceNumber: lr.raceNumber,
+        venue: venueName,
+        isHit: judge.isHit,
+        umatan: { combination: null, payout: null },
+        results: [],
+        _liveFirst: judge.first,
+        _liveSecond: judge.second,
+      });
+    }
+  }
+
+  return {
+    date,
+    venue: venueNames.join('・'),
+    venues: venueNames,
+    totalRaces: total,
+    hitRaces: hits,
+    hitRate: total > 0 ? ((hits / total) * 100).toFixed(1) : '0',
+    betAmount: 0,
+    totalBetPoints: 0,
+    totalInvestment: 0,
+    totalPayout: 0,
+    returnRate: 0,
+    betPointsPerRace: 0,
+    races,
+    live: true,
+    _synthesized: true, // archive 由来ではなく live 合成であることのマーカー
+  };
+}
