@@ -129,17 +129,43 @@ const roleColors = {
 };
 
 // 表示用に事前計算（JSX内の制御フローを避ける）
+const venueRaceLabel = race.venue + race.raceNumber + 'R';
+const distanceLabel = race.distance + 'm';
+const fieldSizeLabel = race.horses.length + '頭';
+const trackLabel = '馬場：' + race.trackCondition;
+const weatherLabel = '☀ ' + race.weather;
+const startTimeLabel = '発走 ' + race.startTime;
+
+const legendChips = Object.entries(bracketColors).map(entry => {
+  const n = entry[0];
+  const c = entry[1];
+  return {
+    label: n + '枠 ' + c.name,
+    style: 'background:' + c.bg + ';color:' + c.text + ';border:1px solid rgba(255,255,255,0.15)',
+  };
+});
+
 const horsesView = race.horses.map(h => {
   const bc = bracketColors[h.bracket] ?? bracketColors[1];
   const rc = roleColors[h.role] ?? '#94a3b8';
-  const styleVars = `--bracket-bg:${bc.bg};--bracket-text:${bc.text};--bracket-glow:${bc.glow};--role-color:${rc}`;
+  const styleVars = '--bracket-bg:' + bc.bg + ';--bracket-text:' + bc.text + ';--bracket-glow:' + bc.glow + ';--role-color:' + rc;
+  const sexAgeLabel = h.sex + h.age + '・' + h.weight.toFixed(1) + 'kg';
+  const horseWeightLabel = '(' + h.horseWeight + 'kg)';
+  const oddsLabel = h.odds.toFixed(1) + '倍';
+  const sireLabel = '父 ' + h.sire;
+  const damLabel = '母 ' + h.dam;
+  const damSireLabel = '母父 ' + h.damSire;
   const pastRows = (h.pastRaces || []).map(p => {
     let cls = '';
     if (p.rank === 1) cls = 'win';
     else if (p.rank === 2 || p.rank === 3) cls = 'place';
-    return { ...p, cls };
+    return Object.assign({}, p, { cls });
   });
-  return { ...h, styleVars, pastRows };
+  const pastSummaryLabel = '過去走 (' + pastRows.length + '走)';
+  return Object.assign({}, h, {
+    styleVars, sexAgeLabel, horseWeightLabel, oddsLabel,
+    sireLabel, damLabel, damSireLabel, pastRows, pastSummaryLabel,
+  });
 });
 ---
 
@@ -148,7 +174,7 @@ const horsesView = race.horses.map(h => {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>出馬表デモ — {race.venue}{race.raceNumber}R {race.raceName}</title>
+<title>{`出馬表デモ — ${venueRaceLabel} ${race.raceName}`}</title>
 <meta name="robots" content="noindex">
 </head>
 <body>
@@ -158,26 +184,26 @@ const horsesView = race.horses.map(h => {
       <div class="race-meta">
         <span class="badge-class">{race.raceClass}</span>
         <span class="badge-date">{race.date}</span>
-        <span class="badge-time">発走 {race.startTime}</span>
+        <span class="badge-time">{startTimeLabel}</span>
       </div>
       <h1 class="race-title">
-        <span class="venue-num">{race.venue}{race.raceNumber}R</span>
+        <span class="venue-num">{venueRaceLabel}</span>
         <span class="race-name">{race.raceName}</span>
       </h1>
       <div class="race-conditions">
         <span>{race.trackInfo}</span>
-        <span>{race.distance}m</span>
-        <span class="weather">☀ {race.weather}</span>
-        <span class="track">馬場：{race.trackCondition}</span>
-        <span class="field-size">{race.horses.length}頭</span>
+        <span>{distanceLabel}</span>
+        <span class="weather">{weatherLabel}</span>
+        <span class="track">{trackLabel}</span>
+        <span class="field-size">{fieldSizeLabel}</span>
       </div>
     </header>
 
     <!-- 凡例 -->
     <div class="legend">
       <span>枠色:</span>
-      {Object.entries(bracketColors).map(([n, c]) => (
-        <span class="legend-chip" style={`background:${c.bg};color:${c.text};border:1px solid rgba(255,255,255,0.15)`}>{n}枠 {c.name}</span>
+      {legendChips.map(chip => (
+        <span class="legend-chip" style={chip.style}>{chip.label}</span>
       ))}
     </div>
 
@@ -195,7 +221,7 @@ const horsesView = race.horses.map(h => {
               <div class="name-block">
                 <div class="role-mark">{h.role}</div>
                 <div class="horse-name">{h.name}</div>
-                <div class="sex-age">{h.sex}{h.age}・{h.weight}kg <span class="hw">({h.horseWeight}kg)</span></div>
+                <div class="sex-age">{h.sexAgeLabel} <span class="hw">{h.horseWeightLabel}</span></div>
               </div>
               <div class="ai-score">
                 <div class="ai-label">AI</div>
@@ -215,18 +241,18 @@ const horsesView = race.horses.map(h => {
               <div class="info-cell pop-cell">
                 <span class="info-label">人気</span>
                 <span class="info-value pop">{h.popularity}<small>番</small></span>
-                <span class="odds">{h.odds.toFixed(1)}倍</span>
+                <span class="odds">{h.oddsLabel}</span>
               </div>
             </div>
 
             <div class="pedigree">
-              <span class="ped-cell"><small>父</small> {h.sire}</span>
-              <span class="ped-cell"><small>母</small> {h.dam}</span>
-              <span class="ped-cell"><small>母父</small> {h.damSire}</span>
+              <span class="ped-cell">{h.sireLabel}</span>
+              <span class="ped-cell">{h.damLabel}</span>
+              <span class="ped-cell">{h.damSireLabel}</span>
             </div>
 
             <details class="past-races">
-              <summary>過去走 ({h.pastRows.length}走)</summary>
+              <summary>{h.pastSummaryLabel}</summary>
               <table class="past-table">
                 <thead>
                   <tr>
