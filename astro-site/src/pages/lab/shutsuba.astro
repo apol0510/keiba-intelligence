@@ -127,6 +127,20 @@ const roleColors = {
   '△': '#a78bfa',
   '×': '#94a3b8',
 };
+
+// 表示用に事前計算（JSX内の制御フローを避ける）
+const horsesView = race.horses.map(h => {
+  const bc = bracketColors[h.bracket] ?? bracketColors[1];
+  const rc = roleColors[h.role] ?? '#94a3b8';
+  const styleVars = `--bracket-bg:${bc.bg};--bracket-text:${bc.text};--bracket-glow:${bc.glow};--role-color:${rc}`;
+  const pastRows = (h.pastRaces || []).map(p => {
+    let cls = '';
+    if (p.rank === 1) cls = 'win';
+    else if (p.rank === 2 || p.rank === 3) cls = 'place';
+    return { ...p, cls };
+  });
+  return { ...h, styleVars, pastRows };
+});
 ---
 
 <!DOCTYPE html>
@@ -169,86 +183,80 @@ const roleColors = {
 
     <!-- 馬カード一覧 -->
     <ol class="horse-list">
-      {race.horses.map(h => {
-        const bc = bracketColors[h.bracket];
-        const rc = roleColors[h.role] || '#94a3b8';
-        return (
-          <li class="horse-card" style={`--bracket-bg:${bc.bg};--bracket-text:${bc.text};--bracket-glow:${bc.glow};--role-color:${rc}`}>
-            {/* 左: 枠+馬番バッジ */}
-            <div class="badge-col">
-              <div class="bracket-badge">{h.bracket}</div>
-              <div class="number-badge">{h.number}</div>
+      {horsesView.map(h => (
+        <li class="horse-card" style={h.styleVars}>
+          <div class="badge-col">
+            <div class="bracket-badge">{h.bracket}</div>
+            <div class="number-badge">{h.number}</div>
+          </div>
+
+          <div class="main-col">
+            <div class="row-top">
+              <div class="name-block">
+                <div class="role-mark">{h.role}</div>
+                <div class="horse-name">{h.name}</div>
+                <div class="sex-age">{h.sex}{h.age}・{h.weight}kg <span class="hw">({h.horseWeight}kg)</span></div>
+              </div>
+              <div class="ai-score">
+                <div class="ai-label">AI</div>
+                <div class="ai-value">{h.aiScore}</div>
+              </div>
             </div>
 
-            {/* メイン情報 */}
-            <div class="main-col">
-              <div class="row-top">
-                <div class="name-block">
-                  <div class="role-mark">{h.role}</div>
-                  <div class="horse-name">{h.name}</div>
-                  <div class="sex-age">{h.sex}{h.age}・{h.weight}kg <span class="hw">({h.horseWeight}kg)</span></div>
-                </div>
-                <div class="ai-score">
-                  <div class="ai-label">AI</div>
-                  <div class="ai-value">{h.aiScore}</div>
-                </div>
+            <div class="row-mid">
+              <div class="info-cell">
+                <span class="info-label">騎手</span>
+                <span class="info-value">{h.jockey}</span>
               </div>
-
-              <div class="row-mid">
-                <div class="info-cell">
-                  <span class="info-label">騎手</span>
-                  <span class="info-value">{h.jockey}</span>
-                </div>
-                <div class="info-cell">
-                  <span class="info-label">厩舎</span>
-                  <span class="info-value">{h.trainer}</span>
-                </div>
-                <div class="info-cell pop-cell">
-                  <span class="info-label">人気</span>
-                  <span class="info-value pop">{h.popularity}<small>番</small></span>
-                  <span class="odds">{h.odds.toFixed(1)}倍</span>
-                </div>
+              <div class="info-cell">
+                <span class="info-label">厩舎</span>
+                <span class="info-value">{h.trainer}</span>
               </div>
-
-              <div class="pedigree">
-                <span class="ped-cell"><small>父</small> {h.sire}</span>
-                <span class="ped-cell"><small>母</small> {h.dam}</span>
-                <span class="ped-cell"><small>母父</small> {h.damSire}</span>
+              <div class="info-cell pop-cell">
+                <span class="info-label">人気</span>
+                <span class="info-value pop">{h.popularity}<small>番</small></span>
+                <span class="odds">{h.odds.toFixed(1)}倍</span>
               </div>
+            </div>
 
-              <details class="past-races">
-                <summary>過去走 ({h.pastRaces.length}走)</summary>
-                <table class="past-table">
-                  <thead>
-                    <tr>
-                      <th>日付</th>
-                      <th>場</th>
-                      <th>レース</th>
-                      <th>距離</th>
-                      <th>着</th>
-                      <th>タイム</th>
-                      <th>人気</th>
+            <div class="pedigree">
+              <span class="ped-cell"><small>父</small> {h.sire}</span>
+              <span class="ped-cell"><small>母</small> {h.dam}</span>
+              <span class="ped-cell"><small>母父</small> {h.damSire}</span>
+            </div>
+
+            <details class="past-races">
+              <summary>過去走 ({h.pastRows.length}走)</summary>
+              <table class="past-table">
+                <thead>
+                  <tr>
+                    <th>日付</th>
+                    <th>場</th>
+                    <th>レース</th>
+                    <th>距離</th>
+                    <th>着</th>
+                    <th>タイム</th>
+                    <th>人気</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {h.pastRows.map(p => (
+                    <tr class={p.cls}>
+                      <td>{p.date}</td>
+                      <td>{p.venue}</td>
+                      <td>{p.name}</td>
+                      <td>{p.dist}</td>
+                      <td><strong>{p.rank}</strong></td>
+                      <td>{p.time}</td>
+                      <td>{p.pop}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {h.pastRaces.map(p => (
-                      <tr class={p.rank === 1 ? 'win' : p.rank <= 3 ? 'place' : ''}>
-                        <td>{p.date}</td>
-                        <td>{p.venue}</td>
-                        <td>{p.name}</td>
-                        <td>{p.dist}</td>
-                        <td><strong>{p.rank}</strong></td>
-                        <td>{p.time}</td>
-                        <td>{p.pop}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </details>
-            </div>
-          </li>
-        );
-      })}
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          </div>
+        </li>
+      ))}
     </ol>
 
     <footer class="demo-footer">
