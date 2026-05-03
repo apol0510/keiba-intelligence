@@ -78,8 +78,12 @@ function validateLiveData(data, expectedDate) {
 }
 
 /**
- * 確定データ (archiveResultsJra.json) に同日エントリが既にあれば、
- * live-results は不要になっているので保存スキップ + 既存ファイル削除。
+ * 確定データ (archiveResultsJra.json) に「完全な」同日エントリがあれば
+ * live-results は不要 → 保存スキップ + 既存ファイル削除。
+ *
+ * 「完全」の判定: totalPayout > 0 (HR取得済み・払戻が実体ある)
+ *   - JV-Link が rank/HR を取れずに payout=0 で archive 入りした「broken」状態
+ *     では live 側を残し、UI の暫定再計算に使えるようにする。
  */
 function shouldSkipBecauseConfirmed(date) {
   try {
@@ -87,7 +91,13 @@ function shouldSkipBecauseConfirmed(date) {
     if (!existsSync(archivePath)) return false;
     const archive = JSON.parse(readFileSync(archivePath, 'utf-8'));
     if (!Array.isArray(archive)) return false;
-    return archive.some((e) => e?.date === date);
+    const entry = archive.find((e) => e?.date === date);
+    if (!entry) return false;
+    // payout が実体ある場合のみ「完全な確定」とみなす
+    const totalPayout = Number(entry.totalPayout) || 0;
+    if (totalPayout > 0) return true;
+    console.log(`ℹ️ archive entry for ${date} あるが totalPayout=0 (broken/HR未取得) → live 取込を継続`);
+    return false;
   } catch (e) {
     console.warn(`⚠️  archiveResultsJra.json チェック失敗 (継続): ${e.message}`);
     return false;
