@@ -11,6 +11,8 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 
+import { isMainRace } from '../src/utils/mainRaceBetting.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = join(__dirname, '..');
@@ -594,6 +596,26 @@ function saveArchive(date, venue, raceResults) {
   const returnRate = betAmount > 0 ? ((totalPayout / betAmount) * 100) : 0;
 
   console.log(`\n📊 買い目点数判定: ${totalRaces}R × ${betPointsPerRace}点 = ${betAmount.toLocaleString()}円 / 払戻 ${totalPayout.toLocaleString()}円 → 回収率 ${returnRate.toFixed(1)}%`);
+
+  // メインレースは実際の買い目本数 (本命軸 × 上位5頭 × 双方向 = 最大10点) を per-race に記録
+  // JRAは複数会場開催が前提のため、会場別にレース数を数える
+  const racesByVenue = new Map();
+  for (const r of raceResults) {
+    const key = r.venue || '';
+    racesByVenue.set(key, (racesByVenue.get(key) || 0) + 1);
+  }
+  for (const race of raceResults) {
+    const venueRaces = racesByVenue.get(race.venue || '') || totalRaces;
+    if (!isMainRace(race.raceNumber, venueRaces)) continue;
+    const lines = Array.isArray(race.bettingLines) ? race.bettingLines : [];
+    const firstLine = lines[0] || '';
+    const m = firstLine.match(/^(\d+)-(.+)$/);
+    if (!m) continue;
+    const aitePart = m[2].replace(/\(抑え.+\)/, '');
+    const partners = aitePart.split('.').filter(s => s.length > 0);
+    race.betPoints = partners.length * 2;
+    race.betType = '馬単';
+  }
 
   // 最終的な回収率（小数点1桁）
   const finalReturnRate = returnRate.toFixed(1);
