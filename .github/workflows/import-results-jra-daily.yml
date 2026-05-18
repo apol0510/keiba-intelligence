@@ -78,10 +78,30 @@ jobs:
           EXPECTED_VENUES=${#FOUND_VENUES[@]}
           echo "🔍 per-venue検索結果: ${EXPECTED_VENUES}会場 (${FOUND_VENUES[*]})"
 
+          # racebook（予想）が存在するかも確認 → 「開催想定日」判定に使う
+          # racebook あり・結果なし = 取込漏れ（要アラート）
+          RACEBOOK_VENUES=()
+          for code in "${VENUE_CODES[@]}"; do
+            RB_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/racebook/${YEAR}/${MONTH}/${DATE}-${code}.json"
+            if curl -sfI "$RB_URL" > /dev/null; then
+              RACEBOOK_VENUES+=("$code")
+            fi
+          done
+          echo "📚 racebook検索結果: ${#RACEBOOK_VENUES[@]}会場 (${RACEBOOK_VENUES[*]})"
+
           if [ "$EXPECTED_VENUES" -eq 0 ]; then
             echo "⏭️  No JRA results in keiba-data-shared yet (全会場404)"
             echo "has_missing=false" >> $GITHUB_OUTPUT
+            # racebook はあるのに結果がない = 取込漏れアラート
+            if [ "${#RACEBOOK_VENUES[@]}" -gt 0 ]; then
+              echo "🚨 racebookあり・結果なし → 取込漏れアラート対象"
+              echo "missing_results_alert=true" >> $GITHUB_OUTPUT
+              echo "racebook_venues=${RACEBOOK_VENUES[*]}" >> $GITHUB_OUTPUT
+            else
+              echo "missing_results_alert=false" >> $GITHUB_OUTPUT
+            fi
           else
+            echo "missing_results_alert=false" >> $GITHUB_OUTPUT
             echo "✅ Results found in keiba-data-shared: $EXPECTED_VENUES venues"
 
             # アーカイブに既に存在するかチェック
@@ -187,3 +207,36 @@ jobs:
           echo "⏭️  No missing JRA results to import"
           echo "   Date: ${{ steps.date.outputs.date }}"
           echo "   Archive is up-to-date"
+
+      - name: Send alert (racebook exists but results missing)
+        if: steps.check.outputs.missing_results_alert == 'true'
+        env:
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          EMAIL_SUBJECT: '🚨 JRA結果データ未登録検出（23:30 JST チェック）'
+          EMAIL_BODY: |
+            マコさん、
+
+            JRA予想（racebook）は keiba-data-shared に登録されていますが、
+            ${{ steps.date.outputs.date }} の結果データが未登録です。
+
+            【予想あり会場】
+            ${{ steps.check.outputs.racebook_venues }}
+
+            【結果なし】
+            keiba-data-shared/jra/results/ に該当日のファイルがありません
+
+            【対応方法】
+            keiba-data-shared-admin の管理画面から JRA 結果を取込んでください：
+            https://keiba-data-shared-admin.netlify.app/admin/results-manager-jra-batch
+
+            または scripts/jra/auto-fetch-jra-official.mjs を実行してください。
+
+            【GitHub Actionsログ】
+            https://github.com/apol0510/keiba-intelligence/actions
+
+            ---
+            このメールは自動送信されています。
+            ワークフロー: import-results-jra-daily.yml (23:30 JST)
+        run: node .github/scripts/send-alert-email.js
