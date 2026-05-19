@@ -260,7 +260,10 @@ function buildHorseDataMapFromRacebook(rbData, targetMap = new Map()) {
         sire: horse.sire || null
       };
       if (horse.pastRaces && horse.pastRaces.length > 0) {
-        data.recentRaces = horse.pastRaces.slice(0, 5).map(pr => ({
+        // racebook pastRaces は古い順([0]=最古) で保存されている。
+        // 消費側(featureScores / AI解説 / UI)は [0]=前走 を前提とするため、
+        // ここで新しい順に並べ替える。
+        data.recentRaces = horse.pastRaces.slice(-5).reverse().map(pr => ({
           date: null, venue: pr.venue || null,
           distance: pr.distance || null,
           distanceMeters: pr.distanceMeters || null,
@@ -857,8 +860,9 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
             }
           }
           // 過去走データ: racebook由来(_pastRaces) > horseDataMap > entries
+          // racebook pastRaces は古い順([0]=最古) → 新しい順に反転
           if (h._pastRaces && h._pastRaces.length > 0) {
-            horseObj.recentRaces = h._pastRaces.slice(0, 5).map(pr => ({
+            horseObj.recentRaces = h._pastRaces.slice(-5).reverse().map(pr => ({
               date: null, venue: pr.venue || null,
               distance: pr.distance || null,
               distanceMeters: pr.distanceMeters || null,
