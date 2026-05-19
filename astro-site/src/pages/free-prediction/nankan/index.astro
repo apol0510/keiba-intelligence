@@ -230,6 +230,7 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                     raceName: race.raceInfo.raceName,
                     distance: race.raceInfo.distance,
                     horseCount: race.raceInfo.horseCount,
+                    generatedAt: race.generatedAt,
                     topHorses: allHorses.sort((a, b) => b.pt - a.pt).slice(0, 5).map(h => ({
                       horseNumber: h.horseNumber,
                       horseName: h.horseName,

@@ -467,7 +467,13 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
       let raceData;
       try { raceData = JSON.parse(section.dataset.race); } catch(ex) { return; }
 
-      const cacheKey = `${type}-${raceData.date}-${raceData.venue}-${raceData.raceNumber}`;
+      // cacheKey に raceData.generatedAt を含める。
+      // 予想JSONが再生成（再import）されると generatedAt が変わるため、
+      // cacheKey も変わり古い localStorage キャッシュは自動的に無視される。
+      // generatedAt が無い場合（古いJSONや result 系で verifiedAt も無いケース）
+      // は空文字となり、従来通り日付+会場+R番号で一意化される。
+      const cacheVersion = raceData.generatedAt || '';
+      const cacheKey = `${type}-${raceData.date}-${raceData.venue}-${raceData.raceNumber}-${cacheVersion}`;
       const isOpen = body.style.display !== 'block';
 
       body.style.display = isOpen ? 'block' : 'none';

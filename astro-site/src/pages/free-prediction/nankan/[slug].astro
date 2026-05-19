@@ -92,6 +92,7 @@ const displayDate = `${dateParts[0]}年${parseInt(dateParts[1])}月${parseInt(da
               raceName: race.raceInfo.raceName,
               distance: race.raceInfo.distance,
               horseCount: race.raceInfo.horseCount,
+              generatedAt: race.generatedAt,
               topHorses: allHorses.sort((a: any, b: any) => b.pt - a.pt).slice(0, 5).map((h: any) => ({
                 horseNumber: h.horseNumber,
                 horseName: h.horseName,

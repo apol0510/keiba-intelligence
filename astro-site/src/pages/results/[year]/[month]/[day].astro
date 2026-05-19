@@ -309,6 +309,7 @@ const jsonLd = {
               date: entry.date,
               raceNumber: race.raceNumber,
               raceName: raceDisplayName,
+              generatedAt: entry.verifiedAt,
               isHit: race.isHit || race.honmeiHit || false,
               result: {
                 first: { number: race.winner || race.result?.first?.number || '?', name: firstName },
