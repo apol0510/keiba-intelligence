@@ -282,7 +282,11 @@ function buildHorseDataMapFromRacebook(rbData, targetMap = new Map()) {
         trainer: horse.trainer || null,
         weight: horse.weight || horse.kinryo || null,
         age: horse.sexAge || horse.seirei || null,
-        sire: horse.sire || null
+        sire: horse.sire || null,
+        // 予想オッズもracebook由来でhorseDataMapに載せる。
+        // computer/経由のデータはhorse再マッピングされず_predictedOddsを持たないため、
+        // ここから convertToLegacyFormat で補完する（期待値-25%固定の解消）。
+        predictedOdds: horse.predictedOdds ?? null
       };
       const pastRaces = horse.pastRaces || horse._pastRaces || [];
       if (pastRaces.length > 0) {
@@ -544,6 +548,7 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
               if (!horseObj.weight && rbInfo.weight) horseObj.weight = String(rbInfo.weight);
               if (!horseObj.age && rbInfo.age) horseObj.age = rbInfo.age;
               if (rbInfo.sire) horseObj.sire = rbInfo.sire;
+              if (rbInfo.predictedOdds != null) horseObj.predictedOdds = rbInfo.predictedOdds;
             }
           }
           // 過去走データ: racebook由来(_pastRaces) > horseDataMap
