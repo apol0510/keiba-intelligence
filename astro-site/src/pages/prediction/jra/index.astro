@@ -554,7 +554,12 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                   <span class="dhc-number">{horse.horseNumber}</span>
                                   <span class="dhc-name">{horse.horseName}</span>
                                   <span class="dhc-role-badge">{horse.role}</span>
-                                  <span class="dhc-pt">PT: {Number(horse.pt).toFixed(1)}</span>
+                                  {/* PT表示を廃止しAI指数(=人気指数+10)に一本化（2026-05-23）。
+                                      PT=rawScore+70 と AI指数=computerIndex+10 は同じcomputerIndex由来で
+                                      二重表示になるため。PTは役割/買い目の内部基盤としては保持（表示のみ廃止）。 */}
+                                  {horse.computerIndex != null && horse.computerIndex !== '' && (
+                                    <span class="dhc-pt">AI指数 {Math.min(100, Number(horse.computerIndex) + 10)}</span>
+                                  )}
                                 </div>
                                 {(horse.jockey || horse.trainer || horse.age || horse.weight) && (
                                   <div class="dhc-jockey-trainer">
