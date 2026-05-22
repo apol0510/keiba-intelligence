@@ -293,10 +293,35 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                   <div class="race-display-area">
                     {venuePredictions.map((race, raceIndex) => {
               const allHorses = race.horses;
-              const horsesWithMetrics = allHorses.map(horse => ({
-                ...horse,
-                metrics: generateAdvancedMetrics(horse, allHorses, race.raceInfo)
-              }));
+              // 勝率・確信度・リスクはPT起点で全頭再計算する（2026-05-22）。
+              // 理由: featureScores由来の指標はrecentRaces欠損馬（新馬・転入・地方など約35%）が
+              //   50.0フォールバックになり、本命より補欠の勝率が高いなど役割順と矛盾していた。
+              //   PTは全馬に必ず付く自前スコア（印1×4+印2×3…/コンピ補完）なので、
+              //   これを起点にすれば「全頭評価・役割順整合・架空データなし」を同時に満たせる。
+              //   featureScores.js は他用途で使うため触らず、表示側でのみ上書きする。
+              const ptValsField = allHorses.map(h => Number(h.pt) || 0);
+              const maxPtField = Math.max(...ptValsField);
+              const minPtField = Math.min(...ptValsField);
+              const ptRangeField = (maxPtField - minPtField) || 1;
+              const horsesWithMetrics = allHorses.map(horse => {
+                const metrics = generateAdvancedMetrics(horse, allHorses, race.raceInfo);
+                const normPt = ((Number(horse.pt) || 0) - minPtField) / ptRangeField; // 0〜1
+                const winProbPt = 8 + normPt * 30;   // 最下位8% 〜 最上位38%（役割順に単調）
+                const certaintyPt = 62 + normPt * 28; // 最下位62% 〜 最上位90%
+                const riskScorePt = 100 - certaintyPt;
+                let riskLevelPt = 'Low';
+                if (riskScorePt > 35) riskLevelPt = 'Medium';
+                if (riskScorePt > 60) riskLevelPt = 'High';
+                return {
+                  ...horse,
+                  metrics: {
+                    ...metrics,
+                    winProbability: winProbPt.toFixed(2),
+                    modelCertainty: certaintyPt.toFixed(1),
+                    riskLevel: riskLevelPt,
+                  },
+                };
+              });
 
               // 全馬表示（プロ会員特典）
               // 役割順にソート（本命→対抗→単穴→連下最上位→連下→補欠→無）
@@ -551,12 +576,17 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                     <span class="qm-label">Risk / リスク</span>
                                     <span class={`qm-value risk-${m.riskLevel.toLowerCase()}`}>{m.riskLevel}</span>
                                   </div>
+                                  {/* 期待値カード一時非表示（2026-05-22）:
+                                      予想オッズが未連携のため全頭が控除率25%の理論値=-25.0%固定になり
+                                      指標として無意味なため。オッズ連携が入ったら下記 false && を外す。 */}
+                                  {false && (
                                   <div class="qm-item">
                                     <span class="qm-label">Expected Value / 期待値</span>
                                     <span class={`qm-value ${m.expectedValue.startsWith('+') ? 'positive' : 'negative'}`}>
                                       {m.expectedValue}
                                     </span>
                                   </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
