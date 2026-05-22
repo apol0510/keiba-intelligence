@@ -286,7 +286,9 @@ function buildHorseDataMapFromRacebook(rbData, targetMap = new Map()) {
         // 予想オッズもracebook由来でhorseDataMapに載せる。
         // computer/経由のデータはhorse再マッピングされず_predictedOddsを持たないため、
         // ここから convertToLegacyFormat で補完する（期待値-25%固定の解消）。
-        predictedOdds: horse.predictedOdds ?? null
+        predictedOdds: horse.predictedOdds ?? null,
+        // 人気指数（AI人気指数=+10表示の元値）もracebook由来で運ぶ。2026-05-23
+        computerIndex: horse.computerIndex ?? null
       };
       const pastRaces = horse.pastRaces || horse._pastRaces || [];
       if (pastRaces.length > 0) {
@@ -549,6 +551,7 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
               if (!horseObj.age && rbInfo.age) horseObj.age = rbInfo.age;
               if (rbInfo.sire) horseObj.sire = rbInfo.sire;
               if (rbInfo.predictedOdds != null) horseObj.predictedOdds = rbInfo.predictedOdds;
+              if (rbInfo.computerIndex != null) horseObj.computerIndex = rbInfo.computerIndex;
             }
           }
           // 過去走データ: racebook由来(_pastRaces) > horseDataMap
