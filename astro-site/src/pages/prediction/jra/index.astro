@@ -303,22 +303,38 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
               const maxPtField = Math.max(...ptValsField);
               const minPtField = Math.min(...ptValsField);
               const ptRangeField = (maxPtField - minPtField) || 1;
+              // 較正済み勝率: PTのsoftmax（全頭合計100%の本物の確率）。
+              // これにより期待値=オッズ×勝率-1 が意味を持つ（妙味馬が浮く）。2026-05-22。
+              const meanPtField = ptValsField.reduce((a, b) => a + b, 0) / (ptValsField.length || 1);
+              const stdPtField = Math.sqrt(ptValsField.reduce((a, b) => a + (b - meanPtField) ** 2, 0) / (ptValsField.length || 1)) || 1;
+              const expPtField = ptValsField.map(p => Math.exp((p - maxPtField) / stdPtField));
+              const sumExpField = expPtField.reduce((a, b) => a + b, 0) || 1;
               const horsesWithMetrics = allHorses.map(horse => {
                 const metrics = generateAdvancedMetrics(horse, allHorses, race.raceInfo);
-                const normPt = ((Number(horse.pt) || 0) - minPtField) / ptRangeField; // 0〜1
-                const winProbPt = 8 + normPt * 30;   // 最下位8% 〜 最上位38%（役割順に単調）
+                const pt = Number(horse.pt) || 0;
+                const normPt = (pt - minPtField) / ptRangeField; // 0〜1
+                const winProbCalib = Math.exp((pt - maxPtField) / stdPtField) / sumExpField * 100; // 較正勝率（合計100%）
                 const certaintyPt = 62 + normPt * 28; // 最下位62% 〜 最上位90%
                 const riskScorePt = 100 - certaintyPt;
                 let riskLevelPt = 'Low';
                 if (riskScorePt > 35) riskLevelPt = 'Medium';
                 if (riskScorePt > 60) riskLevelPt = 'High';
+                // 期待値: 予想オッズがある馬のみ。EV = オッズ × 較正勝率 - 1。
+                // オッズ無しの馬は偽値(-25%固定)を出さず非表示にする。
+                const oddsNum = Number(horse.predictedOdds) || 0;
+                let expectedValueCalib = null;
+                if (oddsNum > 0) {
+                  const ev = oddsNum * (winProbCalib / 100) - 1;
+                  expectedValueCalib = (ev >= 0 ? '+' : '') + (ev * 100).toFixed(1) + '%';
+                }
                 return {
                   ...horse,
                   metrics: {
                     ...metrics,
-                    winProbability: winProbPt.toFixed(2),
+                    winProbability: winProbCalib.toFixed(1),
                     modelCertainty: certaintyPt.toFixed(1),
                     riskLevel: riskLevelPt,
+                    expectedValue: expectedValueCalib,
                   },
                 };
               });
@@ -576,10 +592,9 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                     <span class="qm-label">Risk / リスク</span>
                                     <span class={`qm-value risk-${m.riskLevel.toLowerCase()}`}>{m.riskLevel}</span>
                                   </div>
-                                  {/* 期待値カード一時非表示（2026-05-22）:
-                                      予想オッズが未連携のため全頭が控除率25%の理論値=-25.0%固定になり
-                                      指標として無意味なため。オッズ連携が入ったら下記 false && を外す。 */}
-                                  {false && (
+                                  {/* 期待値: 予想オッズがある馬のみ表示（2026-05-22復活）。
+                                      EV=オッズ×較正勝率-1。オッズ無しの馬は偽値を出さず非表示。 */}
+                                  {m.expectedValue && (
                                   <div class="qm-item">
                                     <span class="qm-label">Expected Value / 期待値</span>
                                     <span class={`qm-value ${m.expectedValue.startsWith('+') ? 'positive' : 'negative'}`}>
