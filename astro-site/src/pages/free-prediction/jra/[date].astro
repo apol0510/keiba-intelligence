@@ -334,22 +334,25 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
                               </div>
                             )}
 
-                            {/* 近走成績（あれば表示）*/}
+                            {/* 近走成績（会員/無料indexと統一: 前走/2走前・日付YY/MM/DD・明るい行）。2026-05-23 */}
                             {horse.recentRaces && horse.recentRaces.length > 0 && (
-                              <div class="recent-races">
-                                <div class="recent-races-title">Recent Races / 近走成績</div>
-                                <div class="recent-races-grid">
-                                  {horse.recentRaces.map((recent, rIdx) => (
-                                    <div class="recent-race-item">
-                                      <div class="recent-race-label">{recent.label || `${rIdx + 1}走前`}</div>
-                                      <div class="recent-race-details">
-                                        {recent.venue && <span class="rr-venue">{recent.venue}</span>}
-                                        {recent.result && <span class={`rr-result ${parseInt(recent.result) <= 3 ? 'top3' : ''}`}>{recent.result}着</span>}
-                                        {recent.distance && <span class="rr-distance">{recent.distance}m</span>}
-                                        {recent.condition && <span class="rr-condition">{recent.condition}</span>}
-                                      </div>
+                              <div class="dhc-recent-form">
+                                <span class="rf-label">近走成績</span>
+                                <div class="rf-rows">
+                                  {horse.recentRaces.slice(0, 5).map((r: any, ri: number) => {
+                                    const meta = recentRaceMeta(r.venue, race.raceInfo.date);
+                                    return (
+                                    <div class="rf-row">
+                                      <span class="rf-pos">{RECENT_LABELS[ri]}</span>
+                                      {meta.dateStr && <span class="rf-date">{meta.dateStr}</span>}
+                                      {meta.venue && <span class="rf-venue">{meta.venue}</span>}
+                                      {r.rank != null && <span class={`rf-rank ${Number(r.rank) <= 3 ? 'good' : ''}`}>{r.rank}着</span>}
+                                      {r.time && <span class="rf-time">{r.time}</span>}
+                                      {r.last3f && <span class="rf-3f">上り{r.last3f}</span>}
+                                      {r.paceType && <span class="rf-pace">{r.paceType}</span>}
                                     </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               </div>
                             )}
@@ -876,6 +879,20 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
       text-shadow: 0 0 10px rgba(125,211,252,0.6);
     }
     .ai-badge-label { font-size: 0.6rem; font-weight: 700; opacity: 0.85; letter-spacing: 0.5px; }
+
+    /* 近走成績（会員/無料indexと統一・明るい行レイアウト） */
+    .dhc-recent-form { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1); }
+    .rf-label { display: block; font-size: 0.7rem; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin-bottom: 6px; }
+    .rf-rows { display: flex; flex-direction: column; gap: 4px; }
+    .rf-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 5px 10px; border-radius: 8px; background: rgba(255,255,255,0.06); font-size: 0.8rem; font-family: 'Courier New', monospace; color: #e2e8f0; }
+    .rf-pos { color: #fbbf24; font-weight: 800; min-width: 44px; }
+    .rf-date { color: #cbd5e1; }
+    .rf-venue { color: #cbd5e1; min-width: 26px; }
+    .rf-rank { font-weight: 800; color: #f1f5f9; }
+    .rf-rank.good { color: #34d399; }
+    .rf-time { color: #ffffff; font-weight: 700; }
+    .rf-3f { color: #38bdf8; }
+    .rf-pace { color: #94a3b8; }
 
     /* AI支持率スコア */
     .dhc-support { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
