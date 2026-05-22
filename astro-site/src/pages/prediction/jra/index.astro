@@ -563,7 +563,12 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                           </div>
 
                           <!-- Feature Analysis (上位3頭のみ詳細表示) -->
-                          {(horse.role === '本命' || horse.role === '対抗' || horse.role === '単穴') && (
+                          <!-- FEATURE IMPORTANCE ANALYSIS 一時非表示（2026-05-22）:
+                               JRAはrecentRaces欠損が多く（新馬・転入馬・地方馬など約35%が近走データなし）、
+                               特徴量が50.0フォールバックになり「壊れている」ように見えるため、表示側のみ停止。
+                               generateAdvancedMetrics は上部 Quantitative Metrics で使用継続のため削除しない。
+                               再開する場合は下記の `false &&` を外す。 -->
+                          {false && (horse.role === '本命' || horse.role === '対抗' || horse.role === '単穴') && (
                             <div class="dhc-features">
                               <div class="feature-title">Feature Importance Analysis / 特徴量重要度分析</div>
                               <div class="feature-grid">
