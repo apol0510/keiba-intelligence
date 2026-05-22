@@ -24,7 +24,9 @@ function extractDistance(value) {
  */
 function estimateDistanceFromTime(timeStr) {
   if (!timeStr) return 0;
-  const t = String(timeStr);
+  // JRA racebook の time は "内1.23.4" / "外1.21.9" のようにトラックバイアス記号
+  // （内/外/中 等）や空白が先頭に付くため、最初の数字までを除去してからパースする
+  const t = String(timeStr).replace(/^[^\d]+/, '').trim();
   let totalSeconds = 0;
   // "1.24.4" → 1分24.4秒 = 84.4秒
   const minsMatch = t.match(/^(\d+)\.(\d{2})\.(\d)$/);
