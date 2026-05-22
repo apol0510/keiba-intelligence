@@ -299,29 +299,17 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
               //   PTは全馬に必ず付く自前スコア（印1×4+印2×3…/コンピ補完）なので、
               //   これを起点にすれば「全頭評価・役割順整合・架空データなし」を同時に満たせる。
               //   featureScores.js は他用途で使うため触らず、表示側でのみ上書きする。
-              // 安全側に戻す（2026-05-22）: 較正検証ができていない「勝率」「期待値」は本番に出さない。
-              // PT起点のsoftmax勝率/期待値は撤去（未検証の確率を勝率と断言しない）。
-              // 確信度・リスクのみPT起点で算出して残す（勝率/期待値カードは表示側で非表示）。
-              const ptValsField = allHorses.map(h => Number(h.pt) || 0);
-              const maxPtField = Math.max(...ptValsField);
-              const minPtField = Math.min(...ptValsField);
-              const ptRangeField = (maxPtField - minPtField) || 1;
+              // 表示用スコア（2026-05-23）:
+              // ・勝率/期待値/確信度/リスクは廃止（較正未検証）。
+              // ・AI支持率スコア = 予想オッズの単調変換 clamp(166/odds^0.8, 1, 95)。
+              //   「勝率」ではなく予想オッズ人気の見栄えスコア（2.3→85, 76.4→5にアンカー）。
               const horsesWithMetrics = allHorses.map(horse => {
                 const metrics = generateAdvancedMetrics(horse, allHorses, race.raceInfo);
-                const normPt = ((Number(horse.pt) || 0) - minPtField) / ptRangeField; // 0〜1
-                const certaintyPt = 62 + normPt * 28; // 最下位62% 〜 最上位90%
-                const riskScorePt = 100 - certaintyPt;
-                let riskLevelPt = 'Low';
-                if (riskScorePt > 35) riskLevelPt = 'Medium';
-                if (riskScorePt > 60) riskLevelPt = 'High';
-                return {
-                  ...horse,
-                  metrics: {
-                    ...metrics,
-                    modelCertainty: certaintyPt.toFixed(1),
-                    riskLevel: riskLevelPt,
-                  },
-                };
+                const oddsNum = Number(horse.predictedOdds) || 0;
+                const aiSupportScore = oddsNum > 0
+                  ? Math.round(Math.min(95, Math.max(1, 166 / Math.pow(oddsNum, 0.8))))
+                  : null;
+                return { ...horse, metrics: { ...metrics, aiSupportScore } };
               });
 
               // 全馬表示（プロ会員特典）
@@ -569,11 +557,14 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                     {horse.trainer && <span class="dhc-trainer">🏠 {horse.trainer}</span>}
                                   </div>
                                 )}
-                                {/* クイック指標ブロックを廃止（2026-05-23 マコ指示）:
-                                    ・予想オッズの生表示（一番嫌う表示）を削除
-                                    ・確信度・リスク（較正未検証で実質機能せず）を廃止
-                                    ・勝率・期待値は既に非表示
-                                    AI支持率スコア（オッズ変換）は外字距離・生産者と合わせて別途。 */}
+                                {/* AI支持率スコア（予想オッズの単調変換 166/odds^0.8）。「勝率」ではない見栄えスコア。2026-05-23 */}
+                                {m.aiSupportScore != null && (
+                                  <div class="dhc-support">
+                                    <span class="sup-label">AI支持率スコア</span>
+                                    <div class="sup-bar-container"><div class="sup-bar" style={`width: ${m.aiSupportScore}%`}></div></div>
+                                    <span class="sup-value">{m.aiSupportScore}</span>
+                                  </div>
+                                )}
                                 {/* 近走成績（実データ・着順/コース/タイム/上がり3F/ペース）。事実なので表示。2026-05-22 */}
                                 {horse.recentRaces && horse.recentRaces.length > 0 && (
                                   <div class="dhc-recent-form">
@@ -1693,6 +1684,40 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
     .rf-rank.good { color: #10b981; }
     .rf-3f { color: #38bdf8; }
     .rf-pace { color: var(--text-tertiary); }
+
+    /* AI支持率スコア */
+    .dhc-support {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-top: var(--spacing-sm);
+    }
+    .sup-label {
+      font-size: 0.7rem;
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      min-width: 96px;
+    }
+    .sup-bar-container {
+      flex: 1;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .sup-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8, #6366f1);
+      border-radius: 4px;
+    }
+    .sup-value {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #38bdf8;
+      font-family: 'Courier New', monospace;
+      min-width: 28px;
+      text-align: right;
+    }
 
     .dhc-features {
       margin-top: var(--spacing-md);

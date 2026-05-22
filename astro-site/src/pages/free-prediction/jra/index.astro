@@ -181,10 +181,15 @@ try {
                 <div class="race-display-area">
                   {venuePredictions.map((race, raceIndex) => {
                     const allHorses = race.horses;
-                    const horsesWithMetrics = allHorses.map(horse => ({
-                      ...horse,
-                      metrics: generateAdvancedMetrics(horse, allHorses, race.raceInfo)
-                    }));
+                    const horsesWithMetrics = allHorses.map(horse => {
+                      const metrics = generateAdvancedMetrics(horse, allHorses, race.raceInfo);
+                      const oddsNum = Number(horse.predictedOdds) || 0;
+                      // AI支持率スコア = 予想オッズの単調変換 clamp(166/odds^0.8,1,95)。勝率ではない見栄えスコア。
+                      const aiSupportScore = oddsNum > 0
+                        ? Math.round(Math.min(95, Math.max(1, 166 / Math.pow(oddsNum, 0.8))))
+                        : null;
+                      return { ...horse, metrics: { ...metrics, aiSupportScore } };
+                    });
 
                     // PT値順にソートして上位5頭のみ表示
                     const sortedTop5 = horsesWithMetrics
@@ -280,32 +285,48 @@ try {
                                           {horse.trainer && <span class="dhc-trainer">🏠 {horse.trainer}</span>}
                                         </div>
                                       )}
+                                      {/* AI指数(=人気指数+10)に一本化。PT値/予想オッズ生表示/確信度/リスク/勝率/期待値は廃止。2026-05-23 */}
                                       <div class="dhc-quick-metrics">
+                                        {horse.computerIndex != null && horse.computerIndex !== '' && (
                                         <div class="qm-item">
-                                          <span class="qm-label">PT値</span>
-                                          <span class="qm-value">{Number(horse.pt).toFixed(2)}</span>
+                                          <span class="qm-label">AI指数</span>
+                                          <span class="qm-value">{Math.min(100, Number(horse.computerIndex) + 10)}</span>
                                         </div>
-                                        <div class="qm-item">
-                                          <span class="qm-label">Win Prob. / 勝率</span>
-                                          <span class="qm-value">{m.winProbability}%</span>
-                                        </div>
-                                        <div class="qm-item">
-                                          <span class="qm-label">Model Certainty / 確信度</span>
-                                          <span class="qm-value">{m.modelCertainty}%</span>
-                                        </div>
-                                        <div class="qm-item">
-                                          <span class="qm-label">Expected Value / 期待値</span>
-                                          <span class={`qm-value ${m.expectedValue.startsWith('+') ? 'positive' : 'negative'}`}>
-                                            {m.expectedValue}
-                                          </span>
-                                        </div>
+                                        )}
                                       </div>
+                                      {/* AI支持率スコア（予想オッズの単調変換）。「勝率」ではない見栄えスコア。2026-05-23 */}
+                                      {m.aiSupportScore != null && (
+                                        <div class="dhc-support">
+                                          <span class="sup-label">AI支持率スコア</span>
+                                          <div class="sup-bar-container"><div class="sup-bar" style={`width: ${m.aiSupportScore}%`}></div></div>
+                                          <span class="sup-value">{m.aiSupportScore}</span>
+                                        </div>
+                                      )}
+                                      {/* 近走成績（実データ）。事実なので表示。2026-05-22 */}
+                                      {horse.recentRaces && horse.recentRaces.length > 0 && (
+                                        <div class="dhc-recent-form">
+                                          <span class="rf-label">近走成績</span>
+                                          <div class="rf-list">
+                                            {horse.recentRaces.slice(0, 3).map((r) => (
+                                              <span class="rf-item">
+                                                {r.venue && <span class="rf-venue">{r.venue}</span>}
+                                                {r.rank != null && <span class={`rf-rank ${Number(r.rank) <= 3 ? 'good' : ''}`}>{r.rank}着</span>}
+                                                {r.time && <span class="rf-time">{r.time}</span>}
+                                                {r.last3f && <span class="rf-3f">上り{r.last3f}</span>}
+                                                {r.paceType && <span class="rf-pace">{r.paceType}</span>}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
 
-                                {/* Feature Importance Analysis（1位・2位のみ詳細表示）*/}
-                                {isTopTwo && (
+                                {/* Feature Importance Analysis 非表示（2026-05-22）:
+                                    JRAはrecentRaces欠損が多く特徴量が50.0フォールバックになり壊れて見えるため。
+                                    再開する場合は false && を外す。 */}
+                                {false && isTopTwo && (
                                   <div class="dhc-features">
                                     <div class="feature-title">Feature Importance Analysis / 特徴量重要度分析</div>
                                     <div class="feature-grid">
@@ -398,12 +419,12 @@ try {
               <h2>無料予想について</h2>
             </div>
             <div class="free-info-content">
-              <p><strong>無料予想では全レースの上位5頭のPT値のみを公開しています。</strong></p>
+              <p><strong>無料予想では全レースの上位5頭のAI指数のみを公開しています。</strong></p>
               <div class="upgrade-benefits">
                 <div class="benefit-section">
                   <h3>🆓 無料会員登録でできること</h3>
                   <ul class="free-info-list">
-                    <li>✅ 全頭予想（全出走馬のPT値・順位）</li>
+                    <li>✅ 全頭予想（全出走馬のAI指数・順位）</li>
                     <li>✅ 買い目（一部）: 本命・対抗・単穴・連下最上位の馬番号</li>
                     <li>✅ AI分析データ（Feature Importance Analysis）</li>
                     <li>✅ メールマガジン配信</li>
@@ -1026,6 +1047,49 @@ try {
     .qm-value.risk-high { color: #ef4444; }
     .qm-value.positive { color: #10b981; }
     .qm-value.negative { color: #ef4444; }
+    .qm-value.odds { color: #38bdf8; }
+
+    /* 近走成績（実データ） */
+    .dhc-recent-form {
+      margin-top: var(--spacing-sm);
+      padding-top: var(--spacing-sm);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .rf-label {
+      font-size: 0.65rem;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .rf-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .rf-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.72rem;
+      font-family: 'Courier New', monospace;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+    .rf-venue { color: var(--text-tertiary); }
+    .rf-rank { font-weight: 800; color: var(--text-primary); }
+    .rf-rank.good { color: #10b981; }
+    .rf-3f { color: #38bdf8; }
+    .rf-pace { color: var(--text-tertiary); }
+
+    /* AI支持率スコア */
+    .dhc-support { display: flex; align-items: center; gap: var(--spacing-sm); margin-top: var(--spacing-sm); }
+    .sup-label { font-size: 0.7rem; color: var(--text-tertiary); white-space: nowrap; min-width: 96px; }
+    .sup-bar-container { flex: 1; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+    .sup-bar { height: 100%; background: linear-gradient(90deg,#38bdf8,#6366f1); border-radius: 4px; }
+    .sup-value { font-size: 0.95rem; font-weight: 800; color: #38bdf8; font-family: 'Courier New', monospace; min-width: 28px; text-align: right; }
 
     /* 特徴量分析 */
     .dhc-features {
