@@ -569,43 +569,11 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                     {horse.trainer && <span class="dhc-trainer">🏠 {horse.trainer}</span>}
                                   </div>
                                 )}
-                                <div class="dhc-quick-metrics">
-                                  {/* 予想オッズ（実データ・ソース由来）。較正不要の事実なので表示する。2026-05-22 */}
-                                  {horse.predictedOdds && (
-                                  <div class="qm-item">
-                                    <span class="qm-label">予想オッズ / Odds</span>
-                                    <span class="qm-value odds">{Number(horse.predictedOdds).toFixed(1)}倍</span>
-                                  </div>
-                                  )}
-                                  {/* 勝率カード非表示（2026-05-22 安全側）:
-                                      PT起点の数値は較正検証されておらず「勝率」と断言できないため。
-                                      過去成績での較正検証ができたら表示を再開する。 */}
-                                  {false && (
-                                  <div class="qm-item">
-                                    <span class="qm-label">Win Prob. / 勝率</span>
-                                    <span class="qm-value">{m.winProbability}%</span>
-                                  </div>
-                                  )}
-                                  <div class="qm-item">
-                                    <span class="qm-label">Model Certainty / 確信度</span>
-                                    <span class="qm-value">{m.modelCertainty}%</span>
-                                  </div>
-                                  <div class="qm-item">
-                                    <span class="qm-label">Risk / リスク</span>
-                                    <span class={`qm-value risk-${m.riskLevel.toLowerCase()}`}>{m.riskLevel}</span>
-                                  </div>
-                                  {/* 期待値カード非表示（2026-05-22 安全側）:
-                                      較正検証されていない勝率×オッズの期待値は信頼できないため本番に出さない。
-                                      過去成績での較正検証ができたら表示を再開する。 */}
-                                  {false && m.expectedValue && (
-                                  <div class="qm-item">
-                                    <span class="qm-label">Expected Value / 期待値</span>
-                                    <span class={`qm-value ${m.expectedValue.startsWith('+') ? 'positive' : 'negative'}`}>
-                                      {m.expectedValue}
-                                    </span>
-                                  </div>
-                                  )}
-                                </div>
+                                {/* クイック指標ブロックを廃止（2026-05-23 マコ指示）:
+                                    ・予想オッズの生表示（一番嫌う表示）を削除
+                                    ・確信度・リスク（較正未検証で実質機能せず）を廃止
+                                    ・勝率・期待値は既に非表示
+                                    AI支持率スコア（オッズ変換）は外字距離・生産者と合わせて別途。 */}
                                 {/* 近走成績（実データ・着順/コース/タイム/上がり3F/ペース）。事実なので表示。2026-05-22 */}
                                 {horse.recentRaces && horse.recentRaces.length > 0 && (
                                   <div class="dhc-recent-form">
