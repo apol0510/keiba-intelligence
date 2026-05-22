@@ -157,10 +157,14 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
             <div class="race-display-area">
               {venuePredictions.map((race, raceIndex) => {
                 const allHorses = race.horses;
-                const horsesWithMetrics = allHorses.map(horse => ({
-                  ...horse,
-                  metrics: generateAdvancedMetrics(horse, allHorses, race.raceInfo)
-                }));
+                const horsesWithMetrics = allHorses.map(horse => {
+                  const metrics = generateAdvancedMetrics(horse, allHorses, race.raceInfo);
+                  const oddsNum = Number((horse as any).predictedOdds) || 0;
+                  const aiSupportScore = oddsNum > 0
+                    ? Math.round(Math.min(95, Math.max(1, 166 / Math.pow(oddsNum, 0.8))))
+                    : null;
+                  return { ...horse, metrics: { ...metrics, aiSupportScore } };
+                });
 
                 // PT値順にソートして上位5頭
                 const sortedTop5 = horsesWithMetrics
@@ -238,32 +242,29 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
                                       {horse.trainer && <span class="dhc-trainer">&#127968; {horse.trainer}</span>}
                                     </div>
                                   )}
+                                  {/* AI指数(=人気指数+10)に一本化。PT値/勝率/確信度/期待値は廃止。2026-05-23 */}
                                   <div class="dhc-quick-metrics">
+                                    {(horse as any).computerIndex != null && (horse as any).computerIndex !== '' && (
                                     <div class="qm-item">
-                                      <span class="qm-label">PT値</span>
-                                      <span class="qm-value">{Number(horse.pt).toFixed(2)}</span>
+                                      <span class="qm-label">AI指数</span>
+                                      <span class="qm-value">{Math.min(100, Number((horse as any).computerIndex) + 10)}</span>
                                     </div>
-                                    <div class="qm-item">
-                                      <span class="qm-label">Win Prob. / 勝率</span>
-                                      <span class="qm-value">{m.winProbability}%</span>
-                                    </div>
-                                    <div class="qm-item">
-                                      <span class="qm-label">Model Certainty / 確信度</span>
-                                      <span class="qm-value">{m.modelCertainty}%</span>
-                                    </div>
-                                    <div class="qm-item">
-                                      <span class="qm-label">Expected Value / 期待値</span>
-                                      <span class={`qm-value ${m.expectedValue.startsWith('+') ? 'positive' : 'negative'}`}>
-                                        {m.expectedValue}
-                                      </span>
-                                    </div>
+                                    )}
                                   </div>
+                                  {/* AI支持率スコア（予想オッズの単調変換）。「勝率」ではない見栄えスコア。2026-05-23 */}
+                                  {m.aiSupportScore != null && (
+                                    <div class="dhc-support">
+                                      <span class="sup-label">AI支持率スコア</span>
+                                      <div class="sup-bar-container"><div class="sup-bar" style={`width: ${m.aiSupportScore}%`}></div></div>
+                                      <span class="sup-value">{m.aiSupportScore}</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
 
-                            {/* Feature Importance Analysis（1位・2位のみ詳細表示）*/}
-                            {isTopTwo && (
+                            {/* Feature Importance Analysis 非表示（2026-05-23）: 50.0フォールバックで壊れて見えるため */}
+                            {false && isTopTwo && (
                               <div class="dhc-features">
                                 <div class="feature-title">Feature Importance Analysis / 特徴量重要度分析</div>
                                 <div class="feature-grid">
@@ -865,6 +866,13 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
 
     .qm-value.positive { color: #10b981; }
     .qm-value.negative { color: #ef4444; }
+
+    /* AI支持率スコア */
+    .dhc-support { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+    .sup-label { font-size: 0.7rem; color: #94a3b8; white-space: nowrap; min-width: 96px; }
+    .sup-bar-container { flex: 1; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+    .sup-bar { height: 100%; background: linear-gradient(90deg,#38bdf8,#6366f1); border-radius: 4px; }
+    .sup-value { font-size: 0.95rem; font-weight: 800; color: #38bdf8; font-family: 'Courier New', monospace; min-width: 28px; text-align: right; }
 
     /* Feature Importance */
     .dhc-features {
