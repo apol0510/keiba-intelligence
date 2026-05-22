@@ -254,7 +254,11 @@ async function fetchRacebookData(date, category = 'jra') {
           jockey: h.jockey || '', trainer: h.trainer || '', seirei: h.sexAge || '',
           kinryo: h.weight != null ? String(h.weight) : '', computerIndex: h.computerIndex || null,
           marks: h.marks || [], ranking: h.ranking || null,
-          _pastRaces: h.pastRaces || []
+          _pastRaces: h.pastRaces || [],
+          // 予想オッズはソースに97.8%存在するが、ここで拾わないと
+          // normalizeDetailed(L132)→convertToLegacyFormat(L566)まで運ばれず
+          // 期待値が全頭-25%固定になる（2026-05-22修正）。
+          _predictedOdds: h.predictedOdds ?? null
         }))
       }))
     });
