@@ -565,6 +565,13 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                   </div>
                                 )}
                                 <div class="dhc-quick-metrics">
+                                  {/* 予想オッズ（実データ・ソース由来）。較正不要の事実なので表示する。2026-05-22 */}
+                                  {horse.predictedOdds && (
+                                  <div class="qm-item">
+                                    <span class="qm-label">予想オッズ / Odds</span>
+                                    <span class="qm-value odds">{Number(horse.predictedOdds).toFixed(1)}倍</span>
+                                  </div>
+                                  )}
                                   {/* 勝率カード非表示（2026-05-22 安全側）:
                                       PT起点の数値は較正検証されておらず「勝率」と断言できないため。
                                       過去成績での較正検証ができたら表示を再開する。 */}
@@ -594,6 +601,23 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                   </div>
                                   )}
                                 </div>
+                                {/* 近走成績（実データ・着順/コース/タイム/上がり3F/ペース）。事実なので表示。2026-05-22 */}
+                                {horse.recentRaces && horse.recentRaces.length > 0 && (
+                                  <div class="dhc-recent-form">
+                                    <span class="rf-label">近走成績</span>
+                                    <div class="rf-list">
+                                      {horse.recentRaces.slice(0, 3).map((r) => (
+                                        <span class="rf-item">
+                                          {r.venue && <span class="rf-venue">{r.venue}</span>}
+                                          {r.rank != null && <span class={`rf-rank ${Number(r.rank) <= 3 ? 'good' : ''}`}>{r.rank}着</span>}
+                                          {r.time && <span class="rf-time">{r.time}</span>}
+                                          {r.last3f && <span class="rf-3f">上り{r.last3f}</span>}
+                                          {r.paceType && <span class="rf-pace">{r.paceType}</span>}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1656,6 +1680,46 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
     .qm-value.risk-high { color: #ef4444; }
     .qm-value.positive { color: #10b981; }
     .qm-value.negative { color: #ef4444; }
+    .qm-value.odds { color: #38bdf8; }
+
+    /* 近走成績（実データ） */
+    .dhc-recent-form {
+      margin-top: var(--spacing-sm);
+      padding-top: var(--spacing-sm);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .rf-label {
+      font-size: 0.65rem;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .rf-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .rf-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.72rem;
+      font-family: 'Courier New', monospace;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+    .rf-venue { color: var(--text-tertiary); }
+    .rf-rank { font-weight: 800; color: var(--text-primary); }
+    .rf-rank.good { color: #10b981; }
+    .rf-3f { color: #38bdf8; }
+    .rf-pace { color: var(--text-tertiary); }
 
     .dhc-features {
       margin-top: var(--spacing-md);
