@@ -269,14 +269,25 @@ async function fetchRacebookData(date, category = 'jra') {
 }
 
 /**
+ * 馬名から (地)地方馬・(外)外国産馬のプレフィックスを除去（lookup用の正規化）。
+ * computer源は "(地)タイトニット" / "(外)モンスエ"、racebook源は素の馬名で
+ * プレフィックスが不一致のため、両側を正規化してマッチさせる（2026-05-23）。
+ * (父)(市)等は実データに出現しないため対象外（出現確認後に追加する）。
+ */
+function normalizeHorseName(n) {
+  return String(n || '').replace(/^[（(](地|外)[）)]\s*/, '').trim();
+}
+
+/**
  * racebook JSONをhorseDataMapに変換（純粋関数）
  * nankan版importPrediction.jsと同一ロジック
  */
 function buildHorseDataMapFromRacebook(rbData, targetMap = new Map()) {
   for (const race of (rbData.races || [])) {
     for (const horse of (race.horses || [])) {
-      const name = horse.name || horse.horseName;
-      if (!name) continue;
+      const rawName = horse.name || horse.horseName;
+      if (!rawName) continue;
+      const name = normalizeHorseName(rawName);
       const data = {
         jockey: horse.jockey || null,
         trainer: horse.trainer || null,
@@ -542,8 +553,10 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
             weight: h.weight || h.kinryo || '' // 斤量
           };
           // racebook由来の基本情報で補完
-          if (horseDataMap && horseDataMap.has(h.name)) {
-            const rbInfo = horseDataMap.get(h.name);
+          // (地)プレフィックス対応の正規化lookup（2026-05-23）
+          const lookupName = normalizeHorseName(h.name);
+          if (horseDataMap && horseDataMap.has(lookupName)) {
+            const rbInfo = horseDataMap.get(lookupName);
             if (rbInfo && typeof rbInfo === 'object' && !Array.isArray(rbInfo)) {
               if (!horseObj.jockey && rbInfo.jockey) horseObj.jockey = rbInfo.jockey;
               if (!horseObj.trainer && rbInfo.trainer) horseObj.trainer = rbInfo.trainer;
@@ -568,8 +581,8 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
               bodyWeight: pr.bodyWeight || null, winner: pr.winner || null
             }));
             horseObj.recentFormSource = 'racebook';
-          } else if (horseDataMap && horseDataMap.has(h.name)) {
-            const mapData = horseDataMap.get(h.name);
+          } else if (horseDataMap && horseDataMap.has(lookupName)) {
+            const mapData = horseDataMap.get(lookupName);
             if (mapData && mapData.recentRaces) {
               horseObj.recentRaces = mapData.recentRaces;
               horseObj.recentFormSource = 'racebook';

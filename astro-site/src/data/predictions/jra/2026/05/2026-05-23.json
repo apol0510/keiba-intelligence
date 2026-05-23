@@ -537,7 +537,7 @@
               "1-16.3.4.9.10.7(抑え8.6.11.12)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.365Z"
         },
         {
           "raceInfo": {
@@ -999,7 +999,7 @@
               "7-3.10.11.2.9.4(抑え14.5.6.1.13)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.367Z"
         },
         {
           "raceInfo": {
@@ -1547,7 +1547,7 @@
               "7-9.2.15.4.3.13(抑え8.16.1.11.10)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.367Z"
         },
         {
           "raceInfo": {
@@ -2088,7 +2088,7 @@
               "1-15.13.16.11.8.14(抑え5.6.9.4.12)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.367Z"
         },
         {
           "raceInfo": {
@@ -2550,7 +2550,7 @@
               "1-6.4.11.13.8.10(抑え9.14.2.7.12)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.367Z"
         },
         {
           "raceInfo": {
@@ -2637,7 +2637,30 @@
               "jockey": "松山",
               "trainer": "高橋一",
               "age": "英",
-              "weight": 57
+              "weight": 57,
+              "sire": "マッキンジー",
+              "predictedOdds": 4.8,
+              "computerIndex": "63",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1阪3.8",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑥未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.0",
+                  "time": "1.25.8",
+                  "paceType": "M",
+                  "bodyWeight": 508,
+                  "winner": "アニマレイ"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 15,
@@ -3029,7 +3052,7 @@
               "3-4.12.1.15.7.11(抑え10.8.9.6.14.16.13)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.367Z"
         },
         {
           "raceInfo": {
@@ -3360,7 +3383,47 @@
               "jockey": "吉村",
               "trainer": "茶木",
               "age": "牝４",
-              "weight": 56
+              "weight": 56,
+              "sire": "ガンランナー",
+              "predictedOdds": 47.2,
+              "computerIndex": "50",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1新5.2",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "39.7",
+                  "time": "1.55.6",
+                  "paceType": "H",
+                  "bodyWeight": 440,
+                  "winner": "レッドイステ"
+                },
+                {
+                  "date": null,
+                  "venue": "1阪2.22",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "41.2",
+                  "time": "1.56.7",
+                  "paceType": "H",
+                  "bodyWeight": 438,
+                  "winner": "タガノアニマ"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 13,
@@ -3670,7 +3733,47 @@
               "jockey": "藤懸",
               "trainer": "平田",
               "age": "牡７",
-              "weight": 58
+              "weight": 58,
+              "sire": "フェノーメノ",
+              "predictedOdds": 74.3,
+              "computerIndex": "40",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1新5.9",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "40.6",
+                  "time": "1.56.6",
+                  "paceType": "H",
+                  "bodyWeight": 500,
+                  "winner": "ハイクオリテⒷ"
+                },
+                {
+                  "date": null,
+                  "venue": "1福4.19",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 15,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.1",
+                  "time": "1.47.1",
+                  "paceType": "M",
+                  "bodyWeight": 496,
+                  "winner": "ジェシーテソ"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 12,
@@ -3729,7 +3832,7 @@
               "5-1.3.12.8.7.16(抑え10.6.13.11.15.9)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.367Z"
         },
         {
           "raceInfo": {
@@ -4419,7 +4522,7 @@
               "9-10.11.6.15.3.5(抑え4.8.13.12.2)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.367Z"
         },
         {
           "raceInfo": {
@@ -4800,7 +4903,47 @@
               "jockey": "高杉",
               "trainer": "吉岡",
               "age": "牡３",
-              "weight": 57
+              "weight": 57,
+              "sire": "カラヴァッジオ",
+              "predictedOdds": 32.7,
+              "computerIndex": "48",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1名3.15",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 2,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "②昇竜",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.2",
+                  "time": "1.25.4",
+                  "paceType": "M",
+                  "bodyWeight": 478,
+                  "winner": "スマートジュ"
+                },
+                {
+                  "date": null,
+                  "venue": "2京2.15",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 15,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.3",
+                  "time": "1.25.3",
+                  "paceType": "H",
+                  "bodyWeight": 484,
+                  "winner": "アパレイユ"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 1,
@@ -4909,7 +5052,7 @@
               "7-6.4.5.8.11.9(抑え2.3.10.1)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.367Z"
         },
         {
           "raceInfo": {
@@ -5686,7 +5829,81 @@
               "jockey": "鮫島駿",
               "trainer": "藤野",
               "age": "牝７",
-              "weight": 56
+              "weight": 56,
+              "sire": "ブラックタイド",
+              "predictedOdds": 58.9,
+              "computerIndex": "46",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "2阪4.12",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑥京橋",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "34.7",
+                  "time": "内2.00.1",
+                  "paceType": "S",
+                  "bodyWeight": 440,
+                  "winner": "マイネルエニⒷ"
+                },
+                {
+                  "date": null,
+                  "venue": "2京2.14",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 5,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑤飛鳥",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.0",
+                  "time": "内2.00.4",
+                  "paceType": "M",
+                  "bodyWeight": 442,
+                  "winner": "ミラージュナⒷ"
+                },
+                {
+                  "date": null,
+                  "venue": "1小1.24",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 13,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "小倉",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "34.7",
+                  "time": "1.58.4",
+                  "paceType": "M",
+                  "bodyWeight": 442,
+                  "winner": "ジョスランⒷ"
+                },
+                {
+                  "date": null,
+                  "venue": "5阪12.28",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 8,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "サンク",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.0",
+                  "time": "内2.00.5",
+                  "paceType": "S",
+                  "bodyWeight": 442,
+                  "winner": "ローランドバⒷ"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 9,
@@ -6199,7 +6416,7 @@
               "6-15.2.11.8.4.14(抑え3.10.16.12)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.367Z"
         },
         {
           "raceInfo": {
@@ -6388,7 +6605,81 @@
               "jockey": "川田",
               "trainer": "今野",
               "age": "牡６",
-              "weight": 57
+              "weight": 57,
+              "sire": "キズナ",
+              "predictedOdds": 7.3,
+              "computerIndex": "58",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "2東5.3",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 15,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "ブリリ",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.4",
+                  "time": "2.10.3",
+                  "paceType": "M",
+                  "bodyWeight": 552,
+                  "winner": "アムー・レッドⒷ"
+                },
+                {
+                  "date": null,
+                  "venue": "1阪3.22",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 9,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "レグ",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.0",
+                  "time": "1.51.9",
+                  "paceType": "M",
+                  "bodyWeight": 556,
+                  "winner": "テーオーグラⒷ"
+                },
+                {
+                  "date": null,
+                  "venue": "2京2.7",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 15,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "アルデ",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.4",
+                  "time": "1.59.4",
+                  "paceType": "H",
+                  "bodyWeight": 568,
+                  "winner": "ゼットリアンⒷ"
+                },
+                {
+                  "date": null,
+                  "venue": "5阪12.21",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 13,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "ベテル",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.5",
+                  "time": "1.49.4",
+                  "paceType": "M",
+                  "bodyWeight": 558,
+                  "winner": "ルシュヴァルⒷ"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 16,
@@ -6650,7 +6941,81 @@
               "jockey": "角田和",
               "trainer": "庄野",
               "age": "牡８",
-              "weight": 57
+              "weight": 57,
+              "sire": "タートルボウル",
+              "predictedOdds": 23.7,
+              "computerIndex": "53",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "3京5.10",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑥平城京",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.3",
+                  "time": "1.50.7",
+                  "paceType": "M",
+                  "bodyWeight": 534,
+                  "winner": "テスティモー"
+                },
+                {
+                  "date": null,
+                  "venue": "4名8.30",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 14,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "名古",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.1",
+                  "time": "1.52.6",
+                  "paceType": "M",
+                  "bodyWeight": 528,
+                  "winner": null
+                },
+                {
+                  "date": null,
+                  "venue": "3阪6.14",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 4,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "三宮",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.5",
+                  "time": "1.50.0",
+                  "paceType": "H",
+                  "bodyWeight": 534,
+                  "winner": "ダブルハート"
+                },
+                {
+                  "date": null,
+                  "venue": "3中3.30",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 11,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "マーチ",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.1",
+                  "time": "1.52.7",
+                  "paceType": "H",
+                  "bodyWeight": 532,
+                  "winner": "ブライアンセ"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 7,
@@ -7397,7 +7762,7 @@
               "14-15.11.3.16.5"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.367Z"
         },
         {
           "raceInfo": {
@@ -8502,7 +8867,7 @@
               "6-4.2.14.12.8.7(抑え10.5.13.11.3)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.367Z"
         }
       ]
     },
@@ -8661,7 +9026,10 @@
               "jockey": "大江原",
               "trainer": "西田",
               "age": "",
-              "weight": 60
+              "weight": 60,
+              "sire": "ブルーポイント",
+              "predictedOdds": 83.4,
+              "computerIndex": "41"
             },
             {
               "horseNumber": 6,
@@ -8681,7 +9049,10 @@
               "jockey": "難波",
               "trainer": "谷",
               "age": "",
-              "weight": 60
+              "weight": 60,
+              "sire": "パレスマリス",
+              "predictedOdds": 9.5,
+              "computerIndex": "59"
             }
           ],
           "bettingLines": {
@@ -8690,7 +9061,7 @@
               "9-8.2.5.1.4.14(抑え11.12.7.3.10)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.367Z"
         },
         {
           "raceInfo": {
@@ -8893,7 +9264,7 @@
               "15-2.8.5.13.3.14(抑え10.11.4.1.12)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.367Z"
         },
         {
           "raceInfo": {
@@ -9105,7 +9476,7 @@
               "8-11.6.2.10.1.9(抑え12.13.4.14.7.15)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.367Z"
         },
         {
           "raceInfo": {
@@ -9273,7 +9644,10 @@
               "jockey": "伴",
               "trainer": "矢野",
               "age": "",
-              "weight": 60
+              "weight": 60,
+              "sire": "マインドユアビスケッツ",
+              "predictedOdds": 10.8,
+              "computerIndex": "58"
             }
           ],
           "bettingLines": {
@@ -9282,7 +9656,7 @@
               "5-4.3.6.11.12.9(抑え8.2.1.13.10.7)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -9495,7 +9869,7 @@
               "3-7.1.11.13.12.15(抑え16.10.8.6)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.531Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -9701,7 +10075,7 @@
               "11-6.3.5.13.2.8(抑え15.4.12)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -9926,7 +10300,7 @@
               "9-3.11.5.14.15.6(抑え8.16.13.1)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -10009,7 +10383,10 @@
               "jockey": "杉原",
               "trainer": "平岩",
               "age": "",
-              "weight": 56
+              "weight": 56,
+              "sire": "ノットディスタイム",
+              "predictedOdds": 22.3,
+              "computerIndex": "53"
             },
             {
               "horseNumber": 8,
@@ -10126,7 +10503,7 @@
               "1-15.11.10.7.2.6(抑え8.13.5.3.14.12)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -10582,7 +10959,7 @@
               "13-16.8.10.14.15.2(抑え1.11.3.12.5)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -11210,7 +11587,7 @@
               "9-5.2.10.15.11.7(抑え14.12.1.8.13)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -11560,7 +11937,64 @@
               "jockey": "吉田隼",
               "trainer": "飯田",
               "age": "牡６",
-              "weight": 58
+              "weight": 58,
+              "sire": "エイシンヒカリ",
+              "predictedOdds": 20.3,
+              "computerIndex": "53",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1小3.1",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 4,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "西日本",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "34.3",
+                  "time": "1.08.9",
+                  "paceType": "H",
+                  "bodyWeight": 474,
+                  "winner": "モーデン"
+                },
+                {
+                  "date": null,
+                  "venue": "1小1.31",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 9,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "33.5",
+                  "time": "1.07.5",
+                  "paceType": "H",
+                  "bodyWeight": 476,
+                  "winner": "アルマロクザ"
+                },
+                {
+                  "date": null,
+                  "venue": "1京1.10",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 18,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.1",
+                  "time": "外1.22.3",
+                  "paceType": "M",
+                  "bodyWeight": 484,
+                  "winner": "サーナーティ"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 11,
@@ -11822,7 +12256,81 @@
               "jockey": "川須",
               "trainer": "畑端",
               "age": "牡６",
-              "weight": 58
+              "weight": 58,
+              "sire": "スノードラゴン",
+              "predictedOdds": 30.4,
+              "computerIndex": "49",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1小3.1",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 4,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "西日本",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "34.9",
+                  "time": "1.08.9",
+                  "paceType": "H",
+                  "bodyWeight": 458,
+                  "winner": "モーデンⒷ"
+                },
+                {
+                  "date": null,
+                  "venue": "1小2.15",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "大濠",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "34.5",
+                  "time": "1.08.9",
+                  "paceType": "H",
+                  "bodyWeight": 462,
+                  "winner": "メイショウセⒷ"
+                },
+                {
+                  "date": null,
+                  "venue": "4京11.29",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 10,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "２　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.4",
+                  "time": "1.13.1",
+                  "paceType": "M",
+                  "bodyWeight": 474,
+                  "winner": "トリリオンボⒷ"
+                },
+                {
+                  "date": null,
+                  "venue": "3福11.8",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "飯坂",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "34.8",
+                  "time": "1.08.9",
+                  "paceType": "H",
+                  "bodyWeight": 460,
+                  "winner": "イツモニコニⒷ"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 14,
@@ -12152,7 +12660,7 @@
               "4-15.2.8.13.9"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -12206,7 +12714,47 @@
               "jockey": "",
               "trainer": "久保田",
               "age": "牡４",
-              "weight": ""
+              "weight": "",
+              "sire": "ルヴァンスレーヴ",
+              "predictedOdds": 5.9,
+              "computerIndex": "66",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1新5.3",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 5,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.7",
+                  "time": "1.12.1",
+                  "paceType": "M",
+                  "bodyWeight": 488,
+                  "winner": "タケルハーロ"
+                },
+                {
+                  "date": null,
+                  "venue": "1福4.11",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 2,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.4",
+                  "time": "1.09.9",
+                  "paceType": "M",
+                  "bodyWeight": 490,
+                  "winner": "ヒラボクカレ"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 2,
@@ -12349,7 +12897,30 @@
               "jockey": "石田",
               "trainer": "新開",
               "age": "牡４",
-              "weight": 55
+              "weight": 55,
+              "sire": "サトノアラジン",
+              "predictedOdds": 14.1,
+              "computerIndex": "53",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1新5.10",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.8",
+                  "time": "1.12.1",
+                  "paceType": "H",
+                  "bodyWeight": 518,
+                  "winner": "フォンメイリ"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 1,
@@ -12459,7 +13030,47 @@
               "jockey": "菊沢",
               "trainer": "松山",
               "age": "牡６",
-              "weight": 58
+              "weight": 58,
+              "sire": "バトルプラン",
+              "predictedOdds": 28.5,
+              "computerIndex": "50",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1阪2.28",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 2,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.2",
+                  "time": "1.26.0",
+                  "paceType": "M",
+                  "bodyWeight": 496,
+                  "winner": "３休０００１"
+                },
+                {
+                  "date": null,
+                  "venue": "1中1.5",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 13,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.9",
+                  "time": "1.12.2",
+                  "paceType": "M",
+                  "bodyWeight": 494,
+                  "winner": "ビーコング"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 14,
@@ -12479,7 +13090,30 @@
               "jockey": "",
               "trainer": "柴田",
               "age": "牝４",
-              "weight": ""
+              "weight": "",
+              "sire": "アメリカンファラオ",
+              "predictedOdds": 23.2,
+              "computerIndex": "48",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1小2.8",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 5,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.1",
+                  "time": "1.00.7",
+                  "paceType": "M",
+                  "bodyWeight": 520,
+                  "winner": "３休０００１"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 13,
@@ -12499,7 +13133,30 @@
               "jockey": "上里",
               "trainer": "石栗",
               "age": "騸４",
-              "weight": 55
+              "weight": 55,
+              "sire": "エスケンデレヤ",
+              "predictedOdds": 63.9,
+              "computerIndex": "41",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "5中12.20",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.0",
+                  "time": "1.12.1",
+                  "paceType": "H",
+                  "bodyWeight": 466,
+                  "winner": null
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 9,
@@ -12509,7 +13166,30 @@
               "jockey": "水沼",
               "trainer": "的場",
               "age": "牡７",
-              "weight": 55
+              "weight": 55,
+              "sire": "アイファーソング",
+              "predictedOdds": 64.1,
+              "computerIndex": "40",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "3中3.30",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 15,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "42.5",
+                  "time": "1.59.0",
+                  "paceType": "H",
+                  "bodyWeight": 464,
+                  "winner": null
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 6,
@@ -12519,7 +13199,47 @@
               "jockey": "丹内",
               "trainer": "堀",
               "age": "牡５",
-              "weight": 58
+              "weight": 58,
+              "sire": "ジャスティファイ",
+              "predictedOdds": 7.9,
+              "computerIndex": "61",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1東2.9",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 9,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.6",
+                  "time": "1.40.6",
+                  "paceType": "M",
+                  "bodyWeight": 524,
+                  "winner": "休１００１"
+                },
+                {
+                  "date": null,
+                  "venue": "1中1.25",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 15,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.8",
+                  "time": "1.11.8",
+                  "paceType": "H",
+                  "bodyWeight": 518,
+                  "winner": "マイレーヌ"
+                }
+              ],
+              "recentFormSource": "racebook"
             }
           ],
           "bettingLines": {
@@ -12528,7 +13248,7 @@
               "4-11.2.6.10.8.7(抑え1.12.15.14.5.13)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         }
       ]
     },
@@ -13013,7 +13733,7 @@
               "14-15.6.13.10.8.2(抑え7.1.12.5.3)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -13521,7 +14241,7 @@
               "1-14.16.8.7.6.5(抑え10.2.9.3.12.15.11)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -13740,7 +14460,30 @@
               "jockey": "大野",
               "trainer": "安田翔",
               "age": "",
-              "weight": 57
+              "weight": 57,
+              "sire": "ジャスティファイ",
+              "predictedOdds": 31.1,
+              "computerIndex": "51",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1阪3.22",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 10,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑩未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "39.3",
+                  "time": "1.57.2",
+                  "paceType": "M",
+                  "bodyWeight": 482,
+                  "winner": "アーサーバロ"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 1,
@@ -13947,7 +14690,7 @@
               "6-8.4.5.7.3.10(抑え12.1.11.9.2)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -14541,7 +15284,7 @@
               "2-18.4.6.14.16.13(抑え12.3.1.11.17.10)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -15102,7 +15845,7 @@
               "14-7.13.9.15.2.17(抑え6.8.11.12.1)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -15420,7 +16163,30 @@
               "jockey": "長浜",
               "trainer": "栗田",
               "age": "",
-              "weight": 56
+              "weight": 56,
+              "sire": "インプロバブル",
+              "predictedOdds": 62.4,
+              "computerIndex": "48",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "2京2.15",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 3,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "40.7",
+                  "time": "2.06.6",
+                  "paceType": "S",
+                  "bodyWeight": 472,
+                  "winner": null
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 2,
@@ -15561,7 +16327,7 @@
               "6-1.7.9.10.11.4(抑え5.12.3.8.2.13)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -16237,7 +17003,47 @@
               "jockey": "江田照",
               "trainer": "伊藤伸",
               "age": "牡４",
-              "weight": 58
+              "weight": 58,
+              "sire": "ロジャーバローズ",
+              "predictedOdds": 81.1,
+              "computerIndex": "40",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1新5.16",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "34.5",
+                  "time": "内1.23.0",
+                  "paceType": "S",
+                  "bodyWeight": 450,
+                  "winner": "サンタアニタ"
+                },
+                {
+                  "date": null,
+                  "venue": "1東2.10",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 16,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.5",
+                  "time": "1.21.0",
+                  "paceType": "M",
+                  "bodyWeight": 464,
+                  "winner": null
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 10,
@@ -16279,7 +17085,7 @@
               "11-17.15.10.2.16.9(抑え12.13.14.4.18.1)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -16553,7 +17359,10 @@
               "jockey": "吉田豊",
               "trainer": "戸田",
               "age": "牡４",
-              "weight": 58
+              "weight": 58,
+              "sire": "マクフィ",
+              "predictedOdds": 33.3,
+              "computerIndex": "50"
             },
             {
               "horseNumber": 5,
@@ -16865,7 +17674,7 @@
               "13-10.16.4.9.14.3(抑え7.11.5.1.8)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -17414,7 +18223,7 @@
               "12-10.9.3.2.5.1(抑え4.8.11.6.7)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -18710,7 +19519,7 @@
               "5-8.1.9.14.11.3(抑え12.6.4.16.7)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -19446,7 +20255,64 @@
               "jockey": "吉田豊",
               "trainer": "伊坂",
               "age": "牝７",
-              "weight": 55
+              "weight": 55,
+              "sire": "ジャスタウェイ",
+              "predictedOdds": 64.7,
+              "computerIndex": "46",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1中1.18",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 3,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "ジャニ",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.2",
+                  "time": "1.11.1",
+                  "paceType": "H",
+                  "bodyWeight": 466,
+                  "winner": "モンドプリュ"
+                },
+                {
+                  "date": null,
+                  "venue": "5中12.28",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 16,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "フェア",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.8",
+                  "time": "1.10.9",
+                  "paceType": "H",
+                  "bodyWeight": 464,
+                  "winner": "コブラ"
+                },
+                {
+                  "date": null,
+                  "venue": "5東11.16",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 4,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "④銀嶺",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.6",
+                  "time": "1.24.2",
+                  "paceType": "M",
+                  "bodyWeight": 464,
+                  "winner": "ダノンフィー"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 6,
@@ -19456,7 +20322,64 @@
               "jockey": "木幡巧",
               "trainer": "大竹",
               "age": "牝５",
-              "weight": 55
+              "weight": 55,
+              "sire": "ロードカナロア",
+              "predictedOdds": 87.1,
+              "computerIndex": "43",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1中1.17",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "カーバ",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "34.1",
+                  "time": "外1.08.1",
+                  "paceType": "M",
+                  "bodyWeight": 462,
+                  "winner": "ウイングレイ"
+                },
+                {
+                  "date": null,
+                  "venue": "5中12.7",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 12,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "南総",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "33.9",
+                  "time": "外1.07.2",
+                  "paceType": "H",
+                  "bodyWeight": 460,
+                  "winner": "ソーダーンラ"
+                },
+                {
+                  "date": null,
+                  "venue": "4東10.4",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "①白秋",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "34.9",
+                  "time": "1.20.8",
+                  "paceType": "M",
+                  "bodyWeight": 450,
+                  "winner": "レッドシュヴ"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 12,
@@ -19652,7 +20575,7 @@
               "3-14.1.9.5.16"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         },
         {
           "raceInfo": {
@@ -19925,7 +20848,30 @@
               "jockey": "荻野極",
               "trainer": "中内田",
               "age": "牝４",
-              "weight": 56
+              "weight": 56,
+              "sire": "キズナ",
+              "predictedOdds": 18.5,
+              "computerIndex": "55",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1京1.18",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 7,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑦小倉山",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.2",
+                  "time": "1.25.5",
+                  "paceType": "H",
+                  "bodyWeight": 448,
+                  "winner": "４休０００１"
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 11,
@@ -20823,7 +21769,7 @@
               "4-3.9.15.14.11.5(抑え2.10.8.6.12)"
             ]
           },
-          "generatedAt": "2026-05-22T16:53:53.532Z"
+          "generatedAt": "2026-05-23T00:08:14.368Z"
         }
       ]
     }
