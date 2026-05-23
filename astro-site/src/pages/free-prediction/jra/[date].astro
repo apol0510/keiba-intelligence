@@ -347,10 +347,14 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
                                       <span class="rf-pos">{RECENT_LABELS[ri]}</span>
                                       {meta.dateStr && <span class="rf-date">{meta.dateStr}</span>}
                                       {meta.venue && <span class="rf-venue">{meta.venue}</span>}
+                                      {r.finishStatus ? (
+                                        <span class="rf-status">[{r.finishStatus}]</span>
+                                      ) : <>
                                       {r.rank != null && <span class={`rf-rank ${Number(r.rank) <= 3 ? 'good' : ''}`}>{r.rank}着</span>}
                                       {r.time && /\d\.\d\d\.\d/.test(String(r.time)) && <span class="rf-time">{r.time}</span>}
                                       {r.last3f && <span class="rf-3f">上り{r.last3f}</span>}
                                       {r.paceType && <span class="rf-pace">{r.paceType}</span>}
+                                      </>}
                                     </div>
                                     );
                                   })}
@@ -895,6 +899,7 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
     .rf-time { color: #ffffff; font-weight: 700; }
     .rf-3f { color: #38bdf8; }
     .rf-pace { color: #94a3b8; }
+    .rf-status { color: #fb923c; font-weight: 700; }
 
     /* AI支持率スコア */
     .dhc-support { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }

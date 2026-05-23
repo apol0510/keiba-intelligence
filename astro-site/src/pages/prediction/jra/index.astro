@@ -586,10 +586,14 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                           <span class="rf-pos">{RECENT_LABELS[ri]}</span>
                                           {meta.dateStr && <span class="rf-date">{meta.dateStr}</span>}
                                           {meta.venue && <span class="rf-venue">{meta.venue}</span>}
+                                          {r.finishStatus ? (
+                                            <span class="rf-status">[{r.finishStatus}]</span>
+                                          ) : <>
                                           {r.rank != null && <span class={`rf-rank ${Number(r.rank) <= 3 ? 'good' : ''}`}>{r.rank}着</span>}
                                           {r.time && /\d\.\d\d\.\d/.test(String(r.time)) && <span class="rf-time">{r.time}</span>}
                                           {r.last3f && <span class="rf-3f">上り{r.last3f}</span>}
                                           {r.paceType && <span class="rf-pace">{r.paceType}</span>}
+                                          </>}
                                         </div>
                                         );
                                       })}
@@ -1737,6 +1741,7 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
     .rf-time { color: #ffffff; font-weight: 700; }
     .rf-3f { color: #38bdf8; }
     .rf-pace { color: #94a3b8; }
+    .rf-status { color: #fb923c; font-weight: 700; }  /* 除外/取消/中止/失格 */
 
     /* 総合pt ガラスモーフィズムバッジ (旧 .ai-badge から改名、CSS衝突回避＋ラベル明確化) */
     .ai-pt-badge {
