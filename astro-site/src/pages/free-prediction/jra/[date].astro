@@ -354,6 +354,9 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
                                       {r.time && /\d\.\d\d\.\d/.test(String(r.time)) && <span class="rf-time">{r.time}</span>}
                                       {r.last3f && <span class="rf-3f">上り{r.last3f}</span>}
                                       {r.paceType && <span class="rf-pace">{r.paceType}</span>}
+                                      {r.jockey && <span class="rf-jockey">{r.jockey}{r.weight ? `(${r.weight})` : ''}</span>}
+                                      {r.bodyWeight && <span class="rf-bw">[{r.bodyWeight}]</span>}
+                                      {r.courseNote && <span class="rf-course">{r.courseNote}</span>}
                                       </>}
                                     </div>
                                     );
@@ -900,6 +903,9 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
     .rf-3f { color: #38bdf8; }
     .rf-pace { color: #94a3b8; }
     .rf-status { color: #fb923c; font-weight: 700; }
+    .rf-jockey { color: #cbd5e1; }
+    .rf-bw { color: #94a3b8; }
+    .rf-course { color: #94a3b8; }
 
     /* AI支持率スコア */
     .dhc-support { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }

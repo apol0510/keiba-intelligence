@@ -312,7 +312,8 @@ function buildHorseDataMapFromRacebook(rbData, targetMap = new Map()) {
           raceName: pr.raceClass || null, popularity: null,
           passingOrder: null, last3f: pr.final3F || null,
           time: pr.time || null, paceType: pr.paceType || null,
-          bodyWeight: pr.bodyWeight || null, winner: pr.winner || null
+          bodyWeight: pr.bodyWeight || null, winner: pr.winner || null,
+          jockey: pr.jockey || null, weight: pr.weight || null, courseNote: pr.courseNote || null
         }));
       }
       targetMap.set(name, data);
@@ -578,7 +579,8 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
               raceName: pr.raceClass || null, popularity: null,
               passingOrder: null, last3f: pr.final3F || null,
               time: pr.time || null, paceType: pr.paceType || null,
-              bodyWeight: pr.bodyWeight || null, winner: pr.winner || null
+              bodyWeight: pr.bodyWeight || null, winner: pr.winner || null,
+              jockey: pr.jockey || null, weight: pr.weight || null, courseNote: pr.courseNote || null
             }));
             horseObj.recentFormSource = 'racebook';
           } else if (horseDataMap && horseDataMap.has(lookupName)) {
