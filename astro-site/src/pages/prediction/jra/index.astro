@@ -542,10 +542,11 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                   <span class="dhc-mark-mobile">{roleMark}</span>
                                   <span class="dhc-number">{horse.horseNumber}</span>
                                   <span class="dhc-name">{horse.horseName}</span>
-                                  {/* AI指数(=人気指数+10)を馬名横にガラスモーフィズムバッジで表示（2026-05-23）。
-                                      PT表示は廃止（PT=rawScore+70 と同じcomputerIndex由来で二重のため）。内部基盤としては保持。 */}
+                                  {/* 総合pt(=人気指数+10)を馬名直後にガラスモーフィズムバッジで表示。
+                                      旧 .ai-badge クラス(別UI用 L767)とCSS衝突するため .ai-pt-badge に改名。
+                                      ラベルは「AI」だと意味不明だったため「総合pt」に。2026-05-23 */}
                                   {horse.computerIndex != null && horse.computerIndex !== '' && (
-                                    <span class="ai-badge"><span class="ai-badge-label">AI</span>{Math.min(100, Number(horse.computerIndex) + 10)}</span>
+                                    <span class="ai-pt-badge"><span class="ai-pt-badge-label">総合pt</span>{Math.min(100, Number(horse.computerIndex) + 10)}</span>
                                   )}
                                   <span class="dhc-role-badge">{horse.role}</span>
                                 </div>
@@ -1594,10 +1595,12 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
       font-size: 1.125rem;
       font-weight: 700;
       color: var(--text-primary);
-      flex: 1;
+      /* flex:1 を廃止: 名前が空間を伸ばして総合ptバッジを右端に押し出していたため。
+         代わりに役割バッジを右端へ寄せるため、後述の .dhc-role-badge に margin-left:auto を付与。2026-05-23 */
     }
 
     .dhc-role-badge {
+      margin-left: auto; /* 役割バッジは行右端へ。総合ptは馬名直後に密着配置。2026-05-23 */
       padding: 4px 12px;
       background: rgba(139, 92, 246, 0.2);
       border: 1px solid rgba(139, 92, 246, 0.5);
@@ -1688,14 +1691,14 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
     .rf-3f { color: #38bdf8; }
     .rf-pace { color: #94a3b8; }
 
-    /* AI指数 ガラスモーフィズムバッジ */
-    .ai-badge {
+    /* 総合pt ガラスモーフィズムバッジ (旧 .ai-badge から改名、CSS衝突回避＋ラベル明確化) */
+    .ai-pt-badge {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding: 3px 11px;
-      border-radius: 999px;
-      font-size: 0.9rem;
+      gap: 5px;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.95rem;
       font-weight: 800;
       line-height: 1;
       color: #ecfeff;
@@ -1704,9 +1707,10 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
       backdrop-filter: blur(10px) saturate(140%);
       -webkit-backdrop-filter: blur(10px) saturate(140%);
       box-shadow: 0 4px 14px rgba(56, 189, 248, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35);
-      text-shadow: 0 0 10px rgba(125, 211, 252, 0.6);
+      text-shadow: 0 0 8px rgba(125, 211, 252, 0.5);
+      font-family: 'Courier New', monospace;
     }
-    .ai-badge-label { font-size: 0.6rem; font-weight: 700; opacity: 0.85; letter-spacing: 0.5px; }
+    .ai-pt-badge-label { font-size: 0.62rem; font-weight: 700; opacity: 0.85; letter-spacing: 0.3px; font-family: system-ui, sans-serif; }
 
     /* AI支持率スコア */
     .dhc-support {

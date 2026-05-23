@@ -4,6 +4,17 @@
 
 export const RECENT_LABELS = ['前走', '2走前', '3走前', '4走前', '5走前'];
 
+// JRA会場1字→正式名(2-3文字)の展開（紙面の "京" → "京都" 等で読みやすく）。
+// 中=中山(最頻のため既定)、名=名古屋(地方の場合が多い)。曖昧な場合は本表のまま。
+const JRA_VENUE_MAP = {
+  '東': '東京', '中': '中山', '京': '京都', '阪': '阪神',
+  '小': '小倉', '新': '新潟', '福': '福島', '札': '札幌', '函': '函館',
+  '名': '名古屋'
+};
+function expandVenue(v) {
+  return JRA_VENUE_MAP[v] || v;
+}
+
 /**
  * 近走の venue 文字列（例 "3京5.17" / "盛岡9.2" / "5名12.7"）から
  * 表示用の { dateStr: 'YY/MM/DD', venue: '京' } を返す。
@@ -26,6 +37,7 @@ export function recentRaceMeta(venueStr, raceDateStr) {
       dateStr = `${String(yr).slice(2)}/${String(mo).padStart(2, '0')}/${String(da).padStart(2, '0')}`;
     }
   }
-  const venue = s.replace(/\d{1,2}\.\d{1,2}\s*$/, '').replace(/^\d+/, '').trim();
+  const rawVenue = s.replace(/\d{1,2}\.\d{1,2}\s*$/, '').replace(/^\d+/, '').trim();
+  const venue = expandVenue(rawVenue);
   return { dateStr, venue };
 }
