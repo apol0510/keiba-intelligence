@@ -354,9 +354,6 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
                                       {r.time && /\d\.\d\d\.\d/.test(String(r.time)) && <span class="rf-time">{r.time}</span>}
                                       {r.last3f && <span class="rf-3f">上り{r.last3f}</span>}
                                       {r.paceType && <span class="rf-pace">{r.paceType}</span>}
-                                      {r.jockey && <span class="rf-jockey">{r.jockey}{r.weight ? `(${r.weight})` : ''}</span>}
-                                      {r.bodyWeight && <span class="rf-bw">[{r.bodyWeight}]</span>}
-                                      {r.courseNote && <span class="rf-course">{r.courseNote}</span>}
                                       </>}
                                     </div>
                                     );
