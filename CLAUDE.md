@@ -155,10 +155,25 @@ npm run validate:archive
 
 新ロジックは **新規取込分から適用**。過去の archiveResults エントリは旧フォーマットのまま残る（再生成は別タスク）。
 
-### analytics-keiba との整合
+### analytics-keiba との関係（独立運用、2026-05-23〜）
 
-姉妹repo `analytics-keiba` にも同じ `src/utils/mainRaceBetting.js` を配置済み。
-**両 repo で同じ判定式・同じ買い目生成ロジック**を使うため、メインレース判定や10点ロジックを変更する場合は **両 repo を同時に更新する**。
+`keiba-intelligence` と `analytics-keiba` は **別サービスとして独立運用** する。
+両方とも今後も稼働を続け、それぞれ独自の顧客に対して予想を提供する。
+
+#### 運用方針
+
+- `keiba-intelligence` は `analytics-keiba` とは **別サービスとして独立運用** する
+- admin (`keiba-data-shared-admin`) からの dispatch / データ供給は **当面維持** する（両 repo にデータが届く状態を続ける）
+- `analytics-keiba` 側のロジック修正を `keiba-intelligence` へ **自動的に横展開しない**
+- `keiba-intelligence` 側は **必要な場合のみ個別に修正** する
+- 顧客表示に影響する汚染・誤表示が残る場合は、`keiba-intelligence` 側の運用方針に沿って **別途最小修正する**
+
+#### 過去の経緯
+
+2026-05-22 以前は両 repo で同じ判定式・同じ買い目生成ロジックを使う前提で、
+メインレース判定や10点ロジックの変更は両 repo 同時に行うルールだった。
+2026-05-23 にこの同期義務を取りやめ、両 repo は独立進化することとした。
+過去の経緯を理由に同期作業を再開してはいけない。
 
 ---
 
