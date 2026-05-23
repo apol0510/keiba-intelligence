@@ -571,7 +571,8 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                   <div class="dhc-recent-form">
                                     <span class="rf-label">近走成績</span>
                                     <div class="rf-rows">
-                                      {horse.recentRaces.slice(0, 5).map((r, ri) => {
+                                      {/* 5走前は新聞圧縮で rank/上り/ペースが欠落するため過去4走に固定（2026-05-23 マコ指示） */}
+                                      {horse.recentRaces.slice(0, 4).map((r, ri) => {
                                         const meta = recentRaceMeta(r.venue, race.raceInfo.date);
                                         return (
                                         <div class="rf-row">

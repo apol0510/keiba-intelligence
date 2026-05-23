@@ -303,7 +303,8 @@ try {
                                         <div class="dhc-recent-form">
                                           <span class="rf-label">近走成績</span>
                                           <div class="rf-rows">
-                                            {horse.recentRaces.slice(0, 5).map((r, ri) => {
+                                            {/* 過去4走表示（5走前は新聞圧縮で取得不能のため諦め）。2026-05-23 */}
+                                            {horse.recentRaces.slice(0, 4).map((r, ri) => {
                                               const meta = recentRaceMeta(r.venue, race.raceInfo.date);
                                               return (
                                               <div class="rf-row">
