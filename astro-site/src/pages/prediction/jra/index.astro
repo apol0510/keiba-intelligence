@@ -338,7 +338,13 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                     </div>
                   )}
 
-                  <!-- AIモデル情報カード -->
+                  {/* AIモデル情報カード（折りたたみ・既定で閉じる、2026-05-23） */}
+                  <details class="ai-model-details">
+                    <summary class="ai-model-summary">
+                      <span class="ai-model-summary-icon">🧠</span>
+                      <span class="ai-model-summary-text">AIモデル仕様 / Ensemble DNN</span>
+                      <span class="ai-model-summary-chevron" aria-hidden="true">▾</span>
+                    </summary>
                   <div class="ai-model-card">
                     <div class="model-header">
                       <div class="model-icon">🧠</div>
@@ -391,6 +397,7 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                       </div>
                     </div>
                   </div>
+                  </details>
 
                   <!-- 買い目セクション（プロ会員限定）-->
                   {umatanBets && (
@@ -1295,6 +1302,45 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
       background: rgba(30, 41, 59, 0.5);
       border-radius: var(--radius-sm);
       border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    /* AIモデル仕様: 折りたたみ（2026-05-23） */
+    .ai-model-details {
+      margin-bottom: var(--spacing-xl);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, rgba(139, 92, 246, 0.06) 100%);
+      overflow: hidden;
+    }
+    .ai-model-summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      color: #93c5fd;
+      user-select: none;
+    }
+    .ai-model-summary::-webkit-details-marker { display: none; }
+    .ai-model-summary-icon { font-size: 1.2rem; }
+    .ai-model-summary-text { flex: 1; font-size: 0.95rem; letter-spacing: 0.3px; }
+    .ai-model-summary-chevron {
+      transition: transform 0.2s;
+      color: #60a5fa;
+      font-size: 0.9rem;
+    }
+    .ai-model-details[open] > .ai-model-summary .ai-model-summary-chevron {
+      transform: rotate(180deg);
+    }
+    .ai-model-details[open] .ai-model-card {
+      border-top: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 0;
+      margin-bottom: 0;
+      border-left: none;
+      border-right: none;
+      border-bottom: none;
     }
 
     .ai-model-card {
