@@ -473,6 +473,76 @@ async function importPrediction(date, venue = 'jra') {
   return { normalizedResult: normalizedAndAdjusted, horseDataMap };
 }
 
+// ===== jra/results 突合で過去走の公式 distance を取得（2026-05-23 段階3B） =====
+// 推測ゼロ。jra/results が現状2026年分のみのため、2025年以前の過去走は null のまま。
+// 時計からの距離推定は誤判定リスクのため不採用(マコ指示)。
+const JRA_VENUE_CODE = {
+  '京': 'KYO', '東': 'TOK', '阪': 'HAN', '中': 'NAK', '小': 'KOK',
+  '新': 'NII', '福': 'FKS', '札': 'SAP', '函': 'HAK', '名': 'CHU'
+};
+const _resultsCache = new Map();
+async function fetchJraResultDay(yr, mo, da, vc) {
+  const yyyy = String(yr);
+  const mm = String(mo).padStart(2, '0');
+  const dd = String(da).padStart(2, '0');
+  const key = `${yyyy}-${mm}-${dd}-${vc}`;
+  if (_resultsCache.has(key)) return _resultsCache.get(key);
+  const url = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/results/${yyyy}/${mm}/${key}.json`;
+  const TOK = process.env.GITHUB_TOKEN;
+  try {
+    const res = await fetch(url, { headers: TOK ? { 'Authorization': `token ${TOK}` } : {} });
+    if (!res.ok) { _resultsCache.set(key, null); return null; }
+    const data = JSON.parse(await res.text());
+    _resultsCache.set(key, data.races || []);
+    return data.races || [];
+  } catch {
+    _resultsCache.set(key, null);
+    return null;
+  }
+}
+async function lookupPastRaceDistance(horseName, venueStr, raceDateStr) {
+  if (!horseName || !venueStr || !raceDateStr) return null;
+  const md = String(venueStr).match(/(\d{1,2})\.(\d{1,2})\s*$/);
+  if (!md) return null;
+  const mo = Number(md[1]); const da = Number(md[2]);
+  const [ry, rm, rd] = String(raceDateStr).split('-').map(Number);
+  let yr = ry;
+  if (mo > rm || (mo === rm && da > rd)) yr -= 1;
+  if (yr !== 2026) return null; // results 2026年分のみ、推測しない
+  const venueChar = String(venueStr).replace(/^\d+/, '').replace(/\d{1,2}\.\d{1,2}\s*$/, '').trim();
+  const vc = JRA_VENUE_CODE[venueChar];
+  if (!vc) return null;
+  const races = await fetchJraResultDay(yr, mo, da, vc);
+  if (!races) return null;
+  const normName = normalizeHorseName(horseName);
+  for (const race of races) {
+    for (const r of (race.results || [])) {
+      if (normalizeHorseName(r.name) === normName) {
+        return race.distance || null;
+      }
+    }
+  }
+  return null;
+}
+async function enrichRecentRacesDistance(convertedData, raceDate) {
+  let attempted = 0, enriched = 0;
+  const venues = convertedData.venues || [convertedData];
+  for (const venue of venues) {
+    const races = venue.predictions || venue.races || [];
+    for (const race of races) {
+      for (const horse of (race.horses || [])) {
+        for (const pr of (horse.recentRaces || [])) {
+          if (pr.distanceMeters) continue;
+          attempted++;
+          const dist = await lookupPastRaceDistance(horse.horseName, pr.venue, raceDate);
+          if (dist) { pr.distanceMeters = dist; enriched++; }
+        }
+      }
+    }
+  }
+  console.log(`📐 [DISTANCE] jra/results 突合: ${enriched}/${attempted}件取得 (推測ゼロ・2026年分のみ)`);
+}
+
 /**
  * keiba-data-shared標準フォーマットを既存の予想ページフォーマットに変換
  *
@@ -629,7 +699,7 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
  * @param {Object} normalizedAndAdjusted - 調整済みNormalizedPrediction
  * @returns {boolean} 保存したかどうか（true: 保存, false: no-op）
  */
-function savePrediction(date, normalizedAndAdjusted, horseDataMap = null) {
+async function savePrediction(date, normalizedAndAdjusted, horseDataMap = null) {
   console.log(`\n💾 保存処理開始...`);
 
   // 保存先パス構築（階層構造：jra/YYYY/MM/YYYY-MM-DD.json）
@@ -667,6 +737,9 @@ function savePrediction(date, normalizedAndAdjusted, horseDataMap = null) {
     // 単一会場の場合（従来フォーマット）
     convertedData = convertToLegacyFormat(normalizedAndAdjusted, date, horseDataMap);
   }
+
+  // 過去走に jra/results から公式 distance を注入（2026年分のみ、推測ゼロ）
+  await enrichRecentRacesDistance(convertedData, date);
 
   // 【再発防止】データ検証を実行（印1ロジック適用後は警告のみ）
   console.log(`🔍 データ検証中...`);
@@ -761,7 +834,7 @@ async function main() {
     const { normalizedResult, horseDataMap } = importResult;
 
     // 保存
-    const saved = savePrediction(date, normalizedResult, horseDataMap);
+    const saved = await savePrediction(date, normalizedResult, horseDataMap);
 
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     if (saved) {

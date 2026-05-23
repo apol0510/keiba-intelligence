@@ -347,6 +347,7 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
                                       <span class="rf-pos">{RECENT_LABELS[ri]}</span>
                                       {meta.dateStr && <span class="rf-date">{meta.dateStr}</span>}
                                       {meta.venue && <span class="rf-venue">{meta.venue}</span>}
+                                      {r.distanceMeters && <span class="rf-dist">{r.distanceMeters}m</span>}
                                       {r.finishStatus ? (
                                         <span class="rf-status">[{r.finishStatus}]</span>
                                       ) : <>
@@ -894,6 +895,7 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
     .rf-pos { color: #fbbf24; font-weight: 800; min-width: 44px; }
     .rf-date { color: #cbd5e1; }
     .rf-venue { color: #cbd5e1; min-width: 26px; }
+    .rf-dist { color: #e2e8f0; font-weight: 700; }
     .rf-rank { font-weight: 800; color: #f1f5f9; }
     .rf-rank.good { color: #34d399; }
     .rf-time { color: #ffffff; font-weight: 700; }
