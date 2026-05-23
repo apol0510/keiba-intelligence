@@ -128,6 +128,77 @@
 - 料金導線・無料/有料制限
 - analytics-keiba（姉妹repo、同期しない）
 
+## Q&A 確認済み（2026-05-23 マコの口頭テストへの正解）
+
+### Q1. `/admin/computer-manager` は使わず `/admin/race-data-importer` のみ使用 — 状況
+
+- **運用方針**: race-data-importer のみが入力。computer-manager は不使用（マコ指示）。
+- **コード現状**（`importPredictionJra.js` L391-403）: フォールバックがまだ残存
+  - 優先順位1: `predictions/`（旧統合ファイル）
+  - 優先順位2: `computer/`（computer-manager の出力）← 本来は廃止対象
+  - 優先順位3: `racebook/`（race-data-importer の出力）← 本来の唯一の入力源
+- **実害が出ていない理由**: マコが運用で computer-manager を動かさない → `computer/` ディレクトリが空 → 自然と `racebook/` にフォールバックする。
+- **隠れたリスク**: `computer/` にファイルが残っていれば今でも優先される。コードから完全に外していないので将来事故の余地。
+- **横の補完**: `fetchRacebookPastRaces` が常時走り、horseDataMap が computerIndex / predictedOdds / recentRaces を racebook から補完。一次ソースが何であれ表示用フィールドは race-data-importer 由来で揃う設計（2026-05-23 セッションで確立）。
+- **🔴 残課題**: `importPredictionJra.js` から優先順位2の `fetchComputerPredictions` を**コードレベルで廃止する**（将来事故防止）。今は据え置き。
+
+### Q2. 総合pt と AI支持率スコア の算出
+
+#### 総合pt（カードの青いガラスバッジ表示）
+- **計算**: `min(100, computerIndex + 10)`
+- **ソース**: `computerIndex` = race-data-importer が新聞「人気指数」を生値で racebook JSON に保存したもの
+- **+10 の意味**: 生値を直接見せないための**著作権マスク**（マコ指定）
+- **ラベル変遷**: 「AI指数」→「AI」→ 現状「**総合pt**」
+- **非表示条件**: computerIndex が無い馬（約15%）は完全非表示（偽値・代替値は出さない）
+- **禁止**: 「= 人気指数+10」のような内訳公開UI（マスクが無効化される）
+
+#### AI支持率スコア（青グラデのバー＋数値）
+- **計算**: `clamp( round( 166 / odds^0.8 ), 1, 95 )`
+- **ソース**: `predictedOdds` = 新聞の単勝予想オッズ（生値）。これを生表示せずスコア化
+- **アンカー**（マコ指定）: オッズ 2.3 → 85、76.4 → 5
+- **非表示条件**: predictedOdds が無い馬は非表示
+- **明示禁止表記**: 「勝率」（較正未検証のため）
+
+#### 内部使用（UIには出ない）
+- `rawScore` = `horse.PT || horse.totalScore || horse.rawScore || (computerIndex ≥ 45 ? computerIndex : 0)`
+- `displayScore` = `rawScore + 70`（旧PT表示の実体、**表示廃止済**）
+- `customScore` = `印1×4 + 印2×3 + 印3×2 + 印4×1`（役割割当の主軸）
+
+### Q3. 不要馬（無）の判定基準＋全頭の振り分け
+
+#### 「無」の判定
+- `rawScore === 0` **かつ** `customScore === 0`
+- 言い換え: 印が一つも付いていない **かつ** totalScore/PT が無い **かつ** 人気指数 < 45（フォールバックも不可）
+
+#### 全頭振り分けの順序（`adjustPrediction.js`）
+
+1. **rawScore 確定**: `totalScore || PT || rawScore || 0`。0 なら人気指数≥45でフォールバック、未満なら 0 のまま（→無）。
+2. **customScore 計算**: `印1×4 + 印2×3 + 印3×2 + 印4×1`。
+3. **activeHorses 抽出**: customScore>0 または rawScore>0。
+4. **ソート**: customScore 降順（全頭 customScore=0 なら rawScore 降順）。
+5. **役割割当（印1◎優先）**:
+   - 印1◎ が 1 位 → そのまま順番に：本命/対抗/単穴/連下最上位/連下…
+   - 印1◎ が 2 位以下 → 1 位を本命、印1◎を対抗に固定、以下も印1◎を除いた順で。
+   - 印1◎ 不在 → 純粋に customScore 順で機械割当。
+6. **連下3頭制限**: 連下のうち customScore 上位 3 頭だけ「連下」、それ以降は「補欠」。
+
+#### 結果バケット（固定）
+
+| 役割 | 頭数 | 判定 |
+|---|---|---|
+| 本命 | 1 | customScore 1位 or 印1◎ |
+| 対抗 | 1 | customScore 2位 or 印1◎（下位の場合） |
+| 単穴 | 1 | 印1◎を除く customScore 3位 |
+| 連下最上位 | 1 | 印1◎を除く customScore 4位 |
+| 連下 | 最大3 | customScore 5位以降の上位3頭 |
+| 補欠 | 残り | active だが連下に入れなかった馬 |
+| 無（不要馬） | 残り | rawScore=0 かつ customScore=0 |
+
+#### 補足
+- 連下最上位は 1 頭固定で、連下3頭制限の対象外（保持される）。
+- 全頭 customScore=0 のとき（印データなしの computer/ 形式など）は rawScore 順で既存役割を維持。
+- COMPI_MIN=45 は人気指数（日刊コンピ）の慣習的な「妙味馬閾値」。
+
 ## 私が提案する前のチェックリスト
 
 1. その表示は **新聞由来の生値・式を露出していないか**？（露出するなら却下）
