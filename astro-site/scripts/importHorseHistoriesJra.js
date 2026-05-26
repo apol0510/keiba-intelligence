@@ -8,7 +8,11 @@
  * 取得方式:
  *   - Contents API + Accept: application/vnd.github.raw を使用
  *     (>1MB のファイルでも raw でボディに返るため Unexpected end of JSON input を防ぐ)
- *   - token は GITHUB_TOKEN_KEIBA_DATA_SHARED を最優先、無ければ GITHUB_TOKEN
+ *   - token 優先順位:
+ *       1. KEIBA_DATA_SHARED_TOKEN (推奨 / Actions secret はこの名前)
+ *       2. GITHUB_TOKEN_KEIBA_DATA_SHARED (ローカル互換用 fallback)
+ *       3. GITHUB_TOKEN (最終 fallback。Actions の自動トークンは
+ *          keiba-data-shared には届かないため通常使えない)
  *   - token が無ければ raw.githubusercontent.com に fallback (public 前提)
  *
  * 使い方:
@@ -60,8 +64,13 @@ function buildLocalPath(date, venue) {
 }
 
 function pickToken() {
-  // 専用 secret を最優先。なければ Actions のデフォルト GITHUB_TOKEN を fallback。
-  // (デフォルト GITHUB_TOKEN は keiba-data-shared には届かないことが多いので最後の手段)
+  // 優先順位:
+  //   1. KEIBA_DATA_SHARED_TOKEN  ← Actions secret はこの名前 (GITHUB_ 始まりは禁止のため)
+  //   2. GITHUB_TOKEN_KEIBA_DATA_SHARED  ← ローカル互換用 fallback
+  //   3. GITHUB_TOKEN  ← Actions の自動トークン。keiba-data-shared には通常届かない
+  if (process.env.KEIBA_DATA_SHARED_TOKEN) {
+    return { token: process.env.KEIBA_DATA_SHARED_TOKEN, source: 'KEIBA_DATA_SHARED_TOKEN' };
+  }
   if (process.env.GITHUB_TOKEN_KEIBA_DATA_SHARED) {
     return { token: process.env.GITHUB_TOKEN_KEIBA_DATA_SHARED, source: 'GITHUB_TOKEN_KEIBA_DATA_SHARED' };
   }
@@ -223,10 +232,11 @@ async function main() {
     console.error('❌ 一部 venue で取得失敗');
     if (tokenSource === 'NONE') {
       console.error('   ヒント: keiba-data-shared が private の場合、token が必須です。');
-      console.error('   workflow secret に GITHUB_TOKEN_KEIBA_DATA_SHARED を設定してください。');
+      console.error('   workflow secret に KEIBA_DATA_SHARED_TOKEN を設定してください。');
+      console.error('   (GITHUB_ で始まる secret 名は GitHub Actions で禁止のため、専用名を使います)');
     } else if (tokenSource === 'GITHUB_TOKEN') {
-      console.error('   ヒント: Actions の自動 GITHUB_TOKEN は keiba-data-shared に届きません。');
-      console.error('   専用 secret GITHUB_TOKEN_KEIBA_DATA_SHARED を渡してください。');
+      console.error('   ヒント: Actions の自動 GITHUB_TOKEN は keiba-data-shared には通常届きません。');
+      console.error('   workflow secret に KEIBA_DATA_SHARED_TOKEN を設定し、env で渡してください。');
     }
     process.exit(4);
   }
