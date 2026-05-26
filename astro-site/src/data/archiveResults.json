@@ -1,5 +1,398 @@
 [
   {
+    "date": "2026-05-26",
+    "venue": "浦和",
+    "venues": [
+      "浦和"
+    ],
+    "totalRaces": 12,
+    "hitRaces": 10,
+    "missRaces": 2,
+    "hitRate": 83.3,
+    "betAmount": 12000,
+    "betPointsPerRace": 10,
+    "totalBetPoints": 120,
+    "totalInvestment": 12000,
+    "totalPayout": 13480,
+    "returnRate": 112.3,
+    "recoveryRate": 112.3,
+    "races": [
+      {
+        "raceNumber": 1,
+        "raceName": "３歳",
+        "venue": "浦和",
+        "result": {
+          "first": {
+            "number": 2,
+            "name": "ポピーレッド"
+          },
+          "second": {
+            "number": 1,
+            "name": "ベアトゥース"
+          },
+          "third": {
+            "number": 5,
+            "name": "シャイニーライフ"
+          }
+        },
+        "bettingLines": [
+          "2-3.1.7.4.9.6(抑え8.5)",
+          "3-2.1.7.4.9.6(抑え8.5)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "2-3.1.7.4.9.6(抑え8.5)"
+        ],
+        "umatan": {
+          "combination": "2-1",
+          "payout": 720
+        }
+      },
+      {
+        "raceNumber": 2,
+        "raceName": "浦和８００ラウンド",
+        "venue": "浦和",
+        "result": {
+          "first": {
+            "number": 2,
+            "name": "パイソン"
+          },
+          "second": {
+            "number": 9,
+            "name": "モンテジュエル"
+          },
+          "third": {
+            "number": 8,
+            "name": "ダイエービルベリー"
+          }
+        },
+        "bettingLines": [
+          "9-8.2.3.12.10.5(抑え7.6.1)",
+          "8-9.2.3.12.10.5(抑え7.6.1)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "9-8.2.3.12.10.5(抑え7.6.1)"
+        ],
+        "umatan": {
+          "combination": "2-9",
+          "payout": 1630
+        }
+      },
+      {
+        "raceNumber": 3,
+        "raceName": "ドリームチャレンジ",
+        "venue": "浦和",
+        "result": {
+          "first": {
+            "number": 6,
+            "name": "オーキッドティアラ"
+          },
+          "second": {
+            "number": 3,
+            "name": "ストラドル"
+          },
+          "third": {
+            "number": 5,
+            "name": "エナジーヒドゥン"
+          }
+        },
+        "bettingLines": [
+          "6-3.1.5.7",
+          "3-6.1.5.7"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "6-3.1.5.7",
+          "3-6.1.5.7"
+        ],
+        "umatan": {
+          "combination": "6-3",
+          "payout": 510
+        }
+      },
+      {
+        "raceNumber": 4,
+        "raceName": "Ｃ２",
+        "venue": "浦和",
+        "result": {
+          "first": {
+            "number": 3,
+            "name": "ジーティーアムール"
+          },
+          "second": {
+            "number": 7,
+            "name": "キタノアマポーラ"
+          },
+          "third": {
+            "number": 4,
+            "name": "バクラヴァ"
+          }
+        },
+        "bettingLines": [
+          "3-4.7.8.10.6.1(抑え5.2)",
+          "4-3.7.8.10.6.1(抑え5.2)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "3-4.7.8.10.6.1(抑え5.2)"
+        ],
+        "umatan": {
+          "combination": "3-7",
+          "payout": 590
+        }
+      },
+      {
+        "raceNumber": 5,
+        "raceName": "Ｃ２",
+        "venue": "浦和",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "リッキオ"
+          },
+          "second": {
+            "number": 1,
+            "name": "ペプチドスパークル"
+          },
+          "third": {
+            "number": 9,
+            "name": "トーセンアデレード"
+          }
+        },
+        "bettingLines": [
+          "1-8.5.9.4.11.3(抑え10.12.2)",
+          "8-1.5.9.4.11.3(抑え10.12.2)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "1-8.5.9.4.11.3(抑え10.12.2)"
+        ],
+        "umatan": {
+          "combination": "4-1",
+          "payout": 3170
+        }
+      },
+      {
+        "raceNumber": 6,
+        "raceName": "うどんとこいのぼりのまち加須賞",
+        "venue": "浦和",
+        "result": {
+          "first": {
+            "number": 5,
+            "name": "サンスレッド"
+          },
+          "second": {
+            "number": 10,
+            "name": "メイショウカンムリ"
+          },
+          "third": {
+            "number": 2,
+            "name": "グァンバーレ"
+          }
+        },
+        "bettingLines": [
+          "5-6.3.10.11.1.9(抑え12.8.7.4)",
+          "6-5.3.10.11.1.9(抑え12.8.7.4)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "5-6.3.10.11.1.9(抑え12.8.7.4)"
+        ],
+        "umatan": {
+          "combination": "5-10",
+          "payout": 1820
+        }
+      },
+      {
+        "raceNumber": 7,
+        "raceName": "桶川べに花まつり賞",
+        "venue": "浦和",
+        "result": {
+          "first": {
+            "number": 10,
+            "name": "ジャストザヴァルス"
+          },
+          "second": {
+            "number": 8,
+            "name": "ミサイルビスケッツ"
+          },
+          "third": {
+            "number": 12,
+            "name": "カペラスター"
+          }
+        },
+        "bettingLines": [
+          "12-2.4.5.8.10.7(抑え9.3.6)",
+          "2-12.4.5.8.10.7(抑え9.3.6)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "10-8",
+          "payout": 4120
+        }
+      },
+      {
+        "raceNumber": 8,
+        "raceName": "ラベンダー特別",
+        "venue": "浦和",
+        "result": {
+          "first": {
+            "number": 6,
+            "name": "パブリックスフィア"
+          },
+          "second": {
+            "number": 8,
+            "name": "リコーミカ"
+          },
+          "third": {
+            "number": 5,
+            "name": "ショコラエクレール"
+          }
+        },
+        "bettingLines": [
+          "6-8.7.4.3.5.2(抑え9)",
+          "8-6.7.4.3.5.2(抑え9)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "6-8.7.4.3.5.2(抑え9)",
+          "8-6.7.4.3.5.2(抑え9)"
+        ],
+        "umatan": {
+          "combination": "6-8",
+          "payout": 490
+        }
+      },
+      {
+        "raceNumber": 9,
+        "raceName": "ツイントップ特別",
+        "venue": "浦和",
+        "result": {
+          "first": {
+            "number": 2,
+            "name": "[J]ホールドミーワンス"
+          },
+          "second": {
+            "number": 1,
+            "name": "レイナバローズ"
+          },
+          "third": {
+            "number": 4,
+            "name": "[J]カシノユメミヅキ"
+          }
+        },
+        "bettingLines": [
+          "1-2.6.10.5.3.9(抑え4.11)",
+          "2-1.6.10.5.3.9(抑え4.11)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "1-2.6.10.5.3.9(抑え4.11)",
+          "2-1.6.10.5.3.9(抑え4.11)"
+        ],
+        "umatan": {
+          "combination": "2-1",
+          "payout": 480
+        }
+      },
+      {
+        "raceNumber": 10,
+        "raceName": "双子座特別",
+        "venue": "浦和",
+        "result": {
+          "first": {
+            "number": 10,
+            "name": "カムバック"
+          },
+          "second": {
+            "number": 11,
+            "name": "クレーネ"
+          },
+          "third": {
+            "number": 4,
+            "name": "ツガノショウグン"
+          }
+        },
+        "bettingLines": [
+          "7-6.2.11.8.3.5(抑え4.9.1.10.13)",
+          "6-7.2.11.8.3.5(抑え4.9.1.10.13)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "10-11",
+          "payout": 8320
+        }
+      },
+      {
+        "raceNumber": 11,
+        "raceName": "五月特別",
+        "venue": "浦和",
+        "result": {
+          "first": {
+            "number": 2,
+            "name": "スタンリーテソーロ"
+          },
+          "second": {
+            "number": 8,
+            "name": "リヴィフェイス"
+          },
+          "third": {
+            "number": 7,
+            "name": "エアポートライナー"
+          }
+        },
+        "bettingLines": [
+          "8-3.2.6.12.1"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "8-3.2.6.12.1"
+        ],
+        "umatan": {
+          "combination": "2-8",
+          "payout": 600
+        },
+        "betPoints": 10,
+        "betType": "馬単"
+      },
+      {
+        "raceNumber": 12,
+        "raceName": "水芭蕉特別",
+        "venue": "浦和",
+        "result": {
+          "first": {
+            "number": 8,
+            "name": "マロンシャンテリー"
+          },
+          "second": {
+            "number": 12,
+            "name": "スピンディエゴール"
+          },
+          "third": {
+            "number": 11,
+            "name": "アルリスカ"
+          }
+        },
+        "bettingLines": [
+          "12-2.4.10.11.8.1(抑え9.7)",
+          "2-12.4.10.11.8.1(抑え9.7)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "12-2.4.10.11.8.1(抑え9.7)"
+        ],
+        "umatan": {
+          "combination": "8-12",
+          "payout": 3470
+        }
+      }
+    ],
+    "verifiedAt": "2026-05-26T18:23:11.922Z"
+  },
+  {
     "date": "2026-05-25",
     "venue": "浦和",
     "venues": [
