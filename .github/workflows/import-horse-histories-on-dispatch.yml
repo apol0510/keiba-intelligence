@@ -54,6 +54,8 @@ jobs:
 
       - name: Import horseHistories from keiba-data-shared
         env:
+          # keiba-data-shared 読み取り専用 PAT (Actions の自動 GITHUB_TOKEN では届かないため必須)
+          GITHUB_TOKEN_KEIBA_DATA_SHARED: ${{ secrets.GITHUB_TOKEN_KEIBA_DATA_SHARED }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MANUAL_DATE: ${{ github.event.inputs.date }}
           MANUAL_VENUES: ${{ github.event.inputs.venues }}
