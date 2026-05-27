@@ -1894,26 +1894,27 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
     }
     .dhc-recent-list {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-      margin-top: 0.35rem;
+      flex-direction: column;
+      gap: 0.45rem;
+      margin-top: 0.5rem;
     }
     .dhc-recent-item {
-      display: inline-flex;
+      display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.3rem;
-      padding: 0.25rem 0.5rem;
+      gap: 0.35rem 0.5rem;
+      width: 100%;
+      padding: 0.45rem 0.6rem;
       background: rgba(255, 255, 255, 0.05);
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 0.78rem;
-      line-height: 1.3;
+      line-height: 1.35;
       color: #e2e8f0;
     }
     .dhc-recent-tag {
+      min-width: 3.2rem;
       font-weight: 700;
       color: #94a3b8;
-      font-size: 0.72rem;
     }
     .dhc-recent-rank {
       font-weight: 700;
@@ -1928,6 +1929,13 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
     .dhc-recent-last3f {
       color: #94a3b8;
       font-size: 0.74rem;
+    }
+    @media (max-width: 768px) {
+      .dhc-recent-item {
+        align-items: flex-start;
+        gap: 0.3rem 0.45rem;
+        font-size: 0.76rem;
+      }
     }
   </style>
 
