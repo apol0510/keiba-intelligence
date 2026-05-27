@@ -15,7 +15,20 @@
  */
 
 import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// このモジュールが置かれているディレクトリの絶対パス。
+// Netlify Functions SSR では process.cwd() が Lambda の cwd になり、
+// netlify.toml の included_files で同梱した src/data/horseHistories/** が
+// 期待する位置に無いケースがあるため、bundle 相対 path も候補に入れる。
+const __moduleDir = (() => {
+  try {
+    return dirname(fileURLToPath(import.meta.url));
+  } catch {
+    return null;
+  }
+})();
 
 const JRA_VENUE_NAME_TO_CODE = {
   '東京': 'TOK',
@@ -37,14 +50,47 @@ export function jraVenueCodeFromName(name) {
 
 /**
  * 指定 date/venueCode の horseHistories JSON を読み込む。無ければ null。
+ *
+ * Netlify Functions SSR では process.cwd() だけでは読めないため、
+ * 複数候補 path を順に試して最初に存在するものを採用する。
+ *   1. projectRoot (= process.cwd() 既定) 起点
+ *      → local build / prerender 時に astro-site/ で動作
+ *   2. このモジュール (bundle 後の entry) の dir 起点
+ *      → SSR Function bundle で esbuild バンドル後でも有効
+ *   3. /var/task 起点 (Netlify Functions の Lambda root)
+ *      → included_files で同梱された場合の最終 fallback
+ *
+ * どれも存在しなければ null を返し、呼び出し側で recentRaces にフォールバック。
  */
 export function loadHorseHistoriesForVenue(date, venueCode, projectRoot = process.cwd()) {
   if (!date || !venueCode) return null;
   const m = String(date).match(/^(\d{4})-(\d{2})-\d{2}$/);
   if (!m) return null;
   const [year, month] = [m[1], m[2]];
-  const file = join(projectRoot, 'src', 'data', 'horseHistories', 'jra', year, month, `${date}-${venueCode}.json`);
-  if (!existsSync(file)) return null;
+  const filename = `${date}-${venueCode}.json`;
+  const subPath = join('src', 'data', 'horseHistories', 'jra', year, month, filename);
+
+  const candidates = [];
+  if (projectRoot) candidates.push(join(projectRoot, subPath));
+  if (__moduleDir) {
+    // utils/ から見て ../data/horseHistories/... (リポジトリ上の物理配置)
+    candidates.push(join(__moduleDir, '..', 'data', 'horseHistories', 'jra', year, month, filename));
+    // bundle ルート (.netlify/v1/functions/ssr/) と同階層に同梱された場合
+    candidates.push(join(__moduleDir, subPath));
+    // bundle dir の親に同梱された場合
+    candidates.push(join(__moduleDir, '..', subPath));
+    candidates.push(join(__moduleDir, '..', '..', subPath));
+    candidates.push(join(__moduleDir, '..', '..', '..', subPath));
+  }
+  // Netlify Functions の Lambda 標準 cwd
+  candidates.push(join('/var/task', subPath));
+
+  let file = null;
+  for (const c of candidates) {
+    if (existsSync(c)) { file = c; break; }
+  }
+  if (!file) return null;
+
   try {
     return JSON.parse(readFileSync(file, 'utf-8'));
   } catch {
