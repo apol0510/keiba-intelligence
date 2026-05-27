@@ -6,6 +6,7 @@ import { join } from 'path';
 import { getStore } from '@netlify/blobs';
 import { generateAdvancedMetrics } from '../../../utils/featureScores.js';
 import { isMainRace, getTop5Challengers } from '../../../utils/mainRaceBetting.js';
+import { RECENT_LABELS } from '../../../utils/recentForm.js';
 
 export const prerender = false;
 
@@ -549,6 +550,26 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                               </div>
                             </div>
                           </div>
+
+                          {horse.recentRaces && horse.recentRaces.length > 0 && (
+                            <div class="dhc-recent-races">
+                              <span class="dhc-recent-label">直近走</span>
+                              <div class="dhc-recent-list">
+                                {horse.recentRaces.slice(0, 4).map((r: any, rIdx: number) => (
+                                  <span class="dhc-recent-item">
+                                    <span class="dhc-recent-tag">{RECENT_LABELS[rIdx] || `${rIdx + 1}走前`}</span>
+                                    <span class={`dhc-recent-rank ${r.rank && r.rank <= 3 ? 'top3' : ''}`}>
+                                      {r.rank ? `${r.rank}着` : r.finishStatus || '-'}
+                                    </span>
+                                    {r.venue && <span class="dhc-recent-venue">{r.venue}</span>}
+                                    {r.distance && <span class="dhc-recent-distance">{r.distance}</span>}
+                                    {r.time && <span class="dhc-recent-time">{r.time}</span>}
+                                    {r.last3f && <span class="dhc-recent-last3f">上がり{r.last3f}</span>}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
 
                           <!-- Feature Analysis (上位3頭のみ詳細表示) -->
                           {(horse.role === '本命' || horse.role === '対抗' || horse.role === '単穴') && (
@@ -1849,6 +1870,64 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
       .feature-label {
         justify-content: space-between;
       }
+    }
+
+    /* 近走表示（dhc-recent-*）: detailed-horse-card 内に挿入する直近走ブロック。
+       既存 dhc-* やテーブル系 (.recent-*) と衝突しないよう新規 prefix を使用。 */
+    .dhc-recent-races {
+      margin-top: 0.75rem;
+      padding: 0.6rem 0.8rem;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+    }
+    .dhc-recent-label {
+      display: inline-block;
+      margin-right: 0.5rem;
+      padding: 0.1rem 0.45rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #cbd5e1;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 4px;
+      vertical-align: middle;
+    }
+    .dhc-recent-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.35rem;
+    }
+    .dhc-recent-item {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.25rem 0.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      font-size: 0.78rem;
+      line-height: 1.3;
+      color: #e2e8f0;
+    }
+    .dhc-recent-tag {
+      font-weight: 700;
+      color: #94a3b8;
+      font-size: 0.72rem;
+    }
+    .dhc-recent-rank {
+      font-weight: 700;
+      color: #cbd5e1;
+    }
+    .dhc-recent-rank.top3 {
+      color: #fbbf24;
+    }
+    .dhc-recent-venue,
+    .dhc-recent-distance,
+    .dhc-recent-time,
+    .dhc-recent-last3f {
+      color: #94a3b8;
+      font-size: 0.74rem;
     }
   </style>
 
