@@ -610,7 +610,9 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                           <span class="rf-pos">{RECENT_LABELS[ri]}</span>
                                           {meta.dateStr && <span class="rf-date">{meta.dateStr}</span>}
                                           {meta.venue && <span class="rf-venue">{meta.venue}</span>}
-                                          {r.distanceMeters && <span class="rf-dist">{r.distanceMeters}m</span>}
+                                          {(r._displayDistance || r.distanceMeters) && (
+                                            <span class="rf-dist">{r._displayDistance || `${r.distanceMeters}m`}</span>
+                                          )}
                                           {r.finishStatus ? (
                                             <span class="rf-status">[{r.finishStatus}]</span>
                                           ) : <>

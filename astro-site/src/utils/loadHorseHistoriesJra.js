@@ -155,6 +155,11 @@ function convertHistoryRaceToKiShape(h) {
   const distanceMeters = Number.isFinite(distanceMetersNum) ? distanceMetersNum : null;
   // horseHistories の time は "1:25.4"、display 側の regex は /\d\.\d\d\.\d/ (ドット形式) を期待。コロン→ドット変換。
   const time = h.time ? String(h.time).replace(/:/g, '.') : '';
+  // 表示用 距離: horseHistories の displayDistance ("芝1200" 形式) を優先、
+  // 無ければ surface + distanceMeters で組み立て。recentRaces 側には surface 情報が
+  // ないため、_displayDistance は horseHistories 由来でのみ埋まる。
+  const displayDistance = h.displayDistance
+    || (h.surface && distanceMeters != null ? `${h.surface}${distanceMeters}` : '');
   return {
     venue: h.venue || '',
     distanceMeters,
@@ -164,6 +169,7 @@ function convertHistoryRaceToKiShape(h) {
     last3f: '',
     paceType: '',
     _dateStr: dateStr,
+    _displayDistance: displayDistance,
     _fromHistories: true,
   };
 }
