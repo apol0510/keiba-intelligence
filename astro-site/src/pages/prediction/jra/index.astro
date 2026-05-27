@@ -8,6 +8,7 @@ import { getStore } from '@netlify/blobs';
 import { generateAdvancedMetrics } from '../../../utils/featureScores.js';
 import { isMainRace, getTop5Challengers } from '../../../utils/mainRaceBetting.js';
 import { recentRaceMeta, RECENT_LABELS } from '../../../utils/recentForm.js';
+import { injectHorseHistoriesIntoVenues } from '../../../utils/loadHorseHistoriesJra.js';
 
 export const prerender = false;
 
@@ -125,6 +126,19 @@ try {
   }
 } catch (err) {
   error = err.message;
+}
+
+// horseHistories 由来の表示専用注入 (失敗時は既存 recentRaces にフォールバック)。
+// 既存 horse.recentRaces は上書きしないため、計算系には副作用なし。
+if (!error && Array.isArray(venues) && venues.length > 0) {
+  try {
+    const targetDate = predictionData?.date || predictionData?.eventInfo?.date || null;
+    if (targetDate) {
+      injectHorseHistoriesIntoVenues(venues, targetDate, process.cwd());
+    }
+  } catch (_e) {
+    // 表示専用フォールバック。失敗時は既存 recentRaces のまま表示。
+  }
 }
 
 // generateAdvancedMetrics imported from featureScores.js
@@ -573,14 +587,24 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                     <span class="sup-value">{m.aiSupportScore}</span>
                                   </div>
                                 )}
-                                {/* 近走成績（実データ・着順/コース/タイム/上がり3F/ペース）。事実なので表示。2026-05-22 */}
-                                {horse.recentRaces && horse.recentRaces.length > 0 && (
+                                {/* 近走成績（実データ・着順/コース/タイム/上がり3F/ペース）。
+                                    horseHistories 由来があれば最大5走、なければ既存 recentRaces で最大4走。
+                                    recentRaces は新聞圧縮品質で5走前データが欠落するため4走固定 (2026-05-23 マコ指示)。
+                                    horseHistories は JRA 公式由来で品質確保されているため5走化可能。 */}
+                                {(() => {
+                                  const fromHist = Array.isArray(horse.recentRacesFromHistories) && horse.recentRacesFromHistories.length > 0;
+                                  const displayRecent = fromHist
+                                    ? horse.recentRacesFromHistories.slice(0, 5)
+                                    : (Array.isArray(horse.recentRaces) ? horse.recentRaces.slice(0, 4) : []);
+                                  if (displayRecent.length === 0) return null;
+                                  return (
                                   <div class="dhc-recent-form">
                                     <span class="rf-label">近走成績</span>
                                     <div class="rf-rows">
-                                      {/* 5走前は新聞圧縮で rank/上り/ペースが欠落するため過去4走に固定（2026-05-23 マコ指示） */}
-                                      {horse.recentRaces.slice(0, 4).map((r, ri) => {
-                                        const meta = recentRaceMeta(r.venue, race.raceInfo.date);
+                                      {displayRecent.map((r, ri) => {
+                                        const meta = r._fromHistories
+                                          ? { venue: r.venue, dateStr: r._dateStr }
+                                          : recentRaceMeta(r.venue, race.raceInfo.date);
                                         return (
                                         <div class="rf-row">
                                           <span class="rf-pos">{RECENT_LABELS[ri]}</span>
@@ -600,7 +624,8 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                       })}
                                     </div>
                                   </div>
-                                )}
+                                  );
+                                })()}
                               </div>
                             </div>
                           </div>

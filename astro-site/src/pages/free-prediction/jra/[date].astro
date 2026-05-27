@@ -6,6 +6,7 @@ import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { generateAdvancedMetrics } from '../../../utils/featureScores.js';
 import { recentRaceMeta, RECENT_LABELS } from '../../../utils/recentForm.js';
+import { injectHorseHistoriesIntoVenues } from '../../../utils/loadHorseHistoriesJra.js';
 
 export const prerender = true;
 
@@ -75,6 +76,16 @@ if (jraData.venues && Array.isArray(jraData.venues)) {
 }
 
 const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
+
+// horseHistories 由来の表示専用注入 (失敗時は既存 recentRaces にフォールバック)。
+// 既存 horse.recentRaces は上書きしないため、計算系には副作用なし。
+if (Array.isArray(venues) && venues.length > 0 && date) {
+  try {
+    injectHorseHistoriesIntoVenues(venues, date, process.cwd());
+  } catch (_e) {
+    // 表示専用フォールバック。失敗時は既存 recentRaces のまま表示。
+  }
+}
 
 // generateAdvancedMetrics imported from featureScores.js
 ---
@@ -334,14 +345,24 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
                               </div>
                             )}
 
-                            {/* 近走成績（会員/無料indexと統一: 前走/2走前・日付YY/MM/DD・明るい行）。2026-05-23 */}
-                            {horse.recentRaces && horse.recentRaces.length > 0 && (
+                            {/* 近走成績（会員/無料indexと統一: 前走/2走前・日付YY/MM/DD・明るい行）。
+                                horseHistories 由来があれば最大5走、なければ recentRaces で最大4走。
+                                recentRaces は新聞圧縮品質で5走前データ欠落のため4走固定 (2026-05-23 マコ指示)。
+                                horseHistories は JRA 公式由来で品質確保されているため5走化可能。 */}
+                            {(() => {
+                              const fromHist = Array.isArray(horse.recentRacesFromHistories) && horse.recentRacesFromHistories.length > 0;
+                              const displayRecent = fromHist
+                                ? horse.recentRacesFromHistories.slice(0, 5)
+                                : (Array.isArray(horse.recentRaces) ? horse.recentRaces.slice(0, 4) : []);
+                              if (displayRecent.length === 0) return null;
+                              return (
                               <div class="dhc-recent-form">
                                 <span class="rf-label">近走成績</span>
                                 <div class="rf-rows">
-                                  {/* 過去4走表示（5走前は新聞圧縮で取得不能のため諦め）。2026-05-23 */}
-                                  {horse.recentRaces.slice(0, 4).map((r: any, ri: number) => {
-                                    const meta = recentRaceMeta(r.venue, race.raceInfo.date);
+                                  {displayRecent.map((r: any, ri: number) => {
+                                    const meta = r._fromHistories
+                                      ? { venue: r.venue, dateStr: r._dateStr }
+                                      : recentRaceMeta(r.venue, race.raceInfo.date);
                                     return (
                                     <div class="rf-row">
                                       <span class="rf-pos">{RECENT_LABELS[ri]}</span>
@@ -361,7 +382,8 @@ const venueNames = venues.map(v => v.venue || v.eventInfo?.venue).join(' / ');
                                   })}
                                 </div>
                               </div>
-                            )}
+                              );
+                            })()}
                           </div>
                         );
                       })}
