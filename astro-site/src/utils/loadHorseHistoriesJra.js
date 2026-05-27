@@ -30,12 +30,6 @@ const __moduleDir = (() => {
   }
 })();
 
-// 🔍 一時診断ログ: 本番 SSR で path 解決が機能していない原因特定のため、
-// 最初の数回だけ candidates の existsSync 結果を Netlify Function log に出力する。
-// 原因特定後に削除する。
-let __debugCount = 0;
-const __DEBUG_LIMIT = 5;
-
 const JRA_VENUE_NAME_TO_CODE = {
   '東京': 'TOK',
   '中山': 'NAK',
@@ -92,26 +86,8 @@ export function loadHorseHistoriesForVenue(date, venueCode, projectRoot = proces
   candidates.push(join('/var/task', subPath));
 
   let file = null;
-  // 🔍 一時診断ログ: candidates の existsSync 結果を最初の数回だけ Function log に出す
-  const __debugCandidates = (__debugCount < __DEBUG_LIMIT)
-    ? candidates.map((c) => ({ path: c, exists: existsSync(c) }))
-    : null;
-  if (__debugCandidates) {
-    file = __debugCandidates.find((x) => x.exists)?.path || null;
-    console.log('[horseHistories debug]', JSON.stringify({
-      date,
-      venueCode,
-      cwd: process.cwd(),
-      moduleDir: __moduleDir,
-      subPath,
-      candidates: __debugCandidates,
-      selected: file,
-    }));
-    __debugCount++;
-  } else {
-    for (const c of candidates) {
-      if (existsSync(c)) { file = c; break; }
-    }
+  for (const c of candidates) {
+    if (existsSync(c)) { file = c; break; }
   }
   if (!file) return null;
 
