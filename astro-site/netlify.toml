@@ -58,6 +58,9 @@
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["airtable", "@sendgrid/mail"]
+  # SSR で horseHistories JSON を読むため Function bundle に同梱する
+  # (path は netlify.toml と同じ astro-site/ からの相対)。
+  included_files = ["src/data/horseHistories/**"]
 
 # プラグイン
 [[plugins]]
