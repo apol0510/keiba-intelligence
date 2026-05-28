@@ -628,6 +628,40 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                   </div>
                                   );
                                 })()}
+                                {/* 過去走データ（horseHistories.history 由来・表示専用アコーディオン）
+                                    historyForDetails がある馬のみ表示。無い馬は何も出さない。
+                                    最大20走 / 当日除外は loadHorseHistoriesJra.js 側で処理済。
+                                    AI指数・印・買い目・特徴量重要度には一切関与しない。 */}
+                                {Array.isArray(horse.historyForDetails) && horse.historyForDetails.length > 0 && (
+                                  <details class="dhc-history-details">
+                                    <summary class="dhc-history-summary">
+                                      <span class="dhc-history-summary-text">過去走データ</span>
+                                      <span class="dhc-history-summary-count">{horse.historyForDetails.length}走</span>
+                                      <span class="dhc-history-summary-chevron" aria-hidden="true">▾</span>
+                                    </summary>
+                                    <div class="dhc-history-list">
+                                      {horse.historyForDetails.map((r) => (
+                                        <div class="dhc-history-row">
+                                          {r._dateStr && <span class="dhh-date">{r._dateStr}</span>}
+                                          {r.venue && <span class="dhh-venue">{r.venue}</span>}
+                                          {r.raceName && <span class="dhh-race-name">{r.raceName}</span>}
+                                          {r._displayDistance && <span class="dhh-dist">{r._displayDistance}</span>}
+                                          {r.trackCondition && <span class="dhh-track">馬場:{r.trackCondition}</span>}
+                                          {r.entryCount !== '' && r.entryCount != null && <span class="dhh-entries">{r.entryCount}頭</span>}
+                                          {r.popularity !== '' && r.popularity != null && <span class="dhh-pop">{r.popularity}人気</span>}
+                                          {r.finishStatus ? (
+                                            <span class="dhh-status">[{r.finishStatus}]</span>
+                                          ) : (r.rank != null && <span class={`dhh-rank ${Number(r.rank) <= 3 ? 'good' : ''}`}>{r.rank}着</span>)}
+                                          {r.jockey && <span class="dhh-jockey">🏇 {r.jockey}</span>}
+                                          {r.carryWeight && <span class="dhh-cw">斤量{r.carryWeight}</span>}
+                                          {r.bodyWeight && <span class="dhh-bw">馬体重{r.bodyWeight}</span>}
+                                          {r.time && <span class="dhh-time">{r.time}</span>}
+                                          {r.winnerName && <span class="dhh-winner">勝: {r.winnerName}</span>}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </details>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -2042,6 +2076,83 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
       .feature-label {
         justify-content: space-between;
       }
+    }
+
+    /* 過去走データ アコーディオン (historyForDetails 表示専用、ai-model-details パターン流用) */
+    .dhc-history-details {
+      margin-top: var(--spacing-sm);
+      padding-top: var(--spacing-sm);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .dhc-history-summary {
+      list-style: none;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: #93c5fd;
+      background: rgba(59, 130, 246, 0.08);
+      border-radius: 8px;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+    .dhc-history-summary::-webkit-details-marker { display: none; }
+    .dhc-history-summary-text { flex: 1; }
+    .dhc-history-summary-count {
+      font-size: 0.72rem;
+      color: #cbd5e1;
+      font-family: 'Courier New', monospace;
+    }
+    .dhc-history-summary-chevron {
+      transition: transform 0.2s;
+      color: #60a5fa;
+      font-size: 0.85rem;
+    }
+    .dhc-history-details[open] > .dhc-history-summary .dhc-history-summary-chevron {
+      transform: rotate(180deg);
+    }
+
+    .dhc-history-list {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .dhc-history-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      font-size: 0.78rem;
+      color: #e2e8f0;
+    }
+    .dhh-date { color: #cbd5e1; font-family: 'Courier New', monospace; min-width: 60px; }
+    .dhh-venue { color: #cbd5e1; min-width: 26px; }
+    .dhh-race-name { color: #f1f5f9; font-weight: 600; }
+    .dhh-dist { color: #e2e8f0; font-weight: 700; }
+    .dhh-track { color: #94a3b8; font-size: 0.72rem; }
+    .dhh-entries, .dhh-pop { color: #94a3b8; font-size: 0.72rem; }
+    .dhh-rank { font-weight: 800; color: #f1f5f9; }
+    .dhh-rank.good { color: #34d399; }
+    .dhh-status { color: #fb923c; font-weight: 700; }
+    .dhh-jockey { color: #cbd5e1; font-size: 0.72rem; }
+    .dhh-cw, .dhh-bw { color: #94a3b8; font-size: 0.72rem; }
+    .dhh-time { color: #ffffff; font-weight: 700; font-family: 'Courier New', monospace; }
+    .dhh-winner { color: #fbbf24; font-size: 0.72rem; }
+
+    @media (max-width: 640px) {
+      .dhc-history-row {
+        font-size: 0.72rem;
+        gap: 6px;
+        padding: 5px 8px;
+      }
+      .dhh-date { min-width: 56px; }
     }
   </style>
 
