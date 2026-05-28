@@ -105,3 +105,25 @@ JRA予想ページ（`/prediction/jra`・`/free-prediction/jra`）の表示ロ�
 - 今後の正データは **race-data-importer（racebook）**。`/admin/computer-manager` は使わない。
 - 既存の computer/ 由来データは段階的に racebook へ置換（**移行扱い**）。
 - **PT・印・役割・順位・補完ロジックは変更しない**（表示フィールドを追加するだけ）。一気に切り替えてロジックを壊さない。
+
+## analytics-keiba との表示境界（2026-05-29 追加）
+
+本ドキュメントが規定する intelligence 表示仕様（AI人気指数 / AI支持率スコア /
+近走成績 / 馬主・生産者 / 廃止項目）は **intelligence 独自の方針**。
+`analytics-keiba`（姉妹 repo）の表示仕様（AI総合指数 / 累積スコア /
+特徴量重要度 / 役割振り分け 等）とは **別系統**。
+
+- `analytics-keiba` のページリニューアル（PR #41〜#46 / #45 系列）の
+  ページ構造・guard ルールを **intelligence に逆輸入してはいけない**。
+- `analytics-keiba` 側 guard (`check-no-ki-relics-*.mjs`) の禁止リストは
+  analytics-keiba 専用。**intelligence の `AIRaceComment` / `AIBettingSection` /
+  `Powered by Keiba Intelligence` クレジット / `AI予想解説` / `AI買い目` /
+  有料版 CTA は intelligence 側では正規の表示要素として維持**する。
+- 表示仕様変更は **片方の repo の都合で他方に持ち込まない**。
+  共通の admin / shared data 契約を変更する場合は、両 repo への影響を
+  ユーザーと確認してから着手する。
+
+詳細な境界ルールは [`../CLAUDE.md`](../CLAUDE.md) の
+「analytics-keiba との関係（独立運用、2026-05-23〜）」セクション
+（特に「UI・表示コンポーネント境界」「shared data / JSON / loader / 予想ロジックの取り扱い境界」
+「本番 URL 取り扱いルール」サブセクション）を参照。
