@@ -175,6 +175,52 @@ npm run validate:archive
 2026-05-23 にこの同期義務を取りやめ、両 repo は独立進化することとした。
 過去の経緯を理由に同期作業を再開してはいけない。
 
+#### UI・表示コンポーネント境界（2026-05-29 追加）
+
+- `keiba-intelligence` と `analytics-keiba` は **別サービス・別 UI として扱う**。
+  両者は同じ admin (`keiba-data-shared-admin`) から共通データを受け取るが、
+  **画面に出す表現は独立**。
+- `analytics-keiba` の無料版正規構造（`jra-race-accordion-list` /
+  `horse-card horse-card-{main/sub/tana}` / analytics 風 stat-block 等）を、
+  **`keiba-intelligence` に無断で適用しない**。
+- 逆に `keiba-intelligence` の `AIRaceComment` / `AIBettingSection` /
+  `Powered by Keiba Intelligence` クレジット / `AI予想解説` / `AI買い目` /
+  有料版 CTA 等の表示コンポーネントを、**`analytics-keiba` 側に持ち込むことは禁止**
+  （`analytics-keiba` 側の `check-no-ki-relics-*.mjs` で検知される）。
+- `analytics-keiba` 側の guard で禁止された文字列・クラス（`XGBoost` / `LSTM` /
+  `Ensemble Neural Network` / `detailed-horse-card` / `dhc-*` / `ai-comment-*` /
+  `ai-betting-*` 等）は **analytics-keiba 側の再混入防止専用ルール**。
+  `keiba-intelligence` 側ではこれらを「正規の表示要素」として現役運用しており、
+  **そのまま intelligence にコピペ適用してはいけない**。
+- 表示仕様の詳細は [`docs/INTELLIGENCE_DISPLAY_SPEC.md`](./docs/INTELLIGENCE_DISPLAY_SPEC.md)
+  を参照。
+
+#### shared data / JSON / loader / 予想ロジックの取り扱い境界
+
+- `keiba-data-shared` の JSON 構造・命名・キー名は **両 repo 共通の契約**。
+  片方の repo の表示都合で変更しない。
+- `importPrediction*.js` / `importResults*.js` / `featureScores.js` /
+  shared loader 群は、片方の表示変更だけのために改変しない。
+  改変が必要な場合は両 repo への影響をユーザーと確認してから着手する。
+- **horseHistories / recentRaces の扱いは両 repo で表示側差分があり得る**
+  （intelligence 側の表示と analytics-keiba 側の表示は同一である必要はない）。
+  表示差分があっても、**JSON 構造側を片方に寄せて変更してはいけない**。
+  `keiba-data-shared-admin` 経由で確定する共通契約を優先する。
+
+#### 本番 URL 取り扱いルール
+
+| repo | 本番 URL |
+|---|---|
+| `keiba-intelligence`（本 repo）| `https://keiba-intelligence.netlify.app/`（Netlify サブドメインが本番）|
+| `analytics-keiba` | `https://analytics.keiba.link/`（**`analytics.keiba.jp` は使用禁止**・存在しない）|
+
+- `analytics-keiba` の Netlify Deploy Preview URL
+  (`deploy-preview-NN--analytics-keiba.netlify.app`) は
+  **Deploy Preview 専用**。本番案内に使わない。
+- `keiba-intelligence` 側の Deploy Preview URL も同様に推測で書かない。
+- 不明な場合・新規 PR の URL を案内する場合は
+  **既存 docs を読むか、ユーザー確認を取る**。
+
 ---
 
 ## 📋 結果システム変更時の参照義務 📋

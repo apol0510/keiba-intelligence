@@ -126,7 +126,7 @@
 - 印・役割・customScore計算（normalize/adjust）
 - 的中実績アーカイブ
 - 料金導線・無料/有料制限
-- analytics-keiba（姉妹repo、同期しない）
+- analytics-keiba（姉妹repo、同期しない。境界ルールは [CLAUDE.md](../CLAUDE.md) の「analytics-keiba との関係（独立運用、2026-05-23〜）」セクション参照）
 
 ## Q&A 確認済み（2026-05-23 マコの口頭テストへの正解）
 
