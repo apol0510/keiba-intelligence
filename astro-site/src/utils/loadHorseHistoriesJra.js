@@ -150,6 +150,44 @@ function convertHistoryRaceToKiShape(h) {
   };
 }
 
+// 馬名クリック / 「過去走データ」展開用の詳細形式に変換する。
+// rf-row 互換項目に加え、レース名・馬場・頭数・人気・騎手・斤量・馬体重・1着馬を保持する。
+// 数値化しないフィールドは表示用に元の値（多くは文字列）をそのまま保持する。
+function convertHistoryRaceToDetailShape(h) {
+  if (!h || typeof h !== 'object') return null;
+  const dm = String(h.date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const dateStr = dm ? `${dm[1].slice(2)}/${dm[2]}/${dm[3]}` : '';
+  const finishNum = Number(h.finish);
+  const rank = Number.isFinite(finishNum) ? finishNum : null;
+  const finishStatus = (typeof h.finish === 'string' && !Number.isFinite(finishNum)) ? h.finish : '';
+  const distanceMetersNum = Number(h.distanceMeters);
+  const distanceMeters = Number.isFinite(distanceMetersNum) ? distanceMetersNum : null;
+  const time = h.time ? String(h.time).replace(/:/g, '.') : '';
+  const displayDistance = h.displayDistance
+    || (h.surface && distanceMeters != null ? `${h.surface}${distanceMeters}` : '');
+  return {
+    date: h.date || '',
+    _dateStr: dateStr,
+    venue: h.venue || '',
+    raceName: h.raceName || '',
+    surface: h.surface || '',
+    distanceMeters,
+    _displayDistance: displayDistance,
+    trackCondition: h.trackCondition || '',
+    entryCount: h.entryCount ?? '',
+    popularity: h.popularity ?? '',
+    finish: h.finish ?? '',
+    rank,
+    finishStatus,
+    jockey: h.jockey || '',
+    carryWeight: h.carryWeight ?? '',
+    bodyWeight: h.bodyWeight ?? '',
+    time,
+    winnerName: h.winnerName || '',
+    _fromHistories: true,
+  };
+}
+
 /**
  * 1頭ぶんの horseHistories から、表示用 race 配列 (最大 5 走) を生成する。
  * history (全レース履歴) を使用し、excludeDate と一致する race は除外、最大 5 走。
@@ -165,6 +203,22 @@ export function pickRecentRacesFromHistories(horseHistoryEntry, excludeDate) {
   if (!source) return null;
   const filtered = source.filter((r) => r && r.date !== excludeDate);
   const converted = filtered.slice(0, 5).map(convertHistoryRaceToKiShape).filter(Boolean);
+  return converted.length > 0 ? converted : null;
+}
+
+/**
+ * 1頭ぶんの horseHistories から、馬名クリック詳細展開用の race 配列を生成する。
+ * history (全レース履歴) のみを使用し、excludeDate と一致する race は除外、最大 maxCount 走 (default 20)。
+ *
+ * recent5 へは fallback しない。history が無い馬には null を返し、呼出側で historyForDetails を未注入のままにする。
+ */
+export function pickHistoryForDetails(horseHistoryEntry, excludeDate, maxCount = 20) {
+  if (!horseHistoryEntry || typeof horseHistoryEntry !== 'object') return null;
+  const source = Array.isArray(horseHistoryEntry.history) ? horseHistoryEntry.history : null;
+  if (!source) return null;
+  const limit = Number.isFinite(maxCount) && maxCount > 0 ? Math.floor(maxCount) : 20;
+  const filtered = source.filter((r) => r && r.date !== excludeDate);
+  const converted = filtered.slice(0, limit).map(convertHistoryRaceToDetailShape).filter(Boolean);
   return converted.length > 0 ? converted : null;
 }
 
@@ -193,6 +247,10 @@ export function injectHorseHistoriesIntoVenues(venues, date, projectRoot) {
         const built = pickRecentRacesFromHistories(histHorse, date);
         if (built && built.length > 0) {
           horse.recentRacesFromHistories = built;
+        }
+        const builtForDetails = pickHistoryForDetails(histHorse, date, 20);
+        if (builtForDetails && builtForDetails.length > 0) {
+          horse.historyForDetails = builtForDetails;
         }
       }
     }
