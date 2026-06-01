@@ -7,6 +7,7 @@ import { join } from 'path';
 import { generateAdvancedMetrics } from '../../../utils/featureScores.js';
 import { recentRaceMeta, RECENT_LABELS } from '../../../utils/recentForm.js';
 import { injectHorseHistoriesIntoVenues } from '../../../utils/loadHorseHistoriesJra.js';
+import { loadFeatureScores, getHorseFeatures, hasUsableFeatureScores, venueCodeFromName } from '../../../utils/loadFeatureScores.js';
 
 export const prerender = true;
 
@@ -138,6 +139,13 @@ if (Array.isArray(venues) && venues.length > 0 && date) {
       {venues.map((venueData, venueIndex) => {
         const venuePredictions = venueData.predictions;
         const venueInfo = venueData.eventInfo;
+        // featureScores（表示専用・読むだけ）。無ければ null → 6項目は非表示。
+        // generateAdvancedMetrics(m.*) には fallback しない。
+        const fsDate = date || venueInfo?.date || null;
+        const fsVenueCode = venueCodeFromName('jra', venueInfo?.venue);
+        const featureScoresData = (fsDate && fsVenueCode)
+          ? loadFeatureScores('jra', fsDate, fsVenueCode, process.cwd())
+          : null;
 
         return (
           <div class={`venue-content ${venueIndex === 0 ? 'active' : ''}`} data-venue-index={venueIndex}>
@@ -270,80 +278,47 @@ if (Array.isArray(venues) && venues.length > 0 && date) {
                               </div>
                             </div>
 
-                            {/* Feature Importance Analysis 非表示（2026-05-23）: 50.0フォールバックで壊れて見えるため */}
-                            {false && isTopTwo && (
-                              <div class="dhc-features">
-                                <div class="feature-title">Feature Importance Analysis / 特徴量重要度分析</div>
-                                <div class="feature-grid">
-                                  <div class="feature-item">
-                                    <div class="feature-label">
-                                      <span class="feature-icon">&#9889;</span>
-                                      <span>Speed Index / スピード指数</span>
-                                    </div>
-                                    <div class="feature-bar-container">
-                                      <div class="feature-bar" style={`width: ${m.speedIndex}%`}></div>
-                                    </div>
-                                    <div class="feature-value">{m.speedIndex}</div>
-                                  </div>
-
-                                  <div class="feature-item">
-                                    <div class="feature-label">
-                                      <span class="feature-icon">&#128170;</span>
-                                      <span>Stamina Rating / スタミナ評価</span>
-                                    </div>
-                                    <div class="feature-bar-container">
-                                      <div class="feature-bar" style={`width: ${m.staminaRating}%`}></div>
-                                    </div>
-                                    <div class="feature-value">{m.staminaRating}</div>
-                                  </div>
-
-                                  <div class="feature-item">
-                                    <div class="feature-label">
-                                      <span class="feature-icon">&#128200;</span>
-                                      <span>Form Trend / 調子傾向</span>
-                                    </div>
-                                    <div class="feature-bar-container trend">
-                                      <div class="feature-bar-center"></div>
-                                      <div class="feature-bar trend" style={`width: ${Math.abs(parseFloat(m.formTrend))}%; ${parseFloat(m.formTrend) >= 0 ? 'left: 50%;' : 'right: 50%;'}`}></div>
-                                    </div>
-                                    <div class="feature-value">{m.formTrend}</div>
-                                  </div>
-
-                                  <div class="feature-item">
-                                    <div class="feature-label">
-                                      <span class="feature-icon">&#127937;</span>
-                                      <span>Track Compatibility / コース適性</span>
-                                    </div>
-                                    <div class="feature-bar-container">
-                                      <div class="feature-bar" style={`width: ${m.trackCompatibility}%`}></div>
-                                    </div>
-                                    <div class="feature-value">{m.trackCompatibility}</div>
-                                  </div>
-
-                                  <div class="feature-item">
-                                    <div class="feature-label">
-                                      <span class="feature-icon">&#128207;</span>
-                                      <span>Distance Fitness / 距離適性</span>
-                                    </div>
-                                    <div class="feature-bar-container">
-                                      <div class="feature-bar" style={`width: ${m.distanceFitness}%`}></div>
-                                    </div>
-                                    <div class="feature-value">{m.distanceFitness}</div>
-                                  </div>
-
-                                  <div class="feature-item">
-                                    <div class="feature-label">
-                                      <span class="feature-icon">&#128100;</span>
-                                      <span>Jockey Factor / 騎手要因</span>
-                                    </div>
-                                    <div class="feature-bar-container">
-                                      <div class="feature-bar" style={`width: ${m.jockeyFactor}%`}></div>
-                                    </div>
-                                    <div class="feature-value">{m.jockeyFactor}</div>
+                            {/* Feature Importance Analysis — shared featureScores の stored value のみ表示。
+                                hasUsableFeatureScores が true のときだけ表示し、無い/全null は非表示。
+                                旧 generateAdvancedMetrics(m.*) には絶対 fallback しない。role gate=isTopTwo（上位2頭）維持。 */}
+                            {isTopTwo && (() => {
+                              const fs6 = getHorseFeatures(featureScoresData, race.raceInfo.raceNumber, horse.horseNumber);
+                              if (!hasUsableFeatureScores(featureScoresData, race.raceInfo.raceNumber, horse.horseNumber)) return null;
+                              const fItems = [
+                                { icon: "⚡", label: "Speed Index / スピード指数", key: "speedIndex" },
+                                { icon: "💪", label: "Stamina Rating / スタミナ評価", key: "staminaRating" },
+                                { icon: "📈", label: "Form Trend / 調子傾向", key: "formTrend" },
+                                { icon: "🏁", label: "Track Compatibility / コース適性", key: "trackCompatibility" },
+                                { icon: "📏", label: "Distance Fitness / 距離適性", key: "distanceFitness" },
+                                { icon: "👤", label: "Jockey Factor / 騎手要因", key: "jockeyFactor" },
+                              ];
+                              return (
+                                <div class="dhc-features">
+                                  <div class="feature-title">Feature Importance Analysis / 特徴量重要度分析</div>
+                                  <div class="feature-grid">
+                                    {fItems.map((it) => {
+                                      const v = fs6 && fs6[it.key] ? fs6[it.key].value : null;
+                                      return (
+                                        <div class="feature-item">
+                                          <div class="feature-label">
+                                            <span class="feature-icon">{it.icon}</span>
+                                            <span>{it.label}</span>
+                                          </div>
+                                          {v != null && (
+                                            <div class="feature-bar-container">
+                                              <div class="feature-bar" style={`width: ${v}%`}></div>
+                                            </div>
+                                          )}
+                                          <div class={v != null ? "feature-value" : "feature-value feature-value--insufficient"}>
+                                            {v != null ? v : "データ不足"}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
-                              </div>
-                            )}
+                              );
+                            })()}
 
                             {/* 近走成績（会員/無料indexと統一: 前走/2走前・日付YY/MM/DD・明るい行）。
                                 horseHistories 由来があれば最大5走、なければ recentRaces で最大4走。
