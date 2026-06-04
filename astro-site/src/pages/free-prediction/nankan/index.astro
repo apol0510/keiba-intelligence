@@ -7,6 +7,7 @@ import { join } from 'path';
 import { generateAdvancedMetrics } from '../../../utils/featureScores.js';
 import { RECENT_LABELS } from '../../../utils/recentForm.js';
 import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../../../utils/injectRecentHorseHistoriesNankan.js';
+import { getDisplayRecentRacesForNankan } from '../../../utils/getDisplayRecentRacesForNankan.js';
 
 export const prerender = false;
 
@@ -373,7 +374,7 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                           <div class="dhc-recent-races">
                             <span class="dhc-recent-label">直近走</span>
                             <div class="dhc-recent-list">
-                              {horse.recentRaces.slice(0, 4).map((r: any, rIdx: number) => (
+                              {getDisplayRecentRacesForNankan(horse).slice(0, 4).map((r: any, rIdx: number) => (
                                 <span class="dhc-recent-item">
                                   <span class="dhc-recent-tag">{RECENT_LABELS[rIdx] || `${rIdx + 1}走前`}</span>
                                   <span class={`dhc-recent-rank ${r.rank && r.rank <= 3 ? 'top3' : ''}`}>
