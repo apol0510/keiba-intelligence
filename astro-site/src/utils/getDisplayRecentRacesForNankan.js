@@ -12,7 +12,7 @@
  * 並び順:
  *   注入元 recentRacesFromHistoriesNankan は「古→新」。
  *   KI の既存 recentRaces は「新→古」のため、注入元を reverse して揃える。
- *   表示側 slice(0,4)（reverse なし・RECENT_LABELS[0]=前走）を既存どおり維持。
+ *   表示側 slice(0,5)（reverse なし・RECENT_LABELS[0]=前走、公式出馬表に合わせ最大5走）。
  */
 
 // 注入元から表示へ渡してよい項目（内部・診断フィールドは落とす）
