@@ -7,6 +7,7 @@ import { getStore } from '@netlify/blobs';
 import { generateAdvancedMetrics } from '../../../utils/featureScores.js';
 import { isMainRace, getTop5Challengers } from '../../../utils/mainRaceBetting.js';
 import { RECENT_LABELS } from '../../../utils/recentForm.js';
+import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../../../utils/injectRecentHorseHistoriesNankan.js';
 
 export const prerender = false;
 
@@ -97,6 +98,12 @@ try {
 
         predictionsByVenue[venueName] = data;
         venues.push(venueName);
+
+        // Phase 6: 南関 recentHorseHistories を別フィールド recentRacesFromHistoriesNankan へ注入。
+        // horse.recentRaces / featureScores は不変。失敗時は何もしない。
+        try {
+          injectRecentHorseHistoriesNankanIntoData(data, nankanVenueCode(fileInfo.venue), process.cwd());
+        } catch (_e) { /* 非致命: 既存表示を維持 */ }
       }
 
       console.log(`✅ 最新予想データ読み込み完了: ${latestDate}`);
