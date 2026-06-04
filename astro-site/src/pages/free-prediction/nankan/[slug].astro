@@ -5,6 +5,7 @@ import AIBettingSection from '../../../components/AIBettingSection.astro';
 import { RECENT_LABELS } from '../../../utils/recentForm.js';
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../../../utils/injectRecentHorseHistoriesNankan.js';
 
 export const prerender = true;
 
@@ -37,6 +38,12 @@ const match = slug.match(/^(\d{4}-\d{2}-\d{2})-([a-z]+)$/);
 const dateStr = match ? match[1] : predictionData.eventInfo.date;
 const venueSlug = match ? match[2] : '';
 const venueName = predictionData.eventInfo.venue || venueMap[venueSlug] || venueSlug;
+
+// Phase 6: 南関 recentHorseHistories を別フィールド recentRacesFromHistoriesNankan へ注入。
+// horse.recentRaces / featureScores は不変。失敗時は何もしない。
+try {
+  injectRecentHorseHistoriesNankanIntoData(predictionData, nankanVenueCode(venueSlug || venueName), process.cwd());
+} catch (_e) { /* 非致命: 既存表示を維持 */ }
 
 const pageTitle = `${dateStr} ${venueName} AI予想 - KEIBA Intelligence`;
 const pageDescription = `${dateStr}の${venueName}競馬AI予想アーカイブ。全${predictionData.eventInfo.totalRaces}レースのAI分析結果をご覧いただけます。`;

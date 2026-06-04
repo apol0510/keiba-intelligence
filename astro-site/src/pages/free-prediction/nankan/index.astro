@@ -6,6 +6,7 @@ import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { generateAdvancedMetrics } from '../../../utils/featureScores.js';
 import { RECENT_LABELS } from '../../../utils/recentForm.js';
+import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../../../utils/injectRecentHorseHistoriesNankan.js';
 
 export const prerender = false;
 
@@ -67,6 +68,12 @@ try {
 
         predictionsByVenue[venueName] = data;
         venues.push(venueName);
+
+        // Phase 6: 南関 recentHorseHistories を別フィールド recentRacesFromHistoriesNankan へ注入。
+        // horse.recentRaces / featureScores は不変。失敗時は何もしない。
+        try {
+          injectRecentHorseHistoriesNankanIntoData(data, nankanVenueCode(fileInfo.venue), process.cwd());
+        } catch (_e) { /* 非致命: 既存表示を維持 */ }
       }
 
       console.log('🏇 [PAGE] 表示会場一覧:', venues);
