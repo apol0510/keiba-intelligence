@@ -239,4 +239,4 @@ jobs:
             ---
             このメールは自動送信されています。
             ワークフロー: import-results-jra-daily.yml (23:30 JST)
-        run: node .github/scripts/send-alert-email.js
+        run: node "$GITHUB_WORKSPACE/.github/scripts/send-alert-email.js"
