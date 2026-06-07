@@ -302,7 +302,7 @@ jobs:
             ---
             このメールは自動送信されています。
             ワークフロー: verify-archive-sync.yml
-        run: node .github/scripts/send-alert-email.js
+        run: node "$GITHUB_WORKSPACE/.github/scripts/send-alert-email.js"
 
       - name: Send alert email (JRA - No Results)
         if: steps.check-jra.outputs.no_results_alert == 'true'
@@ -334,7 +334,7 @@ jobs:
             ---
             このメールは自動送信されています。
             ワークフロー: verify-archive-sync.yml
-        run: node .github/scripts/send-alert-email.js
+        run: node "$GITHUB_WORKSPACE/.github/scripts/send-alert-email.js"
 
       - name: Send alert email (Nankan)
         if: steps.check-nankan.outputs.alert_needed == 'true'
@@ -368,7 +368,7 @@ jobs:
             ---
             このメールは自動送信されています。
             ワークフロー: verify-archive-sync.yml
-        run: node .github/scripts/send-alert-email.js
+        run: node "$GITHUB_WORKSPACE/.github/scripts/send-alert-email.js"
 
       - name: Send alert email (Nankan - No Results)
         if: steps.check-nankan.outputs.no_results_alert == 'true'
@@ -400,7 +400,7 @@ jobs:
             ---
             このメールは自動送信されています。
             ワークフロー: verify-archive-sync.yml
-        run: node .github/scripts/send-alert-email.js
+        run: node "$GITHUB_WORKSPACE/.github/scripts/send-alert-email.js"
 
       - name: Success notification
         if: steps.check-jra.outputs.alert_needed != 'true' && steps.check-nankan.outputs.alert_needed != 'true'
