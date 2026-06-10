@@ -9,6 +9,19 @@ import { isMainRace, getTop5Challengers } from '../../../utils/mainRaceBetting.j
 import { RECENT_LABELS } from '../../../utils/recentForm.js';
 import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../../../utils/injectRecentHorseHistoriesNankan.js';
 import { getDisplayRecentRacesForNankan } from '../../../utils/getDisplayRecentRacesForNankan.js';
+import { loadFeatureScores, getHorseFeatures, hasUsableFeatureScores, venueCodeFromName } from '../../../utils/loadFeatureScores.js';
+
+// 南関 featureScores: 全6項目が揃う馬のみ stored を返す。
+// 一部欠落・無い馬/レース/日は null → generateAdvancedMetrics に fallback（南関は整備途中のため表示を消さない）。
+const NANKAN_FEATS = ['speedIndex', 'staminaRating', 'formTrend', 'trackCompatibility', 'distanceFitness', 'jockeyFactor'];
+function fsScoresFor(featureScoresData, raceNumber, horseNumber) {
+  if (!featureScoresData) return null;
+  if (!hasUsableFeatureScores(featureScoresData, raceNumber, horseNumber)) return null;
+  const fs6 = getHorseFeatures(featureScoresData, raceNumber, horseNumber);
+  if (!fs6) return null;
+  if (!NANKAN_FEATS.every((k) => fs6[k] && fs6[k].value != null)) return null;
+  return fs6;
+}
 
 export const prerender = false;
 
@@ -258,6 +271,12 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
             <!-- 【複数会場対応】会場ごとのレース表示エリア -->
             {venues.map((venueName, venueIndex) => {
               const venueData = predictionsByVenue[venueName];
+              // 南関 featureScores（この会場・日付分）。馬単位で fsScoresFor が引く。無ければ generateAdvancedMetrics に fallback。
+              const fsDate = venueData.eventInfo?.date || latestDate;
+              const fsVenueCode = venueCodeFromName('nankan', venueName);
+              const featureScoresData = (fsDate && fsVenueCode)
+                ? loadFeatureScores('nankan', fsDate, fsVenueCode, process.cwd())
+                : null;
 
               return (
                 <div
@@ -286,7 +305,8 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
               const allHorses = race.horses;
               const horsesWithMetrics = allHorses.map(horse => ({
                 ...horse,
-                metrics: generateAdvancedMetrics(horse, allHorses, race.raceInfo)
+                metrics: generateAdvancedMetrics(horse, allHorses, race.raceInfo),
+                fsScores: fsScoresFor(featureScoresData, race.raceInfo.raceNumber, horse.horseNumber)
               }));
 
               // 印の順番でソート（本命→対抗→単穴→連下最上位→連下→補欠→無印）
@@ -514,6 +534,17 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                       const roleClass = horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : horse.role === '単穴' ? 'tanana' : horse.role === '連下最上位' ? 'renka-top' : horse.role === '連下' ? 'renka' : horse.role === '補欠' ? 'hoketsu' : 'other';
                       const roleMark = horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : horse.role === '単穴' ? '▲' : horse.role === '連下最上位' ? '△' : horse.role === '連下' ? '△' : horse.role === '補欠' ? '☆' : '';
                       const m = horse.metrics;
+                      // stored featureScores（全6項目揃う馬）優先。無ければ generateAdvancedMetrics(m) を使う。
+                      // formTrend は stored が中心56・generateAdvancedMetrics が符号付きのため value-56 で表示系に合わせる。
+                      const fs6 = horse.fsScores;
+                      const feat = fs6 ? {
+                        speedIndex: fs6.speedIndex.value,
+                        staminaRating: fs6.staminaRating.value,
+                        formTrend: fs6.formTrend.value - 56,
+                        trackCompatibility: fs6.trackCompatibility.value,
+                        distanceFitness: fs6.distanceFitness.value,
+                        jockeyFactor: fs6.jockeyFactor.value,
+                      } : m;
 
                       return (
                         <div class={`detailed-horse-card ${roleClass}`}>
@@ -590,9 +621,9 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                     <span>Speed Index / スピード指数</span>
                                   </div>
                                   <div class="feature-bar-container">
-                                    <div class="feature-bar" style={`width: ${m.speedIndex}%`}></div>
+                                    <div class="feature-bar" style={`width: ${feat.speedIndex}%`}></div>
                                   </div>
-                                  <div class="feature-value">{m.speedIndex}</div>
+                                  <div class="feature-value">{feat.speedIndex}</div>
                                 </div>
 
                                 <div class="feature-item">
@@ -601,9 +632,9 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                     <span>Stamina Rating / スタミナ評価</span>
                                   </div>
                                   <div class="feature-bar-container">
-                                    <div class="feature-bar" style={`width: ${m.staminaRating}%`}></div>
+                                    <div class="feature-bar" style={`width: ${feat.staminaRating}%`}></div>
                                   </div>
-                                  <div class="feature-value">{m.staminaRating}</div>
+                                  <div class="feature-value">{feat.staminaRating}</div>
                                 </div>
 
                                 <div class="feature-item">
@@ -613,9 +644,9 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                   </div>
                                   <div class="feature-bar-container trend">
                                     <div class="feature-bar-center"></div>
-                                    <div class="feature-bar trend" style={`width: ${Math.abs(parseFloat(m.formTrend))}%; ${parseFloat(m.formTrend) >= 0 ? 'left: 50%;' : 'right: 50%;'}`}></div>
+                                    <div class="feature-bar trend" style={`width: ${Math.abs(parseFloat(feat.formTrend))}%; ${parseFloat(feat.formTrend) >= 0 ? 'left: 50%;' : 'right: 50%;'}`}></div>
                                   </div>
-                                  <div class="feature-value">{m.formTrend}</div>
+                                  <div class="feature-value">{feat.formTrend}</div>
                                 </div>
 
                                 <div class="feature-item">
@@ -624,9 +655,9 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                     <span>Track Compatibility / コース適性</span>
                                   </div>
                                   <div class="feature-bar-container">
-                                    <div class="feature-bar" style={`width: ${m.trackCompatibility}%`}></div>
+                                    <div class="feature-bar" style={`width: ${feat.trackCompatibility}%`}></div>
                                   </div>
-                                  <div class="feature-value">{m.trackCompatibility}</div>
+                                  <div class="feature-value">{feat.trackCompatibility}</div>
                                 </div>
 
                                 <div class="feature-item">
@@ -635,9 +666,9 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                     <span>Distance Fitness / 距離適性</span>
                                   </div>
                                   <div class="feature-bar-container">
-                                    <div class="feature-bar" style={`width: ${m.distanceFitness}%`}></div>
+                                    <div class="feature-bar" style={`width: ${feat.distanceFitness}%`}></div>
                                   </div>
-                                  <div class="feature-value">{m.distanceFitness}</div>
+                                  <div class="feature-value">{feat.distanceFitness}</div>
                                 </div>
 
                                 <div class="feature-item">
@@ -646,9 +677,9 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                     <span>Jockey Factor / 騎手要因</span>
                                   </div>
                                   <div class="feature-bar-container">
-                                    <div class="feature-bar" style={`width: ${m.jockeyFactor}%`}></div>
+                                    <div class="feature-bar" style={`width: ${feat.jockeyFactor}%`}></div>
                                   </div>
-                                  <div class="feature-value">{m.jockeyFactor}</div>
+                                  <div class="feature-value">{feat.jockeyFactor}</div>
                                 </div>
                               </div>
                             </div>
