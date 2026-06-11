@@ -16,6 +16,7 @@
     "import:results:jra": "node scripts/importResultsJra.js",
     "import:horse-histories:jra": "node scripts/importHorseHistoriesJra.js",
     "import:recent-horse-histories:nankan": "node scripts/importRecentHorseHistoriesNankan.js",
+    "import:entries:nankan": "node scripts/importEntriesNankan.js",
     "import:feature-scores": "node scripts/importFeatureScores.js",
     "rebuild:archive": "node scripts/rebuildArchive.js",
     "test:validation": "node scripts/utils/validatePrediction.test.js"
