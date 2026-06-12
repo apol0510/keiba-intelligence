@@ -10,6 +10,7 @@ import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../..
 import { injectEntriesRecentRacesNankanIntoData } from '../../../utils/injectEntriesRecentRacesNankan.js';
 import { getDisplayRecentRacesForNankan } from '../../../utils/getDisplayRecentRacesForNankan.js';
 import { loadFeatureScores, getHorseFeatures, hasUsableFeatureScores, venueCodeFromName } from '../../../utils/loadFeatureScores.js';
+import RecentRacesFromEntriesNankan from '../../../components/RecentRacesFromEntriesNankan.astro';
 
 // 南関 featureScores: 全6項目が揃う馬のみ stored を返す。
 // 一部欠落・無い馬/レース/日は null → generateAdvancedMetrics に fallback（南関は整備途中のため表示を消さない）。
@@ -427,6 +428,8 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                             </div>
                           </div>
                         )}
+
+                        <RecentRacesFromEntriesNankan horse={horse} />
 
                         <!-- Feature Importance Analysis（本命・対抗のみ詳細表示） -->
                         {isTopTwo && (
