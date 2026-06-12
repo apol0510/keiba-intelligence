@@ -6,6 +6,7 @@ import { RECENT_LABELS } from '../../../utils/recentForm.js';
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../../../utils/injectRecentHorseHistoriesNankan.js';
+import { injectEntriesRecentRacesNankanIntoData } from '../../../utils/injectEntriesRecentRacesNankan.js';
 import { getDisplayRecentRacesForNankan } from '../../../utils/getDisplayRecentRacesForNankan.js';
 
 export const prerender = true;
@@ -44,6 +45,11 @@ const venueName = predictionData.eventInfo.venue || venueMap[venueSlug] || venue
 // horse.recentRaces / featureScores は不変。失敗時は何もしない。
 try {
   injectRecentHorseHistoriesNankanIntoData(predictionData, nankanVenueCode(venueSlug || venueName), process.cwd());
+} catch (_e) { /* 非致命: 既存表示を維持 */ }
+// PR-F5f-1: 南関 entries(出馬表)由来の近走を別フィールド recentRacesFromEntriesNankan へ注入。
+// 上の recentRacesFromHistoriesNankan / horse.recentRaces は不変。表示接続は F5f-2。失敗時は非致命。
+try {
+  injectEntriesRecentRacesNankanIntoData(predictionData, nankanVenueCode(venueSlug || venueName), process.cwd());
 } catch (_e) { /* 非致命: 既存表示を維持 */ }
 
 const pageTitle = `${dateStr} ${venueName} AI予想 - KEIBA Intelligence`;
