@@ -52,8 +52,10 @@ const options = {
   method: 'POST',
   headers: {
     'Authorization': `Bearer ${SENDGRID_API_KEY}`,
-    'Content-Type': 'application/json',
-    'Content-Length': data.length
+    'Content-Type': 'application/json; charset=utf-8',
+    // 日本語・絵文字を含むとバイト長 > 文字数になるため、必ずUTF-8バイト長を渡す
+    // （data.length=文字数だとボディがマルチバイト境界で切れて 415 Invalid UTF8 になる）
+    'Content-Length': Buffer.byteLength(data, 'utf8')
   }
 };
 
@@ -87,5 +89,5 @@ req.on('error', (error) => {
   process.exit(1);
 });
 
-req.write(data);
+req.write(data, 'utf8');
 req.end();
