@@ -11,7 +11,6 @@ import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../..
 import { injectEntriesRecentRacesNankanIntoData } from '../../../utils/injectEntriesRecentRacesNankan.js';
 import { getDisplayRecentRacesForNankan } from '../../../utils/getDisplayRecentRacesForNankan.js';
 import { loadFeatureScores, getHorseFeatures, hasUsableFeatureScores, venueCodeFromName } from '../../../utils/loadFeatureScores.js';
-import RecentRacesFromEntriesNankan from '../../../components/RecentRacesFromEntriesNankan.astro';
 
 // 南関 featureScores: 全6項目が揃う馬のみ stored を返す。
 // 一部欠落・無い馬/レース/日は null → generateAdvancedMetrics に fallback（南関は整備途中のため表示を消さない）。
@@ -617,7 +616,6 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                             </div>
                           )}
 
-                          <RecentRacesFromEntriesNankan horse={horse} />
 
                           <!-- Feature Analysis (上位3頭のみ詳細表示) -->
                           {(horse.role === '本命' || horse.role === '対抗' || horse.role === '単穴') && (
