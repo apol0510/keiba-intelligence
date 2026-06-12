@@ -1,0 +1,52 @@
+---
+/**
+ * RecentRacesFromEntriesNankan.astro (keiba-intelligence) — PR-F5f-2
+ *
+ * 南関 entries(出馬表)由来の近走を「馬詳細」領域に **別ブロック**として表示する共通 component。
+ * 既存「直近走 / 過去N走」(getDisplayRecentRacesForNankan) とは別物・並置する。
+ *
+ * 契約: keiba-data-shared-admin docs/nankan-horse-detail-display-plan.md §32。
+ *   - `horse.recentRacesFromEntriesNankan?.length > 0` のときだけ表示。無ければ何も出さない。
+ *   - 既存「直近走」表示は変更しない。getDisplayRecentRacesForNankan を import しない（fallback 化しない）。
+ *   - **record / 通算 / 条件別は表示しない**（mapper が record を除外済み・本 component も参照しない）。
+ *   - 出走実績の有無や通算成績を示唆する表現は使わない（参考の近走のみ）。
+ *   - opponentName / postPosition は表示しない（mapper 出力に無い）。
+ *   - 予測スコアや評価記号・推奨等の他指標には接続しない（参考表示のみ）。
+ *   - CSS 追加なし。既存 recent-races 系 class を流用する。
+ */
+const { horse } = Astro.props;
+const entries = Array.isArray(horse?.recentRacesFromEntriesNankan)
+  ? horse.recentRacesFromEntriesNankan.slice(0, 5)
+  : [];
+---
+{entries.length > 0 && (
+  <details class="recent-races recent-races-compact">
+    <summary>出馬表由来の近走（参考）</summary>
+    <div class="recent-races-list">
+      {entries.map((r) => {
+        const venue = r?.venue || '';
+        const distance = r?.distance || '';
+        const rank = (r?.rank != null && Number.isFinite(Number(r.rank)))
+          ? `${r.rank}着`
+          : (r?.finishStatus || '');
+        const time = r?.time ? `タイム${r.time}` : '';
+        const last3f = r?.last3f ? `上がり${r.last3f}` : '';
+        const bw = r?.bodyWeight ? `馬体${r.bodyWeight}kg` : '';
+        const pass = r?.passingOrder ? `通過${r.passingOrder}` : '';
+        const jk = r?.jockey ? `騎手:${r.jockey}` : '';
+        return (
+          <div class="recent-race-row">
+            <span class="recent-race-venue">{venue}</span>
+            <span class="recent-race-distance">{distance}</span>
+            <span class="recent-race-rank">{rank}</span>
+            {time && <span class="recent-race-meta">{time}</span>}
+            {jk && <span class="recent-race-meta">{jk}</span>}
+            {pass && <span class="recent-race-meta">{pass}</span>}
+            {last3f && <span class="recent-race-meta">{last3f}</span>}
+            {bw && <span class="recent-race-meta">{bw}</span>}
+          </div>
+        );
+      })}
+    </div>
+  </details>
+)}
