@@ -48,8 +48,13 @@ jobs:
             DATE="$PAYLOAD_DATE"
             echo "📅 Using date from repository_dispatch: $DATE"
           else
-            DATE=$(TZ=Asia/Tokyo date +%Y-%m-%d)
-            echo "📅 Current date (JST): $DATE"
+            # schedule実行時：GitHub Actionsの遅延でJST日付をまたぐと
+            # 「実行時点の今日」だと前日(本来の対象日)を取り逃がす。
+            # 6時間引いた業務日を対象にすることで遅延を吸収する。
+            #   - 23:30 JST 正常実行 → 6h引いても同日 → その日を対象
+            #   - 02:23 JST 翌日に遅延実行 → 6h引いて前日 → 本来の対象日を維持
+            DATE=$(TZ=Asia/Tokyo date -d '6 hours ago' +%Y-%m-%d)
+            echo "📅 Target date (JST, -6h to absorb schedule delay): $DATE"
           fi
           echo "date=$DATE" >> $GITHUB_OUTPUT
 
@@ -93,10 +98,20 @@ jobs:
             echo "⏭️  No JRA results in keiba-data-shared yet (全会場404)"
             echo "has_missing=false" >> $GITHUB_OUTPUT
             # racebook はあるのに結果がない = 取込漏れアラート
+            # ただし安全弁: 対象日 18:00 JST(JRA最終R終了見込み)未満なら
+            # レース未開催/開催中の「結果なし」は正常なので抑止する
+            # （workflow_dispatch等での早期実行による誤アラート防止）
             if [ "${#RACEBOOK_VENUES[@]}" -gt 0 ]; then
-              echo "🚨 racebookあり・結果なし → 取込漏れアラート対象"
-              echo "missing_results_alert=true" >> $GITHUB_OUTPUT
-              echo "racebook_venues=${RACEBOOK_VENUES[*]}" >> $GITHUB_OUTPUT
+              NOW_EPOCH=$(TZ=Asia/Tokyo date +%s)
+              GATE_EPOCH=$(TZ=Asia/Tokyo date -d "$DATE 18:00" +%s)
+              if [ "$NOW_EPOCH" -ge "$GATE_EPOCH" ]; then
+                echo "🚨 racebookあり・結果なし → 取込漏れアラート対象"
+                echo "missing_results_alert=true" >> $GITHUB_OUTPUT
+                echo "racebook_venues=${RACEBOOK_VENUES[*]}" >> $GITHUB_OUTPUT
+              else
+                echo "⏭️  対象日($DATE)のレース終了前(18:00 JST未到達)のため結果未登録アラートを抑止"
+                echo "missing_results_alert=false" >> $GITHUB_OUTPUT
+              fi
             else
               echo "missing_results_alert=false" >> $GITHUB_OUTPUT
             fi
