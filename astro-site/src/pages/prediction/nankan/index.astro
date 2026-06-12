@@ -8,6 +8,7 @@ import { generateAdvancedMetrics } from '../../../utils/featureScores.js';
 import { isMainRace, getTop5Challengers } from '../../../utils/mainRaceBetting.js';
 import { RECENT_LABELS } from '../../../utils/recentForm.js';
 import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../../../utils/injectRecentHorseHistoriesNankan.js';
+import { injectEntriesRecentRacesNankanIntoData } from '../../../utils/injectEntriesRecentRacesNankan.js';
 import { getDisplayRecentRacesForNankan } from '../../../utils/getDisplayRecentRacesForNankan.js';
 import { loadFeatureScores, getHorseFeatures, hasUsableFeatureScores, venueCodeFromName } from '../../../utils/loadFeatureScores.js';
 
@@ -117,6 +118,11 @@ try {
         // horse.recentRaces / featureScores は不変。失敗時は何もしない。
         try {
           injectRecentHorseHistoriesNankanIntoData(data, nankanVenueCode(fileInfo.venue), process.cwd());
+        } catch (_e) { /* 非致命: 既存表示を維持 */ }
+        // PR-F5f-1: 南関 entries(出馬表)由来の近走を別フィールド recentRacesFromEntriesNankan へ注入。
+        // 上の recentRacesFromHistoriesNankan / horse.recentRaces は不変。表示接続は F5f-2。失敗時は非致命。
+        try {
+          injectEntriesRecentRacesNankanIntoData(data, nankanVenueCode(fileInfo.venue), process.cwd());
         } catch (_e) { /* 非致命: 既存表示を維持 */ }
       }
 
