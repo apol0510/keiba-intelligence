@@ -412,7 +412,7 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                           <div class="dhc-recent-races">
                             <span class="dhc-recent-label">直近走</span>
                             <div class="dhc-recent-list">
-                              {getDisplayRecentRacesForNankan(horse).slice(0, 5).map((r: any, rIdx: number) => (
+                              {(Array.isArray(horse?.recentRacesFromEntriesNankan) && horse.recentRacesFromEntriesNankan.length > 0 ? horse.recentRacesFromEntriesNankan : getDisplayRecentRacesForNankan(horse)).slice(0, 5).map((r: any, rIdx: number) => (
                                 <span class="dhc-recent-item">
                                   <span class="dhc-recent-tag">{RECENT_LABELS[rIdx] || `${rIdx + 1}走前`}</span>
                                   <span class={`dhc-recent-rank ${r.rank && r.rank <= 3 ? 'top3' : ''}`}>

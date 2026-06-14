@@ -161,7 +161,7 @@ const displayDate = `${dateParts[0]}年${parseInt(dateParts[1])}月${parseInt(da
                           <div class="recent-races">
                             <span class="recent-label">直近走</span>
                             <div class="recent-list">
-                              {getDisplayRecentRacesForNankan(horse).slice(0, 5).map((r: any, rIdx: number) => (
+                              {(Array.isArray(horse?.recentRacesFromEntriesNankan) && horse.recentRacesFromEntriesNankan.length > 0 ? horse.recentRacesFromEntriesNankan : getDisplayRecentRacesForNankan(horse)).slice(0, 5).map((r: any, rIdx: number) => (
                                 <span class="recent-item">
                                   <span class="recent-tag">{RECENT_LABELS[rIdx] || `${rIdx + 1}走前`}</span>
                                   <span class={`recent-rank ${r.rank && r.rank <= 3 ? 'top3' : ''}`}>
