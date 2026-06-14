@@ -16,6 +16,7 @@ export default defineConfig({
     includeFiles: [
       './src/data/horseHistories/**/*.json',
       './src/data/recentHorseHistories/**/*.json',
+      './src/data/entries/**/*.json',
     ],
   }),
 
