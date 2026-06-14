@@ -161,16 +161,43 @@ const displayDate = `${dateParts[0]}年${parseInt(dateParts[1])}月${parseInt(da
                           <div class="recent-races">
                             <span class="recent-label">直近走</span>
                             <div class="recent-list">
-                              {(Array.isArray(horse?.recentRacesFromEntriesNankan) && horse.recentRacesFromEntriesNankan.length > 0 ? horse.recentRacesFromEntriesNankan : getDisplayRecentRacesForNankan(horse)).slice(0, 5).map((r: any, rIdx: number) => (
-                                <span class="recent-item">
-                                  <span class="recent-tag">{RECENT_LABELS[rIdx] || `${rIdx + 1}走前`}</span>
-                                  <span class={`recent-rank ${r.rank && r.rank <= 3 ? 'top3' : ''}`}>
-                                    {r.rank ? `${r.rank}着` : r.finishStatus || '-'}
-                                  </span>
-                                  <span class="recent-venue">{r.venue}</span>
-                                  <span class="recent-distance">{r.distance}m</span>
-                                </span>
-                              ))}
+                              {(Array.isArray(horse?.recentRacesFromEntriesNankan) && horse.recentRacesFromEntriesNankan.length > 0 ? horse.recentRacesFromEntriesNankan : getDisplayRecentRacesForNankan(horse)).slice(0, 5).map((r: any, rIdx: number) => {
+                                const rankRaw = r?.rank ?? r?.finish;
+                                const isNum = (rankRaw != null && Number.isFinite(Number(rankRaw)));
+                                const rank = isNum ? `${rankRaw}着` : (r?.finishStatus || '');
+                                const hasPerf = r.time || r.last3f || r.margin || r.passingOrder || r.bodyWeight;
+                                const hasMeta = r.jockey || r.carriedWeight || r.raceName || r.headCount;
+                                return (
+                                  <div class="recent-card">
+                                    <div class="recent-line recent-line-main">
+                                      <span class="recent-tag">{RECENT_LABELS[rIdx] || `${rIdx + 1}走前`}</span>
+                                      {r.date && <span class="recent-meta">{r.date}</span>}
+                                      {r.venue && <span class="recent-venue">{r.venue}</span>}
+                                      {r.distance && <span class="recent-distance">{r.distance}</span>}
+                                      {r.trackCondition && <span class="recent-meta">{r.trackCondition}</span>}
+                                      {rank && <span class={`recent-rank ${isNum && Number(rankRaw) <= 3 ? 'top3' : ''}`}>{rank}</span>}
+                                      {r.popularity && <span class="recent-meta">{r.popularity}人気</span>}
+                                    </div>
+                                    {hasPerf && (
+                                      <div class="recent-line recent-line-perf">
+                                        {r.time && <span class="recent-meta">タイム{r.time}</span>}
+                                        {r.last3f && <span class="recent-meta recent-last3f">上がり{r.last3f}</span>}
+                                        {r.margin && <span class="recent-meta recent-margin">着差{r.margin}</span>}
+                                        {r.passingOrder && <span class="recent-meta recent-passing">通過{r.passingOrder}</span>}
+                                        {r.bodyWeight && <span class="recent-meta">馬体{r.bodyWeight}kg</span>}
+                                      </div>
+                                    )}
+                                    {hasMeta && (
+                                      <div class="recent-line recent-line-meta">
+                                        {r.jockey && <span class="recent-meta">騎手:{r.jockey}</span>}
+                                        {r.carriedWeight && <span class="recent-meta">斤量{r.carriedWeight}</span>}
+                                        {r.raceName && <span class="recent-meta recent-name">{r.raceName}</span>}
+                                        {r.headCount && <span class="recent-meta">{r.headCount}頭</span>}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         </td>
@@ -428,7 +455,8 @@ const displayDate = `${dateParts[0]}年${parseInt(dateParts[1])}月${parseInt(da
 
   .recent-races {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 0.5rem;
     flex-wrap: wrap;
     font-size: 0.78rem;
@@ -445,21 +473,42 @@ const displayDate = `${dateParts[0]}年${parseInt(dateParts[1])}月${parseInt(da
 
   .recent-list {
     display: flex;
+    flex-direction: column;
     gap: 0.5rem;
-    flex-wrap: wrap;
+    width: 100%;
   }
 
-  .recent-item {
-    display: inline-flex;
-    align-items: center;
+  /* 1走 = 1カード（3行構成: main / performance / meta） */
+  .recent-card {
+    display: flex;
+    flex-direction: column;
     gap: 0.25rem;
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    line-height: 1.4;
     color: var(--text-secondary);
+  }
+
+  .recent-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.5rem;
+  }
+
+  .recent-line-perf,
+  .recent-line-meta {
+    font-size: 0.74rem;
   }
 
   .recent-tag {
     font-size: 0.68rem;
     color: var(--text-secondary);
     opacity: 0.7;
+    font-weight: 600;
   }
 
   .recent-rank {
@@ -472,9 +521,16 @@ const displayDate = `${dateParts[0]}年${parseInt(dateParts[1])}月${parseInt(da
   }
 
   .recent-venue,
-  .recent-distance {
-    opacity: 0.7;
+  .recent-distance,
+  .recent-meta {
+    opacity: 0.8;
   }
+
+  /* 色分け（AK free 方針: 上がり=青 / 通過=水 / 着差=琥珀 / レース名=灰） */
+  .recent-last3f { color: #38bdf8; opacity: 1; }
+  .recent-passing { color: #67e8f9; opacity: 1; }
+  .recent-margin { color: #fbbf24; opacity: 1; }
+  .recent-name { opacity: 0.8; }
 
   .nav-links {
     display: flex;

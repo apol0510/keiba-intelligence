@@ -600,18 +600,43 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                             <div class="dhc-recent-races">
                               <span class="dhc-recent-label">直近走</span>
                               <div class="dhc-recent-list">
-                                {(Array.isArray(horse?.recentRacesFromEntriesNankan) && horse.recentRacesFromEntriesNankan.length > 0 ? horse.recentRacesFromEntriesNankan : getDisplayRecentRacesForNankan(horse)).slice(0, 5).map((r: any, rIdx: number) => (
-                                  <span class="dhc-recent-item">
-                                    <span class="dhc-recent-tag">{RECENT_LABELS[rIdx] || `${rIdx + 1}走前`}</span>
-                                    <span class={`dhc-recent-rank ${r.rank && r.rank <= 3 ? 'top3' : ''}`}>
-                                      {r.rank ? `${r.rank}着` : r.finishStatus || '-'}
-                                    </span>
-                                    {r.venue && <span class="dhc-recent-venue">{r.venue}</span>}
-                                    {r.distance && <span class="dhc-recent-distance">{r.distance}</span>}
-                                    {r.time && <span class="dhc-recent-time">{r.time}</span>}
-                                    {r.last3f && <span class="dhc-recent-last3f">上がり{r.last3f}</span>}
-                                  </span>
-                                ))}
+                                {(Array.isArray(horse?.recentRacesFromEntriesNankan) && horse.recentRacesFromEntriesNankan.length > 0 ? horse.recentRacesFromEntriesNankan : getDisplayRecentRacesForNankan(horse)).slice(0, 5).map((r: any, rIdx: number) => {
+                                  const rankRaw = r?.rank ?? r?.finish;
+                                  const isNum = (rankRaw != null && Number.isFinite(Number(rankRaw)));
+                                  const rank = isNum ? `${rankRaw}着` : (r?.finishStatus || '');
+                                  const hasPerf = r.time || r.last3f || r.margin || r.passingOrder || r.bodyWeight;
+                                  const hasMeta = r.jockey || r.carriedWeight || r.raceName || r.headCount;
+                                  return (
+                                    <div class="dhc-recent-card">
+                                      <div class="dhc-recent-line dhc-recent-line-main">
+                                        <span class="dhc-recent-tag">{RECENT_LABELS[rIdx] || `${rIdx + 1}走前`}</span>
+                                        {r.date && <span class="dhc-recent-meta">{r.date}</span>}
+                                        {r.venue && <span class="dhc-recent-venue">{r.venue}</span>}
+                                        {r.distance && <span class="dhc-recent-distance">{r.distance}</span>}
+                                        {r.trackCondition && <span class="dhc-recent-meta">{r.trackCondition}</span>}
+                                        {rank && <span class={`dhc-recent-rank ${isNum && Number(rankRaw) <= 3 ? 'top3' : ''}`}>{rank}</span>}
+                                        {r.popularity && <span class="dhc-recent-meta">{r.popularity}人気</span>}
+                                      </div>
+                                      {hasPerf && (
+                                        <div class="dhc-recent-line dhc-recent-line-perf">
+                                          {r.time && <span class="dhc-recent-meta">タイム{r.time}</span>}
+                                          {r.last3f && <span class="dhc-recent-meta dhc-recent-last3f">上がり{r.last3f}</span>}
+                                          {r.margin && <span class="dhc-recent-meta dhc-recent-margin">着差{r.margin}</span>}
+                                          {r.passingOrder && <span class="dhc-recent-meta dhc-recent-passing">通過{r.passingOrder}</span>}
+                                          {r.bodyWeight && <span class="dhc-recent-meta">馬体{r.bodyWeight}kg</span>}
+                                        </div>
+                                      )}
+                                      {hasMeta && (
+                                        <div class="dhc-recent-line dhc-recent-line-meta">
+                                          {r.jockey && <span class="dhc-recent-meta">騎手:{r.jockey}</span>}
+                                          {r.carriedWeight && <span class="dhc-recent-meta">斤量{r.carriedWeight}</span>}
+                                          {r.raceName && <span class="dhc-recent-meta dhc-recent-name">{r.raceName}</span>}
+                                          {r.headCount && <span class="dhc-recent-meta">{r.headCount}頭</span>}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
@@ -1941,21 +1966,32 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
     .dhc-recent-list {
       display: flex;
       flex-direction: column;
-      gap: 0.45rem;
+      gap: 0.5rem;
       margin-top: 0.5rem;
     }
-    .dhc-recent-item {
+    /* 1走 = 1カード（3行構成: main / performance / meta） */
+    .dhc-recent-card {
       display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.35rem 0.5rem;
+      flex-direction: column;
+      gap: 0.25rem;
       width: 100%;
-      padding: 0.45rem 0.6rem;
+      padding: 0.5rem 0.65rem;
       background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 8px;
       font-size: 0.78rem;
-      line-height: 1.35;
+      line-height: 1.4;
       color: #e2e8f0;
+    }
+    .dhc-recent-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.25rem 0.5rem;
+    }
+    .dhc-recent-line-perf,
+    .dhc-recent-line-meta {
+      font-size: 0.74rem;
     }
     .dhc-recent-tag {
       min-width: 3.2rem;
@@ -1971,15 +2007,16 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
     }
     .dhc-recent-venue,
     .dhc-recent-distance,
-    .dhc-recent-time,
-    .dhc-recent-last3f {
+    .dhc-recent-meta {
       color: #94a3b8;
-      font-size: 0.74rem;
     }
+    /* 色分け（AK free 方針: 上がり=青 / 通過=水 / 着差=琥珀 / レース名=灰） */
+    .dhc-recent-last3f { color: #38bdf8; }
+    .dhc-recent-passing { color: #67e8f9; }
+    .dhc-recent-margin { color: #fbbf24; }
+    .dhc-recent-name { color: #94a3b8; }
     @media (max-width: 768px) {
-      .dhc-recent-item {
-        align-items: flex-start;
-        gap: 0.3rem 0.45rem;
+      .dhc-recent-card {
         font-size: 0.76rem;
       }
     }
