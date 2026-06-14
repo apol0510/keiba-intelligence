@@ -222,7 +222,7 @@ const monthlyPlans = [
                   </ul>
 
                   <div class="future-comparison">
-                    <div class="comparison-label">月払いなら50年で</div>
+                    <div class="comparison-label">毎月課金型なら50年で</div>
                     <div class="comparison-monthly">720万円</div>
                     <div class="comparison-arrow">↓</div>
                     <div class="comparison-label">買い切りなら</div>
@@ -299,7 +299,8 @@ const monthlyPlans = [
     </div>
   </section>
 
-  <!-- 月払いプラン（割高・非推奨） -->
+  {/* 月払いプラン（割高・非推奨）は非表示（2026-06-15） */}
+  {/*
   <section class="monthly-plans">
     <div class="container">
       <h2 class="section-title text-center">月払いプラン（割高・非推奨）</h2>
@@ -347,6 +348,7 @@ const monthlyPlans = [
       </div>
     </div>
   </section>
+  */}
 
   <!-- 価格比較表 -->
   <section class="price-comparison">
@@ -379,20 +381,6 @@ const monthlyPlans = [
               <td><strong>¥181/日</strong></td>
               <td><span class="badge badge-success">年間¥78,000お得</span></td>
             </tr>
-            <tr class="warning-row">
-              <td>月払い（南関のみ）</td>
-              <td>¥12,000/月</td>
-              <td>¥12,000/月</td>
-              <td>¥400/日</td>
-              <td><span class="badge badge-warning">年払いより2.2倍割高</span></td>
-            </tr>
-            <tr class="warning-row">
-              <td>月払い（中央のみ）</td>
-              <td>¥12,000/月</td>
-              <td>¥12,000/月</td>
-              <td>¥400/日</td>
-              <td><span class="badge badge-warning">年払いより2.2倍割高</span></td>
-            </tr>
           </tbody>
         </table>
       </div>
@@ -401,7 +389,7 @@ const monthlyPlans = [
         <p>💎 <strong>買い切りプランなら：</strong></p>
         <ul>
           <li>3年利用で月額換算¥2,444（年払いの半額以下）</li>
-          <li>5年利用なら月額換算¥1,467（月払いの1/8）</li>
+          <li>5年利用なら月額換算¥1,467（さらにお得）</li>
           <li>永久アクセス権で将来の値上げリスクなし</li>
           <li>長期利用すればするほどお得</li>
         </ul>
@@ -409,7 +397,6 @@ const monthlyPlans = [
         <ul>
           <li>月額換算¥5,500で南関＋中央の両方が利用可能</li>
           <li>1日あたりわずか¥181（缶コーヒー1本分以下）</li>
-          <li>月払いの半額以下でお得</li>
         </ul>
       </div>
     </div>
@@ -427,8 +414,6 @@ const monthlyPlans = [
               <th>機能</th>
               <th class="highlighted">買い切り</th>
               <th class="highlighted">年払い</th>
-              <th>月払い南関</th>
-              <th>月払い中央</th>
             </tr>
           </thead>
           <tbody>
@@ -436,20 +421,14 @@ const monthlyPlans = [
               <td>南関4場全レース予想</td>
               <td>✅</td>
               <td>✅</td>
-              <td>✅</td>
-              <td>❌</td>
             </tr>
             <tr>
               <td>JRA全10場全レース予想</td>
               <td>✅</td>
               <td>✅</td>
-              <td>❌</td>
-              <td>✅</td>
             </tr>
             <tr>
               <td>馬単買い目提供</td>
-              <td>✅</td>
-              <td>✅</td>
               <td>✅</td>
               <td>✅</td>
             </tr>
@@ -457,13 +436,9 @@ const monthlyPlans = [
               <td>的中実績閲覧</td>
               <td>✅</td>
               <td>✅</td>
-              <td>✅</td>
-              <td>✅</td>
             </tr>
             <tr>
               <td>データ可視化</td>
-              <td>✅</td>
-              <td>✅</td>
               <td>✅</td>
               <td>✅</td>
             </tr>
@@ -471,22 +446,16 @@ const monthlyPlans = [
               <td>Feature Importance Analysis</td>
               <td>✅</td>
               <td>✅</td>
-              <td>✅</td>
-              <td>✅</td>
             </tr>
             <tr>
               <td>永久アクセス</td>
               <td>✅</td>
-              <td>❌</td>
-              <td>❌</td>
               <td>❌</td>
             </tr>
             <tr class="highlight-row">
               <td><strong>月額換算</strong></td>
               <td><strong>¥2,444</strong><br><small>(3年利用時)</small></td>
               <td><strong>¥5,500</strong></td>
-              <td>¥12,000</td>
-              <td>¥12,000</td>
             </tr>
           </tbody>
         </table>
@@ -506,15 +475,7 @@ const monthlyPlans = [
             <strong>買い切りプラン（¥88,000）</strong>を最もおすすめします。3年利用で月額換算¥2,444（年払いの半額以下）、5年なら¥1,467と、長期利用で圧倒的にお得になります。
           </p>
           <p>
-            1年程度の利用を予定されている方は<strong>年払いプラン（¥66,000）</strong>もおすすめです。月額換算¥5,500（1日¥181）で月払いより54%お得です。
-          </p>
-        </div>
-
-        <div class="faq-item card">
-          <h3>Q. 月払いと年払いの差は？</h3>
-          <p>
-            月払いは<strong>¥12,000/月（年間¥144,000）</strong>、年払いは<strong>¥66,000/年</strong>です。
-            年払いなら<strong>年間¥78,000（54%）お得</strong>になります。
+            1年程度の利用を予定されている方は<strong>年払いプラン（¥66,000）</strong>もおすすめです。月額換算¥5,500（1日¥181）でお得にご利用いただけます。
           </p>
         </div>
 
@@ -534,15 +495,15 @@ const monthlyPlans = [
           </p>
           <p>
             でも、ひとつ確実なこと。<strong>あなたが支払うのは2026年の¥88,000だけ</strong>です。
-            月払いなら50年で720万円。買い切りなら8万8千円のみ。それが買い切りの力です。
+            毎月課金型のサービスなら50年で720万円。買い切りなら8万8千円のみ。それが買い切りの力です。
           </p>
         </div>
 
         <div class="faq-item card">
           <h3>Q. 南関のみ・中央のみのプランはありますか？</h3>
           <p>
-            月払い（¥12,000/月）でのみ南関のみ・中央のみのプランをご用意していますが、<strong>年払いプランの方が圧倒的にお得</strong>です。
-            南関＋中央セットの年払い（¥66,000）なら、月払いの半額以下で両方利用できます。
+            現在は<strong>南関＋中央セット</strong>の買い切りプラン・年払いプランのみのご提供です。
+            年払い（¥66,000）なら1日あたり¥181で南関4場＋中央（JRA全10場）の両方をご利用いただけます。
           </p>
         </div>
 
@@ -605,6 +566,8 @@ const monthlyPlans = [
             <button class="btn btn-primary btn-sm select-plan-btn">このプランを選ぶ</button>
           </div>
 
+          {/* 月払いプランは非表示（2026-06-15） */}
+          {/*
           <div class="plan-select-card" data-plan="monthly-nankan" data-price="12000">
             <h4>南関のみ（月払い）</h4>
             <div class="plan-price">¥12,000<span class="plan-period">/月</span></div>
@@ -618,6 +581,7 @@ const monthlyPlans = [
             <p class="plan-warning">年払いより2.2倍割高</p>
             <button class="btn btn-secondary btn-sm select-plan-btn">このプランを選ぶ</button>
           </div>
+          */}
         </div>
       </div>
 
