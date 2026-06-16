@@ -187,6 +187,9 @@ const pageTitle = predictionData
                       const roleClass = horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : 'tanana';
                       const roleMark = horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : '▲';
                       const m = horse.metrics;
+                      // オッズ未取得（predictedOdds 不在）時は generateAdvancedMetrics の期待値が
+                      // 控除率25%逆算で常に -25.0% の fallback 固定値になるため、EV 行自体を非表示にする。
+                      const hasPredictedOdds = Number(horse.predictedOdds) > 0;
 
                       return (
                         <div class={`detailed-horse-card ${roleClass}`}>
@@ -213,12 +216,14 @@ const pageTitle = predictionData
                                     <span class="qm-label">Risk / リスク</span>
                                     <span class={`qm-value risk-${m.riskLevel.toLowerCase()}`}>{m.riskLevel}</span>
                                   </div>
+                                  {hasPredictedOdds && (
                                   <div class="qm-item">
                                     <span class="qm-label">Expected Value / 期待値</span>
                                     <span class={`qm-value ${m.expectedValue.startsWith('+') ? 'positive' : 'negative'}`}>
                                       {m.expectedValue}
                                     </span>
                                   </div>
+                                  )}
                                 </div>
                               </div>
                             </div>

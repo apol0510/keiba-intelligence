@@ -349,6 +349,9 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                   <!-- 上位5頭の分析（1位・2位は詳細、3〜5位は順位隠してシャッフル） -->
                   {topHorses.map((horse, index) => {
                     const m = horse.metrics;
+                    // オッズ未取得（predictedOdds 不在）時は generateAdvancedMetrics の期待値が
+                    // 控除率25%逆算で常に -25.0% の fallback 固定値になるため、EV 行自体を非表示にする。
+                    const hasPredictedOdds = Number(horse.predictedOdds) > 0;
                     // stored featureScores（全6項目揃う馬）優先。無ければ generateAdvancedMetrics(m) を使う。
                     // formTrend は stored が中心56・generateAdvancedMetrics が符号付きのため value-56 で表示系に合わせる。
                     const fs6 = horse.fsScores;
@@ -397,12 +400,14 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                                   <span class="qm-label">Model Certainty / 確信度</span>
                                   <span class="qm-value">{m.modelCertainty}%</span>
                                 </div>
+                                {hasPredictedOdds && (
                                 <div class="qm-item">
                                   <span class="qm-label">Expected Value / 期待値</span>
                                   <span class={`qm-value ${m.expectedValue.startsWith('+') ? 'positive' : 'negative'}`}>
                                     {m.expectedValue}
                                   </span>
                                 </div>
+                                )}
                               </div>
                             </div>
                           </div>

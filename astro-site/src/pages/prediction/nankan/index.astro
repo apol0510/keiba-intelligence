@@ -540,6 +540,9 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                       const roleClass = horse.role === '本命' ? 'honmei' : horse.role === '対抗' ? 'taikou' : horse.role === '単穴' ? 'tanana' : horse.role === '連下最上位' ? 'renka-top' : horse.role === '連下' ? 'renka' : horse.role === '補欠' ? 'hoketsu' : 'other';
                       const roleMark = horse.role === '本命' ? '◎' : horse.role === '対抗' ? '○' : horse.role === '単穴' ? '▲' : horse.role === '連下最上位' ? '△' : horse.role === '連下' ? '△' : horse.role === '補欠' ? '☆' : '';
                       const m = horse.metrics;
+                      // オッズ未取得（predictedOdds 不在）時は generateAdvancedMetrics の期待値が
+                      // 控除率25%逆算で常に -25.0% の fallback 固定値になるため、EV 行自体を非表示にする。
+                      const hasPredictedOdds = Number(horse.predictedOdds) > 0;
                       // stored featureScores（全6項目揃う馬）優先。無ければ generateAdvancedMetrics(m) を使う。
                       // formTrend は stored が中心56・generateAdvancedMetrics が符号付きのため value-56 で表示系に合わせる。
                       const fs6 = horse.fsScores;
@@ -585,12 +588,14 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                     <span class="qm-label">Risk / リスク</span>
                                     <span class={`qm-value risk-${m.riskLevel.toLowerCase()}`}>{m.riskLevel}</span>
                                   </div>
+                                  {hasPredictedOdds && (
                                   <div class="qm-item">
                                     <span class="qm-label">Expected Value / 期待値</span>
                                     <span class={`qm-value ${m.expectedValue.startsWith('+') ? 'positive' : 'negative'}`}>
                                       {m.expectedValue}
                                     </span>
                                   </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
