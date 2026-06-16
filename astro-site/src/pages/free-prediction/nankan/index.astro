@@ -9,6 +9,7 @@ import { RECENT_LABELS } from '../../../utils/recentForm.js';
 import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../../../utils/injectRecentHorseHistoriesNankan.js';
 import { injectEntriesRecentRacesNankanIntoData } from '../../../utils/injectEntriesRecentRacesNankan.js';
 import { injectHorseStatsNankanIntoData } from '../../../utils/injectHorseStatsNankan.js';
+import NankanHorseStatsPanel from '../../../components/NankanHorseStatsPanel.astro';
 import { getDisplayRecentRacesForNankan } from '../../../utils/getDisplayRecentRacesForNankan.js';
 import { loadFeatureScores, getHorseFeatures, hasUsableFeatureScores, venueCodeFromName } from '../../../utils/loadFeatureScores.js';
 
@@ -463,6 +464,7 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                             </div>
                           </div>
                         )}
+                        <NankanHorseStatsPanel horse={horse} />
 
 
                         <!-- Feature Importance Analysis（本命・対抗のみ詳細表示） -->
