@@ -17,6 +17,13 @@ const arr = (x) => Array.isArray(x) && x.length > 0;
 const chaku = (r) => `${r?.first ?? 0}-${r?.second ?? 0}-${r?.third ?? 0}-${r?.out ?? 0}`;
 const starts = (r) => (Number(r?.first) || 0) + (Number(r?.second) || 0) + (Number(r?.third) || 0) + (Number(r?.out) || 0);
 const pctStr = (raw, val) => (ne(raw) ? raw : (val != null ? `${val}%` : ''));
+// 勝率/連対率行: 値がある側だけ表示（空の「連」「勝」を出さない）
+const fmtPctRow = (r) => {
+  const w = pctStr(r.winRateRaw, r.winRate);
+  const q = pctStr(r.quinellaRateRaw, r.quinellaRate);
+  return [(ne(r.label) ? r.label : ''), (ne(w) ? `勝${w}` : ''), (ne(q) ? `連${q}` : '')].filter(ne).join(' ');
+};
+const hasPct = (r) => ne(pctStr(r.winRateRaw, r.winRate)) || ne(pctStr(r.quinellaRateRaw, r.quinellaRate));
 
 // ---- 基本情報 ----
 const p = (s && s.profile) || {};
@@ -36,12 +43,12 @@ const profileItems = [
 
 const chakuRows = (rows) => (arr(rows) ? rows.filter((r) => starts(r) > 0) : []);
 const chakuChips = (rows) => chakuRows(rows).map((x) => `${ne(x.label) ? x.label + ' ' : ''}${chaku(x)}`);
-const pctChips = (rows) => (arr(rows) ? rows.filter((r) => r.winRate != null || r.quinellaRate != null).map((r) => `${ne(r.label) ? r.label + ' ' : ''}勝${pctStr(r.winRateRaw, r.winRate)} 連${pctStr(r.quinellaRateRaw, r.quinellaRate)}`) : []);
+const pctChips = (rows) => (arr(rows) ? rows.filter(hasPct).map(fmtPctRow) : []);
 
 // 騎手別
 let jkChips = [];
 if (s && s.jockeyStats) {
-  const jkLabel = { current: '今回', previous: '前回', all: '全' };
+  const jkLabel = { current: '今回騎手', previous: '前回騎手', all: '全成績' };
   jkChips = ['current', 'previous', 'all'].map((k) => {
     const j = s.jockeyStats[k];
     if (!j || (starts(j) === 0 && j.winRate == null)) return '';
