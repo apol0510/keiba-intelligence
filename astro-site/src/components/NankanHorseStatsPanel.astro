@@ -2,16 +2,12 @@
 /**
  * NankanHorseStatsPanel.astro (keiba-intelligence)
  *
- * horse.horseStatsNankan（uma_info 元表統計）を「近走詳細データ」として表示する（表示専用）。
- * 契約: keiba-data-shared-admin docs/nankan-uma-info-horse-stats-schema.md。
+ * horse.horseStatsNankan（uma_info 元表統計）を「近走詳細データ」として表示（表示専用）。
+ * KI 方針: 分析メモ寄り（紫〜青）。重要ブロックをグループ化したカード状に整理。
+ * recentRacesDetailed は表示しない（既存「直近走」欄と重複・統計/条件適性に寄せる）。
  *
- * 厳守:
- *   - horse.horseStatsNankan を参照（recentRaces の再表示ではない）。
- *   - featureScores / AI指数 / 印 / 買い目 / EV には一切接続しない（表示専用）。
- *   - 空配列 / null / 空ブロックは表示しない。
- *   - 表示名は「近走詳細データ」固定（「過去走データ/最大5走/5走」は使わない）。
- *
- * JSX パーサ回避のため、表示文字列は frontmatter で組み立て JSX は単純 map のみにする。
+ * 厳守: featureScores / AI指数 / 印 / 買い目 / EV 非接続。空/null/全0ブロックは非表示。
+ * 表示名「近走詳細データ」固定（過去走データ/最大5走/5走は使わない）。
  */
 const { horse } = Astro.props;
 const s = horse?.horseStatsNankan || null;
@@ -19,9 +15,10 @@ const s = horse?.horseStatsNankan || null;
 const ne = (v) => v !== null && v !== undefined && String(v).trim() !== '';
 const arr = (x) => Array.isArray(x) && x.length > 0;
 const chaku = (r) => `${r?.first ?? 0}-${r?.second ?? 0}-${r?.third ?? 0}-${r?.out ?? 0}`;
+const starts = (r) => (Number(r?.first) || 0) + (Number(r?.second) || 0) + (Number(r?.third) || 0) + (Number(r?.out) || 0);
 const pctStr = (raw, val) => (ne(raw) ? raw : (val != null ? `${val}%` : ''));
 
-// ---- profile（基本情報）----
+// ---- 基本情報 ----
 const p = (s && s.profile) || {};
 const sexAge = `${ne(p.sex) ? p.sex : ''}${p.age != null ? p.age : ''}`;
 const profileItems = [
@@ -37,97 +34,60 @@ const profileItems = [
   ne(p.breeder) && { k: '生産', v: p.breeder },
 ].filter(Boolean);
 
-// ---- recentRacesDetailed（近走詳細）----
-const recentRows = (arr(s && s.recentRacesDetailed) ? s.recentRacesDetailed : []).map((r) => {
-  const head = [r.date, r.venue, r.trackCondition, r.surface, (r.distance != null ? `${r.distance}m` : '')].filter(ne);
-  const result = [
-    (r.finish != null ? `${r.finish}着` : ''),
-    (ne(r.headCount) ? `${r.headCount}頭` : ''),
-    (ne(r.popularity) ? `${r.popularity}人気` : ''),
-    (ne(r.bodyWeight) ? `${r.bodyWeight}kg` : ''),
-  ].filter(ne);
-  const perf = [
-    (ne(r.time) ? `${r.time}${ne(r.margin) ? `(${r.margin})` : ''}` : ''),
-    (ne(r.last3f) ? `上り${r.last3f}${ne(r.last3fRank) ? `(${r.last3fRank})` : ''}` : ''),
-    (ne(r.passingOrder) ? `通過${r.passingOrder}` : ''),
-    (ne(r.jockey) ? r.jockey : ''),
-    (ne(r.carriedWeight) ? String(r.carriedWeight) : ''),
-    (ne(r.winnerOrRunnerUp) ? `勝馬${r.winnerOrRunnerUp}` : ''),
-  ].filter(ne);
-  return { head: head.join(' '), name: ne(r.raceName) ? r.raceName : '', result: result.join(' '), perf: perf.join(' ') };
-});
+const chakuRows = (rows) => (arr(rows) ? rows.filter((r) => starts(r) > 0) : []);
+const chakuChips = (rows) => chakuRows(rows).map((x) => `${ne(x.label) ? x.label + ' ' : ''}${chaku(x)}`);
+const pctChips = (rows) => (arr(rows) ? rows.filter((r) => r.winRate != null || r.quinellaRate != null).map((r) => `${ne(r.label) ? r.label + ' ' : ''}勝${pctStr(r.winRateRaw, r.winRate)} 連${pctStr(r.quinellaRateRaw, r.quinellaRate)}`) : []);
 
-// ---- chips セクション（着別 / %）----
-const chipSections = [];
-const pushChips = (title, chips) => { const c = chips.filter(ne); if (c.length) chipSections.push({ title, chips: c }); };
-
-if (arr(s && s.bestTimes)) {
-  pushChips('持時計', s.bestTimes.map((b) => [b.venue, (ne(b.time) ? b.time : b.raw), b.trackCondition, b.surface, (b.finish != null ? `${b.finish}着` : '')].filter(ne).join(' ')));
-}
-for (const [title, rows] of [
-  ['距離別成績', s && s.finishStatsByDistance],
-  ['場別成績', s && s.finishStatsByVenue],
-  ['馬場状態別成績', s && s.trackConditionStats],
-  ['出走間隔別成績', s && s.intervalStats],
-  ['季節別成績', s && s.seasonStats],
-]) {
-  if (arr(rows)) pushChips(title, rows.map((r) => `${ne(r.label) ? r.label + ' ' : ''}${chaku(r)}`));
-}
-for (const [title, rows] of [
-  ['種牡馬分析', s && s.sireStats],
-  ['騎手コース別成績', s && s.jockeyCourseStats],
-]) {
-  if (arr(rows)) pushChips(title, rows.filter((r) => r.winRate != null || r.quinellaRate != null).map((r) => `${ne(r.label) ? r.label + ' ' : ''}勝${pctStr(r.winRateRaw, r.winRate)} 連${pctStr(r.quinellaRateRaw, r.quinellaRate)}`));
-}
-// jockeyStats（今回/前回/全）
+// 騎手別
+let jkChips = [];
 if (s && s.jockeyStats) {
   const jkLabel = { current: '今回', previous: '前回', all: '全' };
-  const jkChips = ['current', 'previous', 'all'].map((k) => {
+  jkChips = ['current', 'previous', 'all'].map((k) => {
     const j = s.jockeyStats[k];
-    if (!j || (j.first == null && j.winRate == null)) return '';
+    if (!j || (starts(j) === 0 && j.winRate == null)) return '';
     const rate = [(ne(j.winRateRaw) ? `勝${j.winRateRaw}` : ''), (ne(j.quinellaRateRaw) ? `連${j.quinellaRateRaw}` : '')].filter(ne).join(' ');
     return `${jkLabel[k]} ${chaku(j)}${rate ? ' ' + rate : ''}`;
-  });
-  pushChips('騎手別成績', jkChips);
+  }).filter(ne);
 }
-// returnRates（回収率）
+// 回収率
 const rr = s && s.returnRates;
 const rrChips = [];
 if (rr && rr.horse && rr.horse.win) rrChips.push(`競走馬 単${rr.horse.win.raw} 複${rr.horse.place ? rr.horse.place.raw : ''}`);
 if (rr && rr.jockey && rr.jockey.win) rrChips.push(`騎手 単${rr.jockey.win.raw} 複${rr.jockey.place ? rr.jockey.place.raw : ''}`);
-if (rrChips.length) chipSections.push({ title: '回収率', chips: rrChips });
 
-const show = !!s && (profileItems.length > 0 || recentRows.length > 0 || chipSections.length > 0);
+// ---- グループ（分析メモ）----
+const sub = (title, chips) => { const c = (chips || []).filter(ne); return c.length ? { title, chips: c } : null; };
+const groups = [
+  { name: '条件別サマリー', subs: [sub('距離別', chakuChips(s && s.finishStatsByDistance)), sub('場別', chakuChips(s && s.finishStatsByVenue)), sub('馬場状態別', chakuChips(s && s.trackConditionStats))].filter(Boolean) },
+  { name: 'ローテ／季節', subs: [sub('出走間隔別', chakuChips(s && s.intervalStats)), sub('季節別', chakuChips(s && s.seasonStats))].filter(Boolean) },
+  { name: '血統／騎手', subs: [sub('種牡馬分析', pctChips(s && s.sireStats)), sub('騎手コース別', pctChips(s && s.jockeyCourseStats)), sub('騎手別', jkChips)].filter(Boolean) },
+  { name: '回収率', subs: [sub('回収率', rrChips)].filter(Boolean), accent: true },
+  { name: '持時計', subs: [sub('持時計', arr(s && s.bestTimes) ? s.bestTimes.map((b) => [b.venue, (ne(b.time) ? b.time : b.raw), b.trackCondition, b.surface, (b.finish != null ? `${b.finish}着` : '')].filter(ne).join(' ')) : [])].filter(Boolean) },
+].filter((g) => g.subs.length > 0);
+
+const show = !!s && (profileItems.length > 0 || groups.length > 0);
 ---
 {show && (
-  <details class="nhs">
-    <summary class="nhs-sum">近走詳細データ</summary>
-    <div class="nhs-body">
+  <details class="kinhs">
+    <summary class="kinhs-sum"><span class="kinhs-title">近走詳細データ</span><span class="kinhs-sub">条件適性メモ</span></summary>
+    <div class="kinhs-body">
       {profileItems.length > 0 && (
-        <div class="nhs-sec">
-          <div class="nhs-h">基本情報</div>
-          <div class="nhs-kvwrap">
-            {profileItems.map((it) => (<span class="nhs-kv"><span class="nhs-k">{it.k}</span>{it.v}</span>))}
+        <div class="kinhs-grp">
+          <div class="kinhs-gh">基本情報</div>
+          <div class="kinhs-kvwrap">
+            {profileItems.map((it) => (<span class="kinhs-kv"><span class="kinhs-k">{it.k}</span>{it.v}</span>))}
           </div>
         </div>
       )}
-      {recentRows.length > 0 && (
-        <div class="nhs-sec">
-          <div class="nhs-h">近走詳細</div>
-          {recentRows.map((r) => (
-            <div class="nhs-rr">
-              <div class="nhs-rr-head">{r.head}</div>
-              {r.name && <div class="nhs-rr-name">{r.name}</div>}
-              {r.result && <div class="nhs-rr-line">{r.result}</div>}
-              {r.perf && <div class="nhs-rr-line nhs-rr-perf">{r.perf}</div>}
+      {groups.map((g) => (
+        <div class={g.accent ? 'kinhs-grp kinhs-grp-accent' : 'kinhs-grp'}>
+          <div class="kinhs-gh">{g.name}</div>
+          {g.subs.map((sb) => (
+            <div class="kinhs-subrow">
+              <span class="kinhs-sublabel">{sb.title}</span>
+              <span class="kinhs-chips">{sb.chips.map((c) => (<span class="kinhs-chip">{c}</span>))}</span>
             </div>
           ))}
-        </div>
-      )}
-      {chipSections.map((sec) => (
-        <div class="nhs-sec">
-          <div class="nhs-h">{sec.title}</div>
-          <div class="nhs-chips">{sec.chips.map((c) => (<span class="nhs-chip">{c}</span>))}</div>
         </div>
       ))}
     </div>
@@ -135,22 +95,25 @@ const show = !!s && (profileItems.length > 0 || recentRows.length > 0 || chipSec
 )}
 
 <style>
-  .nhs { margin-top: 8px; border: 1px solid rgba(148,163,184,0.25); border-radius: 8px; background: rgba(15,23,42,0.55); overflow: hidden; }
-  .nhs-sum { cursor: pointer; padding: 8px 12px; font-weight: 600; color: #e2e8f0; font-size: 0.82rem; list-style: none; display: flex; align-items: center; gap: 6px; }
-  .nhs-sum::-webkit-details-marker { display: none; }
-  .nhs-sum::before { content: '▸'; color: #38bdf8; font-size: 0.7rem; }
-  .nhs[open] .nhs-sum::before { content: '▾'; }
-  .nhs-body { padding: 8px 12px 12px; display: flex; flex-direction: column; gap: 10px; }
-  .nhs-h { font-size: 0.72rem; font-weight: 700; color: #38bdf8; margin-bottom: 4px; letter-spacing: 0.02em; }
-  .nhs-kvwrap { display: flex; flex-wrap: wrap; gap: 4px 12px; }
-  .nhs-kv { font-size: 0.78rem; color: #e2e8f0; }
-  .nhs-k { color: #94a3b8; margin-right: 3px; }
-  .nhs-rr { padding: 6px 8px; border-radius: 6px; background: rgba(30,41,59,0.6); margin-bottom: 5px; }
-  .nhs-rr:last-child { margin-bottom: 0; }
-  .nhs-rr-head { font-size: 0.74rem; color: #cbd5e1; }
-  .nhs-rr-name { font-size: 0.78rem; color: #e2e8f0; font-weight: 600; }
-  .nhs-rr-line { font-size: 0.74rem; color: #cbd5e1; }
-  .nhs-rr-perf { color: #94a3b8; }
-  .nhs-chips { display: flex; flex-wrap: wrap; gap: 4px 8px; }
-  .nhs-chip { font-size: 0.74rem; color: #cbd5e1; background: rgba(30,41,59,0.6); border-radius: 5px; padding: 2px 7px; }
+  .kinhs { margin-top: 10px; border: 1px solid rgba(168,139,250,0.32); border-radius: 10px; background: rgba(23,18,43,0.6); overflow: hidden; }
+  .kinhs-sum { cursor: pointer; padding: 9px 12px; list-style: none; display: flex; align-items: baseline; gap: 8px; }
+  .kinhs-sum::-webkit-details-marker { display: none; }
+  .kinhs-sum::before { content: '▸'; color: #a78bfa; font-size: 0.7rem; }
+  .kinhs[open] .kinhs-sum::before { content: '▾'; }
+  .kinhs-title { font-weight: 700; color: #ede9fe; font-size: 0.84rem; }
+  .kinhs-sub { color: #c4b5fd; font-size: 0.72rem; }
+  .kinhs-body { padding: 4px 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .kinhs-grp { border: 1px solid rgba(148,163,184,0.18); border-radius: 8px; background: rgba(30,27,55,0.55); padding: 0.6rem 0.7rem; }
+  .kinhs-gh { color: #a78bfa; font-weight: 700; font-size: 0.74rem; border-left: 3px solid #a78bfa; padding-left: 0.45rem; margin-bottom: 0.5rem; letter-spacing: 0.02em; }
+  .kinhs-kvwrap { display: flex; flex-wrap: wrap; gap: 6px 14px; line-height: 1.75; }
+  .kinhs-kv { font-size: 0.8rem; color: #e9e6f5; }
+  .kinhs-k { color: #a5a0c0; margin-right: 4px; }
+  .kinhs-subrow { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; margin-bottom: 0.4rem; line-height: 1.7; }
+  .kinhs-subrow:last-child { margin-bottom: 0; }
+  .kinhs-sublabel { color: #c4b5fd; font-size: 0.72rem; min-width: 4.5em; }
+  .kinhs-chips { display: flex; flex-wrap: wrap; gap: 5px 7px; }
+  .kinhs-chip { font-size: 0.76rem; color: #e9e6f5; background: rgba(49,46,77,0.7); border: 1px solid rgba(168,139,250,0.22); border-radius: 999px; padding: 0.22rem 0.55rem; }
+  .kinhs-grp-accent { border-color: rgba(251,191,36,0.4); }
+  .kinhs-grp-accent .kinhs-gh { color: #fbbf24; border-left-color: #fbbf24; }
+  .kinhs-grp-accent .kinhs-chip { color: #fde68a; border-color: rgba(251,191,36,0.45); background: rgba(120,53,15,0.35); }
 </style>
