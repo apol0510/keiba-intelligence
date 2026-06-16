@@ -68,7 +68,7 @@ const groups = [
   { name: '条件別サマリー', subs: [sub('距離別', chakuChips(s && s.finishStatsByDistance)), sub('場別', chakuChips(s && s.finishStatsByVenue)), sub('馬場状態別', chakuChips(s && s.trackConditionStats))].filter(Boolean) },
   { name: 'ローテ／季節', subs: [sub('出走間隔別', chakuChips(s && s.intervalStats)), sub('季節別', chakuChips(s && s.seasonStats))].filter(Boolean) },
   { name: '血統／騎手', subs: [sub('種牡馬分析', pctChips(s && s.sireStats)), sub('騎手コース別', pctChips(s && s.jockeyCourseStats)), sub('騎手別', jkChips)].filter(Boolean) },
-  { name: '回収率', subs: [sub('回収率', rrChips)].filter(Boolean), accent: true },
+  { name: '回収率', subs: [sub('回収率', rrChips)].filter(Boolean), accent: true, note: '※ 南関・地方競馬データベース上の集計値です。中央競馬のみの戦績は反映されない場合があります。' },
   { name: '持時計', subs: [sub('持時計', arr(s && s.bestTimes) ? s.bestTimes.map((b) => [b.venue, (ne(b.time) ? b.time : b.raw), b.trackCondition, b.surface, (b.finish != null ? `${b.finish}着` : '')].filter(ne).join(' ')) : [])].filter(Boolean) },
 ].filter((g) => g.subs.length > 0);
 
@@ -95,6 +95,7 @@ const show = !!s && (profileItems.length > 0 || groups.length > 0);
               <span class="kinhs-chips">{sb.chips.map((c) => (<span class="kinhs-chip">{c}</span>))}</span>
             </div>
           ))}
+          {g.note && <div class="kinhs-note">{g.note}</div>}
         </div>
       ))}
     </div>
@@ -123,4 +124,5 @@ const show = !!s && (profileItems.length > 0 || groups.length > 0);
   .kinhs-grp-accent { border-color: rgba(251,191,36,0.4); }
   .kinhs-grp-accent .kinhs-gh { color: #fbbf24; border-left-color: #fbbf24; }
   .kinhs-grp-accent .kinhs-chip { color: #fde68a; border-color: rgba(251,191,36,0.45); background: rgba(120,53,15,0.35); }
+  .kinhs-note { margin-top: 0.45rem; font-size: 0.68rem; color: #a5a0c0; line-height: 1.5; }
 </style>
