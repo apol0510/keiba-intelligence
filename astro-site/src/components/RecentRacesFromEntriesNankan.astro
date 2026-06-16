@@ -20,7 +20,7 @@ const entries = Array.isArray(horse?.recentRacesFromEntriesNankan)
   : [];
 ---
 {entries.length > 0 && (
-  <details class="recent-races recent-races-compact">
+  <details class="recent-races recent-races-compact" data-click-close="true">
     <summary>出馬表由来の近走（参考）</summary>
     <div class="recent-races-list">
       {entries.map((r) => {

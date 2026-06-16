@@ -11,6 +11,7 @@ import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../..
 import { injectEntriesRecentRacesNankanIntoData } from '../../../utils/injectEntriesRecentRacesNankan.js';
 import { injectHorseStatsNankanIntoData } from '../../../utils/injectHorseStatsNankan.js';
 import NankanHorseStatsPanel from '../../../components/NankanHorseStatsPanel.astro';
+import AccordionClickClose from '../../../components/AccordionClickClose.astro';
 import { getDisplayRecentRacesForNankan } from '../../../utils/getDisplayRecentRacesForNankan.js';
 import { loadFeatureScores, getHorseFeatures, hasUsableFeatureScores, venueCodeFromName } from '../../../utils/loadFeatureScores.js';
 
@@ -355,7 +356,7 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                   )}
 
                   {/* AIモデル情報カード（折りたたみ・既定で閉じる、2026-05-23） */}
-                  <details class="ai-model-details">
+                  <details class="ai-model-details" data-click-close="true">
                     <summary class="ai-model-summary">
                       <span class="ai-model-summary-icon">🧠</span>
                       <span class="ai-model-summary-text">AIモデル仕様 / Ensemble DNN</span>
@@ -778,6 +779,8 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
       </div>
     </section>
   </AccessControl>
+
+  <AccordionClickClose />
 
   <style>
     /* free-prediction.astroの基本スタイルを継承 + PRO専用スタイル追加 */
