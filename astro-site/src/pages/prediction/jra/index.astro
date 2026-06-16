@@ -10,6 +10,7 @@ import { isMainRace, getTop5Challengers } from '../../../utils/mainRaceBetting.j
 import { recentRaceMeta, RECENT_LABELS } from '../../../utils/recentForm.js';
 import { injectHorseHistoriesIntoVenues } from '../../../utils/loadHorseHistoriesJra.js';
 import { loadFeatureScores, getHorseFeatures, hasUsableFeatureScores, venueCodeFromName } from '../../../utils/loadFeatureScores.js';
+import AccordionClickClose from '../../../components/AccordionClickClose.astro';
 
 export const prerender = false;
 
@@ -802,8 +803,8 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                               { icon: "👤", label: "Jockey Factor / 騎手要因", key: "jockeyFactor" },
                             ];
                             return (
-                              <div class="dhc-features">
-                                <div class="feature-title">Feature Importance Analysis / 特徴量重要度分析</div>
+                              <details class="dhc-features" data-click-close="true">
+                                <summary class="feature-title feature-summary">Feature Importance Analysis / 特徴量重要度分析</summary>
                                 <div class="feature-grid">
                                   {fItems.map((it) => {
                                     const v = fs6 && fs6[it.key] ? fs6[it.key].value : null;
@@ -825,7 +826,7 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                     );
                                   })}
                                 </div>
-                              </div>
+                              </details>
                             );
                           })()}
                         </div>
@@ -878,6 +879,8 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
       </div>
     </section>
   </AccessControl>
+
+  <AccordionClickClose />
 
   <style>
     /* free-prediction.astroの基本スタイルを継承 + PRO専用スタイル追加 */
@@ -1958,6 +1961,30 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
       margin-bottom: var(--spacing-sm);
       text-transform: uppercase;
       letter-spacing: 1px;
+    }
+
+    /* 特徴量バー見出しをボックス化（折りたたみアコーディオン） */
+    .feature-summary {
+      cursor: pointer;
+      list-style: none;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      margin-bottom: 0;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      border-radius: var(--radius-sm);
+      color: #93c5fd;
+    }
+    .feature-summary::-webkit-details-marker { display: none; }
+    .feature-summary::before { content: '▸'; color: #60a5fa; font-size: 0.7rem; flex-shrink: 0; }
+    details.dhc-features[open] > .feature-summary::before { content: '▾'; }
+    details.dhc-features[open] > .feature-summary {
+      margin-bottom: var(--spacing-sm);
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
     }
 
     .feature-grid {

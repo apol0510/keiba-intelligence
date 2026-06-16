@@ -1332,12 +1332,22 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
       user-select: none;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
+      padding: 8px 12px;
+      margin-bottom: 0;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      border-radius: var(--radius-sm);
+      color: #93c5fd;
     }
     .feature-summary::-webkit-details-marker { display: none; }
-    .feature-summary::before { content: '▸'; color: #60a5fa; font-size: 0.7rem; }
+    .feature-summary::before { content: '▸'; color: #60a5fa; font-size: 0.7rem; flex-shrink: 0; }
     details.dhc-features[open] > .feature-summary::before { content: '▾'; }
-    details.dhc-features[open] > .feature-summary { margin-bottom: var(--spacing-sm); }
+    details.dhc-features[open] > .feature-summary {
+      margin-bottom: var(--spacing-sm);
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
 
     .feature-grid {
       display: grid;

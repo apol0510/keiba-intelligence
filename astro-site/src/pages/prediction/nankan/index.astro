@@ -658,8 +658,8 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
 
                           <!-- Feature Analysis (上位3頭のみ詳細表示) -->
                           {(horse.role === '本命' || horse.role === '対抗' || horse.role === '単穴') && (
-                            <div class="dhc-features">
-                              <div class="feature-title">Feature Importance Analysis / 特徴量重要度分析</div>
+                            <details class="dhc-features" data-click-close="true">
+                              <summary class="feature-title feature-summary">Feature Importance Analysis / 特徴量重要度分析</summary>
                               <div class="feature-grid">
                                 <div class="feature-item">
                                   <div class="feature-label">
@@ -728,7 +728,7 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                   <div class="feature-value">{feat.jockeyFactor}</div>
                                 </div>
                               </div>
-                            </div>
+                            </details>
                           )}
                         </div>
                       );
@@ -1736,6 +1736,30 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
       margin-bottom: var(--spacing-sm);
       text-transform: uppercase;
       letter-spacing: 1px;
+    }
+
+    /* 特徴量バー見出しをボックス化（折りたたみアコーディオン） */
+    .feature-summary {
+      cursor: pointer;
+      list-style: none;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      margin-bottom: 0;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      border-radius: var(--radius-sm);
+      color: #93c5fd;
+    }
+    .feature-summary::-webkit-details-marker { display: none; }
+    .feature-summary::before { content: '▸'; color: #60a5fa; font-size: 0.7rem; flex-shrink: 0; }
+    details.dhc-features[open] > .feature-summary::before { content: '▾'; }
+    details.dhc-features[open] > .feature-summary {
+      margin-bottom: var(--spacing-sm);
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
     }
 
     .feature-grid {
