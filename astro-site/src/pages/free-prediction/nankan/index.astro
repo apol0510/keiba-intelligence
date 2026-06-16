@@ -8,6 +8,7 @@ import { generateAdvancedMetrics } from '../../../utils/featureScores.js';
 import { RECENT_LABELS } from '../../../utils/recentForm.js';
 import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../../../utils/injectRecentHorseHistoriesNankan.js';
 import { injectEntriesRecentRacesNankanIntoData } from '../../../utils/injectEntriesRecentRacesNankan.js';
+import { injectHorseStatsNankanIntoData } from '../../../utils/injectHorseStatsNankan.js';
 import { getDisplayRecentRacesForNankan } from '../../../utils/getDisplayRecentRacesForNankan.js';
 import { loadFeatureScores, getHorseFeatures, hasUsableFeatureScores, venueCodeFromName } from '../../../utils/loadFeatureScores.js';
 
@@ -93,6 +94,11 @@ try {
         // 上の recentRacesFromHistoriesNankan / horse.recentRaces は不変。表示接続は F5f-2。失敗時は非致命。
         try {
           injectEntriesRecentRacesNankanIntoData(data, nankanVenueCode(fileInfo.venue), process.cwd());
+        } catch (_e) { /* 非致命: 既存表示を維持 */ }
+        // 南関 uma_info 元表統計を別フィールド horse.horseStatsNankan へ注入（表示専用・UI接続は後続）。
+        // recentRaces / featureScores / AI指数 / 印 / 買い目 は不変。失敗時は非致命。
+        try {
+          injectHorseStatsNankanIntoData(data, nankanVenueCode(fileInfo.venue), process.cwd());
         } catch (_e) { /* 非致命: 既存表示を維持 */ }
       }
 

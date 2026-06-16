@@ -61,7 +61,7 @@
   # SSR で horseHistories / featureScores / entries JSON を読むため Function bundle に同梱する
   # (path は netlify.toml と同じ astro-site/ からの相対)。
   # entries（南関出馬表）は F5 馬詳細表示で SSR runtime に fs 読みするため追加（表示接続は F5f）。
-  included_files = ["src/data/horseHistories/**", "src/data/featureScores/**", "src/data/recentHorseHistories/**", "src/data/entries/**"]
+  included_files = ["src/data/horseHistories/**", "src/data/featureScores/**", "src/data/recentHorseHistories/**", "src/data/entries/**", "src/data/horseStats/**"]
 
 # プラグイン
 [[plugins]]
