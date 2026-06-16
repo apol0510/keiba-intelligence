@@ -8,7 +8,6 @@ import { join } from 'path';
 import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../../../utils/injectRecentHorseHistoriesNankan.js';
 import { injectEntriesRecentRacesNankanIntoData } from '../../../utils/injectEntriesRecentRacesNankan.js';
 import { getDisplayRecentRacesForNankan } from '../../../utils/getDisplayRecentRacesForNankan.js';
-import NankanHorseDetailPanel from '../../../components/NankanHorseDetailPanel.astro';
 
 export const prerender = true;
 
@@ -201,7 +200,6 @@ const displayDate = `${dateParts[0]}年${parseInt(dateParts[1])}月${parseInt(da
                               })}
                             </div>
                           </div>
-                          <NankanHorseDetailPanel horse={horse} races={getDisplayRecentRacesForNankan(horse)} />
                         </td>
                       </tr>
                     )}

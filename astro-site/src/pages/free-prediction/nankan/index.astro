@@ -9,7 +9,6 @@ import { RECENT_LABELS } from '../../../utils/recentForm.js';
 import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../../../utils/injectRecentHorseHistoriesNankan.js';
 import { injectEntriesRecentRacesNankanIntoData } from '../../../utils/injectEntriesRecentRacesNankan.js';
 import { getDisplayRecentRacesForNankan } from '../../../utils/getDisplayRecentRacesForNankan.js';
-import NankanHorseDetailPanel from '../../../components/NankanHorseDetailPanel.astro';
 import { loadFeatureScores, getHorseFeatures, hasUsableFeatureScores, venueCodeFromName } from '../../../utils/loadFeatureScores.js';
 
 // 南関 featureScores: 全6項目が揃う馬のみ stored を返す。
@@ -458,7 +457,6 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                             </div>
                           </div>
                         )}
-                        <NankanHorseDetailPanel horse={horse} races={getDisplayRecentRacesForNankan(horse)} />
 
 
                         <!-- Feature Importance Analysis（本命・対抗のみ詳細表示） -->
