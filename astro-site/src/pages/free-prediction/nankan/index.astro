@@ -393,6 +393,7 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                               <div class="dhc-title-line">
                                 <span class="dhc-number">{horse.horseNumber}</span>
                                 <span class="dhc-name">{horse.horseName}</span>
+                                <span class="dhc-pt">PT: {Number(horse.pt).toFixed(1)}</span>
                               </div>
                               {(horse.jockey || horse.trainer || horse.age || horse.weight) && (
                                 <div class="dhc-jockey-trainer">
@@ -404,16 +405,16 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                               )}
                               <div class="dhc-quick-metrics">
                                 <div class="qm-item">
-                                  <span class="qm-label">PT値</span>
-                                  <span class="qm-value">{Number(horse.pt).toFixed(2)}</span>
-                                </div>
-                                <div class="qm-item">
                                   <span class="qm-label">Win Prob. / 勝率</span>
                                   <span class="qm-value">{m.winProbability}%</span>
                                 </div>
                                 <div class="qm-item">
                                   <span class="qm-label">Model Certainty / 確信度</span>
                                   <span class="qm-value">{m.modelCertainty}%</span>
+                                </div>
+                                <div class="qm-item">
+                                  <span class="qm-label">Risk / リスク</span>
+                                  <span class={`qm-value risk-${m.riskLevel.toLowerCase()}`}>{m.riskLevel}</span>
                                 </div>
                                 {hasPredictedOdds && (
                                 <div class="qm-item">
@@ -1263,6 +1264,18 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
       font-size: 0.875rem;
       font-weight: 600;
       color: #a78bfa;
+    }
+
+    /* PTを上部バッジ化（premium と統一・PT: 154.0 形式） */
+    .dhc-pt {
+      padding: 4px 12px;
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #10b981;
+      font-family: 'Courier New', monospace;
     }
 
     .dhc-quick-metrics {
