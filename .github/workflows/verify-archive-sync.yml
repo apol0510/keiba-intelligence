@@ -41,19 +41,35 @@ jobs:
 
             echo "━━━ Checking: $DATE ━━━"
 
-            # 予想データがあるかチェック（racebook の per-venue ファイルを優先、computer/ にフォールバック）
+            # 予想データがあるかチェック
+            #  - HAS_PREDICTION         : racebook または computer（ログ表示用のみ）
+            #  - HAS_COMPUTER_PREDICTION: computer 予想のみ（No-Results アラートの発火条件）
+            # racebook は出馬表/前処理データであり、単独では結果未登録アラートの根拠にしない。
+            # （前倒し/日付誤りで racebook だけ存在する stray ファイルを誤検知しないため）
             HAS_PREDICTION=false
+            HAS_COMPUTER_PREDICTION=false
             PRED_VENUES_FOUND=()
+            COMPUTER_VENUES_FOUND=()
             for V in "${JRA_VENUE_CODES[@]}"; do
               RB_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/racebook/$YEAR/$MONTH/$DATE-$V.json"
               CP_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/predictions/computer/$YEAR/$MONTH/$DATE-$V.json"
-              if curl -sfI "$RB_URL" > /dev/null 2>&1 || curl -sfI "$CP_URL" > /dev/null 2>&1; then
+              RB_FOUND=false
+              if curl -sfI "$RB_URL" > /dev/null 2>&1; then
+                RB_FOUND=true
+              fi
+              if curl -sfI "$CP_URL" > /dev/null 2>&1; then
+                HAS_COMPUTER_PREDICTION=true
+                COMPUTER_VENUES_FOUND+=("$V")
+              fi
+              if [ "$RB_FOUND" = true ] || [ "$HAS_COMPUTER_PREDICTION" = true ]; then
                 HAS_PREDICTION=true
                 PRED_VENUES_FOUND+=("$V")
               fi
             done
-            if [ "$HAS_PREDICTION" = true ]; then
-              echo "✅ Prediction: Found (${PRED_VENUES_FOUND[*]})"
+            if [ "$HAS_COMPUTER_PREDICTION" = true ]; then
+              echo "✅ Computer prediction: Found (${COMPUTER_VENUES_FOUND[*]})"
+            elif [ "$HAS_PREDICTION" = true ]; then
+              echo "⏭️  Racebook only (no computer prediction): (${PRED_VENUES_FOUND[*]})"
             else
               echo "⏭️  Prediction: Not found"
             fi
@@ -111,11 +127,14 @@ jobs:
             else
               echo "⏭️  Results: Not found"
 
-              # 予想データがあるのに結果データがない → アラート
-              if [ "$HAS_PREDICTION" = true ]; then
-                echo "🚨 PROBLEM: Prediction exists but NO results!"
+              # computer 予想があるのに結果データがない → アラート
+              # （racebook 単独では発火させない。racebook only は stray/前倒しの可能性があるため）
+              if [ "$HAS_COMPUTER_PREDICTION" = true ]; then
+                echo "🚨 PROBLEM: JRA computer prediction exists but NO results!"
                 NO_RESULTS_DATES="${NO_RESULTS_DATES}${DATE}, "
                 NO_RESULTS_ALERT=true
+              elif [ "$HAS_PREDICTION" = true ]; then
+                echo "ℹ️  Racebook only & no results → skip (likely stray/pre-published racebook)"
               fi
             fi
           done
@@ -314,13 +333,14 @@ jobs:
           EMAIL_BODY: |
             マコさん、
 
-            JRA予想データは存在しますが、結果データがkeiba-data-sharedに登録されていません。
+            JRA computer予想データは存在しますが、結果データがkeiba-data-sharedに登録されていません。
+            （racebook 単独のみの日は対象外です）
 
             【結果データが未登録の日付】
             ${{ steps.check-jra.outputs.no_results_dates }}
 
             【確認事項】
-            1. keiba-data-sharedに予想データは存在します
+            1. keiba-data-sharedに computer予想データは存在します
             2. しかし、結果データが登録されていません
 
             【対応方法】
