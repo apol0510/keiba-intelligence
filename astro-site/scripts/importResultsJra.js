@@ -460,7 +460,7 @@ function verifyResults(prediction, results) {
         '新潟': 'NII', 'NII': 'NII',
         '札幌': 'SAP', 'SAP': 'SAP',
         '函館': 'HKD', 'HKD': 'HKD',
-        '福島': 'FUK', 'FUK': 'FUK',
+        '福島': 'FKS', 'FKS': 'FKS',
         '中京': 'CHU', 'CHU': 'CHU'
       };
       return venueMap[v] || v;
