@@ -459,7 +459,7 @@ function verifyResults(prediction, results) {
         '阪神': 'HAN', 'HAN': 'HAN',
         '新潟': 'NII', 'NII': 'NII',
         '札幌': 'SAP', 'SAP': 'SAP',
-        '函館': 'HAK', 'HAK': 'HAK',
+        '函館': 'HKD', 'HKD': 'HKD',
         '福島': 'FUK', 'FUK': 'FUK',
         '中京': 'CHU', 'CHU': 'CHU'
       };

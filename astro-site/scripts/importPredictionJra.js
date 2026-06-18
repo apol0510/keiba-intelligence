@@ -479,7 +479,7 @@ async function importPrediction(date, venue = 'jra') {
 // 時計からの距離推定は誤判定リスクのため不採用(マコ指示)。
 const JRA_VENUE_CODE = {
   '京': 'KYO', '東': 'TOK', '阪': 'HAN', '中': 'NAK', '小': 'KOK',
-  '新': 'NII', '福': 'FKS', '札': 'SAP', '函': 'HAK', '名': 'CHU'
+  '新': 'NII', '福': 'FKS', '札': 'SAP', '函': 'HKD', '名': 'CHU'
 };
 const _resultsCache = new Map();
 async function fetchJraResultDay(yr, mo, da, vc) {

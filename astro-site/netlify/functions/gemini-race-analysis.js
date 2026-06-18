@@ -177,7 +177,7 @@ const NANKAN_VENUES = { '大井': 'OOI', '船橋': 'FUN', '川崎': 'KAW', '浦�
 const JRA_VENUES = {
   '東京': 'TOK', '中山': 'NAK', '阪神': 'HAN', '京都': 'KYO',
   '中京': 'CHU', '新潟': 'NII', '福島': 'FKS', '小倉': 'KOK',
-  '札幌': 'SAP', '函館': 'HAK'
+  '札幌': 'SAP', '函館': 'HKD'
 };
 
 async function fetchRaceDetails({ venue, date, raceNumber, result }) {
