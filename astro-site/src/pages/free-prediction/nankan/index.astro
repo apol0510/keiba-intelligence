@@ -395,9 +395,10 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                                 <span class="dhc-name">{horse.horseName}</span>
                                 <span class="dhc-pt">PT: {Number(horse.pt).toFixed(1)}</span>
                               </div>
-                              {(horse.jockey || horse.trainer || horse.age || horse.weight) && (
+                              {(horse.jockey || horse.trainer || horse.age || horse.weight || horse.sire) && (
                                 <div class="dhc-jockey-trainer">
                                   {horse.age && <span class="dhc-age">🎂 {horse.age}</span>}
+                                  {horse.sire && <span class="dhc-sire">父: {horse.sire}</span>}
                                   {horse.weight && <span class="dhc-weight">⚖️ {horse.weight}kg</span>}
                                   {horse.jockey && <span class="dhc-jockey">🏇 {horse.jockey}</span>}
                                   {horse.trainer && <span class="dhc-trainer">🏠 {horse.trainer}</span>}
@@ -840,7 +841,7 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
       flex-wrap: wrap;
     }
 
-    .dhc-age, .dhc-weight, .dhc-jockey, .dhc-trainer {
+    .dhc-age, .dhc-sire, .dhc-weight, .dhc-jockey, .dhc-trainer {
       padding: var(--spacing-xs) var(--spacing-sm);
       background: rgba(30, 41, 59, 0.5);
       border-radius: var(--radius-sm);
