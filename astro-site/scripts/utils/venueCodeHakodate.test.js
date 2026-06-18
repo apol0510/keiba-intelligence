@@ -52,10 +52,12 @@ check('importResultsJra: HAK リテラル残存なし', !srcRes.includes("'HAK'"
 // (3) importResultsJra: 函館正規化の HKD 自己 alias（pred↔result 対称突合の維持）
 check("importResultsJra: '函館':'HKD','HKD':'HKD' の自己alias対存在", /'函館'\s*:\s*'HKD'\s*,\s*'HKD'\s*:\s*'HKD'/.test(srcRes));
 
-// (4) 福島は本タスク未変更（既存値が残っていること）
-check("gemini: 福島は既存どおり 'FKS'（未変更）", /'福島'\s*:\s*'FKS'/.test(srcGemini));
-check("importPredictionJra: 福島は既存どおり '福':'FKS'（未変更）", /'福'\s*:\s*'FKS'/.test(srcPred));
-check("importResultsJra: 福島は既存どおり '福島':'FUK'（未変更）", /'福島'\s*:\s*'FUK'/.test(srcRes));
+// (4) 福島も正準コード FKS へ統一（admin venue-codes.ts と一致・FUK 残存なし）
+check("gemini: 福島=FKS", /'福島'\s*:\s*'FKS'/.test(srcGemini));
+check("importPredictionJra: 福島 '福':'FKS'", /'福'\s*:\s*'FKS'/.test(srcPred));
+check("importResultsJra: 福島=FKS（FUKでない）", /'福島'\s*:\s*'FKS'/.test(srcRes) && !/'福島'\s*:\s*'FUK'/.test(srcRes));
+check("importResultsJra: normalizeVenue に FUK リテラル残存なし", !/'FUK'/.test(srcRes));
+check("importResultsJra: '福島':'FKS','FKS':'FKS' の自己alias対存在", /'福島'\s*:\s*'FKS'\s*,\s*'FKS'\s*:\s*'FKS'/.test(srcRes));
 
 console.log(`\n結果: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
