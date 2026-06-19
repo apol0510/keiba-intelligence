@@ -596,6 +596,9 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                     <span class="sup-value">{m.aiSupportScore}</span>
                                   </div>
                                 )}
+                              </div>
+                            </div>
+                          </div>
                                 {/* 近走成績（実データ・着順/コース/タイム/上がり3F/ペース）。
                                     horseHistories 由来があれば最大5走、なければ既存 recentRaces で最大4走。
                                     recentRaces は新聞圧縮品質で5走前データが欠落するため4走固定 (2026-05-23 マコ指示)。
@@ -783,9 +786,6 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                     </details>
                                   );
                                 })()}
-                              </div>
-                            </div>
-                          </div>
 
                           <!-- Feature Analysis (上位3頭のみ詳細表示) -->
                           {/* Feature Importance Analysis — shared featureScores の stored value のみ表示。
@@ -1952,6 +1952,8 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
 
     .dhc-features {
       margin-top: var(--spacing-md);
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .feature-title {
@@ -2185,6 +2187,12 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
 
       .feature-label {
         justify-content: space-between;
+      }
+
+      /* モバイルでは馬カード下端の余白を詰めて次カードとの間隔を自然にする（desktop は維持） */
+      .detailed-horse-card {
+        padding-bottom: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
       }
     }
 

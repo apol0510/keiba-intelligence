@@ -1728,6 +1728,8 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
 
     .dhc-features {
       margin-top: var(--spacing-md);
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .feature-title {
@@ -1981,6 +1983,12 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
 
       .feature-label {
         justify-content: space-between;
+      }
+
+      /* モバイルでは馬カード下端の余白を詰めて次カードとの間隔を自然にする（desktop は維持） */
+      .detailed-horse-card {
+        padding-bottom: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
       }
     }
 
