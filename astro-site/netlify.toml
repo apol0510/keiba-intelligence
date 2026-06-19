@@ -86,6 +86,17 @@
 # THRIVECART_WEBHOOK_SECRET
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 独自ドメインへの恒久リダイレクト (netlify.app サブドメイン → keiba-intelligence.jp)
+# パス・クエリを維持したまま 301 で転送。最優先で評価されるよう redirect 一覧の先頭に置く。
+# 独自ドメイン (keiba-intelligence.jp) 側は from に含めないためループしない。
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[[redirects]]
+  from = "https://keiba-intelligence.netlify.app/*"
+  to = "https://keiba-intelligence.jp/:splat"
+  status = 301
+  force = true
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # URL 再編 (中央/南関を /archive 配下・/free-prediction 配下の対称階層へ)
 # 旧URLは 301 で新URLへ恒久移動
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
