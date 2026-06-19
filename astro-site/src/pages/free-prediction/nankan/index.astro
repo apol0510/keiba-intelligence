@@ -1328,7 +1328,8 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
     /* Feature Analysis */
     .dhc-features {
       margin-top: var(--spacing-md);
-      margin-bottom: var(--spacing-xl);
+      width: 100%;
+      box-sizing: border-box;
     }
 
     /* 特徴量バー: premium と同じスリム表示・既定で閉じるアコーディオン化 */
@@ -1937,6 +1938,12 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
 
       .feature-label {
         justify-content: space-between;
+      }
+
+      /* モバイルでは馬カード下端の余白を詰めて次カードとの間隔を自然にする（desktop は維持） */
+      .detailed-horse-card {
+        padding-bottom: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
       }
 
       .confidence-range {

@@ -321,6 +321,9 @@ if (!error && Array.isArray(venues) && venues.length > 0) {
                                           <span class="sup-value">{m.aiSupportScore}</span>
                                         </div>
                                       )}
+                                    </div>
+                                  </div>
+                                </div>
                                       {/* 近走成績（実データ）。事実なので表示。
                                           horseHistories 由来があれば最大5走、なければ recentRaces で最大4走。
                                           recentRaces は新聞圧縮品質で5走前データ欠落のため4走固定 (2026-05-23 マコ指示)。
@@ -507,9 +510,6 @@ if (!error && Array.isArray(venues) && venues.length > 0) {
                                           </details>
                                         );
                                       })()}
-                                    </div>
-                                  </div>
-                                </div>
 
                                 {/* Feature Importance Analysis — shared featureScores の stored value のみ表示。
                                     hasUsableFeatureScores が true のときだけ表示し、無い/全null は非表示。
@@ -1273,7 +1273,9 @@ if (!error && Array.isArray(venues) && venues.length > 0) {
 
     /* 特徴量分析 */
     .dhc-features {
-      margin-bottom: var(--spacing-xl);
+      margin-top: var(--spacing-md);
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .feature-title {
@@ -1655,6 +1657,12 @@ if (!error && Array.isArray(venues) && venues.length > 0) {
 
       .feature-label {
         justify-content: space-between;
+      }
+
+      /* モバイルでは馬カード下端の余白を詰めて次カードとの間隔を自然にする（desktop は維持） */
+      .detailed-horse-card {
+        padding-bottom: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
       }
 
       .upgrade-benefits {

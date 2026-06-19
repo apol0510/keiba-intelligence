@@ -1065,6 +1065,8 @@ if (Array.isArray(venues) && venues.length > 0 && date) {
       margin-top: var(--spacing-lg);
       padding-top: var(--spacing-lg);
       border-top: 1px solid var(--border-color);
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .feature-title {
@@ -1305,6 +1307,12 @@ if (Array.isArray(venues) && venues.length > 0 && date) {
 
       .feature-label {
         justify-content: space-between;
+      }
+
+      /* モバイルでは馬カード下端の余白を詰めて次カードとの間隔を自然にする（desktop は維持） */
+      .detailed-horse-card {
+        padding-bottom: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
       }
 
       .feature-value {
