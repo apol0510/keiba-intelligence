@@ -155,13 +155,13 @@ const displayDate = `${dateParts[0]}年${parseInt(dateParts[1])}月${parseInt(da
                       </td>
                       <td class="col-jockey">{horse.jockey || '-'}</td>
                     </tr>
-                    {horse.recentRaces && horse.recentRaces.length > 0 && (
+                    {(() => { const recentDisplay = getDisplayRecentRacesForNankan(horse); return recentDisplay.length > 0 && (
                       <tr class="recent-races-row">
                         <td colspan="5">
                           <div class="recent-races">
                             <span class="recent-label">直近走</span>
                             <div class="recent-list">
-                              {(Array.isArray(horse?.recentRacesFromEntriesNankan) && horse.recentRacesFromEntriesNankan.length > 0 ? horse.recentRacesFromEntriesNankan : getDisplayRecentRacesForNankan(horse)).slice(0, 5).map((r: any, rIdx: number) => {
+                              {recentDisplay.slice(0, 5).map((r: any, rIdx: number) => {
                                 const rankRaw = r?.rank ?? r?.finish;
                                 const isNum = (rankRaw != null && Number.isFinite(Number(rankRaw)));
                                 const rank = isNum ? `${rankRaw}着` : (r?.finishStatus || '');
@@ -202,7 +202,7 @@ const displayDate = `${dateParts[0]}年${parseInt(dateParts[1])}月${parseInt(da
                           </div>
                         </td>
                       </tr>
-                    )}
+                    ); })()}
                   </>
                 ))}
               </tbody>

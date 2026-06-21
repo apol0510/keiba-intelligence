@@ -430,11 +430,11 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                           </div>
                         </div>
 
-                        {horse.recentRaces && horse.recentRaces.length > 0 && (
+                        {(() => { const recentDisplay = getDisplayRecentRacesForNankan(horse); return recentDisplay.length > 0 && (
                           <div class="dhc-recent-races">
                             <span class="dhc-recent-label">直近走</span>
                             <div class="dhc-recent-list">
-                              {(Array.isArray(horse?.recentRacesFromEntriesNankan) && horse.recentRacesFromEntriesNankan.length > 0 ? horse.recentRacesFromEntriesNankan : getDisplayRecentRacesForNankan(horse)).slice(0, 5).map((r: any, rIdx: number) => {
+                              {recentDisplay.slice(0, 5).map((r: any, rIdx: number) => {
                                 const rankRaw = r?.rank ?? r?.finish;
                                 const isNum = (rankRaw != null && Number.isFinite(Number(rankRaw)));
                                 const rank = isNum ? `${rankRaw}着` : (r?.finishStatus || '');
@@ -473,7 +473,7 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                               })}
                             </div>
                           </div>
-                        )}
+                        ); })()}
                         <NankanHorseStatsPanel horse={horse} />
 
 

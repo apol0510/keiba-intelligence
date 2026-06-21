@@ -35,16 +35,31 @@ function normalizeInjectedRace(r) {
 }
 
 /**
+ * 表示用 recentRaces を「最初に有効な系統」から解決して返す（horse.recentRaces は不変）。
+ *
+ * 優先順位（表示の正本）:
+ *   1. recentRacesFromEntriesNankan（出馬表 entries 由来・最優先・既に表示用形状）
+ *   2. recentRacesFromHistoriesNankan（recentHorseHistories 注入・whitelist 正規化＋新→古）
+ *   3. recentRaces（legacy・素通し）
+ *
+ * これにより legacy が空でも entries / histories に実データがあれば過去走欄を描画できる。
+ * 描画側はこの戻り値の length で表示可否を判定し、slice(0,5) で最大5走に絞る
+ * （実走数不足を 0 埋めしない。null/undefined/非配列は空配列として安全に扱う）。
+ *
  * @param {object} horse
- * @returns {Array} 表示用 recentRaces（horse.recentRaces は不変）
+ * @returns {Array} 表示用 recentRaces（入力配列・horse は破壊しない）
  */
 export function getDisplayRecentRacesForNankan(horse) {
+  // 1. entries 由来（出馬表）— 最優先。注入時に表示用形状（rank/carriedWeight 等）へ変換済み。
+  const ent = horse && horse.recentRacesFromEntriesNankan;
+  if (Array.isArray(ent) && ent.length > 0) return ent;
+  // 2. histories 由来（注入）— whitelist 正規化＋ finish→rank、KI 既存と同順（新→古）に揃える。
   const inj = horse && horse.recentRacesFromHistoriesNankan;
   if (Array.isArray(inj) && inj.length > 0) {
     const normalized = inj.map(normalizeInjectedRace);
-    return normalized.reverse(); // KI: 既存と同順（新→古）に揃える
+    return normalized.reverse();
   }
-  // 注入が無ければ既存 recentRaces を素通し（正規化しない）
+  // 3. 注入が無ければ既存 recentRaces を素通し（正規化しない）
   return (horse && Array.isArray(horse.recentRaces)) ? horse.recentRaces : [];
 }
 
