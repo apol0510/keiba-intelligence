@@ -34,17 +34,69 @@ function normalizeInjectedRace(r) {
   return out;
 }
 
+// passingOrder を配列・文字列どちらでも表示用文字列へ安全化（推測補完はしない）。
+function normalizePassingOrderNankan(v) {
+  if (Array.isArray(v)) {
+    const parts = v.filter((x) => x !== null && x !== undefined && x !== '');
+    return parts.length > 0 ? parts.join('-') : undefined;
+  }
+  return v;
+}
+
+// horseStats(recentRacesDetailed) 1走 → 表示用 whitelist shape。
+//   finish → rank（order は順序であり着順ではないので使わない）
+//   horseNumberInRace → horseNumber、passingOrder は配列/文字列を安全化。
+//   実体が無い（全項目欠落）の場合は null。
+function mapHorseStatsRecentRaceNankan(r) {
+  if (!r || typeof r !== 'object') return null;
+  const out = {};
+  const put = (k, val) => { if (val !== undefined && val !== null && val !== '') out[k] = val; };
+  put('date', r.date);
+  put('venue', r.venue);
+  put('raceName', r.raceName);
+  put('distance', r.distance);
+  put('surface', r.surface);
+  put('trackCondition', r.trackCondition);
+  put('headCount', r.headCount);
+  put('popularity', r.popularity);
+  put('bodyWeight', r.bodyWeight);
+  put('jockey', r.jockey);
+  put('carriedWeight', r.carriedWeight);
+  put('time', r.time);
+  put('last3f', r.last3f);
+  put('margin', r.margin);
+  put('passingOrder', normalizePassingOrderNankan(r.passingOrder));
+  put('rank', r.finish);                    // finish → rank（order は使わない）
+  put('finishStatus', r.finishStatus);      // 非完走があれば（無ければ付けない）
+  put('horseNumber', r.horseNumberInRace);  // horseNumberInRace → horseNumber
+  for (const k of Object.keys(out)) { if (!DISPLAY_WHITELIST.includes(k)) delete out[k]; }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+// horse.horseStatsNankan.recentRacesDetailed → 表示用配列（最大5走）。
+//   recentRacesDetailed は「新→古」(order 1=前走)。KI の表示契約も「新→古」のため
+//   最新5走を取るだけで reverse しない。不正/空なら [] を返し legacy へ fallback させる。
+function horseStatsRecentRacesNankan(horse) {
+  const detailed = horse && horse.horseStatsNankan && horse.horseStatsNankan.recentRacesDetailed;
+  if (!Array.isArray(detailed) || detailed.length === 0) return [];
+  const mapped = detailed.map(mapHorseStatsRecentRaceNankan).filter(Boolean);
+  if (mapped.length === 0) return [];
+  return mapped.slice(0, 5); // KI: 新→古 のまま（reverse しない）
+}
+
 /**
  * 表示用 recentRaces を「最初に有効な系統」から解決して返す（horse.recentRaces は不変）。
  *
  * 優先順位（表示の正本）:
  *   1. recentRacesFromEntriesNankan（出馬表 entries 由来・最優先・既に表示用形状）
  *   2. recentRacesFromHistoriesNankan（recentHorseHistories 注入・whitelist 正規化＋新→古）
- *   3. recentRaces（legacy・素通し）
+ *   3. horseStatsNankan.recentRacesDetailed（uma_info 正本・最大5走へ正規化＋新→古）
+ *   4. recentRaces（legacy・素通し）
  *
- * これにより legacy が空でも entries / histories に実データがあれば過去走欄を描画できる。
- * 描画側はこの戻り値の length で表示可否を判定し、slice(0,5) で最大5走に絞る
- * （実走数不足を 0 埋めしない。null/undefined/非配列は空配列として安全に扱う）。
+ * これにより legacy が空でも entries / histories / horseStats に実データがあれば過去走欄を
+ * 描画でき、racebook の不完全な4走へ落とさない。描画側はこの戻り値の length で表示可否を
+ * 判定し、slice(0,5) で最大5走に絞る（実走数不足を 0 埋めしない。
+ * null/undefined/非配列は空配列として安全に扱う）。
  *
  * @param {object} horse
  * @returns {Array} 表示用 recentRaces（入力配列・horse は破壊しない）
@@ -59,7 +111,10 @@ export function getDisplayRecentRacesForNankan(horse) {
     const normalized = inj.map(normalizeInjectedRace);
     return normalized.reverse();
   }
-  // 3. 注入が無ければ既存 recentRaces を素通し（正規化しない）
+  // 3. horseStats 正本（uma_info）の近走を最大5走で採用（racebook4走へ落とさない）。
+  const fromHorseStats = horseStatsRecentRacesNankan(horse);
+  if (fromHorseStats.length > 0) return fromHorseStats;
+  // 4. 注入が無ければ既存 recentRaces を素通し（正規化しない）
   return (horse && Array.isArray(horse.recentRaces)) ? horse.recentRaces : [];
 }
 

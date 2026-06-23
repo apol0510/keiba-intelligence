@@ -7,6 +7,7 @@ import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { injectRecentHorseHistoriesNankanIntoData, nankanVenueCode } from '../../../utils/injectRecentHorseHistoriesNankan.js';
 import { injectEntriesRecentRacesNankanIntoData } from '../../../utils/injectEntriesRecentRacesNankan.js';
+import { injectHorseStatsNankanIntoData } from '../../../utils/injectHorseStatsNankan.js';
 import { getDisplayRecentRacesForNankan } from '../../../utils/getDisplayRecentRacesForNankan.js';
 
 export const prerender = true;
@@ -50,6 +51,12 @@ try {
 // 上の recentRacesFromHistoriesNankan / horse.recentRaces は不変。表示接続は F5f-2。失敗時は非致命。
 try {
   injectEntriesRecentRacesNankanIntoData(predictionData, nankanVenueCode(venueSlug || venueName), process.cwd());
+} catch (_e) { /* 非致命: 既存表示を維持 */ }
+// 南関 horseStats(uma_info 正本) を別フィールド horse.horseStatsNankan へ注入。
+// entries / histories が無い日でも getDisplayRecentRacesForNankan が horseStats(5走) を
+// fallback で使えるようにする（recentRaces / featureScores は不変・失敗時は非致命）。
+try {
+  injectHorseStatsNankanIntoData(predictionData, nankanVenueCode(venueSlug || venueName), process.cwd());
 } catch (_e) { /* 非致命: 既存表示を維持 */ }
 
 const pageTitle = `${dateStr} ${venueName} AI予想 - KEIBA Intelligence`;
