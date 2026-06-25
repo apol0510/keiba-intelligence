@@ -216,19 +216,37 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       align-items: center;
     }
 
-    .nav-links a {
+    .nav-links a,
+    .nav-dropdown-trigger {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      padding: var(--spacing-xs) var(--spacing-md);
       color: var(--text-secondary);
-      font-weight: 500;
-      transition: color var(--transition-fast);
+      font-weight: 600;
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: var(--radius-md);
+      background: rgba(30, 41, 59, 0.6);
+      backdrop-filter: blur(8px);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      transition: all var(--transition-base);
     }
 
-    .nav-links a:hover {
-      color: var(--primary-end);
+    .nav-links a:hover,
+    .nav-dropdown-trigger:hover {
+      color: #fff;
+      border-color: rgba(59, 130, 246, 0.6);
+      background: var(--primary-gradient);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      transform: translateY(-1px);
     }
 
     #auth-nav-button {
       display: flex;
-      gap: var(--spacing-lg);
+      gap: var(--spacing-sm);
       align-items: center;
     }
 
@@ -238,15 +256,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     }
 
     .nav-dropdown-trigger {
-      color: var(--text-secondary);
-      font-weight: 500;
       cursor: pointer;
-      transition: color var(--transition-fast);
       user-select: none;
-    }
-
-    .nav-dropdown-trigger:hover {
-      color: var(--primary-end);
     }
 
     .nav-dropdown-menu {

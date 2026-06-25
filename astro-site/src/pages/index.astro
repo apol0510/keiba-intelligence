@@ -8,6 +8,21 @@ export const prerender = true;
   title="ホーム"
   description="AI-Powered Intelligence Dashboard for 南関・中央競馬。的中率71%、回収率186%を誇る競馬予想プラットフォーム。南関4場とJRA全10場に対応。低価格で始められる競馬予想サービス。"
 >
+  <!-- ヒーローキービジュアル（ヒーローセクションの上） -->
+  <section class="hero-keyvisual">
+    <picture>
+      <source media="(max-width: 768px)" srcset="/images/KI_image_mobile.png">
+      <img
+        src="/images/KI_image_pc.png"
+        alt="KEIBA INTELLIGENCE - 中央競馬を、AIとデータで深く読む。"
+        class="hero-keyvisual-img"
+        width="1535"
+        height="1024"
+        fetchpriority="high"
+      >
+    </picture>
+  </section>
+
   <!-- ヒーローセクション -->
   <section class="hero gradient-bg-animated">
     <div class="container">
@@ -323,6 +338,20 @@ export const prerender = true;
       color: #0f172a;
     }
 
+    /* ヒーローキービジュアル */
+    .hero-keyvisual {
+      width: 100%;
+      background: #0a0e1a;
+      line-height: 0;
+    }
+
+    .hero-keyvisual-img {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin: 0 auto;
+    }
+
     /* ヒーローセクション */
     .hero {
       padding: var(--spacing-2xl) 0;
@@ -330,8 +359,7 @@ export const prerender = true;
       display: flex;
       align-items: center;
       background:
-        linear-gradient(180deg, rgba(15, 23, 42, 0.50) 0%, rgba(15, 23, 42, 0.20) 55%, rgba(15, 23, 42, 0.10) 100%),
-        url('/images/KI-hero-desktop.jpg');
+        linear-gradient(180deg, rgba(15, 23, 42, 0.50) 0%, rgba(15, 23, 42, 0.20) 55%, rgba(15, 23, 42, 0.10) 100%);
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -636,8 +664,7 @@ export const prerender = true;
     @media (max-width: 640px) {
       .hero {
         background-image:
-          linear-gradient(180deg, rgba(15, 23, 42, 0.50) 0%, rgba(15, 23, 42, 0.20) 55%, rgba(15, 23, 42, 0.10) 100%),
-          url('/images/KI-hero-mobile.jpg');
+          linear-gradient(180deg, rgba(15, 23, 42, 0.50) 0%, rgba(15, 23, 42, 0.20) 55%, rgba(15, 23, 42, 0.10) 100%);
         background-position: center;
       }
 
