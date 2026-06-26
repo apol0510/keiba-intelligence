@@ -141,57 +141,70 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
           <a href="/register" class="footer-cta">無料会員登録 →</a>
         </div>
 
-        <div class="footer-section">
-          <h4>サービス</h4>
-          <ul>
-            <li><a href="/free-prediction/nankan">無料予想（南関）</a></li>
-            <li><a href="/free-prediction/jra">無料予想（中央）</a></li>
-            <li><a href="/prediction/nankan">有料予想</a></li>
-            <li><a href="/pricing">料金プラン</a></li>
-            <li><a href="/archive/">的中実績</a></li>
-            <li><a href="/about">サイト概要</a></li>
-          </ul>
-        </div>
+        <details class="footer-section footer-acc" open>
+          <summary class="footer-acc-summary">
+            <span class="footer-acc-title">サービス</span>
+            <span class="footer-acc-icon" aria-hidden="true"></span>
+          </summary>
+          <div class="footer-acc-body">
+            <ul>
+              <li><a href="/free-prediction/nankan">無料予想（南関）</a></li>
+              <li><a href="/free-prediction/jra">無料予想（中央）</a></li>
+              <li><a href="/prediction/nankan">有料予想</a></li>
+              <li><a href="/pricing">料金プラン</a></li>
+              <li><a href="/archive/">的中実績</a></li>
+              <li><a href="/about">サイト概要</a></li>
+            </ul>
+          </div>
+        </details>
 
-        <div class="footer-section">
-          <h4>サポート</h4>
-          <ul>
-            <li><a href="/faq">よくある質問</a></li>
-            <li><a href="/contact">お問い合わせ</a></li>
-            <li><a href="/login">ログイン</a></li>
-            <li><a href="/mypage">マイページ</a></li>
-          </ul>
-        </div>
+        <details class="footer-section footer-acc" open>
+          <summary class="footer-acc-summary">
+            <span class="footer-acc-title">サポート</span>
+            <span class="footer-acc-icon" aria-hidden="true"></span>
+          </summary>
+          <div class="footer-acc-body">
+            <ul>
+              <li><a href="/faq">よくある質問</a></li>
+              <li><a href="/contact">お問い合わせ</a></li>
+              <li><a href="/login">ログイン</a></li>
+              <li><a href="/mypage">マイページ</a></li>
+            </ul>
+          </div>
+        </details>
 
-        <div class="footer-section">
-          <h4>対象競馬場</h4>
-          <div class="venue-grid">
-            <div class="venue-category">
+        <details class="footer-section footer-acc footer-venues" open>
+          <summary class="footer-acc-summary">
+            <span class="footer-acc-title">対象競馬場</span>
+            <span class="footer-acc-icon" aria-hidden="true"></span>
+          </summary>
+          <div class="footer-acc-body">
+            <div class="footer-venue-group">
               <h5>南関東4場</h5>
-              <ul>
+              <ul class="footer-venue-list">
                 <li>大井競馬場</li>
                 <li>川崎競馬場</li>
                 <li>船橋競馬場</li>
                 <li>浦和競馬場</li>
               </ul>
             </div>
-            <div class="venue-category">
+            <div class="footer-venue-group">
               <h5>中央競馬（JRA）全10場</h5>
-              <ul>
+              <ul class="footer-venue-list">
                 <li>東京競馬場</li>
                 <li>中山競馬場</li>
                 <li>京都競馬場</li>
                 <li>阪神競馬場</li>
+                <li>中京競馬場</li>
                 <li>小倉競馬場</li>
                 <li>新潟競馬場</li>
-                <li>中京競馬場</li>
                 <li>福島競馬場</li>
                 <li>札幌競馬場</li>
                 <li>函館競馬場</li>
               </ul>
             </div>
           </div>
-        </div>
+        </details>
       </div>
 
       <!-- ボトムバー -->
@@ -361,141 +374,85 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       padding: var(--spacing-2xl) 0;
     }
 
-    /* フッター */
+    /* フッター（3層: 主要導線 / 対象競馬場 / リーガル） */
     .main-footer {
-      background: linear-gradient(135deg,
-        rgba(59, 130, 246, 0.1) 0%,
-        rgba(139, 92, 246, 0.1) 100%);
-      border-top: 2px solid rgba(59, 130, 246, 0.3);
-      padding: var(--spacing-2xl) 0 var(--spacing-lg);
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.55) 0%, rgba(15, 23, 42, 0.85) 100%);
+      border-top: 1px solid rgba(59, 130, 246, 0.25);
+      padding: 48px 0 var(--spacing-lg);
       margin-top: var(--spacing-2xl);
+      min-height: 0;
       position: relative;
       overflow: hidden;
     }
-
     .main-footer::before {
       content: '';
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 0; left: 0; right: 0;
       height: 1px;
-      background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(59, 130, 246, 0.5) 50%,
-        transparent 100%);
+      background: linear-gradient(90deg, transparent 0%, rgba(96, 165, 250, 0.45) 50%, transparent 100%);
     }
 
     .footer-content {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      gap: var(--spacing-2xl);
+      grid-template-columns: 1.3fr 0.8fr 0.8fr 1.4fr;
+      gap: 48px;
       position: relative;
       z-index: 1;
     }
 
-    .footer-section h3 {
-      background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: var(--spacing-md);
-      font-weight: 800;
-      font-size: 1.125rem;
-      position: relative;
-      padding-bottom: var(--spacing-sm);
+    /* セクション見出し（PC/tablet=通常見出し、mobile=アコーディオンsummary） */
+    .footer-acc-summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
     }
-
-    .footer-section h3::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 40px;
-      height: 2px;
-      background: linear-gradient(90deg, #60a5fa 0%, #a78bfa 100%);
-      border-radius: 2px;
+    .footer-acc-summary::-webkit-details-marker { display: none; }
+    .footer-acc-summary:focus-visible {
+      outline: 2px solid rgba(96, 165, 250, 0.7);
+      outline-offset: 2px;
+      border-radius: 4px;
     }
-
-    .footer-section h4 {
-      color: #60a5fa;
-      font-size: 1rem;
-      margin-bottom: var(--spacing-md);
+    .footer-acc-title {
+      color: #6ba0e0;
+      font-size: 0.95rem;
       font-weight: 700;
+      letter-spacing: 0.02em;
     }
+    .footer-acc-icon { display: none; }
 
-    .footer-section p {
-      color: rgba(255, 255, 255, 0.8);
+    .footer-acc-body { margin-top: var(--spacing-md); display: none; }
+    .footer-acc[open] > .footer-acc-body { display: block; }
+    .footer-acc-body ul { list-style: none; }
+    .footer-acc-body > ul li { margin-bottom: 10px; }
+    .footer-acc-body ul li a {
+      color: rgba(255, 255, 255, 0.72);
       font-size: 0.875rem;
-      margin-bottom: var(--spacing-sm);
-      line-height: 1.6;
+      transition: color 0.2s ease;
     }
-
-    .footer-section ul {
-      list-style: none;
-    }
-
-    .footer-section ul li {
-      margin-bottom: var(--spacing-sm);
-      padding-left: var(--spacing-md);
-      position: relative;
-    }
-
-    .footer-section ul li::before {
-      content: '▸';
-      position: absolute;
-      left: 0;
+    .footer-acc-body ul li a:hover {
       color: #60a5fa;
-      font-size: 0.75rem;
     }
 
-    .footer-section ul li a {
-      color: rgba(255, 255, 255, 0.7);
-      font-size: 0.875rem;
-      transition: all 0.2s ease;
-      position: relative;
+    /* PC/tablet: details は open のまま（中身常時表示）。summaryの開閉操作を無効化して常時展開を維持。
+       ※ JS無効でも open 属性で全リンク表示・到達可能。mobileのみ JS で折りたたむ。 */
+    @media (min-width: 768px) {
+      .footer-acc-summary { pointer-events: none; cursor: default; }
     }
 
-    .footer-section ul li a:hover {
-      color: #60a5fa;
-      padding-left: 4px;
-    }
-
-    .venue-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--spacing-lg);
-    }
-
-    .venue-category h5 {
-      color: var(--color-accent);
-      font-size: 0.875rem;
-      margin-bottom: var(--spacing-sm);
-      font-weight: 600;
-    }
-
-    .venue-category ul {
-      list-style: none;
-    }
-
-    .venue-category ul li {
-      color: var(--text-secondary);
-      font-size: 0.875rem;
-      margin-bottom: var(--spacing-xs);
-    }
-
-    /* ブランド列（強化） */
+    /* ブランド列（軽量化） */
     .footer-brand {
-      max-width: 320px;
+      max-width: 300px;
     }
     .footer-logo {
       display: inline-flex;
       align-items: center;
       gap: var(--spacing-sm);
       text-decoration: none;
-      margin-bottom: var(--spacing-md);
+      margin-bottom: var(--spacing-sm);
     }
-    .footer-logo-icon { font-size: 1.75rem; }
+    .footer-logo-icon { font-size: 1.4rem; }
     .footer-logo-text {
       font-size: 1.25rem;
       font-weight: 800;
@@ -506,22 +463,19 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     }
     .footer-tagline {
       color: rgba(255, 255, 255, 0.7);
-      font-size: 0.85rem;
+      font-size: 0.875rem;
       line-height: 1.7;
-      margin-bottom: var(--spacing-lg);
+      max-width: 280px;
+      margin-bottom: var(--spacing-md);
     }
     .footer-stats {
       display: flex;
       gap: var(--spacing-lg);
-      margin-bottom: var(--spacing-lg);
+      margin-bottom: var(--spacing-md);
     }
-    .footer-stat {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
+    .footer-stat { display: flex; flex-direction: column; gap: 2px; }
     .footer-stat-value {
-      font-size: 1.5rem;
+      font-size: 1.65rem;
       font-weight: 800;
       background: var(--primary-gradient);
       -webkit-background-clip: text;
@@ -530,42 +484,66 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       line-height: 1.1;
     }
     .footer-stat-label {
-      font-size: 0.7rem;
+      font-size: 0.72rem;
       color: var(--text-tertiary, rgba(255, 255, 255, 0.55));
     }
     .footer-cta {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: var(--spacing-sm) var(--spacing-lg);
+      height: 44px;
+      padding: 0 var(--spacing-lg);
       border-radius: var(--radius-md);
       font-weight: 700;
-      font-size: 0.9rem;
+      font-size: 0.875rem;
       color: #0f172a;
       background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-      box-shadow: 0 4px 14px rgba(251, 191, 36, 0.35);
+      box-shadow: 0 2px 8px rgba(251, 191, 36, 0.25);
       transition: all var(--transition-base);
     }
     .footer-cta:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 18px rgba(251, 191, 36, 0.5);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
     }
 
-    /* ボトムバー */
+    /* 対象競馬場（コンパクト2列・会場名は1行=nowrap） */
+    .footer-venue-group { margin-bottom: var(--spacing-md); }
+    .footer-venue-group:last-child { margin-bottom: 0; }
+    .footer-venue-group h5 {
+      color: #8e96c4;
+      font-size: 0.8rem;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .footer-venue-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 20px;
+    }
+    .footer-venue-list li {
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    /* リーガル下部バー */
     .footer-bottom {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: var(--spacing-md);
-      margin-top: var(--spacing-2xl);
-      padding-top: var(--spacing-lg);
+      gap: var(--spacing-sm) var(--spacing-lg);
+      margin-top: var(--spacing-xl);
+      padding: 18px 0 var(--spacing-sm);
+      /* チャットボタン(右下: right24px+幅60px)とリンクが重ならない右余白 */
+      padding-right: 96px;
       border-top: 1px solid rgba(255, 255, 255, 0.1);
       position: relative;
       z-index: 1;
     }
     .copyright {
-      color: rgba(255, 255, 255, 0.6);
+      color: rgba(255, 255, 255, 0.55);
       font-size: 0.8rem;
       margin: 0;
     }
@@ -584,12 +562,15 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     .footer-legal a:hover { color: #60a5fa; }
 
     /* レスポンシブ */
+    /* タブレット: 2カラム×2段（ブランド/サービス・サポート/対象競馬場） */
     @media (max-width: 1024px) {
       .footer-content {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
       }
     }
 
+    /* ナビ: モバイルメニュー切替（768px以下） */
     @media (max-width: 768px) {
       .nav-links {
         display: none;
@@ -598,29 +579,120 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       .mobile-menu-btn {
         display: flex;
       }
+    }
+
+    /* フッター モバイル: アコーディオン（767px以下。768pxは tablet 2カラム維持） */
+    @media (max-width: 767px) {
+      .main-footer {
+        padding-top: 30px;
+        /* チャットボタン(bottom:24px+高さ60px=最大84px到達)と下部リンク重なり回避 + iPhone safe area */
+        padding-bottom: calc(104px + env(safe-area-inset-bottom));
+      }
 
       .footer-content {
         grid-template-columns: 1fr;
-        gap: var(--spacing-xl);
+        gap: 11px;
       }
 
-      .venue-grid {
-        grid-template-columns: 1fr;
-        gap: var(--spacing-md);
+      /* ブランド圧縮 */
+      .footer-brand { max-width: none; margin-bottom: 4px; }
+      .footer-logo { margin-bottom: 16px; }
+      .footer-tagline { margin-bottom: 16px; max-width: 100%; }
+      .footer-stats { gap: 32px; margin-bottom: 16px; }
+      .footer-stat-value { font-size: 1.75rem; }
+      .footer-stat-label { font-size: 0.7rem; }
+      .footer-cta {
+        height: 42px;
+        max-width: 230px;
+        box-shadow: 0 2px 6px rgba(251, 191, 36, 0.18);
       }
 
-      .footer-brand { max-width: none; }
+      /* アコーディオン = 独立カード */
+      .footer-acc {
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(96, 165, 250, 0.18);
+        border-radius: 11px;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+      }
+      .footer-acc[open] {
+        background: rgba(255, 255, 255, 0.045);
+        border-color: rgba(96, 165, 250, 0.32);
+      }
+      .footer-acc-summary {
+        min-height: 50px;
+        padding: 0 15px;
+        cursor: pointer;
+      }
+      .footer-acc-icon {
+        display: block;
+        position: relative;
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
+      }
+      .footer-acc-icon::before,
+      .footer-acc-icon::after {
+        content: '';
+        position: absolute;
+        background: #8fb3e6;
+        border-radius: 1px;
+      }
+      .footer-acc-icon::before { top: 5px; left: 0; width: 12px; height: 2px; }
+      .footer-acc-icon::after { top: 0; left: 5px; width: 2px; height: 12px; transition: opacity 0.2s ease; }
+      .footer-acc[open] .footer-acc-icon::after { opacity: 0; }
 
+      .footer-acc-body {
+        margin-top: 0;
+        padding: 4px 16px 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.07);
+      }
+      .footer-acc-body > ul li { margin-bottom: 0; }
+      .footer-acc-body ul li a {
+        display: block;
+        padding: 9px 0;
+        font-size: 0.95rem;
+        line-height: 1.45;
+      }
+
+      /* 対象競馬場（mobile） */
+      .footer-acc-body .footer-venue-group { margin-bottom: 20px; }
+      .footer-venue-list { gap: 11px 22px; }
+      .footer-venue-list li { font-size: 0.875rem; text-align: left; }
+
+      /* リーガル: 著作権1行 + リンク2列Grid */
       .footer-bottom {
         flex-direction: column;
-        align-items: center;
+        align-items: stretch;
         text-align: center;
+        padding: 20px 0;
+        padding-right: 0;
       }
-      .footer-legal { justify-content: center; }
+      .copyright { text-align: center; margin-bottom: 12px; }
+      .footer-legal {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 16px;
+        justify-items: center;
+      }
+      .footer-legal a { font-size: 0.8rem; line-height: 1.5; }
+      /* 「特定商取引法に基づく表記」は長いので横2列幅を使う */
+      .footer-legal li:nth-child(3) { grid-column: 1 / -1; }
     }
   </style>
 
   <script>
+    // フッターアコーディオン: モバイル(<=767px)のみ折りたたむ。PC/tabletは open のまま常時表示。
+    // HTMLは open 付与済みのため JS 無効時は全デバイスで展開（リンク到達可能）。
+    (function () {
+      const mq = window.matchMedia('(max-width: 767px)');
+      const accs = document.querySelectorAll('.footer-acc');
+      function apply() {
+        accs.forEach((d) => { mq.matches ? d.removeAttribute('open') : d.setAttribute('open', ''); });
+      }
+      apply();
+      mq.addEventListener('change', apply);
+    })();
+
     // モバイルメニュー
     const menuBtn = document.querySelector('.mobile-menu-btn');
     const navLinks = document.querySelector('.nav-links');
