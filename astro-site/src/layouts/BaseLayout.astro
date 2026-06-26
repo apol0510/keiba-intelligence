@@ -399,8 +399,11 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
     /* フッター（3層: 主要導線 / 対象競馬場 / リーガル） */
     .main-footer {
-      background: linear-gradient(180deg, rgba(30, 41, 59, 0.55) 0%, rgba(15, 23, 42, 0.85) 100%);
-      border-top: 1px solid rgba(59, 130, 246, 0.25);
+      /* 透明感のあるフロストガラス（ヘッダーと統一） */
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.18) 0%, rgba(15, 23, 42, 0.28) 100%);
+      backdrop-filter: blur(14px) saturate(150%);
+      -webkit-backdrop-filter: blur(14px) saturate(150%);
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
       padding: 48px 0 var(--spacing-lg);
       margin-top: var(--spacing-2xl);
       min-height: 0;
