@@ -264,6 +264,8 @@ export const prerender = true;
       width: 100%;
       background: #0a0e1a;
       line-height: 0;
+      /* main の上パディング(--spacing-2xl)を相殺し、ヘッダー直下に詰める */
+      margin-top: calc(-1 * var(--spacing-2xl));
     }
 
     .hero-keyvisual-img {
