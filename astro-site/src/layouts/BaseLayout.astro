@@ -75,7 +75,13 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
         <div class="nav-links">
           <a href="/">ホーム</a>
-          <a href="/free-prediction/">無料予想</a>
+          <div class="nav-dropdown">
+            <span class="nav-dropdown-trigger">無料予想 ▾</span>
+            <div class="nav-dropdown-menu">
+              <a href="/free-prediction/nankan">南関（無料）</a>
+              <a href="/free-prediction/jra">中央（無料）</a>
+            </div>
+          </div>
           <div class="nav-dropdown">
             <span class="nav-dropdown-trigger">PRO予想 ▾</span>
             <div class="nav-dropdown-menu">
@@ -83,7 +89,13 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
               <a href="/prediction/jra">中央（PRO）</a>
             </div>
           </div>
-          <a href="/archive/">的中実績</a>
+          <div class="nav-dropdown">
+            <span class="nav-dropdown-trigger">的中実績 ▾</span>
+            <div class="nav-dropdown-menu">
+              <a href="/archive/nankan">南関</a>
+              <a href="/archive/jra">中央</a>
+            </div>
+          </div>
           <a href="/pricing">料金プラン</a>
           <span id="auth-nav-button">
             <a href="/register">無料登録</a>
