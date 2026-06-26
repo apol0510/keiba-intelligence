@@ -23,7 +23,9 @@ export async function getStaticPaths() {
       // メインページと同じ「PT降順 上位5頭」。isTopTwo=上位2頭（シャッフルは表示順のみで役割不変なので不要）。
       const top5 = [...(race.horses || [])].sort((a, b) => b.pt - a.pt).slice(0, 5);
       const horses = top5.map((horse, index) => ({ horse, isTopTwo: index < 2 }));
-      const slug = `${venueInfo.date}-v${venueIndex}-R${race.raceInfo.raceNumber}`;
+      // Netlify pretty_urls が URL を小文字+trailing slash に正規化するため、slug も小文字で生成し
+      // メインページからの fetch を 301 リダイレクトなしの直接 200 にする。
+      const slug = `${venueInfo.date}-v${venueIndex}-r${race.raceInfo.raceNumber}`;
       paths.push({ params: { slug }, props: { race, horses, featureScoresData } });
     });
   });

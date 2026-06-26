@@ -200,7 +200,7 @@ const { predictionData, venues, isMultiVenue, error } = loadJraLatestVenues(proc
                             const m = horse.metrics;
                             const isTopTwo = index < 2; // 1位・2位のみ詳細分析
                             // 過去走/特徴量の遅延フラグメントURL（会場順序=venueIndex で安定キー化）
-                            const detailSrc = `/free-prediction/jra/detail/${venueInfo.date}-v${venueIndex}-R${race.raceInfo.raceNumber}/`;
+                            const detailSrc = `/free-prediction/jra/detail/${venueInfo.date}-v${venueIndex}-r${race.raceInfo.raceNumber}/`;
 
                             return (
                               <div class={`detailed-horse-card ${isTopTwo ? 'top-horse-detailed' : 'top-horse-simple'}`}>
