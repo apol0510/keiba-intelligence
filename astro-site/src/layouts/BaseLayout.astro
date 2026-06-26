@@ -226,15 +226,15 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
   <style>
     /* ナビゲーション */
     .main-nav {
-      /* 半透明の白系（背景が透けるフロストガラス効果） */
-      background: linear-gradient(180deg, rgba(159, 177, 212, 0.3) 0%, rgba(129, 149, 189, 0.26) 100%);
-      border-bottom: 1px solid rgba(8, 145, 178, 0.35);
+      /* よりクリアな透明感（薄い白系フロストガラス） */
+      background: linear-gradient(180deg, rgba(180, 196, 226, 0.16) 0%, rgba(150, 170, 210, 0.12) 100%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
       padding: var(--spacing-md) 0;
       position: sticky;
       top: 0;
       z-index: 1000;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(16px) saturate(160%);
+      -webkit-backdrop-filter: blur(16px) saturate(160%);
     }
 
     .nav-content {
