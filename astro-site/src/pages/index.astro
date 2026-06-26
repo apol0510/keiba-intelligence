@@ -10,19 +10,17 @@ export const prerender = true;
 >
   <!-- ヒーローキービジュアル（ヒーローセクションの上） -->
   <section class="hero-keyvisual">
-    <a href="/register" class="hero-keyvisual-link" aria-label="無料会員登録ページへ">
-      <picture>
-        <source media="(max-width: 768px)" srcset="/images/KI_image_mobile.png">
-        <img
-          src="/images/KI_image_pc.png"
-          alt="KEIBA INTELLIGENCE - 中央競馬を、AIとデータで深く読む。無料会員登録はこちら"
-          class="hero-keyvisual-img"
-          width="1535"
-          height="1024"
-          fetchpriority="high"
-        >
-      </picture>
-    </a>
+    <picture>
+      <source media="(max-width: 768px)" srcset="/images/KI_hero_Mobile.png">
+      <img
+        src="/images/KI_hero_PC.png"
+        alt="KEIBA INTELLIGENCE - 中央競馬を、AIとデータで深く読む。オッズ・AI評価・騎手・馬データを一目で可視化"
+        class="hero-keyvisual-img"
+        width="1536"
+        height="1024"
+        fetchpriority="high"
+      >
+    </picture>
   </section>
 
   <!-- ヒーローセクション -->
@@ -124,6 +122,21 @@ export const prerender = true;
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- 無料登録ビジュアル（対応競馬場セクションの上） -->
+  <section class="register-visual">
+    <picture>
+      <source media="(max-width: 768px)" srcset="/images/KI_register_Mobile.png">
+      <img
+        src="/images/KI_register_PC.png"
+        alt="無料予想で、まず体験。全頭予想とAI分析を今すぐチェック。クレジットカード不要・1分で登録"
+        class="register-visual-img"
+        width="1536"
+        height="1024"
+        loading="lazy"
+      >
+    </picture>
   </section>
 
   <!-- 対応競馬場セクション -->
@@ -251,17 +264,21 @@ export const prerender = true;
       line-height: 0;
     }
 
-    .hero-keyvisual-link {
-      display: block;
-      cursor: pointer;
-      transition: opacity var(--transition-base);
-    }
-
-    .hero-keyvisual-link:hover {
-      opacity: 0.92;
-    }
-
     .hero-keyvisual-img {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin: 0 auto;
+    }
+
+    /* 無料登録ビジュアル */
+    .register-visual {
+      width: 100%;
+      background: #0a0e1a;
+      line-height: 0;
+    }
+
+    .register-visual-img {
       display: block;
       width: 100%;
       height: auto;
