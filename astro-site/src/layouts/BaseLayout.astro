@@ -227,7 +227,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     /* ナビゲーション */
     .main-nav {
       background: linear-gradient(180deg, #9fb1d4 0%, #8195bd 100%);
-      border-bottom: 1px solid rgba(96, 130, 200, 0.45);
+      border-bottom: 1px solid rgba(8, 145, 178, 0.4);
       padding: var(--spacing-md) 0;
       position: sticky;
       top: 0;
@@ -262,16 +262,20 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     }
 
     .logo-text {
-      background: var(--primary-gradient);
+      /* 明るいヘッダーでも読めるよう、やや濃いめのcyan系グラデーション */
+      background: linear-gradient(135deg, #0891b2 0%, #06b6d4 50%, #0e7490 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      /* descender(g等)の見切れ防止 */
+      line-height: 1.3;
+      padding-bottom: 2px;
     }
 
     .logo-subtext {
       font-size: 0.7rem;
       font-weight: 600;
-      color: rgba(15, 23, 42, 0.72);
+      color: rgba(8, 47, 73, 0.78);
       letter-spacing: 0.08em;
     }
 
@@ -303,11 +307,11 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
     .nav-links a:hover,
     .nav-dropdown-trigger:hover {
-      color: #fff;
-      border-color: rgba(59, 130, 246, 0.6);
-      background: var(--primary-gradient);
-      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      color: #06212b;
+      border-color: rgba(34, 211, 238, 0.7);
+      background: linear-gradient(135deg, #67e8f9 0%, #22d3ee 100%);
+      box-shadow: 0 4px 16px rgba(34, 211, 238, 0.4),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.25);
       transform: translateY(-1px);
     }
 
