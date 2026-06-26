@@ -401,10 +401,10 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     .main-footer {
       /* 背景画像を暗いオーバーレイ越しに透かせる（テック質感のフッター） */
       background:
-        linear-gradient(180deg, rgba(13, 20, 38, 0.86) 0%, rgba(9, 14, 26, 0.92) 100%),
-        url('/images/KI_hero_PC.png');
+        linear-gradient(180deg, rgba(11, 15, 30, 0.85) 0%, rgba(8, 11, 22, 0.92) 100%),
+        url('/images/footer_image_pc.png');
       background-size: cover, cover;
-      background-position: center, right 35%;
+      background-position: center, center;
       background-repeat: no-repeat, no-repeat;
       border-top: 1px solid rgba(96, 165, 250, 0.4);
       padding: 48px 0 var(--spacing-lg);
@@ -616,6 +616,13 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
         padding-top: 30px;
         /* チャットボタン(bottom:24px+高さ60px=最大84px到達)と下部リンク重なり回避 + iPhone safe area */
         padding-bottom: calc(104px + env(safe-area-inset-bottom));
+        /* モバイルは縦長の背景画像に差し替え */
+        background:
+          linear-gradient(180deg, rgba(11, 15, 30, 0.85) 0%, rgba(8, 11, 22, 0.93) 100%),
+          url('/images/footer_image_mobile.png');
+        background-size: cover, cover;
+        background-position: center, center;
+        background-repeat: no-repeat, no-repeat;
       }
 
       .footer-content {
