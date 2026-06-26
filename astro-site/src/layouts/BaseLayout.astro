@@ -224,7 +224,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
     .nav-links {
       display: flex;
-      gap: var(--spacing-lg);
+      gap: var(--spacing-sm);
       align-items: center;
     }
 
@@ -233,6 +233,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       position: relative;
       display: inline-flex;
       align-items: center;
+      white-space: nowrap;
+      flex-shrink: 0;
       padding: var(--spacing-xs) var(--spacing-md);
       color: var(--text-secondary);
       font-weight: 600;
