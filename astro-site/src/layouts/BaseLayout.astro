@@ -267,6 +267,9 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      /* 視認性向上のため濃い縁取り（明るい背景で文字を際立たせる） */
+      -webkit-text-stroke: 0.8px rgba(6, 33, 51, 0.85);
+      paint-order: stroke fill;
       /* descender(g等)の見切れ防止 */
       line-height: 1.3;
       padding-bottom: 2px;
