@@ -1,0 +1,43 @@
+---
+// JRA 過去走/特徴量の遅延フラグメント（静的・CDN配信、Netlify Function 不使用）。
+// メインページ(free-prediction/jra)の馬カードが details 開封時に fetch して該当馬の内容を注入する。
+// 同一の loadJraLatestVenues を共有し会場順序(venueIndex)を一致させる。BaseLayout は付けない（軽量フラグメント）。
+export const prerender = true;
+
+import { loadJraLatestVenues } from '../../../../utils/loadJraLatest.js';
+import { loadFeatureScores, venueCodeFromName } from '../../../../utils/loadFeatureScores.js';
+import JraHorseDeferredDetail from '../../../../components/JraHorseDeferredDetail.astro';
+
+export async function getStaticPaths() {
+  const { venues } = loadJraLatestVenues(process.cwd());
+  const paths = [];
+  (venues || []).forEach((venueData, venueIndex) => {
+    const venueInfo = venueData.eventInfo;
+    const fsDate = venueInfo?.date || null;
+    const fsVenueCode = venueCodeFromName('jra', venueInfo?.venue);
+    const featureScoresData = (fsDate && fsVenueCode)
+      ? loadFeatureScores('jra', fsDate, fsVenueCode, process.cwd())
+      : null;
+
+    (venueData.predictions || []).forEach((race) => {
+      // メインページと同じ「PT降順 上位5頭」。isTopTwo=上位2頭（シャッフルは表示順のみで役割不変なので不要）。
+      const top5 = [...(race.horses || [])].sort((a, b) => b.pt - a.pt).slice(0, 5);
+      const horses = top5.map((horse, index) => ({ horse, isTopTwo: index < 2 }));
+      const slug = `${venueInfo.date}-v${venueIndex}-R${race.raceInfo.raceNumber}`;
+      paths.push({ params: { slug }, props: { race, horses, featureScoresData } });
+    });
+  });
+  return paths;
+}
+
+const { race, horses, featureScoresData } = Astro.props;
+---
+{horses.map(({ horse, isTopTwo }) => (
+  <JraHorseDeferredDetail
+    horse={horse}
+    race={race}
+    featureScoresData={featureScoresData}
+    isTopTwo={isTopTwo}
+    mode="full"
+  />
+))}

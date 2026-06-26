@@ -3,109 +3,21 @@
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import AIRaceComment from '../../../components/AIRaceComment.astro';
 import AIBettingSection from '../../../components/AIBettingSection.astro';
-import { readdirSync, readFileSync, existsSync } from 'fs';
-import { join } from 'path';
 import { sortHorsesByRole } from '../../../utils/sortHorsesByRole.js';
 import { generateAdvancedMetrics } from '../../../utils/featureScores.js';
 import { recentRaceMeta, RECENT_LABELS } from '../../../utils/recentForm.js';
-import { injectHorseHistoriesIntoVenues } from '../../../utils/loadHorseHistoriesJra.js';
-import { loadFeatureScores, getHorseFeatures, hasUsableFeatureScores, venueCodeFromName } from '../../../utils/loadFeatureScores.js';
+import { loadFeatureScores, venueCodeFromName } from '../../../utils/loadFeatureScores.js';
+import { loadJraLatestVenues } from '../../../utils/loadJraLatest.js';
+import JraHorseDeferredDetail from '../../../components/JraHorseDeferredDetail.astro';
 import AccordionClickClose from '../../../components/AccordionClickClose.astro';
 
 // 静的化（CDN即時配信）。データはbuild時に確定し、日次データpushの再ビルドで更新される。リクエスト依存なし。
 export const prerender = true;
 
-// 最新の中央競馬予想JSONファイルを取得
-const predictionsDir = join(process.cwd(), 'src', 'data', 'predictions', 'jra');
-let predictionData = null;
-let venues = [];
-let isMultiVenue = false;
-let error = null;
-
-try {
-  if (existsSync(predictionsDir)) {
-    // 階層構造（jra/YYYY/MM/YYYY-MM-DD.json）から最新ファイルを検索
-    const years = readdirSync(predictionsDir).filter(name => /^\d{4}$/.test(name));
-    let latestFile = null;
-    let latestPath = null;
-
-    // 全ファイルを収集して日付でソート
-    let allFiles = [];
-
-    for (const year of years) {
-      const yearPath = join(predictionsDir, year);
-      const months = readdirSync(yearPath).filter(name => /^\d{2}$/.test(name));
-
-      for (const month of months) {
-        const monthPath = join(yearPath, month);
-        const files = readdirSync(monthPath).filter(file => file.endsWith('.json') && /^\d{4}-\d{2}-\d{2}\.json$/.test(file));
-
-        for (const file of files) {
-          // ファイル名から日付を抽出（YYYY-MM-DD.json）
-          const dateMatch = file.match(/^(\d{4}-\d{2}-\d{2})\.json$/);
-          if (dateMatch) {
-            allFiles.push({
-              date: dateMatch[1],
-              path: join(monthPath, file),
-              timestamp: new Date(dateMatch[1]).getTime()
-            });
-          }
-        }
-      }
-    }
-
-    // 日付でソート（最新が先頭）
-    allFiles.sort((a, b) => b.timestamp - a.timestamp);
-
-    if (allFiles.length > 0) {
-      latestFile = allFiles[0].date + '.json';
-      latestPath = allFiles[0].path;
-    }
-
-    if (latestPath) {
-      const fileContent = readFileSync(latestPath, 'utf-8');
-      const rawData = JSON.parse(fileContent);
-
-      // データ構造の判定（venues配列があるか）
-      if (rawData.venues && Array.isArray(rawData.venues)) {
-        // 複数会場フォーマット
-        isMultiVenue = true;
-        venues = rawData.venues;
-        predictionData = rawData;
-      } else if (rawData.eventInfo && rawData.predictions) {
-        // 単一会場フォーマット（従来互換）
-        isMultiVenue = false;
-        venues = [{
-          venue: rawData.eventInfo.venue,
-          eventInfo: rawData.eventInfo,
-          predictions: rawData.predictions
-        }];
-        predictionData = rawData;
-      } else {
-        throw new Error('予想データのフォーマットが不正です');
-      }
-    } else {
-      throw new Error('中央競馬の予想データがありません');
-    }
-  } else {
-    throw new Error('中央競馬の予想データフォルダが見つかりません');
-  }
-} catch (err) {
-  error = err.message;
-}
-
-// horseHistories 由来の表示専用注入 (失敗時は既存 recentRaces にフォールバック)。
-// 既存 horse.recentRaces は上書きしないため、計算系には副作用なし。
-if (!error && Array.isArray(venues) && venues.length > 0) {
-  try {
-    const targetDate = predictionData?.date || predictionData?.eventInfo?.date || null;
-    if (targetDate) {
-      injectHorseHistoriesIntoVenues(venues, targetDate, process.cwd());
-    }
-  } catch (_e) {
-    // 表示専用フォールバック。失敗時は既存 recentRaces のまま表示。
-  }
-}
+// 最新の中央競馬予想（複数会場対応）+ horseHistories 表示専用注入を共有ローダーから取得。
+// 元のインラインローダーは src/utils/loadJraLatest.js へ移設（挙動不変）。
+// 過去走/特徴量の遅延フラグメントルート(_detail)と同一ローダーを共有し会場順序を一致させる。
+const { predictionData, venues, isMultiVenue, error } = loadJraLatestVenues(process.cwd());
 
 // generateAdvancedMetrics imported from featureScores.js
 ---
@@ -287,6 +199,8 @@ if (!error && Array.isArray(venues) && venues.length > 0) {
                           {topHorses.map((horse, index) => {
                             const m = horse.metrics;
                             const isTopTwo = index < 2; // 1位・2位のみ詳細分析
+                            // 過去走/特徴量の遅延フラグメントURL（会場順序=venueIndex で安定キー化）
+                            const detailSrc = `/free-prediction/jra/detail/${venueInfo.date}-v${venueIndex}-R${race.raceInfo.raceNumber}/`;
 
                             return (
                               <div class={`detailed-horse-card ${isTopTwo ? 'top-horse-detailed' : 'top-horse-simple'}`}>
@@ -366,193 +280,17 @@ if (!error && Array.isArray(venues) && venues.length > 0) {
                                         </div>
                                         );
                                       })()}
-                                      {/* 過去走データ（horseHistories.history 由来・表示専用アコーディオン）
-                                          構成: プロフィール → 通算成績 → 条件別成績 → 競走成績一覧。
-                                          historyForDetails がある馬のみ表示。loader / 計算系には触れない。
-                                          AI指数・印・買い目・特徴量重要度には一切関与しない。 */}
-                                      {Array.isArray(horse.historyForDetails) && horse.historyForDetails.length > 0 && (() => {
-                                        const hist = horse.historyForDetails;
-                                        const ranked = hist.filter((r) => r && Number.isFinite(Number(r.rank)));
-                                        const totalRanked = ranked.length;
-                                        const cnt = (pred) => ranked.filter(pred).length;
-                                        const w = cnt((r) => Number(r.rank) === 1);
-                                        const p2 = cnt((r) => Number(r.rank) === 2);
-                                        const p3 = cnt((r) => Number(r.rank) === 3);
-                                        const others = totalRanked - w - p2 - p3;
-                                        const pct = (n) => (totalRanked > 0 ? Math.round((n / totalRanked) * 100) : 0);
-                                        const winPct = pct(w);
-                                        const placePct = pct(w + p2);
-                                        const showPct = pct(w + p2 + p3);
-
-                                        const condCount = (arr) => ({
-                                          n: arr.length,
-                                          w: arr.filter((r) => Number(r.rank) === 1).length,
-                                          p2: arr.filter((r) => Number(r.rank) === 2).length,
-                                          p3: arr.filter((r) => Number(r.rank) === 3).length,
-                                        });
-                                        const turfStat = condCount(ranked.filter((r) => r.surface === '芝'));
-                                        const dirtStat = condCount(ranked.filter((r) => r.surface === 'ダ'));
-                                        const raceDist = race.raceInfo && race.raceInfo.distance ? Number(race.raceInfo.distance) : null;
-                                        const raceVenue = race.raceInfo && race.raceInfo.venue ? race.raceInfo.venue : null;
-                                        const sameDist = raceDist != null ? condCount(ranked.filter((r) => Number(r.distanceMeters) === raceDist)) : null;
-                                        const sameVenue = raceVenue ? condCount(ranked.filter((r) => r.venue === raceVenue)) : null;
-
-                                        const fmtCondStat = (s) => `${s.n}戦 ${s.w}-${s.p2}-${s.p3}` + (s.n > 0 ? ` (3着内${Math.round(((s.w + s.p2 + s.p3) / s.n) * 100)}%)` : '');
-
-                                        const profileItems = [
-                                          horse.age && { label: '性齢', value: horse.age },
-                                          horse.sire && { label: '父', value: horse.sire },
-                                          horse.jockey && { label: '騎手', value: horse.jockey },
-                                          horse.weight && { label: '斤量', value: `${horse.weight}kg` },
-                                          horse.trainer && { label: '調教師', value: horse.trainer },
-                                        ].filter(Boolean);
-
-                                        const condRows = [
-                                          turfStat.n > 0 && { label: '芝', stat: turfStat },
-                                          dirtStat.n > 0 && { label: 'ダート', stat: dirtStat },
-                                          sameDist && sameDist.n > 0 && { label: `同距離(${raceDist}m)`, stat: sameDist },
-                                          sameVenue && sameVenue.n > 0 && { label: `同会場(${raceVenue})`, stat: sameVenue },
-                                        ].filter(Boolean);
-
-                                        const display = hist.slice(0, 10);
-                                        const overflow = hist.length - display.length;
-
-                                        return (
-                                          <details class="dhc-history-details">
-                                            <summary class="dhc-history-summary">
-                                              <span class="dhc-history-summary-text">過去走データ</span>
-                                              <span class="dhc-history-summary-count">（{hist.length}走）</span>
-                                              <span class="dhc-history-summary-chevron" aria-hidden="true">▾</span>
-                                            </summary>
-                                            <div class="dhc-history-content">
-                                              {profileItems.length > 0 && (
-                                                <div class="dhc-section">
-                                                  <div class="dhc-section-label">プロフィール</div>
-                                                  <div class="dhc-profile-grid">
-                                                    {profileItems.map((p) => (
-                                                      <div class="dhc-profile-item">
-                                                        <span class="dhc-profile-label">{p.label}</span>
-                                                        <span class="dhc-profile-value">{p.value}</span>
-                                                      </div>
-                                                    ))}
-                                                  </div>
-                                                </div>
-                                              )}
-
-                                              {totalRanked > 0 && (
-                                                <div class="dhc-section">
-                                                  <div class="dhc-section-label">通算成績</div>
-                                                  <div class="dhc-record-grid">
-                                                    <div class="rec-card">
-                                                      <div class="rec-label">通算</div>
-                                                      <div class="rec-value">{w}-{p2}-{p3}-{others}</div>
-                                                    </div>
-                                                    <div class="rec-card">
-                                                      <div class="rec-label">勝率</div>
-                                                      <div class="rec-value">{winPct}%</div>
-                                                    </div>
-                                                    <div class="rec-card">
-                                                      <div class="rec-label">連対率</div>
-                                                      <div class="rec-value">{placePct}%</div>
-                                                    </div>
-                                                    <div class="rec-card">
-                                                      <div class="rec-label">3着内率</div>
-                                                      <div class="rec-value">{showPct}%</div>
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              )}
-
-                                              {condRows.length > 0 && (
-                                                <div class="dhc-section">
-                                                  <div class="dhc-section-label">条件別成績</div>
-                                                  <div class="dhc-cond-list">
-                                                    {condRows.map((row) => (
-                                                      <div class="dhc-cond-row">
-                                                        <span class="dhc-cond-label">{row.label}</span>
-                                                        <span class="dhc-cond-stat">{fmtCondStat(row.stat)}</span>
-                                                      </div>
-                                                    ))}
-                                                  </div>
-                                                </div>
-                                              )}
-
-                                              <div class="dhc-section">
-                                                <div class="dhc-section-label">{hist.length > 10 ? '競走成績（直近10走）' : '競走成績'}</div>
-                                                <div class="dhc-history-list">
-                                                  {display.map((r) => (
-                                                    <div class="dhc-history-row">
-                                                      <div class="dhh-line dhh-line-primary">
-                                                        {r._dateStr && <span class="dhh-date">{r._dateStr}</span>}
-                                                        {r.venue && <span class="dhh-venue">{r.venue}</span>}
-                                                        {r._displayDistance && <span class="dhh-dist">{r._displayDistance}</span>}
-                                                        {r.finishStatus ? (
-                                                          <span class="dhh-status">[{r.finishStatus}]</span>
-                                                        ) : (r.rank != null && (
-                                                          <span class={`dhh-rank ${Number(r.rank) === 1 ? 'win' : Number(r.rank) <= 3 ? 'good' : ''}`}>{r.rank}着</span>
-                                                        ))}
-                                                        {r.popularity !== '' && r.popularity != null && <span class="dhh-pop">{r.popularity}人気</span>}
-                                                      </div>
-                                                      <div class="dhh-line dhh-line-secondary">
-                                                        {r.raceName && <span class="dhh-race-name">{r.raceName}</span>}
-                                                        {r.jockey && <span class="dhh-jockey">🏇 {r.jockey}</span>}
-                                                        {r.bodyWeight && <span class="dhh-bw">{r.bodyWeight}kg</span>}
-                                                        {r.time && <span class="dhh-time">{r.time}</span>}
-                                                        {r.winnerName && <span class="dhh-winner">勝: {r.winnerName}</span>}
-                                                      </div>
-                                                    </div>
-                                                  ))}
-                                                  {overflow > 0 && (
-                                                    <div class="dhh-overflow">他{overflow}走あり</div>
-                                                  )}
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </details>
-                                        );
-                                      })()}
-
-                                {/* Feature Importance Analysis — shared featureScores の stored value のみ表示。
-                                    hasUsableFeatureScores が true のときだけ表示し、無い/全null は非表示。
-                                    旧 generateAdvancedMetrics(m.*) には絶対 fallback しない。role gate=isTopTwo（上位2頭）維持。 */}
-                                {isTopTwo && (() => {
-                                  const fs6 = getHorseFeatures(featureScoresData, race.raceInfo.raceNumber, horse.horseNumber);
-                                  if (!hasUsableFeatureScores(featureScoresData, race.raceInfo.raceNumber, horse.horseNumber)) return null;
-                                  const fItems = [
-                                    { icon: "⚡", label: "Speed Index / スピード指数", key: "speedIndex" },
-                                    { icon: "💪", label: "Stamina Rating / スタミナ評価", key: "staminaRating" },
-                                    { icon: "📈", label: "Form Trend / 調子傾向", key: "formTrend" },
-                                    { icon: "🏁", label: "Track Compatibility / コース適性", key: "trackCompatibility" },
-                                    { icon: "📏", label: "Distance Fitness / 距離適性", key: "distanceFitness" },
-                                    { icon: "👤", label: "Jockey Factor / 騎手要因", key: "jockeyFactor" },
-                                  ];
-                                  return (
-                                    <details class="dhc-features" data-click-close="true">
-                                      <summary class="feature-title feature-summary">Feature Importance Analysis / 特徴量重要度分析</summary>
-                                      <div class="feature-grid">
-                                        {fItems.map((it) => {
-                                          const v = fs6 && fs6[it.key] ? fs6[it.key].value : null;
-                                          return (
-                                            <div class="feature-item">
-                                              <div class="feature-label">
-                                                <span class="feature-icon">{it.icon}</span>
-                                                <span>{it.label}</span>
-                                              </div>
-                                              {v != null && (
-                                                <div class="feature-bar-container">
-                                                  <div class="feature-bar" style={`width: ${v}%`}></div>
-                                                </div>
-                                              )}
-                                              <div class={v != null ? "feature-value" : "feature-value feature-value--insufficient"}>
-                                                {v != null ? v : "データ不足"}
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </details>
-                                  );
-                                })()}
+                                      {/* 過去走データ・特徴量重要度（重い隠れ詳細）は遅延化。
+                                          shell（summaryのみ）を初期描画し、details 開封時に静的フラグメント(_detail)から注入。
+                                          描画内容・集計・順序は従来と同一（JraHorseDeferredDetail 内に移設）。 */}
+                                      <JraHorseDeferredDetail
+                                        horse={horse}
+                                        race={race}
+                                        featureScoresData={featureScoresData}
+                                        isTopTwo={isTopTwo}
+                                        mode="shell"
+                                        detailSrc={detailSrc}
+                                      />
                               </div>
                             );
                           })}
@@ -1910,6 +1648,43 @@ if (!error && Array.isArray(venues) && venues.length > 0) {
   </style>
 
   <script is:inline>
+    // 過去走/特徴量の遅延読込: details 開封時に静的フラグメント(detail/[slug])を fetch し、
+    // 該当馬の中身を注入する。フラグメントは race 単位なので同一 race の2アコーディオンで共有キャッシュ。
+    (function () {
+      const fragCache = new Map(); // src -> Promise<Document>
+      function loadFragment(src) {
+        if (!fragCache.has(src)) {
+          fragCache.set(src, fetch(src)
+            .then((r) => { if (!r.ok) throw new Error('fragment ' + r.status); return r.text(); })
+            .then((t) => new DOMParser().parseFromString(t, 'text/html')));
+        }
+        return fragCache.get(src);
+      }
+      document.addEventListener('toggle', function (e) {
+        const d = e.target;
+        if (!d || d.tagName !== 'DETAILS' || !d.hasAttribute('data-deferred') || !d.open) return;
+        const content = d.querySelector('[data-deferred-content]');
+        if (!content || content.getAttribute('data-loaded')) return;
+        const src = d.getAttribute('data-detail-src');
+        const kind = d.getAttribute('data-deferred');
+        const horse = d.getAttribute('data-horse');
+        if (!src) return;
+        content.setAttribute('data-loaded', 'pending');
+        loadFragment(src).then(function (doc) {
+          const sel = 'details[data-deferred="' + kind + '"][data-horse="' + horse + '"] [data-deferred-content]';
+          const srcContent = doc.querySelector(sel);
+          if (srcContent) {
+            content.innerHTML = srcContent.innerHTML;
+            content.setAttribute('data-loaded', '1');
+          } else {
+            content.removeAttribute('data-loaded');
+          }
+        }).catch(function () {
+          content.removeAttribute('data-loaded');
+        });
+      }, true); // capture: toggle はバブルしないため capture phase で document が拾う
+    })();
+
     function selectVenue(event, button) {
       event.preventDefault();
 

@@ -26,7 +26,9 @@ function fsScoresFor(featureScoresData, raceNumber, horseNumber) {
   return fs6;
 }
 
-export const prerender = false;
+// 静的化（CDN即時配信）。全会場を build 時に読み込み、クライアントで表示切替（?venue= 維持）。
+// データは日次データpushの再ビルドで更新。リクエスト依存（?venue）はクライアント側で処理。
+export const prerender = true;
 
 // 最新の予想JSONファイルを取得（複数会場対応）
 const predictionsDir = join(process.cwd(), 'src', 'data', 'predictions');
@@ -116,22 +118,22 @@ try {
   error = err.message;
 }
 
-// URLパラメータから選択された会場を取得
-const url = new URL(Astro.request.url);
-const selectedVenueParam = url.searchParams.get('venue');
-const selectedVenue = selectedVenueParam && predictionsByVenue[selectedVenueParam]
-  ? selectedVenueParam
-  : venues[0];
-
+// 静的化のため既定会場 = venues[0]（先頭）。?venue= 指定はクライアントで反映（フルリロードなし）。
+// 全会場を描画し display で切替するため、ここでは既定会場をヘッダー表示用に保持する。
+const selectedVenue = venues[0];
 const predictionData = venues.length > 0 ? predictionsByVenue[selectedVenue] : null;
 const isMultiVenue = venues.length > 1;
 
-// 南関 featureScores（選択会場・最新日）。無ければ generateAdvancedMetrics に fallback。
-const fsDate = predictionData?.eventInfo?.date || latestDate;
-const fsVenueCode = predictionData ? venueCodeFromName('nankan', selectedVenue) : null;
-const featureScoresData = (fsDate && fsVenueCode)
-  ? loadFeatureScores('nankan', fsDate, fsVenueCode, process.cwd())
-  : null;
+// 会場別 featureScores（表示専用・読むだけ）。無ければ generateAdvancedMetrics に fallback。
+const featureScoresByVenue = {};
+for (const vn of venues) {
+  const vData = predictionsByVenue[vn];
+  const fsDate = vData?.eventInfo?.date || latestDate;
+  const fsVenueCode = venueCodeFromName('nankan', vn);
+  featureScoresByVenue[vn] = (fsDate && fsVenueCode)
+    ? loadFeatureScores('nankan', fsDate, fsVenueCode, process.cwd())
+    : null;
+}
 
 console.log('🎯 [PAGE] selectedVenue:', selectedVenue);
 console.log('🎯 [PAGE] isMultiVenue:', isMultiVenue);
@@ -203,8 +205,14 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
           )}
 
           <!-- レース選択ボタン -->
+          {/* 全会場を描画し、選択会場以外は CSS で非表示。クライアントが表示切替（フルリロードなし）。 */}
+          {venues.map((venueName, vIdx) => {
+            const vData = predictionsByVenue[venueName];
+            const vFS = featureScoresByVenue[venueName];
+            return (
+            <div class={`venue-content ${vIdx === 0 ? 'active' : ''}`} data-venue-name={venueName}>
           <div class="race-selector">
-            {predictionData.predictions.map((race, index) => (
+            {vData.predictions.map((race, index) => (
               <button
                 class={`race-btn ${index === 0 ? 'active' : ''}`}
                 data-race-index={index}
@@ -219,12 +227,12 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
 
           <!-- レース表示エリア -->
           <div class="race-display-area">
-            {predictionData.predictions.map((race, index) => {
+            {vData.predictions.map((race, index) => {
             const allHorses = race.horses;
             const horsesWithMetrics = allHorses.map(horse => ({
               ...horse,
               metrics: generateAdvancedMetrics(horse, allHorses, race.raceInfo),
-              fsScores: fsScoresFor(featureScoresData, race.raceInfo.raceNumber, horse.horseNumber)
+              fsScores: fsScoresFor(vFS, race.raceInfo.raceNumber, horse.horseNumber)
             }));
 
             // PT値順にソートして上位5頭のみ表示
@@ -268,8 +276,8 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
                   type="prediction"
                   masked={true}
                   raceData={JSON.stringify({
-                    venue: predictionData.eventInfo.venue,
-                    date: predictionData.eventInfo.date,
+                    venue: vData.eventInfo.venue,
+                    date: vData.eventInfo.date,
                     raceNumber: race.raceInfo.raceNumber,
                     raceName: race.raceInfo.raceName,
                     distance: race.raceInfo.distance,
@@ -562,6 +570,9 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
             );
           })}
           </div>
+            </div>
+            );
+          })}
 
           <!-- 無料予想について -->
           <div class="free-info-card">
@@ -1141,6 +1152,14 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
     }
 
     /* レース表示エリア */
+    /* 会場切替（全会場を内包し、選択会場のみ表示）。JS無効時も既定会場(=先頭)は表示される。 */
+    .venue-content {
+      display: none;
+    }
+    .venue-content.active {
+      display: block;
+    }
+
     .race-display-area {
       position: relative;
       min-height: 500px;
@@ -2086,55 +2105,54 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
   </style>
 
   <script is:inline>
-    // 会場切り替え関数
+    // 会場切り替え（静的化: フルリロードせず .venue-content の表示を切替）
     function selectVenue(event, button) {
       event.preventDefault();
-
       const venueName = button.getAttribute('data-venue-name');
-      console.log('🏇 会場切り替え:', venueName);
 
-      // すべての会場ボタンからactiveを削除
-      document.querySelectorAll('.venue-btn').forEach(btn => {
-        btn.classList.remove('active');
-      });
-
-      // クリックされたボタンをアクティブに
+      // 会場ボタンの active 更新
+      document.querySelectorAll('.venue-btn').forEach(btn => btn.classList.remove('active'));
       button.classList.add('active');
 
-      // 会場データをリロード（ページ全体をリロードせず、JavaScriptで切り替え）
-      // 今のところシンプルに、URLパラメータで切り替える方法を使用
-      const url = new URL(window.location.href);
-      url.searchParams.set('venue', venueName);
-      window.location.href = url.toString();
+      // 会場コンテンツの表示切替
+      document.querySelectorAll('.venue-content').forEach(vc => {
+        vc.classList.toggle('active', vc.getAttribute('data-venue-name') === venueName);
+      });
+
+      // ?venue= を履歴へ反映（リロードなし・既存URL形式=会場名を維持）
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('venue', venueName);
+        window.history.replaceState(null, '', url.toString());
+      } catch (_e) {}
+
+      // 表示された会場のアクティブレースのカウンターを再生
+      const activeVenue = document.querySelector('.venue-content.active');
+      if (activeVenue) {
+        const activeRace = activeVenue.querySelector('.race-content.active') || activeVenue.querySelector('.race-content');
+        if (activeRace) {
+          activeRace.classList.add('active');
+          activeRace.querySelectorAll('[data-counter]').forEach(el => animateCounter(el, parseInt(el.getAttribute('data-counter'))));
+        }
+      }
     }
 
+    // レース切り替え（複数会場対応: クリックされた会場(.venue-content)内に限定して切替）
     function selectRace(event, button) {
       event.preventDefault();
-
       const raceIndex = button.getAttribute('data-race-index');
+      const scope = button.closest('.venue-content') || document;
 
-      // すべてのボタンからactiveを削除
-      document.querySelectorAll('.race-btn').forEach(btn => {
-        btn.classList.remove('active');
-      });
-
-      // クリックされたボタンをアクティブに
+      scope.querySelectorAll('.race-btn').forEach(btn => btn.classList.remove('active'));
       button.classList.add('active');
 
-      // すべてのレースコンテンツを非表示
-      document.querySelectorAll('.race-content').forEach(content => {
-        content.classList.remove('active');
-      });
+      scope.querySelectorAll('.race-content').forEach(content => content.classList.remove('active'));
 
-      // 選択されたレースを表示
-      const selectedRace = document.querySelector(`.race-content[data-race-index="${raceIndex}"]`);
+      const selectedRace = scope.querySelector(`.race-content[data-race-index="${raceIndex}"]`);
       if (selectedRace) {
         selectedRace.classList.add('active');
-
-        // カウンターアニメーション再実行
         selectedRace.querySelectorAll('[data-counter]').forEach(el => {
-          const target = parseInt(el.getAttribute('data-counter'));
-          animateCounter(el, target);
+          animateCounter(el, parseInt(el.getAttribute('data-counter')));
         });
       }
     }
@@ -2160,9 +2178,25 @@ const debugInfoString = JSON.stringify(debugInfo, null, 2);
       update();
     }
 
-    // ページ読み込み時にカウンターアニメーション実行
+    // ページ読み込み時: ?venue= 指定があれば該当会場を表示（無効/存在しない指定は既定=先頭にフォールバック）
     document.addEventListener('DOMContentLoaded', () => {
-      const activeRace = document.querySelector('.race-content.active');
+      try {
+        const v = new URLSearchParams(window.location.search).get('venue');
+        if (v) {
+          const target = document.querySelector(`.venue-content[data-venue-name="${CSS.escape(v)}"]`);
+          if (target) {
+            document.querySelectorAll('.venue-content').forEach(vc => vc.classList.remove('active'));
+            target.classList.add('active');
+            document.querySelectorAll('.venue-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.querySelector(`.venue-btn[data-venue-name="${CSS.escape(v)}"]`);
+            if (btn) btn.classList.add('active');
+          }
+        }
+      } catch (_e) {}
+
+      // 表示中の会場のアクティブレースのカウンターを再生
+      const activeVenue = document.querySelector('.venue-content.active') || document;
+      const activeRace = activeVenue.querySelector('.race-content.active');
       if (activeRace) {
         activeRace.querySelectorAll('[data-counter]').forEach(el => {
           const target = parseInt(el.getAttribute('data-counter'));

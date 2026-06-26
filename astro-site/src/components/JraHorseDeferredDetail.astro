@@ -1,0 +1,535 @@
+---
+// JRA 馬カードの「重い隠れ詳細」（過去走データ / 特徴量重要度分析）を担うコンポーネント。
+// 同一コンポーネント＝同一 scope hash のため、メインページ(mode=shell)で CSS をロードし、
+// フラグメントルート(mode=full)で全内容を描画 → クライアント注入時も既存 scoped CSS が効く。
+//
+// mode='shell': プレースホルダ（summary のみ／中身は空）。初期HTMLを軽量化。
+// mode='full' : 全内容を描画（フラグメントルート専用）。
+//
+// 表示専用。AI指数・印・買い目・計算系には一切関与しない（元 index.astro の該当ブロックと同一ロジック）。
+import { getHorseFeatures, hasUsableFeatureScores } from '../utils/loadFeatureScores.js';
+
+const { horse, race, featureScoresData, isTopTwo = false, mode = 'shell', detailSrc = '' } = Astro.props;
+
+const full = mode === 'full';
+
+const hist = Array.isArray(horse?.historyForDetails) ? horse.historyForDetails : [];
+const hasHistory = hist.length > 0;
+
+// 特徴量の表示可否（元: isTopTwo && hasUsableFeatureScores）
+const raceNumber = race?.raceInfo?.raceNumber;
+const fs6 = (isTopTwo && featureScoresData)
+  ? getHorseFeatures(featureScoresData, raceNumber, horse?.horseNumber)
+  : null;
+const hasFeatures = !!(isTopTwo && featureScoresData
+  && hasUsableFeatureScores(featureScoresData, raceNumber, horse?.horseNumber));
+
+// ===== 過去走データ集計（full のときのみ計算） =====
+let histView = null;
+if (full && hasHistory) {
+  const ranked = hist.filter((r) => r && Number.isFinite(Number(r.rank)));
+  const totalRanked = ranked.length;
+  const cnt = (pred) => ranked.filter(pred).length;
+  const w = cnt((r) => Number(r.rank) === 1);
+  const p2 = cnt((r) => Number(r.rank) === 2);
+  const p3 = cnt((r) => Number(r.rank) === 3);
+  const others = totalRanked - w - p2 - p3;
+  const pct = (n) => (totalRanked > 0 ? Math.round((n / totalRanked) * 100) : 0);
+
+  const condCount = (arr) => ({
+    n: arr.length,
+    w: arr.filter((r) => Number(r.rank) === 1).length,
+    p2: arr.filter((r) => Number(r.rank) === 2).length,
+    p3: arr.filter((r) => Number(r.rank) === 3).length,
+  });
+  const turfStat = condCount(ranked.filter((r) => r.surface === '芝'));
+  const dirtStat = condCount(ranked.filter((r) => r.surface === 'ダ'));
+  const raceDist = race?.raceInfo?.distance ? Number(race.raceInfo.distance) : null;
+  const raceVenue = race?.raceInfo?.venue ? race.raceInfo.venue : null;
+  const sameDist = raceDist != null ? condCount(ranked.filter((r) => Number(r.distanceMeters) === raceDist)) : null;
+  const sameVenue = raceVenue ? condCount(ranked.filter((r) => r.venue === raceVenue)) : null;
+  const fmtCondStat = (s) => `${s.n}戦 ${s.w}-${s.p2}-${s.p3}` + (s.n > 0 ? ` (3着内${Math.round(((s.w + s.p2 + s.p3) / s.n) * 100)}%)` : '');
+
+  histView = {
+    winPct: pct(w), placePct: pct(w + p2), showPct: pct(w + p2 + p3),
+    w, p2, p3, others, totalRanked,
+    profileItems: [
+      horse.age && { label: '性齢', value: horse.age },
+      horse.sire && { label: '父', value: horse.sire },
+      horse.jockey && { label: '騎手', value: horse.jockey },
+      horse.weight && { label: '斤量', value: `${horse.weight}kg` },
+      horse.trainer && { label: '調教師', value: horse.trainer },
+    ].filter(Boolean),
+    condRows: [
+      turfStat.n > 0 && { label: '芝', stat: turfStat },
+      dirtStat.n > 0 && { label: 'ダート', stat: dirtStat },
+      sameDist && sameDist.n > 0 && { label: `同距離(${raceDist}m)`, stat: sameDist },
+      sameVenue && sameVenue.n > 0 && { label: `同会場(${raceVenue})`, stat: sameVenue },
+    ].filter(Boolean),
+    fmtCondStat,
+    display: hist.slice(0, 10),
+    overflow: hist.length - hist.slice(0, 10).length,
+  };
+}
+
+// ===== 特徴量（full のときのみ） =====
+const featureItems = [
+  { icon: "⚡", label: "Speed Index / スピード指数", key: "speedIndex" },
+  { icon: "💪", label: "Stamina Rating / スタミナ評価", key: "staminaRating" },
+  { icon: "📈", label: "Form Trend / 調子傾向", key: "formTrend" },
+  { icon: "🏁", label: "Track Compatibility / コース適性", key: "trackCompatibility" },
+  { icon: "📏", label: "Distance Fitness / 距離適性", key: "distanceFitness" },
+  { icon: "👤", label: "Jockey Factor / 騎手要因", key: "jockeyFactor" },
+];
+---
+
+{hasHistory && (
+  <details class="dhc-history-details" data-deferred="hist" data-detail-src={detailSrc} data-horse={horse.horseNumber}>
+    <summary class="dhc-history-summary">
+      <span class="dhc-history-summary-text">過去走データ</span>
+      <span class="dhc-history-summary-count">（{hist.length}走）</span>
+      <span class="dhc-history-summary-chevron" aria-hidden="true">▾</span>
+    </summary>
+    <div class="dhc-history-content" data-deferred-content>
+      {full && histView && (
+        <>
+          {histView.profileItems.length > 0 && (
+            <div class="dhc-section">
+              <div class="dhc-section-label">プロフィール</div>
+              <div class="dhc-profile-grid">
+                {histView.profileItems.map((p) => (
+                  <div class="dhc-profile-item">
+                    <span class="dhc-profile-label">{p.label}</span>
+                    <span class="dhc-profile-value">{p.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {histView.totalRanked > 0 && (
+            <div class="dhc-section">
+              <div class="dhc-section-label">通算成績</div>
+              <div class="dhc-record-grid">
+                <div class="rec-card">
+                  <div class="rec-label">通算</div>
+                  <div class="rec-value">{histView.w}-{histView.p2}-{histView.p3}-{histView.others}</div>
+                </div>
+                <div class="rec-card">
+                  <div class="rec-label">勝率</div>
+                  <div class="rec-value">{histView.winPct}%</div>
+                </div>
+                <div class="rec-card">
+                  <div class="rec-label">連対率</div>
+                  <div class="rec-value">{histView.placePct}%</div>
+                </div>
+                <div class="rec-card">
+                  <div class="rec-label">3着内率</div>
+                  <div class="rec-value">{histView.showPct}%</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {histView.condRows.length > 0 && (
+            <div class="dhc-section">
+              <div class="dhc-section-label">条件別成績</div>
+              <div class="dhc-cond-list">
+                {histView.condRows.map((row) => (
+                  <div class="dhc-cond-row">
+                    <span class="dhc-cond-label">{row.label}</span>
+                    <span class="dhc-cond-stat">{histView.fmtCondStat(row.stat)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div class="dhc-section">
+            <div class="dhc-section-label">{hist.length > 10 ? '競走成績（直近10走）' : '競走成績'}</div>
+            <div class="dhc-history-list">
+              {histView.display.map((r) => (
+                <div class="dhc-history-row">
+                  <div class="dhh-line dhh-line-primary">
+                    {r._dateStr && <span class="dhh-date">{r._dateStr}</span>}
+                    {r.venue && <span class="dhh-venue">{r.venue}</span>}
+                    {r._displayDistance && <span class="dhh-dist">{r._displayDistance}</span>}
+                    {r.finishStatus ? (
+                      <span class="dhh-status">[{r.finishStatus}]</span>
+                    ) : (r.rank != null && (
+                      <span class={`dhh-rank ${Number(r.rank) === 1 ? 'win' : Number(r.rank) <= 3 ? 'good' : ''}`}>{r.rank}着</span>
+                    ))}
+                    {r.popularity !== '' && r.popularity != null && <span class="dhh-pop">{r.popularity}人気</span>}
+                  </div>
+                  <div class="dhh-line dhh-line-secondary">
+                    {r.raceName && <span class="dhh-race-name">{r.raceName}</span>}
+                    {r.jockey && <span class="dhh-jockey">🏇 {r.jockey}</span>}
+                    {r.bodyWeight && <span class="dhh-bw">{r.bodyWeight}kg</span>}
+                    {r.time && <span class="dhh-time">{r.time}</span>}
+                    {r.winnerName && <span class="dhh-winner">勝: {r.winnerName}</span>}
+                  </div>
+                </div>
+              ))}
+              {histView.overflow > 0 && (
+                <div class="dhh-overflow">他{histView.overflow}走あり</div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  </details>
+)}
+
+{hasFeatures && (
+  <details class="dhc-features" data-click-close="true" data-deferred="feat" data-detail-src={detailSrc} data-horse={horse.horseNumber}>
+    <summary class="feature-title feature-summary">Feature Importance Analysis / 特徴量重要度分析</summary>
+    <div class="feature-grid" data-deferred-content>
+      {full && featureItems.map((it) => {
+        const v = fs6 && fs6[it.key] ? fs6[it.key].value : null;
+        return (
+          <div class="feature-item">
+            <div class="feature-label">
+              <span class="feature-icon">{it.icon}</span>
+              <span>{it.label}</span>
+            </div>
+            {v != null && (
+              <div class="feature-bar-container">
+                <div class="feature-bar" style={`width: ${v}%`}></div>
+              </div>
+            )}
+            <div class={v != null ? "feature-value" : "feature-value feature-value--insufficient"}>
+              {v != null ? v : "データ不足"}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </details>
+)}
+
+<style>
+  /* 過去走データ アコーディオン (historyForDetails 表示専用) */
+  .dhc-history-details {
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .dhc-history-summary {
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.08);
+    border-radius: 8px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+  }
+  .dhc-history-summary::-webkit-details-marker { display: none; }
+  .dhc-history-summary-text { flex: 0 0 auto; }
+  .dhc-history-summary-count {
+    flex: 1;
+    font-size: 0.72rem;
+    color: #cbd5e1;
+    font-family: 'Courier New', monospace;
+  }
+  .dhc-history-summary-chevron {
+    transition: transform 0.2s;
+    color: #60a5fa;
+    font-size: 0.85rem;
+  }
+  .dhc-history-details[open] > .dhc-history-summary .dhc-history-summary-chevron {
+    transform: rotate(180deg);
+  }
+
+  .dhc-history-content {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .dhc-history-content:empty { margin-top: 0; }
+  .dhc-section-label {
+    font-size: 0.7rem;
+    color: #93c5fd;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .dhc-profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 6px;
+  }
+  .dhc-profile-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
+  }
+  .dhc-profile-label {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    letter-spacing: 0.3px;
+  }
+  .dhc-profile-value {
+    font-size: 0.85rem;
+    color: #f1f5f9;
+    font-weight: 600;
+  }
+
+  .dhc-record-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 6px;
+  }
+  .rec-card {
+    padding: 8px 10px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(139, 92, 246, 0.08));
+    border: 1px solid rgba(59, 130, 246, 0.18);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+  }
+  .rec-label {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    letter-spacing: 0.3px;
+  }
+  .rec-value {
+    font-size: 0.95rem;
+    color: #ecfeff;
+    font-weight: 800;
+    font-family: 'Courier New', monospace;
+  }
+
+  .dhc-cond-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .dhc-cond-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
+    font-size: 0.78rem;
+  }
+  .dhc-cond-label {
+    flex: 0 0 auto;
+    min-width: 80px;
+    color: #93c5fd;
+    font-weight: 700;
+  }
+  .dhc-cond-stat {
+    flex: 1;
+    color: #e2e8f0;
+    font-family: 'Courier New', monospace;
+  }
+
+  .dhc-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .dhc-history-row {
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .dhh-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .dhh-line-primary {
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .dhh-line-secondary {
+    font-size: 0.72rem;
+    color: #94a3b8;
+  }
+  .dhh-date {
+    color: #cbd5e1;
+    font-family: 'Courier New', monospace;
+    min-width: 60px;
+  }
+  .dhh-venue { color: #cbd5e1; min-width: 26px; }
+  .dhh-dist { color: #e2e8f0; font-weight: 700; }
+  .dhh-rank {
+    font-weight: 800;
+    color: #f1f5f9;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .dhh-rank.good { color: #34d399; background: rgba(52, 211, 153, 0.15); }
+  .dhh-rank.win {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.18);
+    box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.35);
+  }
+  .dhh-status { color: #fb923c; font-weight: 700; }
+  .dhh-pop { color: #94a3b8; font-weight: 600; }
+  .dhh-race-name { color: #cbd5e1; font-weight: 600; }
+  .dhh-jockey { color: #cbd5e1; }
+  .dhh-bw, .dhh-time {
+    color: #cbd5e1;
+    font-family: 'Courier New', monospace;
+  }
+  .dhh-winner { color: #fbbf24; }
+  .dhh-overflow {
+    padding: 5px 10px;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    text-align: center;
+    font-style: italic;
+  }
+
+  /* 特徴量分析 */
+  .dhc-features {
+    margin-top: var(--spacing-md);
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .feature-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #60a5fa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 2px solid rgba(96, 165, 250, 0.3);
+  }
+  .feature-summary {
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-bottom: 0;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    border-radius: var(--radius-sm);
+    color: #93c5fd;
+  }
+  .feature-summary::-webkit-details-marker { display: none; }
+  .feature-summary::before { content: '▸'; color: #60a5fa; font-size: 0.7rem; flex-shrink: 0; }
+  details.dhc-features[open] > .feature-summary::before { content: '▾'; }
+  details.dhc-features[open] > .feature-summary {
+    margin-bottom: var(--spacing-sm);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .feature-grid {
+    display: grid;
+    gap: var(--spacing-md);
+  }
+  .feature-item {
+    display: grid;
+    grid-template-columns: 200px 1fr 60px;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: rgba(30, 41, 59, 0.3);
+    border-radius: var(--radius-sm);
+  }
+  .feature-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+  .feature-icon {
+    font-size: 1.25rem;
+  }
+  .feature-bar-container {
+    position: relative;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .feature-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    border-radius: 4px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .feature-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      transparent 100%);
+    animation: shimmer 2s infinite;
+  }
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  .feature-value {
+    text-align: right;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: #60a5fa;
+    font-size: 0.9rem;
+  }
+
+  /* レスポンシブ（元 index.astro と同一） */
+  @media (max-width: 1024px) {
+    .feature-item {
+      grid-template-columns: 150px 1fr 50px;
+    }
+  }
+  @media (max-width: 768px) {
+    .feature-item {
+      grid-template-columns: 1fr;
+      gap: var(--spacing-sm);
+    }
+    .feature-label {
+      justify-content: space-between;
+    }
+  }
+  @media (max-width: 640px) {
+    .dhc-profile-grid {
+      grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+    }
+    .dhc-record-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .dhh-line-primary { font-size: 0.72rem; gap: 6px; }
+    .dhh-line-secondary { font-size: 0.68rem; gap: 6px; }
+    .dhc-cond-row { font-size: 0.72rem; }
+    .dhh-date { min-width: 56px; }
+  }
+</style>
