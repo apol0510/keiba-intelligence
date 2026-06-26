@@ -122,16 +122,30 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
   <footer class="main-footer">
     <div class="container">
       <div class="footer-content">
-        <div class="footer-section">
-          <h3>KEIBA Intelligence</h3>
-          <p>AI-Powered Intelligence Dashboard for 南関・中央競馬</p>
-          <p class="copyright">&copy; 2026 KEIBA Intelligence. All rights reserved.</p>
+        <div class="footer-section footer-brand">
+          <a href="/" class="footer-logo">
+            <span class="footer-logo-icon">🧠</span>
+            <span class="footer-logo-text">KEIBA Intelligence</span>
+          </a>
+          <p class="footer-tagline">AI-Powered Intelligence Dashboard<br>for 南関・中央競馬</p>
+          <div class="footer-stats">
+            <div class="footer-stat">
+              <span class="footer-stat-value">71.1%</span>
+              <span class="footer-stat-label">的中率（回収含む）</span>
+            </div>
+            <div class="footer-stat">
+              <span class="footer-stat-value">186.4%</span>
+              <span class="footer-stat-label">回収率</span>
+            </div>
+          </div>
+          <a href="/register" class="footer-cta">無料会員登録 →</a>
         </div>
 
         <div class="footer-section">
           <h4>サービス</h4>
           <ul>
-            <li><a href="/free-prediction/">無料予想</a></li>
+            <li><a href="/free-prediction/nankan">無料予想（南関）</a></li>
+            <li><a href="/free-prediction/jra">無料予想（中央）</a></li>
             <li><a href="/prediction/nankan">有料予想</a></li>
             <li><a href="/pricing">料金プラン</a></li>
             <li><a href="/archive/">的中実績</a></li>
@@ -144,9 +158,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
           <ul>
             <li><a href="/faq">よくある質問</a></li>
             <li><a href="/contact">お問い合わせ</a></li>
-            <li><a href="/privacy">プライバシーポリシー</a></li>
-            <li><a href="/terms">利用規約</a></li>
-            <li><a href="/tokushoho">特定商取引法に基づく表記</a></li>
+            <li><a href="/login">ログイン</a></li>
+            <li><a href="/mypage">マイページ</a></li>
           </ul>
         </div>
 
@@ -179,6 +192,17 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- ボトムバー -->
+      <div class="footer-bottom">
+        <p class="copyright">&copy; 2026 KEIBA Intelligence. All rights reserved.</p>
+        <ul class="footer-legal">
+          <li><a href="/privacy">プライバシーポリシー</a></li>
+          <li><a href="/terms">利用規約</a></li>
+          <li><a href="/tokushoho">特定商取引法に基づく表記</a></li>
+          <li><a href="/contact">お問い合わせ</a></li>
+        </ul>
       </div>
     </div>
   </footer>
@@ -460,11 +484,104 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       margin-bottom: var(--spacing-xs);
     }
 
-    .copyright {
-      margin-top: var(--spacing-md);
-      padding-top: var(--spacing-md);
-      border-top: 1px solid var(--border-color);
+    /* ブランド列（強化） */
+    .footer-brand {
+      max-width: 320px;
     }
+    .footer-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      text-decoration: none;
+      margin-bottom: var(--spacing-md);
+    }
+    .footer-logo-icon { font-size: 1.75rem; }
+    .footer-logo-text {
+      font-size: 1.25rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .footer-tagline {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.85rem;
+      line-height: 1.7;
+      margin-bottom: var(--spacing-lg);
+    }
+    .footer-stats {
+      display: flex;
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+    .footer-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .footer-stat-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.1;
+    }
+    .footer-stat-label {
+      font-size: 0.7rem;
+      color: var(--text-tertiary, rgba(255, 255, 255, 0.55));
+    }
+    .footer-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: var(--spacing-sm) var(--spacing-lg);
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #0f172a;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      box-shadow: 0 4px 14px rgba(251, 191, 36, 0.35);
+      transition: all var(--transition-base);
+    }
+    .footer-cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(251, 191, 36, 0.5);
+    }
+
+    /* ボトムバー */
+    .footer-bottom {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--spacing-md);
+      margin-top: var(--spacing-2xl);
+      padding-top: var(--spacing-lg);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      z-index: 1;
+    }
+    .copyright {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.8rem;
+      margin: 0;
+    }
+    .footer-legal {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-md);
+      list-style: none;
+    }
+    .footer-legal li::before { content: none; }
+    .footer-legal a {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.8rem;
+      transition: color 0.2s ease;
+    }
+    .footer-legal a:hover { color: #60a5fa; }
 
     /* レスポンシブ */
     @media (max-width: 1024px) {
@@ -491,6 +608,15 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
         grid-template-columns: 1fr;
         gap: var(--spacing-md);
       }
+
+      .footer-brand { max-width: none; }
+
+      .footer-bottom {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+      .footer-legal { justify-content: center; }
     }
   </style>
 

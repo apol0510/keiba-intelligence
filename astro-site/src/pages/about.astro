@@ -1,0 +1,190 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+export const prerender = true;
+---
+
+<BaseLayout
+  title="サイト概要"
+  description="KEIBA Intelligenceは、中央競馬主要10場（東京・中山・京都・阪神・中京・新潟・福島・小倉・札幌・函館）に対応したAI予想プラットフォーム。オッズ予測・騎手馬データ・コース別傾向をデータで可視化します。"
+>
+  <!-- イントロ -->
+  <section class="about-intro">
+    <div class="container">
+      <p class="about-eyebrow">ABOUT</p>
+      <h1 class="about-title">KEIBA Intelligence とは</h1>
+      <p class="about-lead">
+        感覚ではなく、データで判断する。<br>
+        AIが中央競馬の主要レースを横断分析し、予想の根拠を可視化する次世代プラットフォームです。
+      </p>
+    </div>
+  </section>
+
+  <!-- COVERAGE ビジュアル -->
+  <section class="about-visual">
+    <picture>
+      <source media="(max-width: 768px)" srcset="/images/KI_image_Mobile_01.png">
+      <img
+        src="/images/KI_image_PC_02.png"
+        alt="中央競馬主要10場に対応 - 東京・中山・京都・阪神・中京・新潟・福島・小倉・札幌・函館。主要レースを横断してAIが傾向を分析。"
+        class="about-visual-img"
+        width="1536"
+        height="1024"
+        loading="lazy"
+      >
+    </picture>
+  </section>
+
+  <!-- FEATURES ビジュアル -->
+  <section class="about-visual">
+    <picture>
+      <source media="(max-width: 768px)" srcset="/images/KI_image_Mobile_02.png">
+      <img
+        src="/images/KI_image_PC_01.png"
+        alt="AI分析で予想の根拠を可視化 - オッズ予測・騎手馬データ・コース別傾向をデータで分析。"
+        class="about-visual-img"
+        width="1536"
+        height="1024"
+        loading="lazy"
+      >
+    </picture>
+  </section>
+
+  <!-- 3つの柱（テキスト要約） -->
+  <section class="about-points">
+    <div class="container">
+      <div class="about-point-grid">
+        <div class="about-point card">
+          <div class="about-point-icon">📈</div>
+          <h3>オッズ予測</h3>
+          <p>市場の動きをわかりやすく把握。予測オッズと変動をデータで提示します。</p>
+        </div>
+        <div class="about-point card">
+          <div class="about-point-icon">🏇</div>
+          <h3>騎手・馬データ</h3>
+          <p>相性・近走・適性を整理。勝率/連対率/複勝率からコース・距離適性まで。</p>
+        </div>
+        <div class="about-point card">
+          <div class="about-point-icon">🎯</div>
+          <h3>コース別傾向</h3>
+          <p>距離・馬場・枠順の特徴を分析。レースを横断した傾向を可視化します。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="about-cta-section">
+    <div class="container">
+      <div class="about-cta-card card">
+        <h2>まずは無料で体験</h2>
+        <p>全頭予想とAI分析を、今すぐチェック。クレジットカード不要・1分で登録。</p>
+        <div class="about-cta-buttons">
+          <a href="/register" class="btn btn-gold btn-lg">無料会員登録 →</a>
+          <a href="/free-prediction" class="btn btn-green btn-lg">無料予想を見る</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <style>
+    .about-intro {
+      padding: var(--spacing-2xl) 0 var(--spacing-xl);
+      text-align: center;
+    }
+    .about-eyebrow {
+      color: var(--primary-end);
+      font-weight: 700;
+      letter-spacing: 0.3em;
+      font-size: 0.875rem;
+      margin-bottom: var(--spacing-sm);
+    }
+    .about-title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: var(--spacing-lg);
+      background: linear-gradient(135deg, #e0f2fe 0%, #60a5fa 60%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .about-lead {
+      font-size: 1.125rem;
+      color: var(--text-secondary);
+      line-height: 1.9;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .about-visual {
+      width: 100%;
+      background: #0a0e1a;
+      line-height: 0;
+      margin: var(--spacing-lg) 0;
+    }
+    .about-visual-img {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin: 0 auto;
+    }
+
+    .about-points {
+      padding: var(--spacing-xl) 0 var(--spacing-2xl);
+    }
+    .about-point-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--spacing-lg);
+    }
+    .about-point {
+      text-align: center;
+    }
+    .about-point-icon {
+      font-size: 2.5rem;
+      margin-bottom: var(--spacing-sm);
+    }
+    .about-point h3 {
+      margin-bottom: var(--spacing-sm);
+    }
+    .about-point p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.7;
+    }
+
+    .about-cta-section {
+      padding: 0 0 var(--spacing-2xl);
+    }
+    .about-cta-card {
+      text-align: center;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+      border: 2px solid rgba(59, 130, 246, 0.4);
+      padding: var(--spacing-2xl);
+    }
+    .about-cta-card h2 {
+      font-size: 1.75rem;
+      margin-bottom: var(--spacing-sm);
+    }
+    .about-cta-card p {
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-lg);
+    }
+    .about-cta-buttons {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .about-cta-buttons .btn-lg {
+      padding: var(--spacing-md) var(--spacing-xl);
+      font-size: 1.125rem;
+    }
+
+    @media (max-width: 768px) {
+      .about-title { font-size: 1.875rem; }
+      .about-point-grid { grid-template-columns: 1fr; }
+      .about-cta-buttons { flex-direction: column; }
+    }
+  </style>
+</BaseLayout>
