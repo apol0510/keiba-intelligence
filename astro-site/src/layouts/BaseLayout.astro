@@ -70,7 +70,10 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       <div class="nav-content">
         <a href="/" class="logo">
           <span class="logo-icon">🧠</span>
-          <span class="logo-text">KEIBA Intelligence</span>
+          <span class="logo-text-group">
+            <span class="logo-text">KEIBA Intelligence</span>
+            <span class="logo-subtext">競馬インテリジェンス</span>
+          </span>
         </a>
 
         <div class="nav-links">
@@ -252,11 +255,24 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       font-size: 2rem;
     }
 
+    .logo-text-group {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+    }
+
     .logo-text {
       background: var(--primary-gradient);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+    }
+
+    .logo-subtext {
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      letter-spacing: 0.08em;
     }
 
     .nav-links {
