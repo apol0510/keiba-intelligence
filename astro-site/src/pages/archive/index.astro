@@ -3,7 +3,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
-export const prerender = false;
+// 静的化（CDN即時配信）。データはbuild時に確定し、日次データpushの再ビルドで更新される。リクエスト依存なし。
+export const prerender = true;
 
 function readLatestMonth(jsonPath: string): { year: string; month: string } | null {
   if (!existsSync(jsonPath)) return null;

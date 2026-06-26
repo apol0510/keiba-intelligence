@@ -12,7 +12,8 @@ import { injectHorseHistoriesIntoVenues } from '../../../utils/loadHorseHistorie
 import { loadFeatureScores, getHorseFeatures, hasUsableFeatureScores, venueCodeFromName } from '../../../utils/loadFeatureScores.js';
 import AccordionClickClose from '../../../components/AccordionClickClose.astro';
 
-export const prerender = false;
+// 静的化（CDN即時配信）。データはbuild時に確定し、日次データpushの再ビルドで更新される。リクエスト依存なし。
+export const prerender = true;
 
 // 最新の中央競馬予想JSONファイルを取得
 const predictionsDir = join(process.cwd(), 'src', 'data', 'predictions', 'jra');
