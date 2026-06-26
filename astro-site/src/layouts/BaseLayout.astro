@@ -399,10 +399,13 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
     /* フッター（3層: 主要導線 / 対象競馬場 / リーガル） */
     .main-footer {
-      /* グラス感は残しつつ、ページと区別できる存在感＋上端の区切り */
-      background: linear-gradient(180deg, rgba(46, 62, 92, 0.55) 0%, rgba(22, 32, 52, 0.7) 100%);
-      backdrop-filter: blur(14px) saturate(150%);
-      -webkit-backdrop-filter: blur(14px) saturate(150%);
+      /* 背景画像を暗いオーバーレイ越しに透かせる（テック質感のフッター） */
+      background:
+        linear-gradient(180deg, rgba(13, 20, 38, 0.86) 0%, rgba(9, 14, 26, 0.92) 100%),
+        url('/images/KI_hero_PC.png');
+      background-size: cover, cover;
+      background-position: center, right 35%;
+      background-repeat: no-repeat, no-repeat;
       border-top: 1px solid rgba(96, 165, 250, 0.4);
       padding: 48px 0 var(--spacing-lg);
       margin-top: var(--spacing-2xl);
