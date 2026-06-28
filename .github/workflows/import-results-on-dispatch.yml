@@ -92,6 +92,8 @@ jobs:
           npm run validate:archive
 
       - name: Verify archive sync (MANDATORY)
+        env:
+          KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
         run: |
           echo "🔍 Verifying archive sync with keiba-data-shared..."
           npm run verify:sync
