@@ -26,7 +26,8 @@
 
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
+import { createSharedClient, resolveSharedToken } from './lib/sharedFetch.mjs';
 
 // ESモジュールで __dirname を取得
 const __filename = fileURLToPath(import.meta.url);
@@ -91,23 +92,16 @@ function getAllPredictionFiles() {
 }
 
 /**
- * keiba-data-sharedから結果データを取得
+ * keiba-data-sharedから結果データを取得（認証付き / sharedFetch 使用）
  */
-async function fetchResultsFromAPI(date) {
-  try {
-    const [year, month] = date.split('-');
-    const url = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/${year}/${month}/${date}.json`;
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      return null;
-    }
-
-    return await response.json();
-  } catch (err) {
-    console.error(`   ⚠️  Failed to fetch results for ${date}: ${err.message}`);
-    return null;
-  }
+async function fetchResultsFromAPI(date, { env = process.env, client: _client, resolveToken: _rt } = {}) {
+  const rt = _rt ?? resolveSharedToken;
+  rt({ env }); // TOKEN_MISSING fail-fast（匿名 fallback 禁止）
+  const client = _client ?? createSharedClient({ env });
+  const [year, month] = date.split('-');
+  const path = `nankan/results/${year}/${month}/${date}.json`;
+  // required:false = 404（未投入）→ null。auth/5xx は throw（fatal）。
+  return await client.fetchJson(path, { ref: 'main', required: false });
 }
 
 /**
@@ -418,9 +412,14 @@ async function rebuildArchive() {
   }
 }
 
-// 実行
-rebuildArchive().catch(err => {
-  console.error('\n❌ Error:', err.message);
-  console.error(err.stack);
-  process.exit(1);
-});
+// テスト用 export（CLI動作は変えない。isDirectRun ガードで rebuildArchive は直接実行時のみ起動する）
+export { fetchResultsFromAPI };
+
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) {
+  rebuildArchive().catch(err => {
+    console.error('\n❌ Error:', err.message);
+    console.error(err.stack);
+    process.exit(1);
+  });
+}

@@ -24,6 +24,8 @@ jobs:
 
       - name: Check JRA archive sync
         id: check-jra
+        env:
+          KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
         run: |
           # 過去7日間の日付をチェック
           MISSING_DATES=""
@@ -32,7 +34,8 @@ jobs:
           NO_RESULTS_ALERT=false
 
           # JRA は per-venue ファイル構造（統合ファイル形式は使われていない）
-          JRA_VENUE_CODES=("FKS" "HAN" "NAK" "TOK" "KYO" "CHU" "KOK" "NII" "SAP" "HKD" "HAK")
+          # 函館は HKD が正準コード（HAK は keiba-data-shared に存在しない誤コード）
+          JRA_VENUE_CODES=("FKS" "HAN" "NAK" "TOK" "KYO" "CHU" "KOK" "NII" "SAP" "HKD")
 
           for i in {0..6}; do
             DATE=$(date -u -d "$i days ago" +%Y-%m-%d 2>/dev/null || date -u -v-${i}d +%Y-%m-%d)
@@ -74,22 +77,23 @@ jobs:
               echo "⏭️  Prediction: Not found"
             fi
 
-            # 結果データがあるかチェック（per-venue ファイルを集計）
+            # 結果データがあるかチェック（認証付き per-venue 確認 / 匿名 curl 廃止）
+            # 函館は HKD が正準（HAK は誤コード。keiba-data-shared に HKD ファイルのみ存在）
+            if ! JRA_CHECK_OUTPUT=$(node astro-site/scripts/checkSharedJraResults.mjs --date "$DATE"); then
+              echo "❌ checkSharedJraResults failed (auth/network/token error)"
+              exit 1
+            fi
+            RACE_COUNT=$(echo "$JRA_CHECK_OUTPUT" | grep '^TOTAL_RACES=' | cut -d= -f2-)
+            if [ -z "$RACE_COUNT" ]; then
+              echo "❌ TOTAL_RACES missing from checker output (contract violation)"
+              exit 1
+            fi
+            RESULT_VENUES_FOUND_STR=$(echo "$JRA_CHECK_OUTPUT" | grep '^FOUND_CODES=' | cut -d= -f2-)
             HAS_RESULT=false
-            RACE_COUNT=0
-            RESULT_VENUES_FOUND=()
-            for V in "${JRA_VENUE_CODES[@]}"; do
-              V_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/results/$YEAR/$MONTH/$DATE-$V.json"
-              if curl -sf "$V_URL" > /tmp/v_result.json; then
-                V_COUNT=$(jq -r '.races | length' /tmp/v_result.json 2>/dev/null || echo 0)
-                RACE_COUNT=$((RACE_COUNT + V_COUNT))
-                HAS_RESULT=true
-                RESULT_VENUES_FOUND+=("$V")
-              fi
-            done
+            [ "$RACE_COUNT" -gt 0 ] && HAS_RESULT=true
 
             if [ "$HAS_RESULT" = true ]; then
-              echo "✅ Results: $RACE_COUNT races (${RESULT_VENUES_FOUND[*]})"
+              echo "✅ Results: $RACE_COUNT races ($RESULT_VENUES_FOUND_STR)"
 
               # 10レース以上ある場合のみチェック
               if [ "$RACE_COUNT" -ge 10 ]; then
@@ -163,6 +167,8 @@ jobs:
 
       - name: Check Nankan archive sync
         id: check-nankan
+        env:
+          KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
         run: |
           # 過去7日間の日付をチェック
           MISSING_DATES=""
@@ -198,27 +204,19 @@ jobs:
               fi
             fi
 
-            # 結果データがあるかチェック（統合ファイル優先、なければ会場別ファイルをマージ）
-            RESULT_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/$YEAR/$MONTH/$DATE.json"
-            HAS_RESULT=false
-            RACE_COUNT=0
-            if curl -sf "$RESULT_URL" > /tmp/result.json; then
-              RACE_COUNT=$(cat /tmp/result.json | jq -r '.races | length')
-              HAS_RESULT=true
-            else
-              # 会場別ファイル（OOI/FUN/KAW/URA）を個別確認してレース数を合算
-              TOTAL=0
-              for V in OOI FUN KAW URA; do
-                V_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/$YEAR/$MONTH/$DATE-$V.json"
-                if curl -sf "$V_URL" > /tmp/v_result.json; then
-                  V_COUNT=$(cat /tmp/v_result.json | jq -r '.races | length' 2>/dev/null || echo 0)
-                  TOTAL=$((TOTAL + V_COUNT))
-                  HAS_RESULT=true
-                fi
-              done
-              RACE_COUNT=$TOTAL
-              [ "$HAS_RESULT" = true ] && echo "   (会場別ファイルで検出: $RACE_COUNT races)"
+            # 結果データがあるかチェック（認証付き per-venue 確認 / 匿名 curl 廃止）
+            if ! NAN_CHECK_OUTPUT=$(node astro-site/scripts/checkSharedNankanResults.mjs --date "$DATE" --venues OOI,FUN,KAW,URA); then
+              echo "❌ checkSharedNankanResults failed (auth/network/token error)"
+              exit 1
             fi
+            RACE_COUNT=$(echo "$NAN_CHECK_OUTPUT" | grep '^TOTAL_RACES=' | cut -d= -f2-)
+            if [ -z "$RACE_COUNT" ]; then
+              echo "❌ TOTAL_RACES missing from checker output (contract violation)"
+              exit 1
+            fi
+            HAS_RESULT=false
+            [ "$RACE_COUNT" -gt 0 ] && HAS_RESULT=true
+            [ "$HAS_RESULT" = true ] && echo "   (per-venue ファイルで検出: $RACE_COUNT races)"
 
             if [ "$HAS_RESULT" = true ]; then
               echo "✅ Results: $RACE_COUNT races"

@@ -9,16 +9,21 @@
 
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
+import { createSharedClient, resolveSharedToken } from './lib/sharedFetch.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = join(__dirname, '..');
 
 /**
- * keiba-data-sharedから最新の結果日付を取得
+ * keiba-data-sharedから最新の結果日付を取得（認証付き / sharedFetch 使用）
  */
-async function getLatestResultDate() {
+async function getLatestResultDate({ env = process.env, client: _client, resolveToken: _rt } = {}) {
+  const rt = _rt ?? resolveSharedToken;
+  rt({ env }); // TOKEN_MISSING fail-fast（匿名 fallback 禁止）
+  const client = _client ?? createSharedClient({ env });
+
   const today = new Date();
   const jstNow = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
 
@@ -29,17 +34,12 @@ async function getLatestResultDate() {
     const dateStr = checkDate.toISOString().split('T')[0];
     const [year, month] = dateStr.split('-');
 
-    // 統合ファイルをチェック
-    const unifiedUrl = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/${year}/${month}/${dateStr}.json`;
-
-    try {
-      const response = await fetch(unifiedUrl);
-      if (response.ok) {
-        console.log(`📊 最新結果（統合ファイル）: ${dateStr}`);
-        return { date: dateStr, source: 'unified' };
-      }
-    } catch (error) {
-      // Continue to venue-specific files
+    // 統合ファイルをチェック（required:false = 404 → null）
+    const unifiedPath = `nankan/results/${year}/${month}/${dateStr}.json`;
+    const unified = await client.fetchJson(unifiedPath, { ref: 'main', required: false });
+    if (unified !== null) {
+      console.log(`📊 最新結果（統合ファイル）: ${dateStr}`);
+      return { date: dateStr, source: 'unified' };
     }
 
     // 会場別ファイルをチェック
@@ -48,18 +48,12 @@ async function getLatestResultDate() {
     const foundVenues = [];
 
     for (const venue of venues) {
-      const venueUrl = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/${year}/${month}/${dateStr}-${venue}.json`;
-
-      try {
-        const response = await fetch(venueUrl);
-        if (response.ok) {
-          const data = await response.json();
-          const raceCount = data.races?.length || 0;
-          totalRaces += raceCount;
-          foundVenues.push(`${venue}(${raceCount})`);
-        }
-      } catch (error) {
-        // Venue not found, continue
+      const venuePath = `nankan/results/${year}/${month}/${dateStr}-${venue}.json`;
+      const data = await client.fetchJson(venuePath, { ref: 'main', required: false });
+      if (data !== null) {
+        const raceCount = data.races?.length || 0;
+        totalRaces += raceCount;
+        foundVenues.push(`${venue}(${raceCount})`);
       }
     }
 
@@ -170,4 +164,8 @@ async function main() {
   }
 }
 
-main();
+// テスト用 export（CLI動作は変えない。isDirectRun ガードで main は直接実行時のみ起動する）
+export { getLatestResultDate };
+
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) main();
