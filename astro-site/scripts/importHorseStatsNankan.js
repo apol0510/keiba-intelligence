@@ -9,11 +9,12 @@
  *   importEntriesNankan.js / importRecentHorseHistoriesNankan.js を雛形にした自己完結スクリプト。
  *   horseStats は **1会場=最大12ファイル（R01〜R12）** で entries（1会場1ファイル）と異なる。
  *
- * 取得方式（importEntriesNankan.js と同思想 + 401/403 時 public raw fallback）:
- *   - Contents API + Accept: application/vnd.github.raw
- *   - token 優先: KEIBA_DATA_SHARED_TOKEN → GITHUB_TOKEN_KEIBA_DATA_SHARED → GITHUB_TOKEN
- *   - token が無い/401/403 のときは raw.githubusercontent.com に fallback（public 前提）
- *   - token 値は絶対に表示しない。
+ * 取得方式（sharedFetch helper 経由・認証必須）:
+ *   - createSharedClient（sharedFetch.mjs）を使用
+ *   - token 契約: KEIBA_DATA_SHARED_TOKEN 必須。GITHUB_TOKEN への fallback は禁止。
+ *   - token 未設定: HTTP 到達前に TOKEN_MISSING fatal
+ *   - GITHUB_TOKEN のみ: HTTP 到達前に TOKEN_MISSING fatal（fetch 呼出し 0）
+ *   - 404 のみ未存在扱い（skip）。401/403/429/5xx/network/timeout/malformed → fatal
  *
  * 表示専用データ: featureScores / AI指数 / 印 / 買い目 / EV / recentRaces には一切接続しない。
  *
@@ -27,23 +28,42 @@
 
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createSharedClient, SharedFetchError, SHARED_FETCH_CODES } from './lib/sharedFetch.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = join(__dirname, '..');
 
-const SHARED_OWNER = 'apol0510';
-const SHARED_REPO = 'keiba-data-shared';
 const DEFAULT_BRANCH = 'main';
 const DEFAULT_EXPECTED_RACES = 12;
 
 const ALL_NANKAN_VENUES = ['OOI', 'KAW', 'FUN', 'URA'];
 const NANKAN_VENUE_NAME_BY_CODE = { OOI: '大井', KAW: '川崎', FUN: '船橋', URA: '浦和' };
 
+/** keiba-data-shared 専用 cross-repo token のキー名 */
+const CROSS_REPO_TOKEN_KEY = 'KEIBA_DATA_SHARED_TOKEN';
+
+/**
+ * KEIBA_DATA_SHARED_TOKEN を env から明示的に取得する。
+ * 未設定 or 空の場合は HTTP 到達前に TOKEN_MISSING で fatal。
+ * GITHUB_TOKEN への fallback は禁止（cross-repo アクセスは KEIBA_DATA_SHARED_TOKEN 専用）。
+ */
+function requireCrossRepoToken(env) {
+  const raw = env?.[CROSS_REPO_TOKEN_KEY];
+  const token = typeof raw === 'string' ? raw.trim() : '';
+  if (!token) {
+    throw new SharedFetchError(
+      SHARED_FETCH_CODES.TOKEN_MISSING,
+      `${CROSS_REPO_TOKEN_KEY} が設定されていません。keiba-data-shared へのアクセスには ${CROSS_REPO_TOKEN_KEY} が必須です。GITHUB_TOKEN への fallback は禁止されています。`,
+    );
+  }
+  return token;
+}
+
 function parseArgs(argv) {
   const args = { date: null, venues: null, dryRun: false, sharedRef: DEFAULT_BRANCH, expectedRaces: DEFAULT_EXPECTED_RACES };
-  for (let i = 2; i < argv.length; i++) {
+  for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--date') args.date = argv[++i];
     else if (a.startsWith('--date=')) args.date = a.slice('--date='.length);
@@ -65,60 +85,17 @@ function resolveVenues(arg) {
 
 const rnnOf = (n) => `R${String(n).padStart(2, '0')}`;
 
-function buildSharedPath(date, venue, n) {
+export function buildSharedPath(date, venue, n) {
   const [year, month] = date.split('-');
   return `nankan/horseStats/${year}/${month}/${date}-${venue}-${rnnOf(n)}.json`;
 }
-function buildLocalPath(date, venue, n) {
+export function buildLocalPath(date, venue, n) {
   const [year, month] = date.split('-');
   return join(projectRoot, 'src', 'data', 'horseStats', 'nankan', year, month, `${date}-${venue}-${rnnOf(n)}.json`);
 }
 
-function pickToken() {
-  if (process.env.KEIBA_DATA_SHARED_TOKEN) return { token: process.env.KEIBA_DATA_SHARED_TOKEN, source: 'KEIBA_DATA_SHARED_TOKEN' };
-  if (process.env.GITHUB_TOKEN_KEIBA_DATA_SHARED) return { token: process.env.GITHUB_TOKEN_KEIBA_DATA_SHARED, source: 'GITHUB_TOKEN_KEIBA_DATA_SHARED' };
-  if (process.env.GITHUB_TOKEN) return { token: process.env.GITHUB_TOKEN, source: 'GITHUB_TOKEN' };
-  return { token: null, source: 'NONE' };
-}
-
-function safePrefix(text, n = 80) {
-  if (text == null) return '<null>';
-  const s = String(text).replace(/\s+/g, ' ');
-  return s.length > n ? s.slice(0, n) + '…' : s;
-}
-
-async function fetchRawPublic(sharedPath, ref) {
-  const rawUrl = `https://raw.githubusercontent.com/${SHARED_OWNER}/${SHARED_REPO}/${ref}/${sharedPath}?t=${Date.now()}`;
-  const res = await fetch(rawUrl, { cache: 'no-store' });
-  if (res.status === 404) return { ok: false, status: 404 };
-  if (!res.ok) { const body = await res.text().catch(() => ''); return { ok: false, status: res.status, error: `raw ${res.status}: ${safePrefix(body)}` }; }
-  return { ok: true, status: 200, body: await res.text(), via: 'raw' };
-}
-
-async function fetchSharedRaw(sharedPath, token, ref) {
-  if (token) {
-    const url = `https://api.github.com/repos/${SHARED_OWNER}/${SHARED_REPO}/contents/${sharedPath}?ref=${ref}`;
-    const res = await fetch(url, {
-      headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.raw', 'User-Agent': 'import-horse-stats-nankan' },
-    });
-    if (res.status === 404) return { ok: false, status: 404 };
-    // token が invalid 等（401/403）なら public raw に fallback
-    if (res.status === 401 || res.status === 403) return fetchRawPublic(sharedPath, ref);
-    if (!res.ok) { const body = await res.text().catch(() => ''); return { ok: false, status: res.status, error: `Contents API ${res.status}: ${safePrefix(body)}` }; }
-    return { ok: true, status: 200, body: await res.text(), via: 'api' };
-  }
-  return fetchRawPublic(sharedPath, ref);
-}
-
-function parseJsonStrict(body, status) {
-  if (body == null || body === '') throw new Error(`empty body (status=${status})`);
-  const first = body.trimStart()[0];
-  if (first !== '{' && first !== '[') throw new Error(`invalid JSON prefix: "${safePrefix(body)}" (status=${status})`);
-  return JSON.parse(body);
-}
-
 /** horseStats 1ファイルの import 契約検証。不適合は throw。戻り値: horses 数。 */
-function validateHorseStatsJson(json, venue, date, raceNo) {
+export function validateHorseStatsJson(json, venue, date, raceNo) {
   if (!json || typeof json !== 'object') throw new Error('not an object');
   if (json.dataType !== 'horseStats') throw new Error(`dataType mismatch: ${json.dataType}`);
   if (json.date !== date) throw new Error(`date mismatch: expected=${date}, file=${json.date}`);
@@ -134,27 +111,40 @@ function validateHorseStatsJson(json, venue, date, raceNo) {
   return horses.length;
 }
 
-async function main() {
-  const args = parseArgs(process.argv);
+/**
+ * DI-injectable importer（テスト用途・直接実行時はwrapper経由）。
+ * @returns {Promise<{filesFound, totalHorses, errors, notFound, wouldWrite, written}>}
+ */
+export async function importHorseStatsNankan({
+  argv = process.argv.slice(2),
+  env = process.env,
+  client,
+  logger = console,
+  writeFileFn = writeFileSync,
+  mkdirFn = mkdirSync,
+} = {}) {
+  // KEIBA_DATA_SHARED_TOKEN 必須。GITHUB_TOKEN fallback 禁止。HTTP 到達前に検証。
+  const token = requireCrossRepoToken(env);
+
+  const args = parseArgs(argv);
   if (!args.date || !/^\d{4}-\d{2}-\d{2}$/.test(args.date)) {
-    console.error('❌ --date=YYYY-MM-DD が必要');
-    process.exit(2);
+    throw new Error('Usage: --date=YYYY-MM-DD [--venue=OOI] [--dry-run]');
   }
   if (!(args.expectedRaces >= 1 && args.expectedRaces <= 12)) {
-    console.error('❌ --expected-races は 1〜12');
-    process.exit(2);
+    throw new Error('--expected-races は 1〜12');
   }
   const venues = resolveVenues(args.venues);
-  const { token, source: tokenSource } = pickToken();
 
-  console.log('📥 importHorseStatsNankan');
-  console.log(`   date:    ${args.date}`);
-  console.log(`   venues:  ${venues.join(', ')}`);
-  console.log(`   races:   R01..R${String(args.expectedRaces).padStart(2, '0')}`);
-  console.log(`   ref:     ${args.sharedRef}`);
-  console.log(`   auth:    ${token ? `Contents API (token from ${tokenSource}, 401/403時 raw fallback)` : 'raw public'}`);
-  console.log(`   dry-run: ${args.dryRun ? 'YES' : 'NO'}`);
-  console.log('');
+  // KEIBA_DATA_SHARED_TOKEN のみを渡す（env 内の他 token を client へ漏洩させない）
+  const c = client ?? createSharedClient({ env: { [CROSS_REPO_TOKEN_KEY]: token } });
+
+  logger.log('📥 importHorseStatsNankan');
+  logger.log(`   date:    ${args.date}`);
+  logger.log(`   venues:  ${venues.join(', ')}`);
+  logger.log(`   races:   R01..R${String(args.expectedRaces).padStart(2, '0')}`);
+  logger.log(`   ref:     ${args.sharedRef}`);
+  logger.log(`   dry-run: ${args.dryRun ? 'YES' : 'NO'}`);
+  logger.log('');
 
   let filesFound = 0, totalHorses = 0, errors = 0, notFound = 0, wouldWrite = 0, written = 0;
 
@@ -164,37 +154,48 @@ async function main() {
       const localPath = buildLocalPath(args.date, venue, n);
       const label = `${venue} ${rnnOf(n)}`;
       try {
-        const r = await fetchSharedRaw(sharedPath, token, args.sharedRef);
-        if (r.status === 404) { console.log(`  ${label}: skip (404 ${sharedPath})`); notFound++; continue; }
-        if (!r.ok) throw new Error(r.error || `fetch failed (status=${r.status})`);
-        const json = parseJsonStrict(r.body, r.status);
+        // required:false → 404 のみ null（skip）、他は fatal throw
+        const json = await c.fetchJson(sharedPath, { ref: args.sharedRef, required: false });
+        if (json === null) {
+          logger.log(`  ${label}: skip (404 ${sharedPath})`);
+          notFound++;
+          continue;
+        }
         const horses = validateHorseStatsJson(json, venue, args.date, n);
-        filesFound++; totalHorses += horses;
+        filesFound++;
+        totalHorses += horses;
         if (args.dryRun) {
-          console.log(`  ${label}: OK (dry-run, horses=${horses}, via=${r.via}, would write ${localPath.replace(projectRoot, '.')})`);
+          logger.log(`  ${label}: OK (dry-run, horses=${horses}, would write ${localPath.replace(projectRoot, '.')})`);
           wouldWrite++;
         } else {
-          mkdirSync(dirname(localPath), { recursive: true });
-          writeFileSync(localPath, JSON.stringify(json, null, 2), 'utf-8');
-          console.log(`  ${label}: saved (horses=${horses}) -> ${localPath.replace(projectRoot, '.')}`);
+          mkdirFn(dirname(localPath), { recursive: true });
+          writeFileFn(localPath, JSON.stringify(json, null, 2), 'utf-8');
+          logger.log(`  ${label}: saved (horses=${horses}) -> ${localPath.replace(projectRoot, '.')}`);
           written++;
         }
       } catch (e) {
-        console.log(`  ${label}: ERROR ${e.message}`);
+        logger.log(`  ${label}: ERROR ${e.message}`);
         errors++;
       }
     }
   }
 
-  console.log('');
-  console.log(`━━━ filesFound=${filesFound} totalHorses=${totalHorses} errors=${errors} notFound=${notFound} wouldWrite=${wouldWrite} written=${written} ━━━`);
+  logger.log('');
+  logger.log(`━━━ filesFound=${filesFound} totalHorses=${totalHorses} errors=${errors} notFound=${notFound} wouldWrite=${wouldWrite} written=${written} ━━━`);
 
-  if (errors > 0) { console.error('❌ 取得/検証エラーあり'); process.exit(4); }
-  if (filesFound === 0) { console.error('❌ 1件も取得なし'); process.exit(5); }
+  return { filesFound, totalHorses, errors, notFound, wouldWrite, written };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((e) => { console.error('FATAL:', e); process.exit(1); });
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) {
+  importHorseStatsNankan({ argv: process.argv.slice(2) })
+    .then(({ filesFound, errors }) => {
+      if (errors > 0) { console.error('❌ 取得/検証エラーあり'); process.exit(4); }
+      if (filesFound === 0) { console.error('❌ 1件も取得なし'); process.exit(5); }
+    })
+    .catch((e) => {
+      if (e instanceof Error && /Usage:|1〜12/.test(e.message)) { console.error(`❌ ${e.message}`); process.exit(2); }
+      console.error('FATAL:', e.message ?? String(e));
+      process.exit(1);
+    });
 }
-
-export { validateHorseStatsJson, buildSharedPath, buildLocalPath };

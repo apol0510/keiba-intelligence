@@ -514,3 +514,90 @@ test('42. verify-archive-sync.yml: schedule・workflow_dispatch が維持され�
   assert.ok(text.includes("cron: '0 15 * * *'"), 'schedule cron が変更されている');
   assert.ok(text.includes('workflow_dispatch'), 'workflow_dispatch が削除されている');
 });
+
+// ---- PR-KI-4a: horseStats(nankan) + entries(nankan) 認証移行 ----
+
+const PR_KI_4A_WORKFLOWS = [
+  'import-horse-stats-nankan-on-dispatch.yml',
+  'import-entries-nankan-on-dispatch.yml',
+];
+
+test('43. import-horse-stats-nankan-on-dispatch.yml: import step env に KEIBA_DATA_SHARED_TOKEN が正式設定（YAML構造検証）', () => {
+  const r = verifyTokenInStepEnvByName('import-horse-stats-nankan-on-dispatch.yml', 'import horsestats (nankan)');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+test('44. import-horse-stats-nankan-on-dispatch.yml: import step env に GITHUB_TOKEN が shared 読取り用として存在しない（YAML構造検証）', () => {
+  const r = verifyNoGithubTokenInStepEnv('import-horse-stats-nankan-on-dispatch.yml', 'import horsestats (nankan)');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `GITHUB_TOKEN が import step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
+
+test('45. import-entries-nankan-on-dispatch.yml: import step env に KEIBA_DATA_SHARED_TOKEN が正式設定（YAML構造検証）', () => {
+  const r = verifyTokenInStepEnvByName('import-entries-nankan-on-dispatch.yml', 'import entries (nankan)');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+test('46. import-entries-nankan-on-dispatch.yml: import step env に GITHUB_TOKEN が shared 読取り用として存在しない（YAML構造検証）', () => {
+  const r = verifyNoGithubTokenInStepEnv('import-entries-nankan-on-dispatch.yml', 'import entries (nankan)');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `GITHUB_TOKEN が import step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
+
+test('47. PR-KI-4a 対象 workflow に continue-on-error が存在しない', () => {
+  for (const name of PR_KI_4A_WORKFLOWS) {
+    const text = readWorkflow(name);
+    assert.ok(
+      !text.includes('continue-on-error'),
+      `${name} に continue-on-error が含まれている（import 失敗の握り潰しになる）`,
+    );
+  }
+});
+
+test('48. import-horse-stats-nankan-on-dispatch.yml: checkout 用 GITHUB_TOKEN は維持されている', () => {
+  const text = readWorkflow('import-horse-stats-nankan-on-dispatch.yml');
+  assert.ok(text.includes("token: ${{ secrets.GITHUB_TOKEN }}"), 'checkout 用 GITHUB_TOKEN が削除されている');
+});
+
+test('49. import-entries-nankan-on-dispatch.yml: checkout 用 GITHUB_TOKEN は維持されている', () => {
+  const text = readWorkflow('import-entries-nankan-on-dispatch.yml');
+  assert.ok(text.includes("token: ${{ secrets.GITHUB_TOKEN }}"), 'checkout 用 GITHUB_TOKEN が削除されている');
+});
+
+test('50. import-horse-stats-nankan-on-dispatch.yml: repository_dispatch・workflow_dispatch が維持されている', () => {
+  const text = readWorkflow('import-horse-stats-nankan-on-dispatch.yml');
+  assert.ok(text.includes('horse-stats-nankan-updated'), 'repository_dispatch horse-stats-nankan-updated が削除されている');
+  assert.ok(text.includes('workflow_dispatch'), 'workflow_dispatch が削除されている');
+});
+
+test('51. import-entries-nankan-on-dispatch.yml: repository_dispatch・workflow_dispatch が維持されている', () => {
+  const text = readWorkflow('import-entries-nankan-on-dispatch.yml');
+  assert.ok(text.includes('entries-nankan-updated'), 'repository_dispatch entries-nankan-updated が削除されている');
+  assert.ok(text.includes('workflow_dispatch'), 'workflow_dispatch が削除されている');
+});
+
+test('52. PR-KI-4a 対象 workflow の import 呼び出し行に || true が存在しない', () => {
+  const IMPORT_SCRIPTS = ['importHorseStatsNankan.js', 'importEntriesNankan.js', 'import:horse-stats', 'import:entries'];
+  for (const name of PR_KI_4A_WORKFLOWS) {
+    const lines = readWorkflow(name).split('\n');
+    for (const line of lines) {
+      const hasScript = IMPORT_SCRIPTS.some((s) => line.includes(s));
+      if (hasScript) {
+        assert.ok(
+          !line.includes('|| true'),
+          `${name}: import 呼び出し行に "|| true" が含まれている → 失敗の exit 0 化になる:\n  ${line.trim()}`,
+        );
+      }
+    }
+  }
+});
