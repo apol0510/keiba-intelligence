@@ -297,3 +297,220 @@ test('24. import-prediction-daily.yml: import step env に KEIBA_DATA_SHARED_TOK
     `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
   );
 });
+
+// ---- PR-KI-3b-2: 予想 checker workflow（構造的検証） ----
+
+/**
+ * PyYAML を使って指定 step の env 配下に KEIBA_DATA_SHARED_TOKEN が設定されているか検証する。
+ * コメント等への混入では通過しない。
+ */
+function verifyTokenInStepEnvByName(workflowFile, stepNameFragment) {
+  const script = [
+    'import yaml, sys',
+    'f = open(sys.argv[1])',
+    'doc = yaml.safe_load(f)',
+    'f.close()',
+    'job = list(doc.get("jobs", {}).values())[0]',
+    'steps = job.get("steps", [])',
+    'frag = sys.argv[2].lower()',
+    'step = next((s for s in steps if frag in (s.get("name") or "").lower()), None)',
+    'assert step, f"Step with fragment {repr(sys.argv[2])} not found"',
+    'env = step.get("env") or {}',
+    'key = "KEIBA_DATA_SHARED_TOKEN"',
+    'assert key in env, f"Key {repr(key)} not in step env. env keys: {list(env.keys())}"',
+    'val = str(env[key])',
+    'expected = "${{ secrets.KEIBA_DATA_SHARED_TOKEN }}"',
+    'assert val == expected, f"Value mismatch. expected={repr(expected)}, got={repr(val)}"',
+    'print("OK")',
+  ].join('\n');
+
+  const wfPath = join(WORKFLOWS_DIR, workflowFile);
+  const r = spawnSync('python3', ['-c', script, wfPath, stepNameFragment], { encoding: 'utf-8' });
+  return r;
+}
+
+test('25. import-results-jra-daily.yml: checkSharedJraPredictions.mjs を使用', () => {
+  const text = readWorkflow('import-results-jra-daily.yml');
+  assert.ok(
+    text.includes('checkSharedJraPredictions.mjs'),
+    'checkSharedJraPredictions.mjs の呼び出しが見つからない',
+  );
+});
+
+test('26. verify-archive-sync.yml: checkSharedJraPredictions.mjs を使用', () => {
+  const text = readWorkflow('verify-archive-sync.yml');
+  assert.ok(
+    text.includes('checkSharedJraPredictions.mjs'),
+    'verify-archive-sync.yml に checkSharedJraPredictions.mjs が見つからない',
+  );
+});
+
+test('27. verify-archive-sync.yml: checkSharedNankanPredictions.mjs を使用', () => {
+  const text = readWorkflow('verify-archive-sync.yml');
+  assert.ok(
+    text.includes('checkSharedNankanPredictions.mjs'),
+    'verify-archive-sync.yml に checkSharedNankanPredictions.mjs が見つからない',
+  );
+});
+
+test('28. import-results-jra-daily.yml: keiba-data-shared への匿名 curl が存在しない', () => {
+  const text = readWorkflow('import-results-jra-daily.yml');
+  assert.ok(
+    !text.includes('raw.githubusercontent.com/apol0510/keiba-data-shared'),
+    'import-results-jra-daily.yml に keiba-data-shared への匿名 raw.githubusercontent curl が残っている',
+  );
+});
+
+test('29. verify-archive-sync.yml: keiba-data-shared への匿名 curl が存在しない（self-archive は除外）', () => {
+  const text = readWorkflow('verify-archive-sync.yml');
+  assert.ok(
+    !text.includes('raw.githubusercontent.com/apol0510/keiba-data-shared'),
+    'verify-archive-sync.yml に keiba-data-shared への匿名 raw.githubusercontent curl が残っている',
+  );
+});
+
+test('30. import-results-jra-daily.yml: checkSharedJraPredictions の exit code を確認している', () => {
+  const text = readWorkflow('import-results-jra-daily.yml');
+  assert.ok(
+    text.includes('if ! RB_OUTPUT=') || text.includes('|| exit 1'),
+    'checkSharedJraPredictions の exit code が確認されていない',
+  );
+});
+
+test('31. verify-archive-sync.yml: checkSharedJraPredictions の exit code を確認している', () => {
+  const text = readWorkflow('verify-archive-sync.yml');
+  assert.ok(
+    text.includes('if ! JRA_PRED_OUTPUT=') || text.includes('|| exit 1'),
+    'checkSharedJraPredictions の exit code が確認されていない',
+  );
+});
+
+test('32. verify-archive-sync.yml: checkSharedNankanPredictions の exit code を確認している', () => {
+  const text = readWorkflow('verify-archive-sync.yml');
+  assert.ok(
+    text.includes('if ! NK_PRED_OUTPUT=') || text.includes('|| exit 1'),
+    'checkSharedNankanPredictions の exit code が確認されていない',
+  );
+});
+
+test('33. verify-archive-sync.yml: check-jra step env に KEIBA_DATA_SHARED_TOKEN が正式設定（YAML構造検証）', () => {
+  const r = verifyTokenInStepEnvByName('verify-archive-sync.yml', 'check jra archive sync');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+test('34. verify-archive-sync.yml: check-nankan step env に KEIBA_DATA_SHARED_TOKEN が正式設定（YAML構造検証）', () => {
+  const r = verifyTokenInStepEnvByName('verify-archive-sync.yml', 'check nankan archive sync');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+// ---- PR-KI-3b-2: 追加安全監査 ----
+
+/** PyYAML で step env に GITHUB_TOKEN がないことを確認（shared 読取り用途への混入防止） */
+function verifyNoGithubTokenInStepEnv(workflowFile, stepNameFragment) {
+  const script = [
+    'import yaml, sys',
+    'f = open(sys.argv[1])',
+    'doc = yaml.safe_load(f)',
+    'f.close()',
+    'job = list(doc.get("jobs", {}).values())[0]',
+    'steps = job.get("steps", [])',
+    'frag = sys.argv[2].lower()',
+    'step = next((s for s in steps if frag in (s.get("name") or "").lower()), None)',
+    'assert step, f"Step with fragment {repr(sys.argv[2])} not found"',
+    'env = step.get("env") or {}',
+    'key = "GITHUB_TOKEN"',
+    'assert key not in env, f"GITHUB_TOKEN found in step env (must not be set for shared reads). env keys: {list(env.keys())}"',
+    'print("OK")',
+  ].join('\n');
+
+  const wfPath = join(WORKFLOWS_DIR, workflowFile);
+  const r = spawnSync('python3', ['-c', script, wfPath, stepNameFragment], { encoding: 'utf-8' });
+  return r;
+}
+
+test('35. import-results-jra-daily.yml: check step env に KEIBA_DATA_SHARED_TOKEN が正式設定（YAML構造検証）', () => {
+  const r = verifyTokenInStepEnvByName('import-results-jra-daily.yml', 'check for missing results');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+test('36. import-results-jra-daily.yml: checker step env に GITHUB_TOKEN が shared 読取り用として存在しない（YAML構造検証）', () => {
+  const r = verifyNoGithubTokenInStepEnv('import-results-jra-daily.yml', 'check for missing results');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `GITHUB_TOKEN が checker step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
+
+test('37. verify-archive-sync.yml: check-jra step env に GITHUB_TOKEN が shared 読取り用として存在しない（YAML構造検証）', () => {
+  const r = verifyNoGithubTokenInStepEnv('verify-archive-sync.yml', 'check jra archive sync');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `GITHUB_TOKEN が checker step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
+
+test('38. verify-archive-sync.yml: check-nankan step env に GITHUB_TOKEN が shared 読取り用として存在しない（YAML構造検証）', () => {
+  const r = verifyNoGithubTokenInStepEnv('verify-archive-sync.yml', 'check nankan archive sync');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `GITHUB_TOKEN が checker step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
+
+const PR_KI_3B2_WORKFLOWS = [
+  'import-results-jra-daily.yml',
+  'verify-archive-sync.yml',
+];
+
+test('39. 対象 workflow に continue-on-error が存在しない', () => {
+  for (const name of PR_KI_3B2_WORKFLOWS) {
+    const text = readWorkflow(name);
+    assert.ok(
+      !text.includes('continue-on-error'),
+      `${name} に continue-on-error が含まれている（checker 失敗の握り潰しになる）`,
+    );
+  }
+});
+
+test('40. 対象 workflow の checker 呼び出し行に || true が存在しない（exit 0 化禁止）', () => {
+  const CHECKER_NAMES = [
+    'checkSharedJraPredictions.mjs',
+    'checkSharedNankanPredictions.mjs',
+    'checkSharedJraResults.mjs',
+    'checkSharedNankanResults.mjs',
+  ];
+  for (const name of PR_KI_3B2_WORKFLOWS) {
+    const lines = readWorkflow(name).split('\n');
+    for (const line of lines) {
+      const hasChecker = CHECKER_NAMES.some((c) => line.includes(c));
+      if (hasChecker) {
+        assert.ok(
+          !line.includes('|| true'),
+          `${name}: checker 呼び出し行に "|| true" が含まれている → 失敗の exit 0 化になる:\n  ${line.trim()}`,
+        );
+      }
+    }
+  }
+});
+
+test('41. import-results-jra-daily.yml: schedule・workflow_dispatch・repository_dispatch が維持されている', () => {
+  const text = readWorkflow('import-results-jra-daily.yml');
+  assert.ok(text.includes("cron: '30 14 * * *'"), 'schedule cron が変更されている');
+  assert.ok(text.includes('workflow_dispatch'), 'workflow_dispatch が削除されている');
+  assert.ok(text.includes('jra-results-updated'), 'repository_dispatch jra-results-updated が削除されている');
+});
+
+test('42. verify-archive-sync.yml: schedule・workflow_dispatch が維持されている', () => {
+  const text = readWorkflow('verify-archive-sync.yml');
+  assert.ok(text.includes("cron: '0 15 * * *'"), 'schedule cron が変更されている');
+  assert.ok(text.includes('workflow_dispatch'), 'workflow_dispatch が削除されている');
+});
