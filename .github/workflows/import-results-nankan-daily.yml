@@ -94,7 +94,6 @@ jobs:
       - name: Import missing results
         if: steps.check.outputs.has_missing == 'true'
         id: import-results
-        continue-on-error: true
         env:
           KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
         run: |

@@ -42,7 +42,6 @@ jobs:
 
       - name: Import results from keiba-data-shared
         id: import-results
-        continue-on-error: true
         env:
           KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
           MANUAL_DATE: ${{ github.event.inputs.date }}
