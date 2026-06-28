@@ -62,7 +62,7 @@ jobs:
       - name: Run archive sync (JRA self-healing)
         id: sync
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
         run: |
           DAYS="${{ github.event.inputs.days || '14' }}"
           echo "🔄 Running JRA archive sync: days=$DAYS, tracks=jra"

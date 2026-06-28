@@ -8,10 +8,11 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import crypto from 'crypto';
 
 import { isMainRace } from '../src/utils/mainRaceBetting.js';
+import { createSharedClient, resolveSharedToken } from './lib/sharedFetch.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -124,118 +125,50 @@ function normalizeVenue(venue) {
 }
 
 /**
- * keiba-data-sharedから結果データを取得
+ * keiba-data-sharedから結果データを取得（認証付き / sharedFetch 使用）
  * 統合ファイルがない場合は会場別ファイルをマージ
  */
-async function fetchSharedResults(date, venue = 'nankan') {
-  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+async function fetchSharedResults(date, venue = 'nankan', { env = process.env, client: _client, resolveToken: _rt } = {}) {
+  const rt = _rt ?? resolveSharedToken;
+  rt({ env }); // TOKEN_MISSING fail-fast（匿名 fallback 禁止）
+  const client = _client ?? createSharedClient({ env });
   const [year, month] = date.split('-');
-  const owner = 'apol0510';
-  const repo = 'keiba-data-shared';
   const path = `${venue}/results/${year}/${month}/${date}.json`;
 
   console.log(`📡 keiba-data-sharedから取得中: ${path}`);
 
-  // まず統合ファイルを試す
-  try {
-    // ローカル実行時（GITHUB_TOKENなし）: raw.githubusercontent.comを使用（公開リポジトリ）
-    if (!GITHUB_TOKEN) {
-      console.log(`   ローカル実行モード: raw.githubusercontent.comからダウンロード`);
-      const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
-      const response = await fetch(rawUrl);
-
-      if (response.ok) {
-        const content = await response.text();
-        const results = JSON.parse(content);
-        console.log(`✅ 取得成功: ${path}`);
-        return results;
-      }
-      // 404の場合は会場別ファイルにフォールバック
-      if (response.status !== 404) {
-        throw new Error(`結果データの取得に失敗: ${response.status} ${response.statusText}`);
-      }
-    } else {
-      // GitHub Actions実行時: GitHub API経由（レート制限回避）
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-
-      const response = await fetch(apiUrl, {
-        headers: {
-          'Authorization': `token ${GITHUB_TOKEN}`,
-          'Accept': 'application/vnd.github.v3+json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const content = Buffer.from(data.content, 'base64').toString('utf-8');
-        console.log(`✅ 取得成功: ${path}`);
-        return JSON.parse(content);
-      }
-      // 404の場合は会場別ファイルにフォールバック
-      if (response.status !== 404) {
-        throw new Error(`結果データの取得に失敗: ${response.status} ${response.statusText}`);
-      }
-    }
-
-    // 統合ファイルがない場合、会場別ファイルをマージ
-    console.log(`   統合ファイルが見つかりません。会場別ファイルを検索します...`);
-    return await fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN);
-
-  } catch (error) {
-    // ネットワークエラー等
-    throw error;
+  // 統合ファイルを試す（required:false = 404 → null）
+  const unified = await client.fetchJson(path, { ref: 'main', required: false });
+  if (unified !== null) {
+    console.log(`✅ 取得成功: ${path}`);
+    return unified;
   }
+
+  // 統合ファイルがない場合、会場別ファイルをマージ
+  console.log(`   統合ファイルが見つかりません。会場別ファイルを検索します...`);
+  return await fetchAndMergeVenueResults(date, year, month, client);
 }
 
 /**
  * 会場別結果ファイルを取得してマージ（南関版）
  */
-async function fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN) {
-  const owner = 'apol0510';
-  const repo = 'keiba-data-shared';
+async function fetchAndMergeVenueResults(date, year, month, client) {
   const venueCodes = ['OOI', 'FUN', 'KAW', 'URA']; // 大井・船橋・川崎・浦和
 
   const venues = [];
   let allRaces = [];
 
   for (const venueCode of venueCodes) {
-    const venueFile = `${date}-${venueCode}.json`;
-    const venuePath = `nankan/results/${year}/${month}/${venueFile}`;
+    const venuePath = `nankan/results/${year}/${month}/${date}-${venueCode}.json`;
+    // required:false = 404（未投入）→ null → スキップ。auth/5xx は throw（fatal）。
+    const venueData = await client.fetchJson(venuePath, { ref: 'main', required: false });
+    if (venueData === null) continue; // 404ならスキップ
 
-    try {
-      let venueData;
+    console.log(`   ✅ ${venueCode}: ${venueData.races?.length || 0}レース取得`);
 
-      if (!GITHUB_TOKEN) {
-        // ローカル実行時
-        const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${venuePath}`;
-        const response = await fetch(rawUrl);
-        if (!response.ok) continue; // 404ならスキップ
-        venueData = JSON.parse(await response.text());
-      } else {
-        // GitHub Actions実行時
-        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${venuePath}`;
-        const response = await fetch(apiUrl, {
-          headers: {
-            'Authorization': `token ${GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json'
-          }
-        });
-        if (!response.ok) continue; // 404ならスキップ
-        const data = await response.json();
-        venueData = JSON.parse(Buffer.from(data.content, 'base64').toString('utf-8'));
-      }
-
-      console.log(`   ✅ ${venueCode}: ${venueData.races?.length || 0}レース取得`);
-
-      // 会場データを追加
-      if (venueData.races) {
-        allRaces = allRaces.concat(venueData.races);
-        venues.push(venueData.venue || venueCode);
-      }
-
-    } catch (err) {
-      // エラーは無視して次の会場へ
-      continue;
+    if (venueData.races) {
+      allRaces = allRaces.concat(venueData.races);
+      venues.push(venueData.venue || venueCode);
     }
   }
 
@@ -245,7 +178,6 @@ async function fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN) {
 
   console.log(`✅ 会場別ファイルからマージ完了: ${allRaces.length}レース（${venues.join('・')}）`);
 
-  // 統合フォーマットで返す
   return {
     date: date,
     venue: venues.join('・'),
@@ -786,4 +718,8 @@ async function main() {
   }
 }
 
-main();
+// テスト用 export（CLI動作は変えない。isDirectRun ガードで main は直接実行時のみ起動する）
+export { fetchSharedResults, fetchAndMergeVenueResults };
+
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) main();

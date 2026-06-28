@@ -61,31 +61,38 @@ jobs:
       - name: Check for missing results
         id: check
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
         run: |
           DATE="${{ steps.date.outputs.date }}"
           YEAR="${DATE:0:4}"
           MONTH="${DATE:5:2}"
-          BASE="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/results/${YEAR}/${MONTH}"
 
-          # per-venueファイル（FKS/HAN/NAK/TOK/KYO/CHU/KOK/NII/SAP/HKD）の存在を確認
-          # 統合JSON(YYYY-MM-DD.json)は使用しない
-          VENUE_CODES=("FKS" "HAN" "NAK" "TOK" "KYO" "CHU" "KOK" "NII" "SAP" "HKD")
-          FOUND_VENUES=()
+          # 認証付き per-venue JRA 結果確認（匿名 curl は廃止。TOKEN_MISSING 等は exit 1 で失敗扱い）
+          if ! OUTPUT=$(node scripts/checkSharedJraResults.mjs --date "$DATE"); then
+            echo "❌ checkSharedJraResults failed (auth/network/token error)"
+            exit 1
+          fi
+          FOUND_CODES=$(echo "$OUTPUT" | grep '^FOUND_CODES=' | cut -d= -f2-)
+          TOTAL_RACES_RAW=$(echo "$OUTPUT" | grep '^TOTAL_RACES=' | cut -d= -f2-)
+          if [ -z "$TOTAL_RACES_RAW" ]; then
+            echo "❌ TOTAL_RACES missing from checker output (contract violation)"
+            exit 1
+          fi
+          # FOUND_CODES（スペース区切り）→ 配列化。空文字は 0 要素として明示的に処理する。
+          if [ -z "$FOUND_CODES" ]; then
+            FOUND_VENUES=()
+            EXPECTED_VENUES=0
+          else
+            read -ra FOUND_VENUES <<< "$FOUND_CODES"
+            EXPECTED_VENUES="${#FOUND_VENUES[@]}"
+          fi
 
-          for code in "${VENUE_CODES[@]}"; do
-            URL="${BASE}/${DATE}-${code}.json"
-            if curl -sfI "$URL" > /dev/null; then
-              FOUND_VENUES+=("$code")
-            fi
-          done
-
-          EXPECTED_VENUES=${#FOUND_VENUES[@]}
           echo "🔍 per-venue検索結果: ${EXPECTED_VENUES}会場 (${FOUND_VENUES[*]})"
 
-          # racebook（予想）が存在するかも確認 → 「開催想定日」判定に使う
+          # racebook（予想）が存在するかも確認 → 「開催想定日」判定に使う（anonymous のまま、PR-KI-3 対象）
           # racebook あり・結果なし = 取込漏れ（要アラート）
           RACEBOOK_VENUES=()
+          VENUE_CODES=("FKS" "HAN" "NAK" "TOK" "KYO" "CHU" "KOK" "NII" "SAP" "HKD")
           for code in "${VENUE_CODES[@]}"; do
             RB_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/racebook/${YEAR}/${MONTH}/${DATE}-${code}.json"
             if curl -sfI "$RB_URL" > /dev/null; then
@@ -141,7 +148,7 @@ jobs:
       - name: Import missing results
         if: steps.check.outputs.has_missing == 'true'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
         run: |
           DATE="${{ steps.date.outputs.date }}"
           echo "📥 Importing JRA results for: $DATE"

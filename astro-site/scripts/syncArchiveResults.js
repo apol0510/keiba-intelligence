@@ -31,8 +31,9 @@
 
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { spawn } from 'child_process';
+import { createSharedClient, resolveSharedToken } from './lib/sharedFetch.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -92,21 +93,15 @@ function loadArchiveDates(archiveFileName) {
   }
 }
 
-async function fetchJson(url) {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    return await response.json();
-  } catch (error) {
-    return null;
-  }
-}
-
-async function checkSharedResults(date, track) {
+async function checkSharedResults(date, track, { env = process.env, client: _client, resolveToken: _rt } = {}) {
+  const rt = _rt ?? resolveSharedToken;
+  rt({ env }); // TOKEN_MISSING fail-fast（匿名 fallback 禁止）
+  const client = _client ?? createSharedClient({ env });
   const [year, month] = date.split('-');
-  const base = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/${track}/results/${year}/${month}`;
 
-  const unified = await fetchJson(`${base}/${date}.json`);
+  // 統合ファイルを試す（required:false = 404 → null）
+  const unifiedPath = `${track}/results/${year}/${month}/${date}.json`;
+  const unified = await client.fetchJson(unifiedPath, { ref: 'main', required: false });
   if (unified && Array.isArray(unified.races) && unified.races.length > 0) {
     return { totalRaces: unified.races.length, venues: [unified.venue || 'unified'] };
   }
@@ -116,7 +111,8 @@ async function checkSharedResults(date, track) {
   const foundVenues = [];
 
   for (const code of venues) {
-    const data = await fetchJson(`${base}/${date}-${code}.json`);
+    const venuePath = `${track}/results/${year}/${month}/${date}-${code}.json`;
+    const data = await client.fetchJson(venuePath, { ref: 'main', required: false });
     if (data && Array.isArray(data.races)) {
       totalRaces += data.races.length;
       foundVenues.push(code);
@@ -304,8 +300,14 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((error) => {
-  console.error(`\n❌ 致命的エラー: ${error.message}`);
-  console.error(error);
-  process.exit(1);
-});
+// テスト用 export（CLI動作は変えない。isDirectRun ガードで main は直接実行時のみ起動する）
+export { checkSharedResults };
+
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) {
+  main().catch((error) => {
+    console.error(`\n❌ 致命的エラー: ${error.message}`);
+    console.error(error);
+    process.exit(1);
+  });
+}

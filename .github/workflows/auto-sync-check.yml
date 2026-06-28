@@ -38,6 +38,8 @@ jobs:
         id: check-sync
         working-directory: astro-site
         continue-on-error: true
+        env:
+          KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
         run: |
           echo "🔍 Checking sync status..."
           npm run verify:sync
@@ -46,6 +48,8 @@ jobs:
         id: detect-missing
         if: steps.check-sync.outcome == 'failure'
         working-directory: astro-site
+        env:
+          KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
         run: |
           echo "🔍 Detecting missing dates..."
 
@@ -55,34 +59,19 @@ jobs:
 
           for i in {1..7}; do
             CHECK_DATE=$(TZ=Asia/Tokyo date -d "$TODAY - $i days" +%Y-%m-%d 2>/dev/null || date -v-${i}d +%Y-%m-%d)
-            YEAR=${CHECK_DATE:0:4}
-            MONTH=${CHECK_DATE:5:2}
 
-            # keiba-data-shared に結果が存在するか確認
-            VENUES=("OOI" "FUN" "KAW" "URA")
-            FOUND=false
-
-            # 統合ファイル確認
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/$YEAR/$MONTH/$CHECK_DATE.json")
-            if [ "$HTTP_CODE" = "200" ]; then
-              FOUND=true
-            else
-              # 会場別ファイル確認（12レース以上）
-              TOTAL_RACES=0
-              for VENUE in "${VENUES[@]}"; do
-                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/$YEAR/$MONTH/$CHECK_DATE-$VENUE.json")
-                if [ "$HTTP_CODE" = "200" ]; then
-                  RACE_COUNT=$(curl -s "https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/results/$YEAR/$MONTH/$CHECK_DATE-$VENUE.json" | jq '.races | length')
-                  TOTAL_RACES=$((TOTAL_RACES + RACE_COUNT))
-                fi
-              done
-
-              if [ "$TOTAL_RACES" -ge 12 ]; then
-                FOUND=true
-              fi
+            # 認証付きで per-venue 存在確認（匿名 curl は廃止。TOKEN_MISSING 等は exit 1 で失敗扱い）
+            if ! OUTPUT=$(node scripts/checkSharedNankanResults.mjs --date "$CHECK_DATE" --venues OOI,FUN,KAW,URA); then
+              echo "❌ checkSharedNankanResults failed (auth/network/token error)"
+              exit 1
+            fi
+            TOTAL_RACES=$(echo "$OUTPUT" | grep '^TOTAL_RACES=' | cut -d= -f2-)
+            if [ -z "$TOTAL_RACES" ]; then
+              echo "❌ TOTAL_RACES missing from checker output (contract violation)"
+              exit 1
             fi
 
-            if [ "$FOUND" = true ]; then
+            if [ "$TOTAL_RACES" -ge 12 ]; then
               # archiveResults.json に存在するか確認
               if ! jq -e --arg date "$CHECK_DATE" '.[] | select(.date == $date)' src/data/archiveResults.json > /dev/null; then
                 echo "❌ Missing: $CHECK_DATE"
@@ -108,7 +97,7 @@ jobs:
         if: steps.detect-missing.outputs.has_missing == 'true'
         working-directory: astro-site
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
         run: |
           MISSING_DATES="${{ steps.detect-missing.outputs.missing_dates }}"
           IFS=',' read -ra DATES <<< "$MISSING_DATES"
@@ -121,6 +110,8 @@ jobs:
       - name: Validate and verify
         if: steps.detect-missing.outputs.has_missing == 'true'
         working-directory: astro-site
+        env:
+          KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
         run: |
           echo "🔍 Validating archive format..."
           npm run validate:archive

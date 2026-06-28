@@ -8,10 +8,11 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import crypto from 'crypto';
 
 import { isMainRace } from '../src/utils/mainRaceBetting.js';
+import { createSharedClient, resolveSharedToken } from './lib/sharedFetch.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -154,20 +155,20 @@ async function sendAlert(type, date, details = {}, metadata = {}) {
  * keiba-data-sharedから結果データを取得（per-venue方式）
  * 統合JSON(YYYY-MM-DD.json)は使わず、会場別ファイルのみを正としてマージする
  */
-async function fetchSharedResults(date, venue = 'jra') {
-  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+async function fetchSharedResults(date, venue = 'jra', { env = process.env, client: _client, resolveToken: _rt } = {}) {
+  const rt = _rt ?? resolveSharedToken;
+  rt({ env }); // TOKEN_MISSING fail-fast（匿名 fallback 禁止）
+  const client = _client ?? createSharedClient({ env });
   const [year, month] = date.split('-');
 
   console.log(`📡 keiba-data-sharedから取得中（per-venue方式）: ${date}`);
-  return await fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN);
+  return await fetchAndMergeVenueResults(date, year, month, client);
 }
 
 /**
  * 会場別結果ファイルを取得してマージ
  */
-async function fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN) {
-  const owner = 'apol0510';
-  const repo = 'keiba-data-shared';
+async function fetchAndMergeVenueResults(date, year, month, client) {
   // venue-codes.tsと一致させること: 福島=FKS, 函館=HKD
   const venueCodesJRA = ['TOK', 'KYO', 'HAN', 'NAK', 'CHU', 'KOK', 'NII', 'FKS', 'SAP', 'HKD'];
 
@@ -175,47 +176,21 @@ async function fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN) {
   let allRaces = [];
 
   for (const venueCode of venueCodesJRA) {
-    const venueFile = `${date}-${venueCode}.json`;
-    const venuePath = `jra/results/${year}/${month}/${venueFile}`;
+    const venuePath = `jra/results/${year}/${month}/${date}-${venueCode}.json`;
+    // required:false = 404（未投入）→ null → スキップ。auth/5xx は throw（fatal）。
+    const venueData = await client.fetchJson(venuePath, { ref: 'main', required: false });
+    if (venueData === null) continue; // 404ならスキップ
 
-    try {
-      let venueData;
+    console.log(`   ✅ ${venueCode}: ${venueData.races?.length || 0}レース取得`);
 
-      if (!GITHUB_TOKEN) {
-        // ローカル実行時
-        const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${venuePath}`;
-        const response = await fetch(rawUrl);
-        if (!response.ok) continue; // 404ならスキップ
-        venueData = JSON.parse(await response.text());
-      } else {
-        // GitHub Actions実行時
-        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${venuePath}`;
-        const response = await fetch(apiUrl, {
-          headers: {
-            'Authorization': `token ${GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json'
-          }
-        });
-        if (!response.ok) continue; // 404ならスキップ
-        const data = await response.json();
-        venueData = JSON.parse(Buffer.from(data.content, 'base64').toString('utf-8'));
+    // 会場データを追加（各レースに venue を注入。auto-fetch由来のJSONはrace-levelにvenueが無い）
+    if (venueData.races) {
+      const venueName = venueData.venue || venueCode;
+      for (const r of venueData.races) {
+        if (!r.venue) r.venue = venueName;
+        allRaces.push(r);
       }
-
-      console.log(`   ✅ ${venueCode}: ${venueData.races?.length || 0}レース取得`);
-
-      // 会場データを追加（各レースに venue を注入。auto-fetch由来のJSONはrace-levelにvenueが無い）
-      if (venueData.races) {
-        const venueName = venueData.venue || venueCode;
-        for (const r of venueData.races) {
-          if (!r.venue) r.venue = venueName;
-          allRaces.push(r);
-        }
-        venues.push(venueName);
-      }
-
-    } catch (err) {
-      // エラーは無視して次の会場へ
-      continue;
+      venues.push(venueName);
     }
   }
 
@@ -226,7 +201,6 @@ async function fetchAndMergeVenueResults(date, year, month, GITHUB_TOKEN) {
   console.log(`Found JRA results: ${venues.length} venues`);
   console.log(`✅ 会場別ファイルからマージ完了: ${allRaces.length}レース（${venues.join('・')}）`);
 
-  // 統合フォーマットで返す
   return {
     date: date,
     venue: venues.join('・'),
@@ -864,4 +838,8 @@ async function main() {
   }
 }
 
-main();
+// テスト用 export（CLI動作は変えない。isDirectRun ガードで main は直接実行時のみ起動する）
+export { fetchSharedResults, fetchAndMergeVenueResults };
+
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) main();
