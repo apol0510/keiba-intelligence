@@ -83,9 +83,8 @@ jobs:
 
       - name: Import horseStats (nankan) from keiba-data-shared
         env:
-          # keiba-data-shared 読み取り用 PAT（Actions の自動 GITHUB_TOKEN では届かないため）
+          # keiba-data-shared 読み取り専用 PAT（KEIBA_DATA_SHARED_TOKEN 必須・GITHUB_TOKEN fallback 禁止）
           KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           node scripts/importHorseStatsNankan.js \
             --date "${{ steps.resolve.outputs.date }}" \
