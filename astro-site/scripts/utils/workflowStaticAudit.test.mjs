@@ -822,3 +822,152 @@ test('77. import-feature-scores-on-dispatch.yml: import step env に GITHUB_TOKE
     `GITHUB_TOKEN が import step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
   );
 });
+
+// ---- PR-KI-4h: continue-on-error 除去（import-results-on-dispatch / import-results-nankan-daily）----
+// auto-sync-check.yml の check-sync step は後続 step が steps.detect-missing.outputs.has_missing（出力値条件）を
+// 使用するため continue-on-error を除去すると自動修復チェーンが破断する（AUTO-STOP）。
+// そのため auto-sync-check.yml は token 配線・trigger テストのみ追加し continue-on-error は除去しない。
+
+/** PyYAML で step に continue-on-error が存在しないことを確認 */
+function verifyNoContinueOnErrorInStep(workflowFile, stepNameFragment) {
+  const script = [
+    'import yaml, sys',
+    'f = open(sys.argv[1])',
+    'doc = yaml.safe_load(f)',
+    'f.close()',
+    'job = list(doc.get("jobs", {}).values())[0]',
+    'steps = job.get("steps", [])',
+    'frag = sys.argv[2].lower()',
+    'step = next((s for s in steps if frag in (s.get("name") or "").lower()), None)',
+    'assert step, f"Step with fragment {repr(sys.argv[2])} not found"',
+    'coe = step.get("continue-on-error", False)',
+    'assert not coe, f"continue-on-error={coe!r} が設定されている（除去必須）"',
+    'print("OK")',
+  ].join('\n');
+
+  const wfPath = join(WORKFLOWS_DIR, workflowFile);
+  const r = spawnSync('python3', ['-c', script, wfPath, stepNameFragment], { encoding: 'utf-8' });
+  return r;
+}
+
+const DISPATCH_IMPORT_STEP = 'Import results from keiba-data-shared';
+const NANKAN_DAILY_IMPORT_STEP = 'Import missing results';
+const AUTO_SYNC_CHECK_STEP = 'Check sync status';
+
+// ---- import-results-on-dispatch.yml: import step ----
+
+test('78. import-results-on-dispatch.yml: import step env に KEIBA_DATA_SHARED_TOKEN が正式設定（YAML構造検証）', () => {
+  const r = verifyTokenInStepEnvByName('import-results-on-dispatch.yml', DISPATCH_IMPORT_STEP);
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+test('79. import-results-on-dispatch.yml: import step env に GITHUB_TOKEN が存在しない（YAML構造検証）', () => {
+  const r = verifyNoGithubTokenInStepEnv('import-results-on-dispatch.yml', DISPATCH_IMPORT_STEP);
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `GITHUB_TOKEN が import step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
+
+test('80. import-results-on-dispatch.yml: import step に continue-on-error が存在しない（YAML構造検証）', () => {
+  const r = verifyNoContinueOnErrorInStep('import-results-on-dispatch.yml', DISPATCH_IMPORT_STEP);
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `import step に continue-on-error が設定されている: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
+
+test('81. import-results-on-dispatch.yml: import:results 呼び出し行に || true が存在しない', () => {
+  const lines = readWorkflow('import-results-on-dispatch.yml').split('\n');
+  for (const line of lines) {
+    if (line.includes('import:results')) {
+      assert.ok(
+        !line.includes('|| true'),
+        `import-results-on-dispatch.yml: import:results 呼び出し行に "|| true" が含まれている:\n  ${line.trim()}`,
+      );
+    }
+  }
+});
+
+// ---- import-results-nankan-daily.yml: checkout / triggers / import step ----
+
+test('82. import-results-nankan-daily.yml: checkout 用 GITHUB_TOKEN は維持されている', () => {
+  const text = readWorkflow('import-results-nankan-daily.yml');
+  assert.ok(text.includes("token: ${{ secrets.GITHUB_TOKEN }}"), 'checkout 用 GITHUB_TOKEN が削除されている');
+});
+
+test('83. import-results-nankan-daily.yml: schedule・workflow_dispatch・repository_dispatch が維持されている', () => {
+  const text = readWorkflow('import-results-nankan-daily.yml');
+  assert.ok(text.includes("cron: '30 14 * * *'"), 'schedule cron が変更されている');
+  assert.ok(text.includes('workflow_dispatch'), 'workflow_dispatch が削除されている');
+  assert.ok(text.includes('nankan-results-updated'), 'repository_dispatch nankan-results-updated が削除されている');
+});
+
+test('84. import-results-nankan-daily.yml: import step env に KEIBA_DATA_SHARED_TOKEN が正式設定（YAML構造検証）', () => {
+  const r = verifyTokenInStepEnvByName('import-results-nankan-daily.yml', NANKAN_DAILY_IMPORT_STEP);
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+test('85. import-results-nankan-daily.yml: import step env に GITHUB_TOKEN が存在しない（YAML構造検証）', () => {
+  const r = verifyNoGithubTokenInStepEnv('import-results-nankan-daily.yml', NANKAN_DAILY_IMPORT_STEP);
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `GITHUB_TOKEN が import step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
+
+test('86. import-results-nankan-daily.yml: import step に continue-on-error が存在しない（YAML構造検証）', () => {
+  const r = verifyNoContinueOnErrorInStep('import-results-nankan-daily.yml', NANKAN_DAILY_IMPORT_STEP);
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `import step に continue-on-error が設定されている: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
+
+test('87. import-results-nankan-daily.yml: import:results 呼び出し行に || true が存在しない', () => {
+  const lines = readWorkflow('import-results-nankan-daily.yml').split('\n');
+  for (const line of lines) {
+    if (line.includes('import:results')) {
+      assert.ok(
+        !line.includes('|| true'),
+        `import-results-nankan-daily.yml: import:results 呼び出し行に "|| true" が含まれている:\n  ${line.trim()}`,
+      );
+    }
+  }
+});
+
+// ---- auto-sync-check.yml: checkout / triggers / check-sync step 認証 ----
+// (AUTO-STOP: check-sync の continue-on-error は後続修復 step 依存のため現状維持)
+
+test('88. auto-sync-check.yml: checkout 用 GITHUB_TOKEN は維持されている', () => {
+  const text = readWorkflow('auto-sync-check.yml');
+  assert.ok(text.includes("token: ${{ secrets.GITHUB_TOKEN }}"), 'checkout 用 GITHUB_TOKEN が削除されている');
+});
+
+test('89. auto-sync-check.yml: schedule・workflow_dispatch が維持されている', () => {
+  const text = readWorkflow('auto-sync-check.yml');
+  assert.ok(text.includes("cron: '0 16 * * *'"), 'schedule cron が変更されている');
+  assert.ok(text.includes('workflow_dispatch'), 'workflow_dispatch が削除されている');
+});
+
+test('90. auto-sync-check.yml: check-sync step env に KEIBA_DATA_SHARED_TOKEN が正式設定（YAML構造検証）', () => {
+  const r = verifyTokenInStepEnvByName('auto-sync-check.yml', AUTO_SYNC_CHECK_STEP);
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+test('91. auto-sync-check.yml: check-sync step env に GITHUB_TOKEN が存在しない（YAML構造検証）', () => {
+  const r = verifyNoGithubTokenInStepEnv('auto-sync-check.yml', AUTO_SYNC_CHECK_STEP);
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `GITHUB_TOKEN が check-sync step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
