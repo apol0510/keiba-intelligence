@@ -601,3 +601,53 @@ test('52. PR-KI-4a 対象 workflow の import 呼び出し行に || true が存�
     }
   }
 });
+
+// ---- PR-KI-4b: recentHorseHistories(nankan) 認証移行 ----
+
+const RHH_WORKFLOW = 'import-recent-horse-histories-nankan-on-dispatch.yml';
+
+test('53. import-recent-horse-histories-nankan-on-dispatch.yml: import step env に KEIBA_DATA_SHARED_TOKEN が正式設定（YAML構造検証）', () => {
+  const r = verifyTokenInStepEnvByName(RHH_WORKFLOW, 'import recent horse histories (nankan)');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+test('54. import-recent-horse-histories-nankan-on-dispatch.yml: import step env に GITHUB_TOKEN が存在しない（YAML構造検証）', () => {
+  const r = verifyNoGithubTokenInStepEnv(RHH_WORKFLOW, 'import recent horse histories (nankan)');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `GITHUB_TOKEN が import step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
+
+test('55. import-recent-horse-histories-nankan-on-dispatch.yml: continue-on-error が存在しない', () => {
+  const text = readWorkflow(RHH_WORKFLOW);
+  assert.ok(!text.includes('continue-on-error'), `${RHH_WORKFLOW} に continue-on-error が含まれている`);
+});
+
+test('56. import-recent-horse-histories-nankan-on-dispatch.yml: checkout 用 GITHUB_TOKEN は維持されている', () => {
+  const text = readWorkflow(RHH_WORKFLOW);
+  assert.ok(text.includes("token: ${{ secrets.GITHUB_TOKEN }}"), 'checkout 用 GITHUB_TOKEN が削除されている');
+});
+
+test('57. import-recent-horse-histories-nankan-on-dispatch.yml: repository_dispatch・workflow_dispatch が維持されている', () => {
+  const text = readWorkflow(RHH_WORKFLOW);
+  assert.ok(text.includes('recent-horse-histories-nankan-updated'), 'repository_dispatch event type が削除されている');
+  assert.ok(text.includes('workflow_dispatch'), 'workflow_dispatch が削除されている');
+});
+
+test('58. import-recent-horse-histories-nankan-on-dispatch.yml: import 呼び出し行に || true が存在しない', () => {
+  const IMPORT_SCRIPTS = ['importRecentHorseHistoriesNankan.js', 'import:recent-horse-histories'];
+  const lines = readWorkflow(RHH_WORKFLOW).split('\n');
+  for (const line of lines) {
+    const hasScript = IMPORT_SCRIPTS.some((s) => line.includes(s));
+    if (hasScript) {
+      assert.ok(
+        !line.includes('|| true'),
+        `${RHH_WORKFLOW}: import 呼び出し行に "|| true" が含まれている → 失敗の exit 0 化になる:\n  ${line.trim()}`,
+      );
+    }
+  }
+});
