@@ -651,3 +651,65 @@ test('58. import-recent-horse-histories-nankan-on-dispatch.yml: import 呼び出
     }
   }
 });
+
+// ---- PR-KI-4d: import-results-on-dispatch.yml verify:sync step 認証修正 ----
+
+const DISPATCH_RESULT_WORKFLOW = 'import-results-on-dispatch.yml';
+const VERIFY_STEP = 'Verify archive sync';
+
+test('59. import-results-on-dispatch.yml: verify:sync step env に KEIBA_DATA_SHARED_TOKEN が設定されている（YAML構造検証）', () => {
+  const r = verifyTokenInStepEnvByName(DISPATCH_RESULT_WORKFLOW, VERIFY_STEP);
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+test('60. import-results-on-dispatch.yml: verify:sync step env に GITHUB_TOKEN が存在しない（YAML構造検証）', () => {
+  const r = verifyNoGithubTokenInStepEnv(DISPATCH_RESULT_WORKFLOW, VERIFY_STEP);
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `GITHUB_TOKEN が verify step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
+
+test('61. import-results-on-dispatch.yml: checkout 用 GITHUB_TOKEN は維持されている', () => {
+  const text = readWorkflow(DISPATCH_RESULT_WORKFLOW);
+  assert.ok(text.includes("token: ${{ secrets.GITHUB_TOKEN }}"), 'checkout 用 GITHUB_TOKEN が削除されている');
+});
+
+test('62. import-results-on-dispatch.yml: repository_dispatch (results-updated, nankan-results-updated) と workflow_dispatch が維持されている', () => {
+  const text = readWorkflow(DISPATCH_RESULT_WORKFLOW);
+  assert.ok(text.includes('results-updated'), 'repository_dispatch event type が削除されている');
+  assert.ok(text.includes('workflow_dispatch'), 'workflow_dispatch が削除されている');
+});
+
+test('63. import-results-on-dispatch.yml: verify:sync step に continue-on-error が存在しない', () => {
+  const wfPath = join(WORKFLOWS_DIR, DISPATCH_RESULT_WORKFLOW);
+  const r = spawnSync('python3', ['-c', `
+import yaml, sys
+with open(${JSON.stringify(wfPath)}) as f:
+    doc = yaml.safe_load(f)
+for job in doc.get('jobs', {}).values():
+    for step in job.get('steps', []):
+        if '${VERIFY_STEP.toLowerCase()}' in step.get('name', '').lower():
+            if step.get('continue-on-error', False):
+                print('FAIL: continue-on-error=true on verify step')
+                sys.exit(1)
+print('OK')
+`], { encoding: 'utf-8' });
+  assert.strictEqual(r.stdout.trim(), 'OK',
+    `verify step に continue-on-error が含まれている: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`);
+});
+
+test('64. import-results-on-dispatch.yml: verify:sync 呼び出し行に || true が存在しない', () => {
+  const lines = readWorkflow(DISPATCH_RESULT_WORKFLOW).split('\n');
+  for (const line of lines) {
+    if (line.includes('verify:sync')) {
+      assert.ok(
+        !line.includes('|| true'),
+        `${DISPATCH_RESULT_WORKFLOW}: verify:sync 呼び出し行に "|| true" が含まれている:\n  ${line.trim()}`,
+      );
+    }
+  }
+});
