@@ -89,17 +89,19 @@ jobs:
 
           echo "🔍 per-venue検索結果: ${EXPECTED_VENUES}会場 (${FOUND_VENUES[*]})"
 
-          # racebook（予想）が存在するかも確認 → 「開催想定日」判定に使う（anonymous のまま、PR-KI-3 対象）
+          # racebook（予想）が存在するかも確認 → 「開催想定日」判定に使う（認証付き Node checker）
           # racebook あり・結果なし = 取込漏れ（要アラート）
-          RACEBOOK_VENUES=()
-          VENUE_CODES=("FKS" "HAN" "NAK" "TOK" "KYO" "CHU" "KOK" "NII" "SAP" "HKD")
-          for code in "${VENUE_CODES[@]}"; do
-            RB_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/racebook/${YEAR}/${MONTH}/${DATE}-${code}.json"
-            if curl -sfI "$RB_URL" > /dev/null; then
-              RACEBOOK_VENUES+=("$code")
-            fi
-          done
-          echo "📚 racebook検索結果: ${#RACEBOOK_VENUES[@]}会場 (${RACEBOOK_VENUES[*]})"
+          if ! RB_OUTPUT=$(node scripts/checkSharedJraPredictions.mjs --date "$DATE"); then
+            echo "❌ checkSharedJraPredictions failed (auth/network/token error)"
+            exit 1
+          fi
+          RB_CODES=$(echo "$RB_OUTPUT" | grep '^RACEBOOK_CODES=' | cut -d= -f2-)
+          if [ -z "$RB_CODES" ]; then
+            RACEBOOK_VENUES=()
+          else
+            read -ra RACEBOOK_VENUES <<< "$RB_CODES"
+          fi
+          echo "📚 racebook検索結果: ${#RACEBOOK_VENUES[@]}会場 (${RB_CODES})"
 
           if [ "$EXPECTED_VENUES" -eq 0 ]; then
             echo "⏭️  No JRA results in keiba-data-shared yet (全会場404)"

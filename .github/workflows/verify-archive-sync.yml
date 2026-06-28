@@ -44,35 +44,25 @@ jobs:
 
             echo "━━━ Checking: $DATE ━━━"
 
-            # 予想データがあるかチェック
+            # 予想データがあるかチェック（認証付き Node checker：racebook + computer 両種別）
             #  - HAS_PREDICTION         : racebook または computer（ログ表示用のみ）
             #  - HAS_COMPUTER_PREDICTION: computer 予想のみ（No-Results アラートの発火条件）
             # racebook は出馬表/前処理データであり、単独では結果未登録アラートの根拠にしない。
             # （前倒し/日付誤りで racebook だけ存在する stray ファイルを誤検知しないため）
+            if ! JRA_PRED_OUTPUT=$(node astro-site/scripts/checkSharedJraPredictions.mjs --date "$DATE"); then
+              echo "❌ checkSharedJraPredictions failed (auth/network/token error)"
+              exit 1
+            fi
+            RB_CODES=$(echo "$JRA_PRED_OUTPUT" | grep '^RACEBOOK_CODES=' | cut -d= -f2-)
+            CP_CODES=$(echo "$JRA_PRED_OUTPUT" | grep '^COMPUTER_CODES=' | cut -d= -f2-)
             HAS_PREDICTION=false
             HAS_COMPUTER_PREDICTION=false
-            PRED_VENUES_FOUND=()
-            COMPUTER_VENUES_FOUND=()
-            for V in "${JRA_VENUE_CODES[@]}"; do
-              RB_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/racebook/$YEAR/$MONTH/$DATE-$V.json"
-              CP_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/predictions/computer/$YEAR/$MONTH/$DATE-$V.json"
-              RB_FOUND=false
-              if curl -sfI "$RB_URL" > /dev/null 2>&1; then
-                RB_FOUND=true
-              fi
-              if curl -sfI "$CP_URL" > /dev/null 2>&1; then
-                HAS_COMPUTER_PREDICTION=true
-                COMPUTER_VENUES_FOUND+=("$V")
-              fi
-              if [ "$RB_FOUND" = true ] || [ "$HAS_COMPUTER_PREDICTION" = true ]; then
-                HAS_PREDICTION=true
-                PRED_VENUES_FOUND+=("$V")
-              fi
-            done
+            if [ -n "$RB_CODES" ] || [ -n "$CP_CODES" ]; then HAS_PREDICTION=true; fi
+            if [ -n "$CP_CODES" ]; then HAS_COMPUTER_PREDICTION=true; fi
             if [ "$HAS_COMPUTER_PREDICTION" = true ]; then
-              echo "✅ Computer prediction: Found (${COMPUTER_VENUES_FOUND[*]})"
+              echo "✅ Computer prediction: Found (${CP_CODES})"
             elif [ "$HAS_PREDICTION" = true ]; then
-              echo "⏭️  Racebook only (no computer prediction): (${PRED_VENUES_FOUND[*]})"
+              echo "⏭️  Racebook only (no computer prediction): (${RB_CODES})"
             else
               echo "⏭️  Prediction: Not found"
             fi
@@ -183,25 +173,23 @@ jobs:
 
             echo "━━━ Checking: $DATE ━━━"
 
-            # 予想データがあるかチェック（統合ファイル優先、会場別ファイルもフォールバック）
-            PREDICTION_URL="https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/predictions/$YEAR/$MONTH/$DATE.json"
+            # 予想データがあるかチェック（認証付き Node checker：統合ファイル優先→会場別 fallback）
+            if ! NK_PRED_OUTPUT=$(node astro-site/scripts/checkSharedNankanPredictions.mjs --date "$DATE" --venues OOI,FUN,KAW,URA); then
+              echo "❌ checkSharedNankanPredictions failed (auth/network/token error)"
+              exit 1
+            fi
+            NK_PRED_FOUND=$(echo "$NK_PRED_OUTPUT" | grep '^FOUND=' | cut -d= -f2-)
+            NK_PRED_CODES=$(echo "$NK_PRED_OUTPUT" | grep '^FOUND_CODES=' | cut -d= -f2-)
             HAS_PREDICTION=false
-
-            if curl -sf "$PREDICTION_URL" > /dev/null; then
-              echo "✅ Prediction: Found"
+            if [ "$NK_PRED_FOUND" = "true" ]; then
               HAS_PREDICTION=true
-            else
-              for V in OOI FUN KAW URA; do
-                if curl -sf "https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/nankan/predictions/$YEAR/$MONTH/$DATE-$V.json" > /dev/null; then
-                  HAS_PREDICTION=true
-                  break
-                fi
-              done
-              if [ "$HAS_PREDICTION" = true ]; then
-                echo "✅ Prediction: Found (会場別ファイル)"
+              if [ -n "$NK_PRED_CODES" ]; then
+                echo "✅ Prediction: Found (会場別ファイル: ${NK_PRED_CODES})"
               else
-                echo "⏭️  Prediction: Not found"
+                echo "✅ Prediction: Found (統合ファイル)"
               fi
+            else
+              echo "⏭️  Prediction: Not found"
             fi
 
             # 結果データがあるかチェック（認証付き per-venue 確認 / 匿名 curl 廃止）
