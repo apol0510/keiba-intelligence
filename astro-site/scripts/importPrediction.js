@@ -11,13 +11,16 @@
  *   node scripts/importPrediction.js  # 今日の日付を使用
  *
  * 環境変数:
- *   GITHUB_TOKEN: GitHub Personal Access Token（read-only）
+ *   KEIBA_DATA_SHARED_TOKEN: keiba-data-shared 読み取り用 PAT（required）
+ *   token 不足は HTTP 前 fail-fast（resolveToken で即時エラー）
+ *   匿名 fallback なし
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import crypto from 'crypto';
+import { createSharedClient, resolveSharedToken } from './lib/sharedFetch.mjs';
 
 // ESモジュールで __dirname を取得
 const __filename = fileURLToPath(import.meta.url);
@@ -60,137 +63,80 @@ function getTodayJST() {
  * @param {string} subDir - サブディレクトリ（'computer' または ''）
  * @returns {Promise<Object|null>} venues配列を持つ統合JSON、またはnull
  */
-async function fetchVenuePredictions(date, venue = 'nankan', subDir = '') {
-  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-  const [year, month, day] = date.split('-');
+async function fetchVenuePredictions(date, venue = 'nankan', subDir = '', client) {
+  const [year, month] = date.split('-');
   const dirPath = subDir
     ? `${venue}/predictions/${subDir}/${year}/${month}`
     : `${venue}/predictions/${year}/${month}`;
-  const owner = 'apol0510';
-  const repo = 'keiba-data-shared';
 
   console.log(`📡 [IMPORT] 会場別ファイル取得中: ${dirPath}`);
 
-  // ディレクトリ内のファイル一覧を取得
-  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
-  const headers = GITHUB_TOKEN ? {
-    'Authorization': `token ${GITHUB_TOKEN}`,
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'keiba-intelligence-import'
-  } : {
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'keiba-intelligence-import'
-  };
-
-  const dirResponse = await fetch(apiUrl, { headers });
-
-  if (!dirResponse.ok) {
-    if (dirResponse.status === 404) {
-      console.log(`⏭️  [IMPORT] ディレクトリが見つかりません: ${dirPath}`);
-      return null;
-    }
-    throw new Error(`GitHub API Error: ${dirResponse.status}`);
+  const entries = await client.listDirectory(dirPath, { ref: 'main', required: false });
+  if (!entries) {
+    console.log(`⏭️  [IMPORT] ディレクトリが見つかりません: ${dirPath}`);
+    return null;
   }
 
-  const files = await dirResponse.json();
-
-  // 指定日付の会場別ファイルを抽出（例: 2026-03-09-OOI.json）
-  const dateFiles = files.filter(file =>
-    file.name.startsWith(`${date}-`) && file.name.endsWith('.json')
-  );
-
-  if (dateFiles.length === 0) {
+  const dateEntries = entries.filter(e => e.name.startsWith(`${date}-`) && e.name.endsWith('.json'));
+  if (dateEntries.length === 0) {
     console.log(`⏭️  [IMPORT] ${date}の会場別ファイルが見つかりません: ${dirPath}`);
     return null;
   }
 
-  console.log(`✅ [IMPORT] ${dateFiles.length}会場のファイルを検出:`, dateFiles.map(f => f.name).join(', '));
+  console.log(`✅ [IMPORT] ${dateEntries.length}会場のファイルを検出:`, dateEntries.map(e => e.name).join(', '));
 
-  // 各ファイルを取得
   const venues = [];
-  for (const file of dateFiles) {
-    const fileUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${file.name}`;
-    const response = await fetch(fileUrl);
-
-    if (response.ok) {
-      const content = await response.text();
-      const venueData = JSON.parse(content);
-      venues.push(venueData);
-      console.log(`   ✅ [IMPORT] ${file.name} 取得完了`);
-    } else {
-      console.log(`   ⚠️  [IMPORT] ${file.name} 取得失敗: ${response.status}`);
+  for (const entry of dateEntries) {
+    const venueData = await client.fetchJsonFromEntry(entry, { ref: 'main', required: false });
+    if (venueData === null) {
+      console.log(`   ⚠️  [IMPORT] ${entry.name} 取得失敗: 404`);
+      continue;
     }
+    venues.push(venueData);
+    console.log(`   ✅ [IMPORT] ${entry.name} 取得完了`);
   }
 
-  if (venues.length === 0) {
-    return null;
-  }
+  if (venues.length === 0) return null;
 
-  // venues配列形式に統合
   console.log(`✅ [IMPORT] venues配列形式に統合完了: ${venues.length}会場`);
-  return {
-    date: date,
-    venues: venues,
-    totalVenues: venues.length
-  };
+  return { date, venues, totalVenues: venues.length };
 }
 
 /**
  * computer/ディレクトリから会場別ファイルを取得（後方互換のため残す）
  * @deprecated 内部でfetchVenuePredictionsを呼び出す
  */
-async function fetchComputerPredictions(date, venue = 'nankan') {
-  return await fetchVenuePredictions(date, venue, 'computer');
+async function fetchComputerPredictions(date, venue = 'nankan', client) {
+  return await fetchVenuePredictions(date, venue, 'computer', client);
 }
 
 /**
  * keiba-data-sharedからracebook JSONを取得
  * race-data-importer が保存したデータ（印・近走・調教を含む）
  */
-async function fetchRacebookData(date, category = 'nankan') {
-  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+async function fetchRacebookData(date, category = 'nankan', client) {
   const [year, month] = date.split('-');
   const dirPath = `${category}/racebook/${year}/${month}`;
-  const owner = 'apol0510';
-  const repo = 'keiba-data-shared';
 
   console.log(`📡 [RACEBOOK] racebookデータ取得中: ${dirPath}`);
 
-  const headers = GITHUB_TOKEN ? {
-    'Authorization': `token ${GITHUB_TOKEN}`,
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'keiba-intelligence-import'
-  } : {
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'keiba-intelligence-import'
-  };
-
-  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
-  const dirResponse = await fetch(apiUrl, { headers });
-
-  if (!dirResponse.ok) {
+  const entries = await client.listDirectory(dirPath, { ref: 'main', required: false });
+  if (!entries) {
     console.log(`⏭️  [RACEBOOK] ディレクトリなし: ${dirPath}`);
     return null;
   }
 
-  const files = await dirResponse.json();
-  const dateFiles = files.filter(f => f.name.startsWith(`${date}-`) && f.name.endsWith('.json'));
-
-  if (dateFiles.length === 0) {
+  const dateEntries = entries.filter(e => e.name.startsWith(`${date}-`) && e.name.endsWith('.json'));
+  if (dateEntries.length === 0) {
     console.log(`⏭️  [RACEBOOK] ${date}のracebookファイルなし`);
     return null;
   }
 
   const venues = [];
-  for (const file of dateFiles) {
-    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${file.name}`;
-    const fetchHeaders = GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {};
-    const response = await fetch(rawUrl, { headers: fetchHeaders });
-    if (!response.ok) continue;
-
-    const rbData = JSON.parse(await response.text());
-    console.log(`   ✅ [RACEBOOK] ${file.name} 取得完了 (${rbData.races?.length || 0}R)`);
-
+  for (const entry of dateEntries) {
+    const rbData = await client.fetchJsonFromEntry(entry, { ref: 'main', required: false });
+    if (rbData === null) continue;
+    console.log(`   ✅ [RACEBOOK] ${entry.name} 取得完了 (${rbData.races?.length || 0}R)`);
     venues.push(convertRacebookToPredictions(rbData, date));
   }
 
@@ -305,161 +251,131 @@ function normalizeRaceName(s) {
  * @param {Set<string>} predHorseNames - 予想側の馬名集合
  * @param {Set<string>} predRaceNames - 予想側のレース名集合（正規化済み）
  */
-async function fetchRacebookPastRaces(date, category = 'nankan', predHorseNames = null, predRaceNames = null) {
-  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+async function fetchRacebookPastRaces(date, category = 'nankan', predHorseNames = null, predRaceNames = null, client) {
   const [year, month] = date.split('-');
   const dirPath = `${category}/racebook/${year}/${month}`;
-  const owner = 'apol0510';
-  const repo = 'keiba-data-shared';
 
   console.log(`📡 [RACEBOOK-PAST] 内容ベース照合: ${dirPath}`);
 
-  const headers = GITHUB_TOKEN ? {
-    'Authorization': `token ${GITHUB_TOKEN}`,
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'keiba-intelligence-import'
-  } : {
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'keiba-intelligence-import'
-  };
-
-  try {
-    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
-    const dirResponse = await fetch(apiUrl, { headers });
-    if (!dirResponse.ok) {
-      console.warn(`[RACEBOOK-PAST] ディレクトリ取得失敗: ${dirResponse.status}`);
-      return null;
-    }
-
-    const files = await dirResponse.json();
-    const jsonFiles = files.filter(f => f.name.endsWith('.json') && /^\d{4}-\d{2}-\d{2}-[A-Za-z0-9]+\.json$/.test(f.name));
-    if (jsonFiles.length === 0) return null;
-
-    // 同日付のracebookファイルが存在すればそれを採用（ファイル名 = 信頼可能な証拠）
-    // 内容ベース照合の前にショートカットし、予想より先に他会場racebookだけ存在して
-    // 低スコアで誤って失敗するのを防ぐ
-    const sameDateFiles = jsonFiles.filter(f => f.name.startsWith(`${date}-`));
-    if (sameDateFiles.length > 0) {
-      console.log(`✅ [RACEBOOK-PAST] 同日付ファイル ${sameDateFiles.length}件を採用: ${sameDateFiles.map(f => f.name).join(', ')}`);
-      const map = new Map();
-      for (const file of sameDateFiles) {
-        const rbData = await fetchRacebookFile(dirPath, file.name, owner, repo, GITHUB_TOKEN);
-        if (rbData) buildHorseDataMapFromRacebook(rbData, map);
-      }
-      console.log(`✅ [RACEBOOK-PAST] 同日付モード: ${map.size}頭取得`);
-      return map.size > 0 ? map : null;
-    }
-
-    // 馬名・レース名情報が無い場合は従来動作（日付ファイル名一致）にフォールバック
-    const canScore = predHorseNames instanceof Set && predHorseNames.size > 0;
-    if (!canScore) {
-      console.warn(`[RACEBOOK-PAST] ⚠️ 予想馬名未提供 → 同日付ファイルなしで終了`);
-      return null;
-    }
-
-    // venueコード別にグループ化
-    const byVenue = new Map();
-    for (const f of jsonFiles) {
-      const m = f.name.match(/^\d{4}-\d{2}-\d{2}-([A-Za-z0-9]+)\.json$/);
-      if (!m) continue;
-      const code = m[1].toUpperCase();
-      if (!byVenue.has(code)) byVenue.set(code, []);
-      byVenue.get(code).push(f.name);
-    }
-
-    const horseDataMap = new Map();
-    const totalHorseCount = predHorseNames.size;
-    const totalRaceCount = predRaceNames ? predRaceNames.size : 0;
-    const failedVenues = []; // {venueCode, bestScore, diff, candidates}
-    let adoptedCount = 0;
-
-    for (const [venueCode, fileList] of byVenue) {
-      console.log(`🔎 [MATCH] venue=${venueCode} 候補ファイル数=${fileList.length}`);
-      const scored = [];
-
-      for (const filename of fileList) {
-        const rbData = await fetchRacebookFile(dirPath, filename, owner, repo, GITHUB_TOKEN);
-        if (!rbData) continue;
-
-        const rbHorses = new Set();
-        const rbRaces = new Set();
-        for (const r of (rbData.races || [])) {
-          if (r.raceClass) rbRaces.add(normalizeRaceName(r.raceClass));
-          for (const h of (r.horses || [])) if (h.name) rbHorses.add(h.name);
-        }
-
-        let horseMatch = 0;
-        for (const n of rbHorses) if (predHorseNames.has(n)) horseMatch++;
-        let raceMatch = 0;
-        if (predRaceNames) for (const n of rbRaces) if (predRaceNames.has(n)) raceMatch++;
-
-        const horseRate = totalHorseCount > 0 ? horseMatch / totalHorseCount : 0;
-        const raceRate = totalRaceCount > 0 ? raceMatch / totalRaceCount : 0;
-        const score = horseRate * 0.7 + raceRate * 0.3;
-
-        scored.push({ filename, rbData, horseMatch, raceMatch, score });
-      }
-
-      scored.sort((a, b) => b.score - a.score);
-
-      const best = scored[0];
-      const second = scored[1];
-      const diff = best && second ? (best.score - second.score) : (best ? best.score : 0);
-      const adopted = best && best.score >= 0.7 && diff >= 0.1;
-
-      for (const s of scored) {
-        const mark = (s === best && adopted) ? '✅ 採用' : '';
-        console.log(`  [MATCH] file=${s.filename} horse=${s.horseMatch}/${totalHorseCount} race=${s.raceMatch}/${totalRaceCount} score=${(s.score * 100).toFixed(0)}% ${mark}`);
-      }
-
-      if (adopted) {
-        buildHorseDataMapFromRacebook(best.rbData, horseDataMap);
-        adoptedCount++;
-      } else {
-        failedVenues.push({
-          venueCode,
-          bestScore: best ? best.score : 0,
-          diff,
-          candidates: scored.map(s => ({ filename: s.filename, score: s.score, horseMatch: s.horseMatch, raceMatch: s.raceMatch }))
-        });
-        if (best) {
-          console.error(`  ❌ [ERROR] ${venueCode} racebook一致候補なし: bestScore=${(best.score * 100).toFixed(0)}%, diff=${(diff * 100).toFixed(0)}pt`);
-        } else {
-          console.error(`  ❌ [ERROR] ${venueCode} racebook候補ファイルが一切取得できませんでした`);
-        }
-      }
-    }
-
-    // 1件も照合できなかった場合: 同日付racebookが未保存の可能性が高いため
-    // importを中断せず、recentRaces無しで継続（特徴量は一部デフォルト値になるが import自体は成功させる）
-    if (adoptedCount === 0) {
-      console.warn(`\n⚠️  [RACEBOOK-PAST] 同日付ファイルなし＋内容一致率70%未満 → recentRaces無しで続行`);
-      console.warn(`   予想: ${totalHorseCount}頭 / ${totalRaceCount}レース`);
-      console.warn(`   比較したファイル:`);
-      for (const fv of failedVenues) {
-        console.warn(`   [venue=${fv.venueCode}] bestScore=${(fv.bestScore * 100).toFixed(0)}% diff=${(fv.diff * 100).toFixed(0)}pt`);
-        for (const c of fv.candidates) {
-          console.warn(`     - ${c.filename}: horse=${c.horseMatch}/${totalHorseCount} race=${c.raceMatch}/${totalRaceCount} score=${(c.score * 100).toFixed(0)}%`);
-        }
-      }
-      return null;
-    }
-
-    console.log(`✅ [RACEBOOK-PAST] ${horseDataMap.size}頭のpastRacesを取得 (${adoptedCount}会場採用)`);
-    return horseDataMap.size > 0 ? horseDataMap : null;
-  } catch (err) {
-    // fetch系のネットワークエラーは継続可能としてnullを返す
-    console.warn('[RACEBOOK-PAST] 取得エラー:', err.message);
+  const allEntries = await client.listDirectory(dirPath, { ref: 'main', required: false });
+  if (!allEntries) {
+    console.warn(`[RACEBOOK-PAST] ディレクトリなし: ${dirPath}`);
     return null;
   }
-}
 
-async function fetchRacebookFile(dirPath, filename, owner, repo, GITHUB_TOKEN) {
-  const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${filename}`;
-  const headers = GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {};
-  const res = await fetch(rawUrl, { headers });
-  if (!res.ok) return null;
-  try { return JSON.parse(await res.text()); } catch { return null; }
+  const jsonEntries = allEntries.filter(e => e.name.endsWith('.json') && /^\d{4}-\d{2}-\d{2}-[A-Za-z0-9]+\.json$/.test(e.name));
+  if (jsonEntries.length === 0) return null;
+
+  // 同日付のracebookファイルが存在すればそれを採用（ファイル名 = 信頼可能な証拠）
+  const sameDateEntries = jsonEntries.filter(e => e.name.startsWith(`${date}-`));
+  if (sameDateEntries.length > 0) {
+    console.log(`✅ [RACEBOOK-PAST] 同日付ファイル ${sameDateEntries.length}件を採用: ${sameDateEntries.map(e => e.name).join(', ')}`);
+    const map = new Map();
+    for (const entry of sameDateEntries) {
+      const rbData = await client.fetchJsonFromEntry(entry, { ref: 'main', required: false });
+      if (rbData) buildHorseDataMapFromRacebook(rbData, map);
+    }
+    console.log(`✅ [RACEBOOK-PAST] 同日付モード: ${map.size}頭取得`);
+    return map.size > 0 ? map : null;
+  }
+
+  // 馬名・レース名情報が無い場合は従来動作（日付ファイル名一致）にフォールバック
+  const canScore = predHorseNames instanceof Set && predHorseNames.size > 0;
+  if (!canScore) {
+    console.warn(`[RACEBOOK-PAST] ⚠️ 予想馬名未提供 → 同日付ファイルなしで終了`);
+    return null;
+  }
+
+  // venueコード別にグループ化
+  const byVenue = new Map();
+  for (const entry of jsonEntries) {
+    const m = entry.name.match(/^\d{4}-\d{2}-\d{2}-([A-Za-z0-9]+)\.json$/);
+    if (!m) continue;
+    const code = m[1].toUpperCase();
+    if (!byVenue.has(code)) byVenue.set(code, []);
+    byVenue.get(code).push(entry);
+  }
+
+  const horseDataMap = new Map();
+  const totalHorseCount = predHorseNames.size;
+  const totalRaceCount = predRaceNames ? predRaceNames.size : 0;
+  const failedVenues = [];
+  let adoptedCount = 0;
+
+  for (const [venueCode, entryList] of byVenue) {
+    console.log(`🔎 [MATCH] venue=${venueCode} 候補ファイル数=${entryList.length}`);
+    const scored = [];
+
+    for (const entry of entryList) {
+      const rbData = await client.fetchJsonFromEntry(entry, { ref: 'main', required: false });
+      if (!rbData) continue;
+
+      const rbHorses = new Set();
+      const rbRaces = new Set();
+      for (const r of (rbData.races || [])) {
+        if (r.raceClass) rbRaces.add(normalizeRaceName(r.raceClass));
+        for (const h of (r.horses || [])) if (h.name) rbHorses.add(h.name);
+      }
+
+      let horseMatch = 0;
+      for (const n of rbHorses) if (predHorseNames.has(n)) horseMatch++;
+      let raceMatch = 0;
+      if (predRaceNames) for (const n of rbRaces) if (predRaceNames.has(n)) raceMatch++;
+
+      const horseRate = totalHorseCount > 0 ? horseMatch / totalHorseCount : 0;
+      const raceRate = totalRaceCount > 0 ? raceMatch / totalRaceCount : 0;
+      const score = horseRate * 0.7 + raceRate * 0.3;
+
+      scored.push({ filename: entry.name, rbData, horseMatch, raceMatch, score });
+    }
+
+    scored.sort((a, b) => b.score - a.score);
+
+    const best = scored[0];
+    const second = scored[1];
+    const diff = best && second ? (best.score - second.score) : (best ? best.score : 0);
+    const adopted = best && best.score >= 0.7 && diff >= 0.1;
+
+    for (const s of scored) {
+      const mark = (s === best && adopted) ? '✅ 採用' : '';
+      console.log(`  [MATCH] file=${s.filename} horse=${s.horseMatch}/${totalHorseCount} race=${s.raceMatch}/${totalRaceCount} score=${(s.score * 100).toFixed(0)}% ${mark}`);
+    }
+
+    if (adopted) {
+      buildHorseDataMapFromRacebook(best.rbData, horseDataMap);
+      adoptedCount++;
+    } else {
+      failedVenues.push({
+        venueCode,
+        bestScore: best ? best.score : 0,
+        diff,
+        candidates: scored.map(s => ({ filename: s.filename, score: s.score, horseMatch: s.horseMatch, raceMatch: s.raceMatch }))
+      });
+      if (best) {
+        console.error(`  ❌ [ERROR] ${venueCode} racebook一致候補なし: bestScore=${(best.score * 100).toFixed(0)}%, diff=${(diff * 100).toFixed(0)}pt`);
+      } else {
+        console.error(`  ❌ [ERROR] ${venueCode} racebook候補ファイルが一切取得できませんでした`);
+      }
+    }
+  }
+
+  // 1件も照合できなかった場合: 同日付racebookが未保存の可能性が高いため
+  // importを中断せず、recentRaces無しで継続
+  if (adoptedCount === 0) {
+    console.warn(`\n⚠️  [RACEBOOK-PAST] 同日付ファイルなし＋内容一致率70%未満 → recentRaces無しで続行`);
+    console.warn(`   予想: ${totalHorseCount}頭 / ${totalRaceCount}レース`);
+    console.warn(`   比較したファイル:`);
+    for (const fv of failedVenues) {
+      console.warn(`   [venue=${fv.venueCode}] bestScore=${(fv.bestScore * 100).toFixed(0)}% diff=${(fv.diff * 100).toFixed(0)}pt`);
+      for (const c of fv.candidates) {
+        console.warn(`     - ${c.filename}: horse=${c.horseMatch}/${totalHorseCount} race=${c.raceMatch}/${totalRaceCount} score=${(c.score * 100).toFixed(0)}%`);
+      }
+    }
+    return null;
+  }
+
+  console.log(`✅ [RACEBOOK-PAST] ${horseDataMap.size}頭のpastRacesを取得 (${adoptedCount}会場採用)`);
+  return horseDataMap.size > 0 ? horseDataMap : null;
 }
 
 /**
@@ -471,71 +387,19 @@ async function fetchRacebookFile(dirPath, filename, owner, repo, GITHUB_TOKEN) {
  * @param {string} venue - 競馬場カテゴリ（デフォルト: 'nankan'）
  * @returns {Promise<Object>} 予想JSON
  */
-async function fetchSharedPrediction(date, venue = 'nankan') {
-  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-
-  // 日付をパースしてパスを構築
-  const [year, month, day] = date.split('-');
+async function fetchSharedPrediction(date, venue = 'nankan', client) {
+  const [year, month] = date.split('-');
   const path = `${venue}/predictions/${year}/${month}/${date}.json`;
-
-  const owner = 'apol0510';
-  const repo = 'keiba-data-shared';
 
   console.log(`📡 keiba-data-sharedから取得中: ${path}`);
 
-  // ローカル実行時（GITHUB_TOKENなし）: raw.githubusercontent.comを使用（公開リポジトリ）
-  if (!GITHUB_TOKEN) {
-    console.log(`   ローカル実行モード: raw.githubusercontent.comからダウンロード`);
-    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
-    const response = await fetch(rawUrl);
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        // 予想データがない場合は正常終了（エラーではない）
-        console.log(`⏭️  予想データが見つかりません: ${path}`);
-        console.log(`   まだ予想が作成されていない可能性があります`);
-        return null; // nullを返す
-      }
-      throw new Error(`予想データの取得に失敗: ${response.status} ${response.statusText}`);
-    }
-
-    const content = await response.text();
-    const prediction = JSON.parse(content);
-    console.log(`✅ 取得成功: ${path}`);
-    return prediction;
+  const data = await client.fetchJson(path, { ref: 'main', required: false });
+  if (data === null) {
+    console.log(`⏭️  予想データが見つかりません: ${path}`);
+    return null;
   }
-
-  // GitHub Actions実行時: GitHub API経由（レート制限回避）
-  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-
-  const response = await fetch(apiUrl, {
-    headers: {
-      'Authorization': `token ${GITHUB_TOKEN}`,
-      'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'keiba-intelligence-import'
-    }
-  });
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      // 予想データがない場合は正常終了（エラーではない）
-      console.log(`⏭️  予想データが見つかりません: ${path}`);
-      console.log(`   まだ予想が作成されていない可能性があります`);
-      return null; // nullを返す
-    }
-    const errorData = await response.json();
-    throw new Error(`GitHub API Error: ${response.status} ${JSON.stringify(errorData)}`);
-  }
-
-  const data = await response.json();
-
-  // Base64デコード
-  const content = Buffer.from(data.content, 'base64').toString('utf-8');
-  const predictionJSON = JSON.parse(content);
-
   console.log(`✅ 取得成功: ${path}`);
-
-  return predictionJSON;
+  return data;
 }
 
 /**
@@ -545,22 +409,22 @@ async function fetchSharedPrediction(date, venue = 'nankan') {
  * @param {string} venue - 競馬場カテゴリ（デフォルト: 'nankan'）
  * @returns {Promise<Object[]>} 調整済みNormalizedPrediction配列（複数会場対応）
  */
-async function importPrediction(date, venue = 'nankan') {
+export async function importPrediction(date, venue = 'nankan', { client } = {}) {
   console.log(`\n━━━ ${date} 予想データ取り込み開始 ━━━`);
 
   // 優先順位1: 正規形式の会場別ファイル（nankan/predictions/YYYY/MM/YYYY-MM-DD-{VENUE}.json）
-  let sharedJSON = await fetchVenuePredictions(date, venue, '');
+  let sharedJSON = await fetchVenuePredictions(date, venue, '', client);
 
   // 優先順位2: computer/ディレクトリから会場別ファイル（コンピ指数）
   if (!sharedJSON) {
     console.log(`📡 [IMPORT] computer/配下をチェック`);
-    sharedJSON = await fetchComputerPredictions(date, venue);
+    sharedJSON = await fetchComputerPredictions(date, venue, client);
   }
 
   // 優先順位3（非推奨）: 従来の統合ファイル（YYYY-MM-DD.json）
   if (!sharedJSON) {
     console.log(`⚠️  [IMPORT] 【非推奨】従来の単一ファイルを取得します`);
-    sharedJSON = await fetchSharedPrediction(date, venue);
+    sharedJSON = await fetchSharedPrediction(date, venue, client);
     if (sharedJSON) {
       console.log(`⚠️  [IMPORT] 警告: 単一ファイル形式は将来廃止されます。会場別ファイルに移行してください。`);
     }
@@ -569,7 +433,7 @@ async function importPrediction(date, venue = 'nankan') {
   // 優先順位4: racebook（race-data-importer保存データ）
   if (!sharedJSON) {
     console.log(`📡 [IMPORT] racebook配下をチェック`);
-    sharedJSON = await fetchRacebookData(date, venue);
+    sharedJSON = await fetchRacebookData(date, venue, client);
   }
 
   // 予想データがない場合はスキップ
@@ -594,10 +458,10 @@ async function importPrediction(date, venue = 'nankan') {
   console.log(`🔍 [IMPORT] 予想データ: ${predHorseNames.size}頭 / ${predRaceNames.size}レース`);
 
   // 出馬表データ（recentRaces）を取得
-  let horseDataMap = await fetchEntriesData(date, venue);
+  let horseDataMap = await fetchEntriesData(date, venue, client);
   // entries未保存時はracebookのpastRacesで補完（内容ベース照合）
   if (!horseDataMap || horseDataMap.size === 0) {
-    horseDataMap = await fetchRacebookPastRaces(date, venue, predHorseNames, predRaceNames);
+    horseDataMap = await fetchRacebookPastRaces(date, venue, predHorseNames, predRaceNames, client);
   }
 
   // recentRaces紐付け結果をログ（0件なら警告）
@@ -691,37 +555,20 @@ async function importPrediction(date, venue = 'nankan') {
  * @param {string} venue - 競馬場カテゴリ（デフォルト: 'nankan'）
  * @returns {Promise<Map|null>} 馬名→recentRacesのMap
  */
-async function fetchEntriesData(date, venue = 'nankan') {
-  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+async function fetchEntriesData(date, venue = 'nankan', client) {
   const [year, month] = date.split('-');
-  const owner = 'apol0510';
-  const repo = 'keiba-data-shared';
-
-  // entriesディレクトリのファイル一覧を取得
   const dirPath = `${venue}/entries/${year}/${month}`;
-  const headers = GITHUB_TOKEN ? {
-    'Authorization': `token ${GITHUB_TOKEN}`,
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'keiba-intelligence-import'
-  } : {
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'keiba-intelligence-import'
-  };
 
   console.log(`📡 [ENTRIES] 出馬表データ取得中: ${dirPath}`);
 
-  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
-  const dirResponse = await fetch(apiUrl, { headers });
-
-  if (!dirResponse.ok) {
+  const entries = await client.listDirectory(dirPath, { ref: 'main', required: false });
+  if (!entries) {
     console.log(`⏭️  [ENTRIES] 出馬表ディレクトリが見つかりません: ${dirPath}`);
     return null;
   }
 
-  const files = await dirResponse.json();
-  const dateFiles = files.filter(f => f.name.startsWith(`${date}-`) && f.name.endsWith('.json'));
-
-  if (dateFiles.length === 0) {
+  const dateEntries = entries.filter(e => e.name.startsWith(`${date}-`) && e.name.endsWith('.json'));
+  if (dateEntries.length === 0) {
     console.log(`⏭️  [ENTRIES] ${date}の出馬表が見つかりません`);
     return null;
   }
@@ -729,14 +576,10 @@ async function fetchEntriesData(date, venue = 'nankan') {
   // 馬名→recentRacesのMap（全会場分統合）
   const horseDataMap = new Map();
 
-  for (const file of dateFiles) {
-    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${file.name}`;
-    const response = await fetch(rawUrl, GITHUB_TOKEN ? { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } } : {});
-
-    if (!response.ok) continue;
-
-    const entryData = JSON.parse(await response.text());
-    console.log(`   ✅ [ENTRIES] ${file.name} 取得完了`);
+  for (const entry of dateEntries) {
+    const entryData = await client.fetchJsonFromEntry(entry, { ref: 'main', required: false });
+    if (entryData === null) continue;
+    console.log(`   ✅ [ENTRIES] ${entry.name} 取得完了`);
 
     if (entryData.races) {
       for (const race of entryData.races) {
@@ -993,89 +836,96 @@ function savePrediction(date, normalizedAndAdjusted, horseDataMap = null) {
 }
 
 /**
- * メイン処理
+ * メイン処理（DI対応・テスト可能）
  */
-async function main() {
-  try {
-    // コマンドライン引数をパース
-    const args = process.argv.slice(2);
-    let date = null;
+export async function importPredictionMain({
+  argv = process.argv,
+  env = process.env,
+  client: _client,
+  resolveToken = resolveSharedToken,
+} = {}) {
+  // コマンドライン引数をパース・検証（token fail-fast より先に実施）
+  const args = argv.slice(2);
+  let date = null;
 
-    for (let i = 0; i < args.length; i++) {
-      if (args[i] === '--date' && i + 1 < args.length) {
-        date = args[i + 1];
-        i++;
-      }
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--date' && i + 1 < args.length) {
+      date = args[i + 1];
+      i++;
     }
-
-    // 日付が指定されていない場合は今日の日付を使用
-    if (!date) {
-      date = getTodayJST();
-      console.log(`📅 日付未指定のため、今日の日付を使用: ${date}`);
-    } else {
-      console.log(`📅 指定された日付: ${date}`);
-    }
-
-    // 会場コード付き日付を自動除去（例: 2026-02-20-OOI → 2026-02-20）
-    const dateMatch = date.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (dateMatch) {
-      const cleanDate = dateMatch[1];
-      if (cleanDate !== date) {
-        console.log(`📅 会場コードを除去: ${date} → ${cleanDate}`);
-        date = cleanDate;
-      }
-    }
-
-    // 日付フォーマット検証
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      throw new Error('日付はYYYY-MM-DD形式で指定してください');
-    }
-
-    // 取り込み実行
-    const importResult = await importPrediction(date);
-
-    // 予想データがない場合は正常終了
-    if (!importResult || !importResult.results || importResult.results.length === 0) {
-      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('⏭️  予想データがないため、処理を終了します');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-      return; // 正常終了
-    }
-
-    const { results, horseDataMap } = importResult;
-
-    // 【複数会場対応】各会場のデータを保存
-    console.log(`\n📦 [BUILD] 保存対象: ${results.length}会場`);
-    const savedFiles = [];
-    let totalSaved = 0;
-
-    for (const normalizedAndAdjusted of results) {
-      const saved = savePrediction(date, normalizedAndAdjusted, horseDataMap);
-      if (saved) {
-        totalSaved++;
-        const venue = normalizedAndAdjusted.venue || '大井';
-        const venueMap = { '大井': 'ooi', '船橋': 'funabashi', '川崎': 'kawasaki', '浦和': 'urawa' };
-        const venueSlug = venueMap[venue] || 'ooi';
-        savedFiles.push(`${date}-${venueSlug}.json`);
-      }
-    }
-
-    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    if (totalSaved > 0) {
-      console.log(`✅ [BUILD] 生成ファイル一覧:`);
-      savedFiles.forEach(f => console.log(`   - ${f}`));
-      console.log(`✅ 取り込み完了！（${totalSaved}/${results.length}会場）`);
-    } else {
-      console.log('⏭️  変更なし（既存データと同一）');
-    }
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-  } catch (error) {
-    console.error('\n❌ エラーが発生しました:', error.message);
-    console.error(error.stack);
-    process.exit(1);
   }
+
+  // 日付が指定されていない場合は今日の日付を使用
+  if (!date) {
+    date = getTodayJST();
+    console.log(`📅 日付未指定のため、今日の日付を使用: ${date}`);
+  } else {
+    console.log(`📅 指定された日付: ${date}`);
+  }
+
+  // 会場コード付き日付を自動除去（例: 2026-02-20-OOI → 2026-02-20）
+  const dateMatch = date.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (dateMatch) {
+    const cleanDate = dateMatch[1];
+    if (cleanDate !== date) {
+      console.log(`📅 会場コードを除去: ${date} → ${cleanDate}`);
+      date = cleanDate;
+    }
+  }
+
+  // 日付フォーマット検証
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error('日付はYYYY-MM-DD形式で指定してください');
+  }
+
+  // トークン未設定は即時失敗（引数検証後）
+  resolveToken({ env });
+  const client = _client ?? createSharedClient({ env });
+
+  // 取り込み実行
+  const importResult = await importPrediction(date, 'nankan', { client });
+
+  // 予想データがない場合は正常終了
+  if (!importResult || !importResult.results || importResult.results.length === 0) {
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('⏭️  予想データがないため、処理を終了します');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    return;
+  }
+
+  const { results, horseDataMap } = importResult;
+
+  // 【複数会場対応】各会場のデータを保存
+  console.log(`\n📦 [BUILD] 保存対象: ${results.length}会場`);
+  const savedFiles = [];
+  let totalSaved = 0;
+
+  for (const normalizedAndAdjusted of results) {
+    const saved = savePrediction(date, normalizedAndAdjusted, horseDataMap);
+    if (saved) {
+      totalSaved++;
+      const venue = normalizedAndAdjusted.venue || '大井';
+      const venueMap = { '大井': 'ooi', '船橋': 'funabashi', '川崎': 'kawasaki', '浦和': 'urawa' };
+      const venueSlug = venueMap[venue] || 'ooi';
+      savedFiles.push(`${date}-${venueSlug}.json`);
+    }
+  }
+
+  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  if (totalSaved > 0) {
+    console.log(`✅ [BUILD] 生成ファイル一覧:`);
+    savedFiles.forEach(f => console.log(`   - ${f}`));
+    console.log(`✅ 取り込み完了！（${totalSaved}/${results.length}会場）`);
+  } else {
+    console.log('⏭️  変更なし（既存データと同一）');
+  }
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 
-// 実行
-main();
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) {
+  importPredictionMain().catch((e) => {
+    console.error('FATAL:', e?.message ?? String(e));
+    process.exit(1);
+  });
+}

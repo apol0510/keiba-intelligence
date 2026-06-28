@@ -1,14 +1,22 @@
 /**
- * workflowStaticAudit.test.mjs — PR-KI-2 対象 workflow ファイルの静的監査
+ * workflowStaticAudit.test.mjs — workflow ファイルの静的監査
  *
- * 確認項目:
+ * 確認項目 (PR-KI-2):
  *   - KEIBA_DATA_SHARED_TOKEN が全 shared 取得 step に設定されている
  *   - checkSharedNankanResults / checkSharedJraResults 呼び出しで exit code を確認している
  *   - TOTAL_RACES:-0 / TOTAL_RACES=${TOTAL_RACES:-0} が存在しない
  *   - HAK ベニューコードが存在しない（HKD のみ）
  *   - GITHUB_TOKEN を cross-repo 用途で使用していない
- *   - node --experimental-vm-modules などの匿名 fetch 行が curl raw.githubusercontent で残っていない
- *     （racebook の curl は PR-KI-3 スコープ外として許容する）
+ *   - 匿名 curl raw.githubusercontent が残っていない
+ *
+ * 確認項目 (PR-KI-3b-1):
+ *   - import-on-dispatch.yml / import-prediction-daily.yml の import step env 配下に
+ *     KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }} が設定されている
+ *     （PyYAML 構造解析 + 位置確認の二重検証）
+ *   - checkout 用 GITHUB_TOKEN 維持
+ *   - schedule / dispatch 条件不変
+ *   - working-directory 不変
+ *   - script path 不変
  *
  *   node --test scripts/utils/workflowStaticAudit.test.mjs
  */
@@ -17,6 +25,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKFLOWS_DIR = join(__dirname, '..', '..', '..', '.github', 'workflows');
@@ -205,5 +214,86 @@ test('22. verify-archive-sync.yml: checkSharedNankanResults.mjs を使用', () =
   assert.ok(
     text.includes('checkSharedNankanResults.mjs'),
     'verify-archive-sync.yml に checkSharedNankanResults.mjs が見つからない',
+  );
+});
+
+// ---- PR-KI-3b-1: 予想 import ワークフロー（構造的検証） ----
+
+/**
+ * PyYAML を使って import step の env 配下に KEIBA_DATA_SHARED_TOKEN が設定されているか検証する。
+ * token が YAML のどこか（コメントなど）に含まれるだけでは通過しない。
+ */
+function verifyTokenInImportStepEnv(workflowFile, stepNameFragment) {
+  const script = [
+    'import yaml, sys',
+    'f = open(sys.argv[1])',
+    'doc = yaml.safe_load(f)',
+    'f.close()',
+    'job = list(doc.get("jobs", {}).values())[0]',
+    'steps = job.get("steps", [])',
+    'frag = sys.argv[2].lower()',
+    'step = next((s for s in steps if frag in (s.get("name") or "").lower()), None)',
+    'assert step, f"Step with fragment {repr(sys.argv[2])} not found"',
+    'env = step.get("env") or {}',
+    'key = "KEIBA_DATA_SHARED_TOKEN"',
+    'assert key in env, f"Key {repr(key)} not in step env. env keys: {list(env.keys())}"',
+    'val = str(env[key])',
+    'expected = "${{ secrets.KEIBA_DATA_SHARED_TOKEN }}"',
+    'assert val == expected, f"Value mismatch. expected={repr(expected)}, got={repr(val)}"',
+    'print("OK")',
+  ].join('\n');
+
+  const wfPath = join(WORKFLOWS_DIR, workflowFile);
+  const r = spawnSync('python3', ['-c', script, wfPath, stepNameFragment], { encoding: 'utf-8' });
+  return r;
+}
+
+test('23. import-on-dispatch.yml: import step env に KEIBA_DATA_SHARED_TOKEN が正式設定されている（YAML構造検証）', () => {
+  const workflowFile = 'import-on-dispatch.yml';
+  const text = readWorkflow(workflowFile);
+
+  // 位置確認: step header の後かつ次のステップより前
+  const stepIdx = text.indexOf('Sync and import predictions');
+  assert.ok(stepIdx >= 0, '"Sync and import predictions" step が見つからない');
+  const tokenLine = 'KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}';
+  const tokenIdx = text.indexOf(tokenLine);
+  assert.ok(tokenIdx > stepIdx, `${tokenLine} が import step より後にない`);
+
+  // GITHUB_TOKEN 維持確認
+  assert.ok(text.includes('GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}'), 'checkout 用 GITHUB_TOKEN が維持されていない');
+
+  // working-directory 不変確認
+  assert.ok(text.includes('working-directory: astro-site'), 'working-directory が変更されている');
+
+  // PyYAML 構造検証
+  const r = verifyTokenInImportStepEnv(workflowFile, 'sync and import');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+test('24. import-prediction-daily.yml: import step env に KEIBA_DATA_SHARED_TOKEN が正式設定されている（YAML構造検証）', () => {
+  const workflowFile = 'import-prediction-daily.yml';
+  const text = readWorkflow(workflowFile);
+
+  // 位置確認: step header の後かつ次のステップより前
+  const stepIdx = text.indexOf('Import prediction from keiba-data-shared');
+  assert.ok(stepIdx >= 0, '"Import prediction from keiba-data-shared" step が見つからない');
+  const tokenLine = 'KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}';
+  const tokenIdx = text.indexOf(tokenLine);
+  assert.ok(tokenIdx > stepIdx, `${tokenLine} が import step より後にない`);
+
+  // GITHUB_TOKEN 維持確認
+  assert.ok(text.includes('GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}'), 'checkout 用 GITHUB_TOKEN が維持されていない');
+
+  // working-directory 不変確認
+  assert.ok(text.includes('working-directory: astro-site'), 'working-directory が変更されている');
+
+  // PyYAML 構造検証
+  const r = verifyTokenInImportStepEnv(workflowFile, 'import prediction from keiba-data-shared');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
   );
 });

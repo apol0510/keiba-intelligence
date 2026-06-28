@@ -11,13 +11,16 @@
  *   node scripts/importPredictionJra.js  # 今日の日付を使用
  *
  * 環境変数:
- *   GITHUB_TOKEN: GitHub Personal Access Token（read-only）
+ *   KEIBA_DATA_SHARED_TOKEN: keiba-data-shared 読み取り用 PAT（required）
+ *   token 不足は HTTP 前 fail-fast（resolveToken で即時エラー）
+ *   匿名 fallback なし
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import crypto from 'crypto';
+import { createSharedClient, resolveSharedToken } from './lib/sharedFetch.mjs';
 
 // ESモジュールで __dirname を取得
 const __filename = fileURLToPath(import.meta.url);
@@ -61,73 +64,19 @@ function getTodayJST() {
  * @param {string} venue - 競馬場カテゴリ（デフォルト: 'jra'）
  * @returns {Promise<Object>} 予想JSON
  */
-async function fetchSharedPrediction(date, venue = 'jra') {
-  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-
-  // 日付をパースしてパスを構築
-  const [year, month, day] = date.split('-');
+async function fetchSharedPrediction(date, venue = 'jra', client) {
+  const [year, month] = date.split('-');
   const path = `${venue}/predictions/${year}/${month}/${date}.json`;
-
-  const owner = 'apol0510';
-  const repo = 'keiba-data-shared';
 
   console.log(`📡 keiba-data-sharedから取得中: ${path}`);
 
-  // ローカル実行時（GITHUB_TOKENなし）: raw.githubusercontent.comを使用（公開リポジトリ）
-  if (!GITHUB_TOKEN) {
-    console.log(`   ローカル実行モード: raw.githubusercontent.comからダウンロード`);
-    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
-    console.log(`   📍 URL: ${rawUrl}`);
-    const response = await fetch(rawUrl);
-    console.log(`   📡 Response status: ${response.status} ${response.statusText}`);
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        // 予想データがない場合は正常終了（エラーではない）
-        console.log(`⏭️  予想データが見つかりません: ${path}`);
-        console.log(`   まだ予想が作成されていない可能性があります`);
-        return null; // nullを返す
-      }
-      throw new Error(`予想データの取得に失敗: ${response.status} ${response.statusText}`);
-    }
-
-    const content = await response.text();
-    const prediction = JSON.parse(content);
-    console.log(`✅ 取得成功: ${path}`);
-    return prediction;
+  const data = await client.fetchJson(path, { ref: 'main', required: false });
+  if (data === null) {
+    console.log(`⏭️  予想データが見つかりません: ${path}`);
+    return null;
   }
-
-  // GitHub Actions実行時: GitHub API経由（レート制限回避）
-  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-
-  const response = await fetch(apiUrl, {
-    headers: {
-      'Authorization': `token ${GITHUB_TOKEN}`,
-      'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'keiba-intelligence-import-jra'
-    }
-  });
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      // 予想データがない場合は正常終了（エラーではない）
-      console.log(`⏭️  予想データが見つかりません: ${path}`);
-      console.log(`   まだ予想が作成されていない可能性があります`);
-      return null; // nullを返す
-    }
-    const errorData = await response.json();
-    throw new Error(`GitHub API Error: ${response.status} ${JSON.stringify(errorData)}`);
-  }
-
-  const data = await response.json();
-
-  // Base64デコード
-  const content = Buffer.from(data.content, 'base64').toString('utf-8');
-  const predictionJSON = JSON.parse(content);
-
   console.log(`✅ 取得成功: ${path}`);
-
-  return predictionJSON;
+  return data;
 }
 
 /**
@@ -141,53 +90,34 @@ async function fetchSharedPrediction(date, venue = 'jra') {
  * @param {string} category - 競馬場カテゴリ（デフォルト: 'jra'）
  * @returns {Promise<Object|null>} venues配列を持つ統合JSON、またはnull
  */
-async function fetchComputerPredictions(date, category = 'jra') {
-  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+async function fetchComputerPredictions(date, category = 'jra', client) {
   const [year, month] = date.split('-');
   const dirPath = `${category}/predictions/computer/${year}/${month}`;
-  const owner = 'apol0510';
-  const repo = 'keiba-data-shared';
 
   console.log(`📡 [COMPUTER] computer/配下取得中: ${dirPath}`);
 
-  const headers = GITHUB_TOKEN ? {
-    'Authorization': `token ${GITHUB_TOKEN}`,
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'keiba-intelligence-import-jra'
-  } : {
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'keiba-intelligence-import-jra'
-  };
-
-  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
-  const dirResponse = await fetch(apiUrl, { headers });
-
-  if (!dirResponse.ok) {
+  const entries = await client.listDirectory(dirPath, { ref: 'main', required: false });
+  if (!entries) {
     console.log(`⏭️  [COMPUTER] ディレクトリなし: ${dirPath}`);
     return null;
   }
 
-  const files = await dirResponse.json();
-  const dateFiles = files.filter(f => f.name.startsWith(`${date}-`) && f.name.endsWith('.json'));
-
-  if (dateFiles.length === 0) {
+  const dateEntries = entries.filter(e => e.name.startsWith(`${date}-`) && e.name.endsWith('.json'));
+  if (dateEntries.length === 0) {
     console.log(`⏭️  [COMPUTER] ${date}の会場別ファイルなし`);
     return null;
   }
 
-  console.log(`✅ [COMPUTER] ${dateFiles.length}会場のファイルを検出: ${dateFiles.map(f => f.name).join(', ')}`);
+  console.log(`✅ [COMPUTER] ${dateEntries.length}会場のファイルを検出: ${dateEntries.map(e => e.name).join(', ')}`);
 
   const venues = [];
-  for (const file of dateFiles) {
-    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${file.name}`;
-    const fetchHeaders = GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {};
-    const response = await fetch(rawUrl, { headers: fetchHeaders });
-    if (!response.ok) {
-      console.log(`   ⚠️  [COMPUTER] ${file.name} 取得失敗: ${response.status}`);
+  for (const entry of dateEntries) {
+    const venueData = await client.fetchJsonFromEntry(entry, { ref: 'main', required: false });
+    if (venueData === null) {
+      console.log(`   ⚠️  [COMPUTER] ${entry.name} 取得失敗: 404`);
       continue;
     }
-    const venueData = JSON.parse(await response.text());
-    console.log(`   ✅ [COMPUTER] ${file.name} 取得完了 (${venueData.races?.length || 0}R)`);
+    console.log(`   ✅ [COMPUTER] ${entry.name} 取得完了 (${venueData.races?.length || 0}R)`);
     venues.push(venueData);
   }
 
@@ -198,49 +128,30 @@ async function fetchComputerPredictions(date, category = 'jra') {
 /**
  * keiba-data-sharedからracebook JSONを取得（JRA用）
  */
-async function fetchRacebookData(date, category = 'jra') {
-  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+async function fetchRacebookData(date, category = 'jra', client) {
   const [year, month] = date.split('-');
   const dirPath = `${category}/racebook/${year}/${month}`;
-  const owner = 'apol0510';
-  const repo = 'keiba-data-shared';
 
   console.log(`📡 [RACEBOOK] racebookデータ取得中: ${dirPath}`);
 
-  const headers = GITHUB_TOKEN ? {
-    'Authorization': `token ${GITHUB_TOKEN}`,
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'keiba-intelligence-import'
-  } : {
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'keiba-intelligence-import'
-  };
-
-  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
-  const dirResponse = await fetch(apiUrl, { headers });
-
-  if (!dirResponse.ok) {
+  const entries = await client.listDirectory(dirPath, { ref: 'main', required: false });
+  if (!entries) {
     console.log(`⏭️  [RACEBOOK] ディレクトリなし: ${dirPath}`);
     return null;
   }
 
-  const files = await dirResponse.json();
-  const dateFiles = files.filter(f => f.name.startsWith(`${date}-`) && f.name.endsWith('.json'));
-
-  if (dateFiles.length === 0) {
+  const dateEntries = entries.filter(e => e.name.startsWith(`${date}-`) && e.name.endsWith('.json'));
+  if (dateEntries.length === 0) {
     console.log(`⏭️  [RACEBOOK] ${date}のracebookファイルなし`);
     return null;
   }
 
   const venues = [];
-  for (const file of dateFiles) {
-    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${file.name}`;
-    const fetchHeaders = GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {};
-    const response = await fetch(rawUrl, { headers: fetchHeaders });
-    if (!response.ok) continue;
+  for (const entry of dateEntries) {
+    const rbData = await client.fetchJsonFromEntry(entry, { ref: 'main', required: false });
+    if (rbData === null) continue;
 
-    const rbData = JSON.parse(await response.text());
-    console.log(`   ✅ [RACEBOOK] ${file.name} 取得完了 (${rbData.races?.length || 0}R)`);
+    console.log(`   ✅ [RACEBOOK] ${entry.name} 取得完了 (${rbData.races?.length || 0}R)`);
 
     venues.push({
       date, venue: rbData.track, totalRaces: rbData.races?.length || 0,
@@ -326,58 +237,34 @@ function buildHorseDataMapFromRacebook(rbData, targetMap = new Map()) {
 /**
  * racebook生データを取得してhorseDataMapを構築（JRA用）
  */
-async function fetchRacebookPastRaces(date, category = 'jra') {
-  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+async function fetchRacebookPastRaces(date, category = 'jra', client) {
   const [year, month] = date.split('-');
   const dirPath = `${category}/racebook/${year}/${month}`;
-  const owner = 'apol0510';
-  const repo = 'keiba-data-shared';
 
   console.log(`📡 [RACEBOOK-PAST] pastRaces取得中: ${dirPath}`);
 
-  const headers = GITHUB_TOKEN ? {
-    'Authorization': `token ${GITHUB_TOKEN}`,
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'keiba-intelligence-import-jra'
-  } : {
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'keiba-intelligence-import-jra'
-  };
-
-  try {
-    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dirPath}`;
-    const dirResponse = await fetch(apiUrl, { headers });
-    if (!dirResponse.ok) {
-      console.log(`⏭️  [RACEBOOK-PAST] ディレクトリなし: ${dirPath}`);
-      return null;
-    }
-
-    const files = await dirResponse.json();
-    const dateFiles = files.filter(f => f.name.startsWith(`${date}-`) && f.name.endsWith('.json'));
-
-    if (dateFiles.length === 0) {
-      console.log(`⏭️  [RACEBOOK-PAST] ${date}のracebookファイルなし`);
-      return null;
-    }
-
-    const horseDataMap = new Map();
-    for (const file of dateFiles) {
-      const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${dirPath}/${file.name}`;
-      const fetchHeaders = GITHUB_TOKEN ? { 'Authorization': `token ${GITHUB_TOKEN}` } : {};
-      const res = await fetch(rawUrl, { headers: fetchHeaders });
-      if (!res.ok) continue;
-
-      const rbData = JSON.parse(await res.text());
-      console.log(`   ✅ [RACEBOOK-PAST] ${file.name} 取得完了 (${rbData.races?.length || 0}R)`);
-      buildHorseDataMapFromRacebook(rbData, horseDataMap);
-    }
-
-    console.log(`✅ [RACEBOOK-PAST] ${horseDataMap.size}頭のpastRacesを取得`);
-    return horseDataMap.size > 0 ? horseDataMap : null;
-  } catch (err) {
-    console.warn('[RACEBOOK-PAST] 取得エラー:', err.message);
+  const entries = await client.listDirectory(dirPath, { ref: 'main', required: false });
+  if (!entries) {
+    console.log(`⏭️  [RACEBOOK-PAST] ディレクトリなし: ${dirPath}`);
     return null;
   }
+
+  const dateEntries = entries.filter(e => e.name.startsWith(`${date}-`) && e.name.endsWith('.json'));
+  if (dateEntries.length === 0) {
+    console.log(`⏭️  [RACEBOOK-PAST] ${date}のracebookファイルなし`);
+    return null;
+  }
+
+  const horseDataMap = new Map();
+  for (const entry of dateEntries) {
+    const rbData = await client.fetchJsonFromEntry(entry, { ref: 'main', required: false });
+    if (rbData === null) continue;
+    console.log(`   ✅ [RACEBOOK-PAST] ${entry.name} 取得完了 (${rbData.races?.length || 0}R)`);
+    buildHorseDataMapFromRacebook(rbData, horseDataMap);
+  }
+
+  console.log(`✅ [RACEBOOK-PAST] ${horseDataMap.size}頭のpastRacesを取得`);
+  return horseDataMap.size > 0 ? horseDataMap : null;
 }
 
 /**
@@ -387,22 +274,22 @@ async function fetchRacebookPastRaces(date, category = 'jra') {
  * @param {string} venue - 競馬場カテゴリ（デフォルト: 'jra'）
  * @returns {Promise<Object>} 調整済みNormalizedPrediction
  */
-async function importPrediction(date, venue = 'jra') {
+export async function importPrediction(date, venue = 'jra', { client } = {}) {
   console.log(`\n━━━ ${date} 中央競馬予想データ取り込み開始 ━━━`);
 
   // 優先順位1: predictions（従来の統合ファイル）
-  let sharedJSON = await fetchSharedPrediction(date, venue);
+  let sharedJSON = await fetchSharedPrediction(date, venue, client);
 
   // 優先順位2: computer/ 配下の会場別ファイル（コンピ指数）
   if (!sharedJSON) {
     console.log(`📡 [IMPORT] computer/配下をチェック`);
-    sharedJSON = await fetchComputerPredictions(date, venue);
+    sharedJSON = await fetchComputerPredictions(date, venue, client);
   }
 
   // 優先順位3: racebook（race-data-importer保存データ）
   if (!sharedJSON) {
     console.log(`📡 [IMPORT] racebook配下をチェック`);
-    sharedJSON = await fetchRacebookData(date, venue);
+    sharedJSON = await fetchRacebookData(date, venue, client);
   }
 
   // 予想データがない場合はスキップ
@@ -412,7 +299,7 @@ async function importPrediction(date, venue = 'jra') {
   }
 
   // racebook pastRaces を取得してhorseDataMapを構築
-  let horseDataMap = await fetchRacebookPastRaces(date, venue);
+  let horseDataMap = await fetchRacebookPastRaces(date, venue, client);
 
   // recentRaces紐付け結果をログ
   if (horseDataMap && horseDataMap.size > 0) {
@@ -482,26 +369,20 @@ const JRA_VENUE_CODE = {
   '新': 'NII', '福': 'FKS', '札': 'SAP', '函': 'HKD', '名': 'CHU'
 };
 const _resultsCache = new Map();
-async function fetchJraResultDay(yr, mo, da, vc) {
+export function clearResultsCache() { _resultsCache.clear(); }
+export async function fetchJraResultDay(yr, mo, da, vc, client) {
   const yyyy = String(yr);
   const mm = String(mo).padStart(2, '0');
   const dd = String(da).padStart(2, '0');
   const key = `${yyyy}-${mm}-${dd}-${vc}`;
   if (_resultsCache.has(key)) return _resultsCache.get(key);
-  const url = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/jra/results/${yyyy}/${mm}/${key}.json`;
-  const TOK = process.env.GITHUB_TOKEN;
-  try {
-    const res = await fetch(url, { headers: TOK ? { 'Authorization': `token ${TOK}` } : {} });
-    if (!res.ok) { _resultsCache.set(key, null); return null; }
-    const data = JSON.parse(await res.text());
-    _resultsCache.set(key, data.races || []);
-    return data.races || [];
-  } catch {
-    _resultsCache.set(key, null);
-    return null;
-  }
+  const path = `jra/results/${yyyy}/${mm}/${key}.json`;
+  const data = await client.fetchJson(path, { ref: 'main', required: false });
+  if (data === null) { _resultsCache.set(key, null); return null; }
+  _resultsCache.set(key, data.races || []);
+  return data.races || [];
 }
-async function lookupPastRaceDistance(horseName, venueStr, raceDateStr) {
+export async function lookupPastRaceDistance(horseName, venueStr, raceDateStr, client) {
   if (!horseName || !venueStr || !raceDateStr) return null;
   const md = String(venueStr).match(/(\d{1,2})\.(\d{1,2})\s*$/);
   if (!md) return null;
@@ -513,7 +394,7 @@ async function lookupPastRaceDistance(horseName, venueStr, raceDateStr) {
   const venueChar = String(venueStr).replace(/^\d+/, '').replace(/\d{1,2}\.\d{1,2}\s*$/, '').trim();
   const vc = JRA_VENUE_CODE[venueChar];
   if (!vc) return null;
-  const races = await fetchJraResultDay(yr, mo, da, vc);
+  const races = await fetchJraResultDay(yr, mo, da, vc, client);
   if (!races) return null;
   const normName = normalizeHorseName(horseName);
   for (const race of races) {
@@ -525,7 +406,7 @@ async function lookupPastRaceDistance(horseName, venueStr, raceDateStr) {
   }
   return null;
 }
-async function enrichRecentRacesDistance(convertedData, raceDate) {
+export async function enrichRecentRacesDistance(convertedData, raceDate, client) {
   let attempted = 0, enriched = 0;
   const venues = convertedData.venues || [convertedData];
   for (const venue of venues) {
@@ -535,7 +416,7 @@ async function enrichRecentRacesDistance(convertedData, raceDate) {
         for (const pr of (horse.recentRaces || [])) {
           if (pr.distanceMeters) continue;
           attempted++;
-          const dist = await lookupPastRaceDistance(horse.horseName, pr.venue, raceDate);
+          const dist = await lookupPastRaceDistance(horse.horseName, pr.venue, raceDate, client);
           if (dist) { pr.distanceMeters = dist; enriched++; }
         }
       }
@@ -701,7 +582,7 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
  * @param {Object} normalizedAndAdjusted - 調整済みNormalizedPrediction
  * @returns {boolean} 保存したかどうか（true: 保存, false: no-op）
  */
-async function savePrediction(date, normalizedAndAdjusted, horseDataMap = null) {
+async function savePrediction(date, normalizedAndAdjusted, horseDataMap = null, client) {
   console.log(`\n💾 保存処理開始...`);
 
   // 保存先パス構築（階層構造：jra/YYYY/MM/YYYY-MM-DD.json）
@@ -741,7 +622,7 @@ async function savePrediction(date, normalizedAndAdjusted, horseDataMap = null) 
   }
 
   // 過去走に jra/results から公式 distance を注入（2026年分のみ、推測ゼロ）
-  await enrichRecentRacesDistance(convertedData, date);
+  await enrichRecentRacesDistance(convertedData, date, client);
 
   // 【再発防止】データ検証を実行（印1ロジック適用後は警告のみ）
   console.log(`🔍 データ検証中...`);
@@ -784,74 +665,81 @@ async function savePrediction(date, normalizedAndAdjusted, horseDataMap = null) 
 }
 
 /**
- * メイン処理
+ * メイン処理（DI対応・テスト可能）
  */
-async function main() {
-  try {
-    // コマンドライン引数をパース
-    const args = process.argv.slice(2);
-    let date = null;
+export async function importPredictionJraMain({
+  argv = process.argv,
+  env = process.env,
+  client: _client,
+  resolveToken = resolveSharedToken,
+} = {}) {
+  // コマンドライン引数をパース・検証（token fail-fast より先に実施）
+  const args = argv.slice(2);
+  let date = null;
 
-    for (let i = 0; i < args.length; i++) {
-      if (args[i] === '--date' && i + 1 < args.length) {
-        date = args[i + 1];
-        i++;
-      }
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--date' && i + 1 < args.length) {
+      date = args[i + 1];
+      i++;
     }
-
-    // 日付が指定されていない場合は今日の日付を使用
-    if (!date) {
-      date = getTodayJST();
-      console.log(`📅 日付未指定のため、今日の日付を使用: ${date}`);
-    } else {
-      console.log(`📅 指定された日付: ${date}`);
-    }
-
-    // 会場コード付き日付を自動除去（例: 2026-02-20-TKY → 2026-02-20）
-    const dateMatch = date.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (dateMatch) {
-      const cleanDate = dateMatch[1];
-      if (cleanDate !== date) {
-        console.log(`📅 会場コードを除去: ${date} → ${cleanDate}`);
-        date = cleanDate;
-      }
-    }
-
-    // 日付フォーマット検証
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      throw new Error('日付はYYYY-MM-DD形式で指定してください');
-    }
-
-    // 取り込み実行
-    const importResult = await importPrediction(date);
-
-    // 予想データがない場合は正常終了
-    if (!importResult) {
-      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('⏭️  予想データがないため、処理を終了します');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-      return; // 正常終了
-    }
-
-    const { normalizedResult, horseDataMap } = importResult;
-
-    // 保存
-    const saved = await savePrediction(date, normalizedResult, horseDataMap);
-
-    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    if (saved) {
-      console.log('✅ 取り込み完了！');
-    } else {
-      console.log('⏭️  変更なし（既存データと同一）');
-    }
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-  } catch (error) {
-    console.error('\n❌ エラーが発生しました:', error.message);
-    console.error(error.stack);
-    process.exit(1);
   }
+
+  // 日付が指定されていない場合は今日の日付を使用
+  if (!date) {
+    date = getTodayJST();
+    console.log(`📅 日付未指定のため、今日の日付を使用: ${date}`);
+  } else {
+    console.log(`📅 指定された日付: ${date}`);
+  }
+
+  // 会場コード付き日付を自動除去（例: 2026-02-20-TKY → 2026-02-20）
+  const dateMatch = date.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (dateMatch) {
+    const cleanDate = dateMatch[1];
+    if (cleanDate !== date) {
+      console.log(`📅 会場コードを除去: ${date} → ${cleanDate}`);
+      date = cleanDate;
+    }
+  }
+
+  // 日付フォーマット検証
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error('日付はYYYY-MM-DD形式で指定してください');
+  }
+
+  // トークン未設定は即時失敗（引数検証後）
+  resolveToken({ env });
+  const client = _client ?? createSharedClient({ env });
+
+  // 取り込み実行
+  const importResult = await importPrediction(date, 'jra', { client });
+
+  // 予想データがない場合は正常終了
+  if (!importResult) {
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('⏭️  予想データがないため、処理を終了します');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    return;
+  }
+
+  const { normalizedResult, horseDataMap } = importResult;
+
+  // 保存
+  const saved = await savePrediction(date, normalizedResult, horseDataMap, client);
+
+  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  if (saved) {
+    console.log('✅ 取り込み完了！');
+  } else {
+    console.log('⏭️  変更なし（既存データと同一）');
+  }
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 
-// 実行
-main();
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) {
+  importPredictionJraMain().catch((e) => {
+    console.error('FATAL:', e?.message ?? String(e));
+    process.exit(1);
+  });
+}

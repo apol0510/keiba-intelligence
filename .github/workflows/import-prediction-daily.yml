@@ -47,6 +47,7 @@ jobs:
       - name: Import prediction from keiba-data-shared
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
         run: |
           DATE="${{ steps.date.outputs.date }}"
           echo "🔄 Daily check: Importing prediction for $DATE"
