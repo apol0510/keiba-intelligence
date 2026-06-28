@@ -5,7 +5,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fetchSharedResults, fetchAndMergeVenueResults } from './importResults.js';
+import { fetchSharedResults, fetchAndMergeVenueResults, checkSharedPredictionsExist } from './importResults.js';
 import { createSharedClient, SHARED_FETCH_CODES } from './lib/sharedFetch.mjs';
 
 const SECRET = 'ghp_MOCK_TOKEN_importResults_test';
@@ -172,4 +172,109 @@ test('13. venue name は venueData.venue 優先、なければ venue code を使
   const client = createSharedClient({ fetchImpl, env: ENV_OK, sleepImpl: noSleep });
   const result = await fetchAndMergeVenueResults(DATE, YEAR, MONTH, client);
   assert.deepEqual(result.venues, ['OOI']); // venue フィールドがないため code をフォールバック
+});
+
+// ----- checkSharedPredictionsExist -----
+
+test('14. 200 → exists: true（存在あり）', async () => {
+  const fetchImpl = mkFetch(() => mkRes(200, { predictions: [] }));
+  const client = createSharedClient({ fetchImpl, env: ENV_OK, sleepImpl: noSleep });
+  const loadErrors = [{ venue: '大井', error: '...' }];
+  const result = await checkSharedPredictionsExist(DATE, loadErrors, { client });
+  assert.deepEqual(result, [{ venue: '大井', exists: true }]);
+});
+
+test('15. 404 → exists: false（存在なし = 正常）', async () => {
+  const client = mkClient(() => mkRes(404, 'Not Found'));
+  const loadErrors = [{ venue: '大井', error: '...' }];
+  const result = await checkSharedPredictionsExist(DATE, loadErrors, { client });
+  assert.deepEqual(result, [{ venue: '大井', exists: false }]);
+});
+
+test('16. 401 → AUTH_FAILED throw（fatal）', async () => {
+  const client = mkClient(() => mkRes(401, 'Unauthorized'));
+  const loadErrors = [{ venue: '船橋', error: '...' }];
+  await assert.rejects(
+    checkSharedPredictionsExist(DATE, loadErrors, { client }),
+    (e) => e.code === SHARED_FETCH_CODES.AUTH_FAILED,
+  );
+});
+
+test('17. 403 → FORBIDDEN throw（fatal）', async () => {
+  const client = mkClient(() => mkRes(403, 'Forbidden'));
+  const loadErrors = [{ venue: '川崎', error: '...' }];
+  await assert.rejects(
+    checkSharedPredictionsExist(DATE, loadErrors, { client }),
+    (e) => e.code === SHARED_FETCH_CODES.FORBIDDEN,
+  );
+});
+
+test('18. 429 → RATE_LIMITED throw（fatal）', async () => {
+  const client = mkClient(() => mkRes(429, 'Too Many Requests'));
+  const loadErrors = [{ venue: '浦和', error: '...' }];
+  await assert.rejects(
+    checkSharedPredictionsExist(DATE, loadErrors, { client }),
+    (e) => e.code === SHARED_FETCH_CODES.RATE_LIMITED,
+  );
+});
+
+test('19. 500 → SERVER_ERROR throw（fatal）', async () => {
+  const client = mkClient(() => mkRes(500, 'Internal Server Error'));
+  const loadErrors = [{ venue: '大井', error: '...' }];
+  await assert.rejects(
+    checkSharedPredictionsExist(DATE, loadErrors, { client }),
+    (e) => e.code === SHARED_FETCH_CODES.SERVER_ERROR,
+  );
+});
+
+test('20. api.github.com 経由（raw.githubusercontent.com は呼ばない / Authorization付き）', async () => {
+  const fetchImpl = mkFetch(() => mkRes(200, { predictions: [] }));
+  const client = createSharedClient({ fetchImpl, env: ENV_OK, sleepImpl: noSleep });
+  const loadErrors = [{ venue: '大井', error: '...' }];
+  await checkSharedPredictionsExist(DATE, loadErrors, { client });
+  assert.equal(fetchImpl.calls.length, 1);
+  assert.ok(fetchImpl.calls[0].url.includes('api.github.com'), '認証済み Contents API を使用する');
+  assert.ok(!fetchImpl.calls[0].url.includes('raw.githubusercontent.com'), 'anonymous raw URL を呼ばない');
+  assert.ok(fetchImpl.calls[0].init.headers.Authorization.startsWith('Bearer '), 'Authorization header 付き');
+});
+
+test('21. ネットワークエラー → INVALID_RESPONSE throw（fatal）', async () => {
+  const fetchImpl = mkFetch(() => { throw new Error('Network failed'); });
+  const client = createSharedClient({ fetchImpl, env: ENV_OK, sleepImpl: noSleep });
+  const loadErrors = [{ venue: '大井', error: '...' }];
+  await assert.rejects(
+    checkSharedPredictionsExist(DATE, loadErrors, { client }),
+    (e) => e.code === SHARED_FETCH_CODES.INVALID_RESPONSE,
+  );
+});
+
+test('22. malformed JSON → INVALID_JSON throw（fatal）', async () => {
+  const client = mkClient(() => mkRes(200, 'malformed{{{json'));
+  const loadErrors = [{ venue: '船橋', error: '...' }];
+  await assert.rejects(
+    checkSharedPredictionsExist(DATE, loadErrors, { client }),
+    (e) => e.code === SHARED_FETCH_CODES.INVALID_JSON,
+  );
+});
+
+test('23. 複数会場 — 正しい path 生成・結果順序維持（大井=OOI/船橋=FUN）', async () => {
+  const accessedPaths = [];
+  const fetchImpl = mkFetch((url) => {
+    accessedPaths.push(url);
+    if (url.includes('-OOI.json')) return mkRes(200, { predictions: [] });
+    if (url.includes('-FUN.json')) return mkRes(404, 'Not Found');
+    return mkRes(404, 'Not Found');
+  });
+  const client = createSharedClient({ fetchImpl, env: ENV_OK, sleepImpl: noSleep });
+  const loadErrors = [
+    { venue: '大井', error: '...' },
+    { venue: '船橋', error: '...' },
+  ];
+  const result = await checkSharedPredictionsExist(DATE, loadErrors, { client });
+  assert.deepEqual(result, [
+    { venue: '大井', exists: true },
+    { venue: '船橋', exists: false },
+  ]);
+  assert.ok(accessedPaths.some(u => u.includes(`nankan/predictions/${YEAR}/${MONTH}/${DATE}-OOI.json`)), '大井 path = OOI');
+  assert.ok(accessedPaths.some(u => u.includes(`nankan/predictions/${YEAR}/${MONTH}/${DATE}-FUN.json`)), '船橋 path = FUN');
 });

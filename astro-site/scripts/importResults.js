@@ -483,6 +483,40 @@ function saveArchive(date, venue, raceResults, venues = []) {
 }
 
 /**
+ * 各会場の予想データが keiba-data-shared に存在するか認証付きで確認する。
+ * 404 のみ「存在しない」として exists:false を返す。
+ * 401/403/429/5xx/timeout/malformed は throw（fatal）。anonymous fallback なし。
+ * @param {string} date YYYY-MM-DD
+ * @param {{venue:string}[]} loadErrors
+ * @param {{client?:object}} [opts]
+ * @returns {Promise<{venue:string, exists:boolean}[]>}
+ */
+async function checkSharedPredictionsExist(date, loadErrors, { client: _client } = {}) {
+  const [year, month] = date.split('-');
+  const sharedClient = _client ?? createSharedClient();
+  const checkResults = [];
+
+  for (const { venue: venueName } of loadErrors) {
+    const venueMap = { '大井': 'OOI', '船橋': 'FUN', '川崎': 'KAW', '浦和': 'URA' };
+    const venueCode = venueMap[venueName] || venueName;
+    const sharedPredictionPath = `nankan/predictions/${year}/${month}/${date}-${venueCode}.json`;
+
+    console.log(`\n🔍 keiba-data-sharedの予想データ存在確認中（${venueName}）...`);
+    // 404 → null → exists:false。401/403/429/5xx/timeout は throw（fatal）。
+    const data = await sharedClient.fetchJson(sharedPredictionPath, { ref: 'main', required: false });
+
+    if (data !== null) {
+      checkResults.push({ venue: venueName, exists: true });
+      console.error(`   🚨 ${venueName}: 予想データが存在するのに読み込めませんでした！`);
+    } else {
+      checkResults.push({ venue: venueName, exists: false });
+      console.log(`   ⏭️  ${venueName}: 予想データなし（SEO対策用の結果データのみ）`);
+    }
+  }
+  return checkResults;
+}
+
+/**
  * メイン処理
  */
 async function main() {
@@ -562,32 +596,8 @@ async function main() {
       console.log(`⏭️  予想データが見つかりません: ${date}`);
       console.log(`   検索対象会場: ${loadErrors.map(e => e.venue).join(', ')}`);
 
-      // 【複数会場対応】各会場の予想データが存在するか確認
-      const [year, month] = date.split('-');
-      const checkResults = [];
-
-      for (const { venue: venueName, error: errMsg } of loadErrors) {
-        const venueMap = { '大井': 'OOI', '船橋': 'FUN', '川崎': 'KAW', '浦和': 'URA' };
-        const venueCode = venueMap[venueName] || venueName;
-        const sharedPredictionPath = `nankan/predictions/${year}/${month}/${date}-${venueCode}.json`;
-        const checkUrl = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/${sharedPredictionPath}`;
-
-        try {
-          console.log(`\n🔍 keiba-data-sharedの予想データ存在確認中（${venueName}）...`);
-          const checkResponse = await fetch(checkUrl);
-
-          if (checkResponse.ok) {
-            checkResults.push({ venue: venueName, exists: true });
-            console.error(`   🚨 ${venueName}: 予想データが存在するのに読み込めませんでした！`);
-          } else {
-            checkResults.push({ venue: venueName, exists: false });
-            console.log(`   ⏭️  ${venueName}: 予想データなし（SEO対策用の結果データのみ）`);
-          }
-        } catch (checkError) {
-          checkResults.push({ venue: venueName, exists: null });
-          console.warn(`   ⚠️  ${venueName}: 存在確認失敗（ネットワークエラー？）`);
-        }
-      }
+      // 【複数会場対応】各会場の予想データが存在するか確認（認証付き / anonymous fallbackなし）
+      const checkResults = await checkSharedPredictionsExist(date, loadErrors);
 
       // いずれかの会場で予想データが存在する場合は異常
       const existingVenues = checkResults.filter(r => r.exists === true);
@@ -719,7 +729,7 @@ async function main() {
 }
 
 // テスト用 export（CLI動作は変えない。isDirectRun ガードで main は直接実行時のみ起動する）
-export { fetchSharedResults, fetchAndMergeVenueResults };
+export { fetchSharedResults, fetchAndMergeVenueResults, checkSharedPredictionsExist };
 
 const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isDirectRun) main();
