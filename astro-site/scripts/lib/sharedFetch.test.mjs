@@ -60,11 +60,24 @@ test('1. KEIBA_DATA_SHARED_TOKEN を最優先で解決', () => {
   assert.equal(source, 'KEIBA_DATA_SHARED_TOKEN');
 });
 
-// 2. 互換 token 名への fallback
-test('2. 互換 token 名へ fallback（順序通り）', () => {
-  assert.equal(resolveSharedToken({ env: { GITHUB_TOKEN_KEIBA_DATA_SHARED: 'B', GITHUB_TOKEN: 'C' } }).source, 'GITHUB_TOKEN_KEIBA_DATA_SHARED');
-  assert.equal(resolveSharedToken({ env: { GITHUB_TOKEN: 'C' } }).source, 'GITHUB_TOKEN');
-  assert.deepEqual(TOKEN_ENV_NAMES, ['KEIBA_DATA_SHARED_TOKEN', 'GITHUB_TOKEN_KEIBA_DATA_SHARED', 'GITHUB_TOKEN']);
+// 2. TOKEN_ENV_NAMES は KEIBA_DATA_SHARED_TOKEN のみ（旧 fallback 廃止）
+test('2. TOKEN_ENV_NAMES は KEIBA_DATA_SHARED_TOKEN のみ（旧 fallback 廃止）', () => {
+  assert.deepEqual(TOKEN_ENV_NAMES, ['KEIBA_DATA_SHARED_TOKEN']);
+  // GITHUB_TOKEN_KEIBA_DATA_SHARED のみ → TOKEN_MISSING（fallback しない）
+  assert.throws(
+    () => resolveSharedToken({ env: { GITHUB_TOKEN_KEIBA_DATA_SHARED: 'B' } }),
+    (e) => e instanceof SharedFetchError && e.code === SHARED_FETCH_CODES.TOKEN_MISSING,
+  );
+  // GITHUB_TOKEN のみ → TOKEN_MISSING（fallback しない）
+  assert.throws(
+    () => resolveSharedToken({ env: { GITHUB_TOKEN: 'C' } }),
+    (e) => e instanceof SharedFetchError && e.code === SHARED_FETCH_CODES.TOKEN_MISSING,
+  );
+  // 両旧 token のみ → TOKEN_MISSING（fallback しない）
+  assert.throws(
+    () => resolveSharedToken({ env: { GITHUB_TOKEN_KEIBA_DATA_SHARED: 'B', GITHUB_TOKEN: 'C' } }),
+    (e) => e instanceof SharedFetchError && e.code === SHARED_FETCH_CODES.TOKEN_MISSING,
+  );
 });
 
 // 3. token 全未設定で TOKEN_MISSING
@@ -306,4 +319,42 @@ test('28. blobs 5xx は retry 後 SERVER_ERROR、secret 非露出', async () => 
     return true;
   });
   assert.equal(fetchImpl.calls.length, 3, '初回 + retry2');
+});
+
+// ---- PR-KI-4f: 旧 token fallback 廃止確認（HTTP fetch 0 保証） ----
+
+// 29. GITHUB_TOKEN のみ → TOKEN_MISSING、HTTP fetch 未実行
+test('29. GITHUB_TOKEN のみ設定 → TOKEN_MISSING、HTTP fetch 0', async () => {
+  const fetchImpl = mkFetch(() => mkRes(200, {}));
+  const client = makeClient({ fetchImpl, env: { GITHUB_TOKEN: 'ghp_LEGACY' } });
+  await assert.rejects(
+    client.fetchJson('nankan/results/x.json'),
+    (e) => e instanceof SharedFetchError && e.code === SHARED_FETCH_CODES.TOKEN_MISSING,
+  );
+  assert.equal(fetchImpl.calls.length, 0, 'GITHUB_TOKEN fallback 廃止: fetch を呼ばない');
+});
+
+// 30. GITHUB_TOKEN_KEIBA_DATA_SHARED のみ → TOKEN_MISSING、HTTP fetch 未実行
+test('30. GITHUB_TOKEN_KEIBA_DATA_SHARED のみ設定 → TOKEN_MISSING、HTTP fetch 0', async () => {
+  const fetchImpl = mkFetch(() => mkRes(200, {}));
+  const client = makeClient({ fetchImpl, env: { GITHUB_TOKEN_KEIBA_DATA_SHARED: 'ghp_COMPAT' } });
+  await assert.rejects(
+    client.fetchJson('nankan/results/x.json'),
+    (e) => e instanceof SharedFetchError && e.code === SHARED_FETCH_CODES.TOKEN_MISSING,
+  );
+  assert.equal(fetchImpl.calls.length, 0, 'GITHUB_TOKEN_KEIBA_DATA_SHARED fallback 廃止: fetch を呼ばない');
+});
+
+// 31. KEIBA_DATA_SHARED_TOKEN + 旧 token 混在 → KEIBA_DATA_SHARED_TOKEN の値のみ Authorization に使用
+test('31. KEIBA_DATA_SHARED_TOKEN + 旧 token 混在 → KEIBA_DATA_SHARED_TOKEN のみ使用', async () => {
+  const kdsToken = 'ghp_KDS_TOKEN';
+  const fetchImpl = mkFetch(() => mkRes(200, { ok: true }));
+  const client = makeClient({
+    fetchImpl,
+    env: { KEIBA_DATA_SHARED_TOKEN: kdsToken, GITHUB_TOKEN_KEIBA_DATA_SHARED: 'ghp_OLD1', GITHUB_TOKEN: 'ghp_OLD2' },
+  });
+  await client.fetchJson('nankan/results/x.json');
+  const auth = fetchImpl.calls[0].init.headers.Authorization;
+  assert.equal(auth, `Bearer ${kdsToken}`, '旧 token ではなく KEIBA_DATA_SHARED_TOKEN が使われる');
+  assert.ok(!auth.includes('OLD1') && !auth.includes('OLD2'), '旧 token が Authorization に混入しない');
 });
