@@ -713,3 +713,58 @@ test('64. import-results-on-dispatch.yml: verify:sync 呼び出し行に || true
     }
   }
 });
+
+// ---- PR-KI-4c: JRA horseHistories importer 認証移行 ----
+
+const JRA_HH_WORKFLOW = 'import-horse-histories-on-dispatch.yml';
+
+test('65. import-horse-histories-on-dispatch.yml: ファイルが存在する', () => {
+  const existing = readdirSync(WORKFLOWS_DIR);
+  assert.ok(existing.includes(JRA_HH_WORKFLOW), `${JRA_HH_WORKFLOW} が存在しない`);
+});
+
+test('66. import-horse-histories-on-dispatch.yml: import step env に KEIBA_DATA_SHARED_TOKEN が正式設定（YAML構造検証）', () => {
+  const r = verifyTokenInStepEnvByName(JRA_HH_WORKFLOW, 'Import horseHistories from keiba-data-shared');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+test('67. import-horse-histories-on-dispatch.yml: import step env に GITHUB_TOKEN が存在しない（YAML構造検証）', () => {
+  const r = verifyNoGithubTokenInStepEnv(JRA_HH_WORKFLOW, 'Import horseHistories from keiba-data-shared');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `GITHUB_TOKEN が import step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
+
+test('68. import-horse-histories-on-dispatch.yml: continue-on-error が存在しない', () => {
+  const text = readWorkflow(JRA_HH_WORKFLOW);
+  assert.ok(!text.includes('continue-on-error'), `${JRA_HH_WORKFLOW} に continue-on-error が含まれている`);
+});
+
+test('69. import-horse-histories-on-dispatch.yml: checkout 用 GITHUB_TOKEN は維持されている', () => {
+  const text = readWorkflow(JRA_HH_WORKFLOW);
+  assert.ok(text.includes("token: ${{ secrets.GITHUB_TOKEN }}"), 'checkout 用 GITHUB_TOKEN が削除されている');
+});
+
+test('70. import-horse-histories-on-dispatch.yml: repository_dispatch・workflow_dispatch が維持されている', () => {
+  const text = readWorkflow(JRA_HH_WORKFLOW);
+  assert.ok(text.includes('horse-histories-updated'), 'repository_dispatch event type が削除されている');
+  assert.ok(text.includes('workflow_dispatch'), 'workflow_dispatch が削除されている');
+});
+
+test('71. import-horse-histories-on-dispatch.yml: import 呼び出し行に || true が存在しない', () => {
+  const IMPORT_SCRIPTS = ['importHorseHistoriesJra.js', 'import:horse-histories:jra', 'import:horse-histories'];
+  const lines = readWorkflow(JRA_HH_WORKFLOW).split('\n');
+  for (const line of lines) {
+    const hasScript = IMPORT_SCRIPTS.some((s) => line.includes(s));
+    if (hasScript) {
+      assert.ok(
+        !line.includes('|| true'),
+        `${JRA_HH_WORKFLOW}: import 呼び出し行に "|| true" が含まれている → 失敗の exit 0 化になる:\n  ${line.trim()}`,
+      );
+    }
+  }
+});
