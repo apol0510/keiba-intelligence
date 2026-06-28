@@ -654,6 +654,26 @@ function saveArchive(date, venue, raceResults) {
 }
 
 /**
+ * JRA の予想データが keiba-data-shared に存在するか認証付きで確認する。
+ * 404 のみ「存在しない」として false を返す。
+ * 401/403/429/5xx/timeout/malformed は throw（fatal）。anonymous fallback なし。
+ * @param {string} date YYYY-MM-DD
+ * @param {string} venueCode 会場コード (例: TOK)
+ * @param {{client?:object}} [opts]
+ * @returns {Promise<boolean>}
+ */
+async function checkSharedPredictionExists(date, venueCode, { client: _client } = {}) {
+  const [year, month] = date.split('-');
+  const sharedPredictionPath = `jra/predictions/${year}/${month}/${date}-${venueCode}.json`;
+  const sharedClient = _client ?? createSharedClient();
+
+  console.log(`\n🔍 keiba-data-sharedの予想データ存在確認中...`);
+  // 404 → null → false。401/403/429/5xx/timeout は throw（fatal）。
+  const data = await sharedClient.fetchJson(sharedPredictionPath, { ref: 'main', required: false });
+  return data !== null;
+}
+
+/**
  * メイン処理
  */
 async function main() {
@@ -714,55 +734,42 @@ async function main() {
       };
       const venueCode = venueCodeMap[venue] || venue;
 
-      // keiba-data-sharedに予想データが存在するか確認（会場別ファイル）
+      // keiba-data-sharedに予想データが存在するか確認（認証付き / anonymous fallbackなし）
       const [year, month] = date.split('-');
       const sharedPredictionPath = `jra/predictions/${year}/${month}/${date}-${venueCode}.json`;
-      const checkUrl = `https://raw.githubusercontent.com/apol0510/keiba-data-shared/main/${sharedPredictionPath}`;
+      const predictionExists = await checkSharedPredictionExists(date, venueCode);
 
-      try {
-        console.log(`\n🔍 keiba-data-sharedの予想データ存在確認中...`);
-        const checkResponse = await fetch(checkUrl);
+      if (predictionExists) {
+        // 予想データが存在するのに読み込めなかった → 異常
+        console.error(`\n🚨 異常検知：予想データが存在するのに読み込めませんでした！`);
+        console.error(`   keiba-data-shared: ${sharedPredictionPath} (存在)`);
+        console.error(`   keiba-intelligence: 読み込み失敗`);
+        console.error(`   venue: ${venue}`);
+        console.error(`   元のエラー: ${error.message}\n`);
 
-        if (checkResponse.ok) {
-          // 予想データが存在するのに読み込めなかった → 異常
-          console.error(`\n🚨 異常検知：予想データが存在するのに読み込めませんでした！`);
-          console.error(`   keiba-data-shared: ${sharedPredictionPath} (存在)`);
-          console.error(`   keiba-intelligence: 読み込み失敗`);
-          console.error(`   venue: ${venue}`);
-          console.error(`   元のエラー: ${error.message}\n`);
+        // アラート送信（stage/error/message を明示）
+        await sendAlert('import-results-failure', date, {
+          stage: 'fetch-predictions-jra',
+          error: error.message || 'JRA予想データ読み込み失敗',
+          message: `JRA予想データは存在するが読み込みに失敗。venue=${venue}`,
+          stack: error.stack ? String(error.stack).slice(0, 800) : undefined,
+          venue: venue,
+          venueIsUndefined: venue === undefined || venue === 'undefined',
+          sharedPredictionExists: true,
+          sharedPredictionPath: sharedPredictionPath,
+          localSearchPath: error.message
+        }, {
+          variant: 'jra',
+          timestamp: new Date().toISOString(),
+          critical: true
+        });
 
-          // アラート送信（stage/error/message を明示）
-          await sendAlert('import-results-failure', date, {
-            stage: 'fetch-predictions-jra',
-            error: error.message || 'JRA予想データ読み込み失敗',
-            message: `JRA予想データは存在するが読み込みに失敗。venue=${venue}`,
-            stack: error.stack ? String(error.stack).slice(0, 800) : undefined,
-            venue: venue,
-            venueIsUndefined: venue === undefined || venue === 'undefined',
-            sharedPredictionExists: true,
-            sharedPredictionPath: sharedPredictionPath,
-            localSearchPath: error.message
-          }, {
-            variant: 'jra',
-            timestamp: new Date().toISOString(),
-            critical: true
-          });
-
-          // エラーとして終了（修正が必要）
-          process.exit(1);
-        } else {
-          // 予想データが存在しない → 正常（SEO対策用の結果データのみ）
-          console.log(`   keiba-data-sharedにはSEO対策用の結果データのみ保存されています`);
-          console.log(`   keiba-intelligenceでは的中判定をスキップします\n`);
-          console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-          console.log(`⏭️  処理完了: 予想データなし（スキップ）`);
-          console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-          process.exit(0); // 正常終了
-        }
-      } catch (checkError) {
-        // ネットワークエラー等でチェック失敗 → 警告して正常終了
-        console.warn(`⚠️  keiba-data-sharedの予想データ存在確認に失敗（ネットワークエラー？）`);
-        console.warn(`   処理を継続します（予想データなしとして扱います）\n`);
+        // エラーとして終了（修正が必要）
+        process.exit(1);
+      } else {
+        // 予想データが存在しない → 正常（SEO対策用の結果データのみ）
+        console.log(`   keiba-data-sharedにはSEO対策用の結果データのみ保存されています`);
+        console.log(`   keiba-intelligenceでは的中判定をスキップします\n`);
         console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
         console.log(`⏭️  処理完了: 予想データなし（スキップ）`);
         console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
@@ -839,7 +846,7 @@ async function main() {
 }
 
 // テスト用 export（CLI動作は変えない。isDirectRun ガードで main は直接実行時のみ起動する）
-export { fetchSharedResults, fetchAndMergeVenueResults };
+export { fetchSharedResults, fetchAndMergeVenueResults, checkSharedPredictionExists };
 
 const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isDirectRun) main();
