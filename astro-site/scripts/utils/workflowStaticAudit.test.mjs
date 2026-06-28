@@ -259,8 +259,8 @@ test('23. import-on-dispatch.yml: import step env に KEIBA_DATA_SHARED_TOKEN �
   const tokenIdx = text.indexOf(tokenLine);
   assert.ok(tokenIdx > stepIdx, `${tokenLine} が import step より後にない`);
 
-  // GITHUB_TOKEN 維持確認
-  assert.ok(text.includes('GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}'), 'checkout 用 GITHUB_TOKEN が維持されていない');
+  // checkout 用 GITHUB_TOKEN 維持確認（import step env の GITHUB_TOKEN ではなく checkout step の token:）
+  assert.ok(text.includes("token: ${{ secrets.GITHUB_TOKEN }}"), 'checkout 用 GITHUB_TOKEN が削除されている');
 
   // working-directory 不変確認
   assert.ok(text.includes('working-directory: astro-site'), 'working-directory が変更されている');
@@ -284,8 +284,8 @@ test('24. import-prediction-daily.yml: import step env に KEIBA_DATA_SHARED_TOK
   const tokenIdx = text.indexOf(tokenLine);
   assert.ok(tokenIdx > stepIdx, `${tokenLine} が import step より後にない`);
 
-  // GITHUB_TOKEN 維持確認
-  assert.ok(text.includes('GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}'), 'checkout 用 GITHUB_TOKEN が維持されていない');
+  // checkout 用 GITHUB_TOKEN 維持確認（import step env の GITHUB_TOKEN ではなく checkout step の token:）
+  assert.ok(text.includes("token: ${{ secrets.GITHUB_TOKEN }}"), 'checkout 用 GITHUB_TOKEN が削除されている');
 
   // working-directory 不変確認
   assert.ok(text.includes('working-directory: astro-site'), 'working-directory が変更されている');
@@ -767,4 +767,58 @@ test('71. import-horse-histories-on-dispatch.yml: import 呼び出し行に || t
       );
     }
   }
+});
+
+// ---- PR-KI-4e: import step env の GITHUB_TOKEN 除去（3 workflow） ----
+
+const ON_DISPATCH_WORKFLOW = 'import-on-dispatch.yml';
+const PREDICTION_DAILY_WORKFLOW = 'import-prediction-daily.yml';
+const FEATURE_SCORES_WORKFLOW = 'import-feature-scores-on-dispatch.yml';
+
+test('72. import-on-dispatch.yml: import step env に KEIBA_DATA_SHARED_TOKEN が正式設定（YAML構造検証）', () => {
+  const r = verifyTokenInStepEnvByName(ON_DISPATCH_WORKFLOW, 'Sync and import predictions');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+test('73. import-on-dispatch.yml: import step env に GITHUB_TOKEN が存在しない（YAML構造検証）', () => {
+  const r = verifyNoGithubTokenInStepEnv(ON_DISPATCH_WORKFLOW, 'Sync and import predictions');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `GITHUB_TOKEN が import step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
+
+test('74. import-prediction-daily.yml: import step env に KEIBA_DATA_SHARED_TOKEN が正式設定（YAML構造検証）', () => {
+  const r = verifyTokenInStepEnvByName(PREDICTION_DAILY_WORKFLOW, 'Import prediction from keiba-data-shared');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+test('75. import-prediction-daily.yml: import step env に GITHUB_TOKEN が存在しない（YAML構造検証）', () => {
+  const r = verifyNoGithubTokenInStepEnv(PREDICTION_DAILY_WORKFLOW, 'Import prediction from keiba-data-shared');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `GITHUB_TOKEN が import step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
+});
+
+test('76. import-feature-scores-on-dispatch.yml: import step env に KEIBA_DATA_SHARED_TOKEN が正式設定（YAML構造検証）', () => {
+  const r = verifyTokenInStepEnvByName(FEATURE_SCORES_WORKFLOW, 'Import featureScores from keiba-data-shared');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `PyYAML 構造検証失敗: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()} status=${r.status}`,
+  );
+});
+
+test('77. import-feature-scores-on-dispatch.yml: import step env に GITHUB_TOKEN が存在しない（YAML構造検証）', () => {
+  const r = verifyNoGithubTokenInStepEnv(FEATURE_SCORES_WORKFLOW, 'Import featureScores from keiba-data-shared');
+  assert.strictEqual(
+    r.stdout.trim(), 'OK',
+    `GITHUB_TOKEN が import step env に存在する（shared 読取り用途禁止）: stdout=${r.stdout.trim()} stderr=${r.stderr.trim()}`,
+  );
 });

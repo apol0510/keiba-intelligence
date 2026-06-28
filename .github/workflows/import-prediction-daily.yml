@@ -46,7 +46,7 @@ jobs:
 
       - name: Import prediction from keiba-data-shared
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # keiba-data-shared 読み取り専用 PAT（GITHUB_TOKEN fallback 禁止）
           KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
         run: |
           DATE="${{ steps.date.outputs.date }}"
