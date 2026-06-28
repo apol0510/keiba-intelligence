@@ -60,9 +60,8 @@ jobs:
 
       - name: Import featureScores from keiba-data-shared
         env:
-          # keiba-data-shared 読み取り専用 PAT（horseHistories と同じ secret）
+          # keiba-data-shared 読み取り専用 PAT（GITHUB_TOKEN fallback 禁止）
           KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CATEGORY: ${{ github.event.inputs.category }}
           DATE: ${{ github.event.inputs.date }}
           VENUES: ${{ github.event.inputs.venues }}
