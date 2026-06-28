@@ -57,11 +57,9 @@ export class SharedFetchError extends Error {
   }
 }
 
-/** token 解決順（private 化後の正式運用は KEIBA_DATA_SHARED_TOKEN） */
+/** KEIBA_DATA_SHARED_TOKEN のみ正式トークン。旧 fallback（GITHUB_TOKEN_KEIBA_DATA_SHARED / GITHUB_TOKEN）は廃止。 */
 export const TOKEN_ENV_NAMES = Object.freeze([
   'KEIBA_DATA_SHARED_TOKEN',
-  'GITHUB_TOKEN_KEIBA_DATA_SHARED',
-  'GITHUB_TOKEN',
 ]);
 
 /**
@@ -78,7 +76,7 @@ export function resolveSharedToken({ env = process.env } = {}) {
   }
   throw new SharedFetchError(
     SHARED_FETCH_CODES.TOKEN_MISSING,
-    `No shared-repo token in environment. Set one of: ${TOKEN_ENV_NAMES.join(', ')} (KEIBA_DATA_SHARED_TOKEN recommended).`,
+    `No shared-repo token in environment. Set ${TOKEN_ENV_NAMES[0]} as a GitHub Actions secret (GITHUB_TOKEN fallback is disabled).`,
   );
 }
 
