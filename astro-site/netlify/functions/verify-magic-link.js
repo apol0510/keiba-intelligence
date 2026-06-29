@@ -70,7 +70,7 @@ exports.handler = async (event) => {
       .firstPage();
 
     if (tokens.length === 0) {
-      console.error('❌ Token not found:', token);
+      console.error('❌ Token not found');
       return {
         statusCode: 404,
         headers,
@@ -83,7 +83,7 @@ exports.handler = async (event) => {
 
     // 使用済みチェック
     if (tokenData.Used) {
-      console.error('❌ Token already used:', token);
+      console.error('❌ Token already used');
       return {
         statusCode: 403,
         headers,
@@ -93,7 +93,7 @@ exports.handler = async (event) => {
 
     // 有効期限チェック
     if (new Date() > new Date(tokenData.ExpiresAt)) {
-      console.error('❌ Token expired:', token);
+      console.error('❌ Token expired');
       return {
         statusCode: 403,
         headers,
