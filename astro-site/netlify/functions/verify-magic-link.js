@@ -59,7 +59,7 @@ exports.handler = async (event) => {
       };
     }
 
-    console.log('🔐 Verifying token:', token);
+    console.log('🔐 Verifying token: [redacted]');
 
     // 1. トークン検証
     const tokens = await authTokensTable
@@ -111,7 +111,7 @@ exports.handler = async (event) => {
       },
     ]);
 
-    console.log('✅ Token marked as used:', token);
+    console.log('✅ Token marked as used');
 
     // 3. 顧客情報を取得
     const customers = await customersTable
