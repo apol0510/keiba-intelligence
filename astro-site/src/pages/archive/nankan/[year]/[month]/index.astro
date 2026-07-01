@@ -119,8 +119,8 @@ const pageDescription = monthData.length > 0
                   <div class="day-stats">
                     <span class="stat">的中 {Number(dayData.hitRaces) || 0}/{Number(dayData.totalRaces) || 0}R</span>
                     <span class="stat hit-rate">的中率 {Number(dayData.hitRate) || 0}%</span>
-                    {dayData.betPointsPerRace && (
-                      <span class="stat">購入点数 {(Number(dayData.totalRaces) || 0) * (Number(dayData.betPointsPerRace) || 0)}点</span>
+                    {(Number(dayData.totalBetPoints) || 0) > 0 && (
+                      <span class="stat">購入点数 {Number(dayData.totalBetPoints) || 0}点</span>
                     )}
                     {(Number(dayData.totalPayout) || 0) > 0 && (
                       <span class="stat payout-yen">配当 ¥{(Number(dayData.totalPayout) || 0).toLocaleString()}</span>
