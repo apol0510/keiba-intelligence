@@ -11,6 +11,7 @@ import { recentRaceMeta, RECENT_LABELS } from '../../../utils/recentForm.js';
 import { injectHorseHistoriesIntoVenues } from '../../../utils/loadHorseHistoriesJra.js';
 import { loadFeatureScores, getHorseFeatures, hasUsableFeatureScores, venueCodeFromName } from '../../../utils/loadFeatureScores.js';
 import AccordionClickClose from '../../../components/AccordionClickClose.astro';
+import BetDirectionRows from '../../../components/BetDirectionRows.astro';
 
 export const prerender = false;
 
@@ -226,15 +227,8 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
   };
 }
 
-// F3表示: 各軸の相手を「双方向(⇔)グループ=評価上位bidiCount頭」と「前進(→)グループ=残り」に分割。
-// メインレース(forwardAll)は全頭を前進(→)グループへ。
-function f3Groups(axisObj) {
-  if (!axisObj) return { bidi: [], fwd: [] };
-  const opp = Array.isArray(axisObj.opponents) ? axisObj.opponents : [];
-  if (axisObj.forwardAll) return { bidi: [], fwd: opp };
-  const k = axisObj.bidiCount ?? 3;
-  return { bidi: opp.slice(0, k), fwd: opp.slice(k) };
-}
+// F3表示（双方向/一方向の2行分割）は共通コンポーネント BetDirectionRows.astro に集約。
+// bidi/fwd の分割ロジック・内容・順序・件数はコンポーネント側でも不変。
 ---
 
 <BaseLayout
@@ -496,37 +490,7 @@ function f3Groups(axisObj) {
                             <span class="axis-horse-name">{umatanBets.honmei.axisName}</span>
                           </div>
                           <div class="formula-content">
-                            {(() => { const g = f3Groups(umatanBets.honmei); return (
-                              <>
-                                <span class="axis-number">{umatanBets.honmei.axis}</span>
-                                {g.bidi.length > 0 && (
-                                  <>
-                                    <span class="formula-arrow">⇔</span>
-                                    <span class="opponents-list">
-                                      {g.bidi.map((num, idx) => (
-                                        <>
-                                          <span class="opponent-number">{num}</span>
-                                          {idx < g.bidi.length - 1 && <span class="opponent-separator">.</span>}
-                                        </>
-                                      ))}
-                                    </span>
-                                  </>
-                                )}
-                                {g.fwd.length > 0 && (
-                                  <>
-                                    <span class="formula-arrow one-way">→</span>
-                                    <span class="opponents-list">
-                                      {g.fwd.map((num, idx) => (
-                                        <>
-                                          <span class="opponent-number">{num}</span>
-                                          {idx < g.fwd.length - 1 && <span class="opponent-separator">.</span>}
-                                        </>
-                                      ))}
-                                    </span>
-                                  </>
-                                )}
-                              </>
-                            ); })()}
+                            <BetDirectionRows axis={umatanBets.honmei} />
                           </div>
                         </div>
 
@@ -539,37 +503,7 @@ function f3Groups(axisObj) {
                               <span class="axis-horse-name">{umatanBets.taikou.axisName}</span>
                             </div>
                             <div class="formula-content">
-                              {(() => { const g = f3Groups(umatanBets.taikou); return (
-                                <>
-                                  <span class="axis-number">{umatanBets.taikou.axis}</span>
-                                  {g.bidi.length > 0 && (
-                                    <>
-                                      <span class="formula-arrow">⇔</span>
-                                      <span class="opponents-list">
-                                        {g.bidi.map((num, idx) => (
-                                          <>
-                                            <span class="opponent-number">{num}</span>
-                                            {idx < g.bidi.length - 1 && <span class="opponent-separator">.</span>}
-                                          </>
-                                        ))}
-                                      </span>
-                                    </>
-                                  )}
-                                  {g.fwd.length > 0 && (
-                                    <>
-                                      <span class="formula-arrow one-way">→</span>
-                                      <span class="opponents-list">
-                                        {g.fwd.map((num, idx) => (
-                                          <>
-                                            <span class="opponent-number">{num}</span>
-                                            {idx < g.fwd.length - 1 && <span class="opponent-separator">.</span>}
-                                          </>
-                                        ))}
-                                      </span>
-                                    </>
-                                  )}
-                                </>
-                              ); })()}
+                              <BetDirectionRows axis={umatanBets.taikou} />
                             </div>
                           </div>
                         )}
@@ -1352,9 +1286,16 @@ function f3Groups(axisObj) {
 
     .formula-content {
       display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      flex-wrap: wrap;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+    }
+
+    /* スマートフォン: カード内の左右余白を少し縮める（横スクロール防止） */
+    @media (max-width: 480px) {
+      .formula-row {
+        padding: var(--spacing-md);
+      }
     }
 
     .axis-number {
