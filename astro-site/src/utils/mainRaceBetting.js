@@ -1,6 +1,6 @@
-// メインレース専用 馬単買い目ロジック（最大10点・本命軸双方向）
+// メインレース専用 馬単買い目ロジック（一方向5点・本命軸）
 //
-// 仕様:
+// 仕様（KI固有・F3）:
 //   - メインレース判定は getMainRaceNumber() で統一
 //     12R開催 → R11、10R開催 → R9、8R開催 → R7、それ以外は最終レース
 //   - 本命を軸に、相手は本命を除く役割優先で上位5頭まで
@@ -8,8 +8,8 @@
 //   - 5頭未満なら拾えた分だけ生成
 //   - 表示・的中判定・archive保存は同じ1行コンパクト形式
 //     (例: "3-5.7.8.10.12") を共有する。
-//   - 既存の checkUmatanHit が双方向判定するため、
-//     この1行で 本命→相手 / 相手→本命 の合計10点が成立する。
+//   - メインレースは checkUmatanHit を reverseTopK=0（一方向）で判定するため、
+//     本命 → 相手上位5頭の 5点のみが成立する（逆方向・抑えは含まない）。
 
 const ROLE_PRIORITY = { '対抗': 1, '単穴': 2, '連下最上位': 3, '連下': 4 };
 
@@ -68,5 +68,6 @@ export function countMainRaceBetPoints(horses) {
   const honmei = horses.find(h => h && h.role === '本命');
   const honmeiNum = horseNumber(honmei);
   const filtered = partners.filter(p => horseNumber(p) !== honmeiNum);
-  return filtered.length * 2;
+  // メインは一方向5点（軸 → 相手上位5頭）。旧・双方向 ×2 は廃止。
+  return filtered.length;
 }

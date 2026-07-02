@@ -12,6 +12,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import crypto from 'crypto';
 
 import { isMainRace } from '../src/utils/mainRaceBetting.js';
+import { checkUmatanHit } from '../src/utils/umatanHit.js';
 import { createSharedClient, resolveSharedToken } from './lib/sharedFetch.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -348,56 +349,20 @@ function buildDisplayName(race, venue, raceNumber) {
   return fallback;
 }
 
-/**
- * 馬単の的中判定
- */
-function checkUmatanHit(bettingLine, result) {
-  // 買い目解析: "4-1.11.2.5.7.9(抑え10.8.6)"
-  const match = bettingLine.match(/^(\d+)-(.+)$/);
-  if (!match) return false;
-
-  const axis = parseInt(match[1]);
-  const aitePart = match[2];
-
-  // 本線相手馬を抽出
-  const mainPart = aitePart.replace(/\(抑え.+\)/, '');
-  const mainAite = mainPart.split('.').map(n => parseInt(n)).filter(n => !isNaN(n));
-
-  // 抑え馬を抽出
-  let osaeAite = [];
-  const osaeMatch = aitePart.match(/\(抑え([0-9.]+)\)/);
-  if (osaeMatch) {
-    osaeAite = osaeMatch[1].split('.').map(n => parseInt(n)).filter(n => !isNaN(n));
-  }
-
-  // 全相手馬（本線+抑え）
-  const allAite = [...mainAite, ...osaeAite];
-
-  // 1着と2着を取得
-  const first = result.results[0]?.number;
-  const second = result.results[1]?.number;
-
-  if (!first || !second) return false;
-
-  // 馬単判定（2パターン）
-  // パターン1: 軸が1着、相手が2着
-  if (axis === first && allAite.includes(second)) {
-    return true;
-  }
-
-  // パターン2: 相手が1着、軸が2着
-  if (allAite.includes(first) && axis === second) {
-    return true;
-  }
-
-  return false;
-}
+// 馬単 F3 的中判定は単一源 src/utils/umatanHit.js の checkUmatanHit を使用（importResults.js と共通）。
 
 /**
  * 的中判定メイン処理
  */
 function verifyResults(prediction, results) {
   const raceResults = [];
+
+  // 会場別レース数（メインレース判定用: 会場は結果データの生の venue 文字列でグルーピング）
+  const venueRaceCount = {};
+  for (const rr of results.races) {
+    const v = rr.venue || '';
+    venueRaceCount[v] = (venueRaceCount[v] || 0) + 1;
+  }
 
   // 予想データの形式を判定（新形式 venues[] or 旧形式 predictions/races[]）
   let predictionRaces = [];
@@ -465,7 +430,10 @@ function verifyResults(prediction, results) {
     }
 
     const bettingLines = predRace.bettingLines?.umatan || [];
-    const hits = bettingLines.filter(line => checkUmatanHit(line, race));
+    // F3方向ルール: メイン=一方向(reverseTopK=0) / 通常=前進+評価上位3位逆方向(reverseTopK=3)
+    const venueRaces = venueRaceCount[raceVenue || ''] || results.races.length;
+    const reverseTopK = isMainRace(normalizedRaceNumber, venueRaces) ? 0 : 3;
+    const hits = bettingLines.filter(line => checkUmatanHit(line, race, reverseTopK));
 
     // 買い目点数を計算（全ラインの合計）
     const totalPoints = bettingLines.reduce((sum, line) => sum + calculateBettingPoints(line), 0);
@@ -539,22 +507,13 @@ function saveArchive(date, venue, raceResults) {
   const hitRate = totalRaces > 0 ? (hitRaces / totalRaces * 100).toFixed(1) : '0.0';
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 払戻金計算（4段階可変点数方式・実レース数ベース）
-  //   totalPayout >= races × 12 × 100 → 12点
-  //   totalPayout >= races × 10 × 100 → 10点
-  //   totalPayout >= races ×  8 × 100 → 8点
-  //   totalPayout >= races ×  6 × 100 → 6点
-  //   それ以下 → 6点（下限・マイナス受容）
-  // 詳細: BET_POINT_LOGIC.md 参照
+  // 投資額計算（全レース1レース5点固定・実レース数ベース）
+  //   1レース5点 × 100円。投資額 = 実レース数 × 5 × 100（採用有無に不依存の定数）。
+  //   例: 36レース → 180点・18,000円。
+  //   DP・目標回収率(165%等)・上限(200%等)は使用しない。的中候補は全件を公開実績へ算入する。
+  //   （旧・4段階可変点数方式 6/8/10/12 は廃止）詳細: BET_POINT_LOGIC.md 参照
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  function getBetPoints(totalPayout, races) {
-    if (races <= 0) return 6;
-    if (totalPayout >= races * 12 * 100) return 12;
-    if (totalPayout >= races * 10 * 100) return 10;
-    if (totalPayout >= races *  8 * 100) return 8;
-    if (totalPayout >= races *  6 * 100) return 6;
-    return 6;
-  }
+  const BET_POINTS_PER_RACE = 5;
 
   const totalPayout = raceResults.reduce((sum, race) => {
     if (race.isHit && race.umatan.payout) {
@@ -565,30 +524,17 @@ function saveArchive(date, venue, raceResults) {
     return sum;
   }, 0);
 
-  const betPointsPerRace = getBetPoints(totalPayout, totalRaces);
+  const betPointsPerRace = BET_POINTS_PER_RACE;
   const betAmount = totalRaces * betPointsPerRace * 100;
   const returnRate = betAmount > 0 ? ((totalPayout / betAmount) * 100) : 0;
 
-  console.log(`\n📊 買い目点数判定: ${totalRaces}R × ${betPointsPerRace}点 = ${betAmount.toLocaleString()}円 / 払戻 ${totalPayout.toLocaleString()}円 → 回収率 ${returnRate.toFixed(1)}%`);
+  console.log(`\n📊 投資点数(5点固定): ${totalRaces}R × ${betPointsPerRace}点 = ${betAmount.toLocaleString()}円 / 払戻 ${totalPayout.toLocaleString()}円 → 回収率 ${returnRate.toFixed(1)}%`);
 
-  // メインレースは実際の買い目本数 (本命軸 × 上位5頭 × 双方向 = 最大10点) を per-race に記録
-  // JRAは複数会場開催が前提のため、会場別にレース数を数える
-  const racesByVenue = new Map();
-  for (const r of raceResults) {
-    const key = r.venue || '';
-    racesByVenue.set(key, (racesByVenue.get(key) || 0) + 1);
-  }
+  // race 単位に betType / betPoints（投資基準=全レース5点固定）を埋め込む。
+  // 表示買い目の実点数（メイン=一方向5点 / 通常=前進+上位3逆方向）とは分離した、回収率計算上の基準点数。
   for (const race of raceResults) {
-    const venueRaces = racesByVenue.get(race.venue || '') || totalRaces;
-    if (!isMainRace(race.raceNumber, venueRaces)) continue;
-    const lines = Array.isArray(race.bettingLines) ? race.bettingLines : [];
-    const firstLine = lines[0] || '';
-    const m = firstLine.match(/^(\d+)-(.+)$/);
-    if (!m) continue;
-    const aitePart = m[2].replace(/\(抑え.+\)/, '');
-    const partners = aitePart.split('.').filter(s => s.length > 0);
-    race.betPoints = partners.length * 2;
     race.betType = '馬単';
+    race.betPoints = betPointsPerRace;
   }
 
   // 最終的な回収率（小数点1桁）

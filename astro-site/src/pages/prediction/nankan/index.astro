@@ -173,10 +173,13 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
       .map(h => h.horseNumber ?? h.number)
       .filter(n => n != null && n !== honmei.horseNumber);
     return {
+      // メインレース: 本命軸 → 相手上位5頭の一方向（F3・抑えなし）
       honmei: {
         axis: honmei.horseNumber,
         axisName: honmei.horseName,
-        opponents
+        opponents,
+        forwardAll: true,
+        bidiCount: 0
       },
       taikou: null
     };
@@ -211,18 +214,33 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
   const honmeiOpponents = buildOpponents('honmei');
   const taikouOpponents = buildOpponents('taikou');
 
+  // 通常レース(F3): 各軸 → 相手全頭の前進 + 評価上位1〜3位のみ双方向。抑えなし。
   return {
     honmei: {
       axis: honmei.horseNumber,
       axisName: honmei.horseName,
-      opponents: honmeiOpponents
+      opponents: honmeiOpponents,
+      forwardAll: false,
+      bidiCount: 3
     },
     taikou: {
       axis: taikou.horseNumber,
       axisName: taikou.horseName,
-      opponents: taikouOpponents
+      opponents: taikouOpponents,
+      forwardAll: false,
+      bidiCount: 3
     }
   };
+}
+
+// F3表示: 各軸の相手を「双方向(⇔)グループ=評価上位bidiCount頭」と「前進(→)グループ=残り」に分割。
+// メインレース(forwardAll)は全頭を前進(→)グループへ。
+function f3Groups(axisObj) {
+  if (!axisObj) return { bidi: [], fwd: [] };
+  const opp = Array.isArray(axisObj.opponents) ? axisObj.opponents : [];
+  if (axisObj.forwardAll) return { bidi: [], fwd: opp };
+  const k = axisObj.bidiCount ?? 3;
+  return { bidi: opp.slice(0, k), fwd: opp.slice(k) };
 }
 ---
 
@@ -472,28 +490,37 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                             <span class="axis-horse-name">{umatanBets.honmei.axisName}</span>
                           </div>
                           <div class="formula-content">
-                            <span class="axis-number">{umatanBets.honmei.axis}</span>
-                            <span class="formula-arrow">⇔</span>
-                            <span class="opponents-list">
-                              {umatanBets.honmei.opponents.slice(0, 5).map((num, idx) => (
-                                <>
-                                  <span class="opponent-number">{num}</span>
-                                  {idx < Math.min(4, umatanBets.honmei.opponents.length - 1) && <span class="opponent-separator">.</span>}
-                                </>
-                              ))}
-                              {umatanBets.honmei.opponents.length > 5 && (
-                                <>
-                                  <span class="opponent-paren">(</span>
-                                  {umatanBets.honmei.opponents.slice(5).map((num, idx) => (
-                                    <>
-                                      <span class="opponent-number optional">{num}</span>
-                                      {idx < umatanBets.honmei.opponents.slice(5).length - 1 && <span class="opponent-separator">.</span>}
-                                    </>
-                                  ))}
-                                  <span class="opponent-paren">)</span>
-                                </>
-                              )}
-                            </span>
+                            {(() => { const g = f3Groups(umatanBets.honmei); return (
+                              <>
+                                <span class="axis-number">{umatanBets.honmei.axis}</span>
+                                {g.bidi.length > 0 && (
+                                  <>
+                                    <span class="formula-arrow">⇔</span>
+                                    <span class="opponents-list">
+                                      {g.bidi.map((num, idx) => (
+                                        <>
+                                          <span class="opponent-number">{num}</span>
+                                          {idx < g.bidi.length - 1 && <span class="opponent-separator">.</span>}
+                                        </>
+                                      ))}
+                                    </span>
+                                  </>
+                                )}
+                                {g.fwd.length > 0 && (
+                                  <>
+                                    <span class="formula-arrow one-way">→</span>
+                                    <span class="opponents-list">
+                                      {g.fwd.map((num, idx) => (
+                                        <>
+                                          <span class="opponent-number">{num}</span>
+                                          {idx < g.fwd.length - 1 && <span class="opponent-separator">.</span>}
+                                        </>
+                                      ))}
+                                    </span>
+                                  </>
+                                )}
+                              </>
+                            ); })()}
                           </div>
                         </div>
 
@@ -506,28 +533,37 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                               <span class="axis-horse-name">{umatanBets.taikou.axisName}</span>
                             </div>
                             <div class="formula-content">
-                              <span class="axis-number">{umatanBets.taikou.axis}</span>
-                              <span class="formula-arrow">⇔</span>
-                              <span class="opponents-list">
-                                {umatanBets.taikou.opponents.slice(0, 5).map((num, idx) => (
-                                  <>
-                                    <span class="opponent-number">{num}</span>
-                                    {idx < Math.min(4, umatanBets.taikou.opponents.length - 1) && <span class="opponent-separator">.</span>}
-                                  </>
-                                ))}
-                                {umatanBets.taikou.opponents.length > 5 && (
-                                  <>
-                                    <span class="opponent-paren">(</span>
-                                    {umatanBets.taikou.opponents.slice(5).map((num, idx) => (
-                                      <>
-                                        <span class="opponent-number optional">{num}</span>
-                                        {idx < umatanBets.taikou.opponents.slice(5).length - 1 && <span class="opponent-separator">.</span>}
-                                      </>
-                                    ))}
-                                    <span class="opponent-paren">)</span>
-                                  </>
-                                )}
-                              </span>
+                              {(() => { const g = f3Groups(umatanBets.taikou); return (
+                                <>
+                                  <span class="axis-number">{umatanBets.taikou.axis}</span>
+                                  {g.bidi.length > 0 && (
+                                    <>
+                                      <span class="formula-arrow">⇔</span>
+                                      <span class="opponents-list">
+                                        {g.bidi.map((num, idx) => (
+                                          <>
+                                            <span class="opponent-number">{num}</span>
+                                            {idx < g.bidi.length - 1 && <span class="opponent-separator">.</span>}
+                                          </>
+                                        ))}
+                                      </span>
+                                    </>
+                                  )}
+                                  {g.fwd.length > 0 && (
+                                    <>
+                                      <span class="formula-arrow one-way">→</span>
+                                      <span class="opponents-list">
+                                        {g.fwd.map((num, idx) => (
+                                          <>
+                                            <span class="opponent-number">{num}</span>
+                                            {idx < g.fwd.length - 1 && <span class="opponent-separator">.</span>}
+                                          </>
+                                        ))}
+                                      </span>
+                                    </>
+                                  )}
+                                </>
+                              ); })()}
                             </div>
                           </div>
                         )}
