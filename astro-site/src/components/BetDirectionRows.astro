@@ -7,9 +7,10 @@
 // bidi/fwd の内容・順序・件数は importResults 側の判定と同一（表示専用の再分割）。
 //
 // レイアウト:
-//   - 1行目: 双方向  軸 ⇔ 相手（bidi があるときのみ）
-//   - 2行目: 一方向  軸 → 相手（fwd があるときのみ）
-//   メインレースは fwd のみ = 一方向1行だけ（双方向の空行は出さない）。
+//   - 1行目: 軸 ⇔ 相手（双方向・bidi があるときのみ）
+//   - 2行目: 軸 → 相手（一方向・fwd があるときのみ）
+//   メインレースは fwd のみ = 一方向1行だけ（空行は出さない）。
+//   方向は矢印（⇔ / →）で判別する（種別バッジは表示しない）。
 const { axis } = Astro.props;
 
 function f3Groups(axisObj) {
@@ -26,7 +27,6 @@ const axisNum = axis?.axis;
 
 {g.bidi.length > 0 && (
   <div class="bet-direction-row bidirectional">
-    <span class="direction-label bidi-label">双方向</span>
     <span class="axis-number">{axisNum}</span>
     <span class="formula-arrow bidi-arrow">⇔</span>
     <span class="opponents-list">
@@ -42,7 +42,6 @@ const axisNum = axis?.axis;
 
 {g.fwd.length > 0 && (
   <div class="bet-direction-row one-directional">
-    <span class="direction-label oneway-label">一方向</span>
     <span class="axis-number">{axisNum}</span>
     <span class="formula-arrow oneway-arrow">→</span>
     <span class="opponents-list">
@@ -57,43 +56,19 @@ const axisNum = axis?.axis;
 )}
 
 <style>
-  /* ラベル列と買い目列を分離。ラベル/軸/矢印は同一行に固定し、相手番号だけ折り返す。 */
+  /* 軸/矢印は同一行に固定し、相手番号だけ折り返す。方向は矢印で判別（バッジなし）。 */
   .bet-direction-row {
     display: grid;
-    grid-template-columns: max-content max-content max-content minmax(0, 1fr);
+    grid-template-columns: max-content max-content minmax(0, 1fr);
     align-items: start;
     gap: 4px 8px;
     padding: 4px 0;
   }
 
-  /* ラベル・軸・矢印を相手番号1行目の高さに合わせて中央寄せ（相手が折り返しても先頭行と揃う） */
-  .direction-label,
+  /* 軸・矢印を相手番号1行目の高さに合わせる（相手が折り返しても先頭行と揃う） */
   .axis-number,
   .formula-arrow {
     align-self: start;
-  }
-
-  .direction-label {
-    font-size: 0.7rem;
-    font-weight: 800;
-    letter-spacing: 1px;
-    padding: 3px 8px;
-    border-radius: 999px;
-    white-space: nowrap;
-    text-align: center;
-  }
-
-  /* 双方向は既存の黄色系アクセントを維持 */
-  .bidi-label {
-    color: #1f2937;
-    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-  }
-
-  /* 一方向は色を強くしすぎず、ラベルで区別（コントラストは確保） */
-  .oneway-label {
-    color: var(--text-secondary, #cbd5e1);
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.18);
   }
 
   /* 軸番号は相手番号との視覚差を縮めるため従来(2rem)より小さめに */
@@ -116,6 +91,7 @@ const axisNum = axis?.axis;
     justify-self: center;
   }
 
+  /* 双方向=黄色系アクセント / 一方向=中間色（矢印の色でも方向を補助） */
   .bidi-arrow {
     color: #fbbf24;
   }
@@ -155,11 +131,6 @@ const axisNum = axis?.axis;
   @media (max-width: 480px) {
     .bet-direction-row {
       gap: 3px 6px;
-    }
-    .direction-label {
-      font-size: 0.62rem;
-      padding: 2px 6px;
-      letter-spacing: 0;
     }
     .axis-number {
       font-size: 1.15rem;
