@@ -1,96 +1,77 @@
-# BET POINT LOGIC（購入点数ロジック）
+# BET POINT LOGIC（購入点数・回収率ロジック）
 
 > archiveResults における購入点数と回収率の算出仕様。
-> 実装: `astro-site/scripts/importResults.js` / `importResultsJra.js`
+> 実装: `astro-site/src/lib/recoverySelection.js`（単一源）を
+> `astro-site/scripts/importResults.js` / `importResultsJra.js` / `recalc-bet-points.mjs` から呼ぶ。
+> **AK（analytics-keiba）と KI（keiba-intelligence）で本ロジックは同一**。
+> `src/lib/recoverySelection.js` は両リポジトリで byte-identical とし、同一テストベクタで出力一致を保証する。
 
 ## 適用範囲
 
-**南関と中央（JRA）の両方に同一ロジックを適用する**。両者で閾値・点数・計算式は同じ。
+**南関馬単と中央（JRA）馬単の両方に同一ロジックを適用する**。三連複は対象外（別系統）。
 
 | 区分 | 取込スクリプト | 保存先ファイル |
 |---|---|---|
 | 南関（大井 / 川崎 / 船橋 / 浦和） | `scripts/importResults.js` | `src/data/archiveResults.json` |
 | 中央（JRA） | `scripts/importResultsJra.js` | `src/data/archiveResultsJra.json` |
 
-JRA は 1 日に複数会場（中山・阪神・福島 等）が並走するため、`races[]` には全会場のレースが
-混在した状態で保存される。点数判定は**全会場まとめて 1 日単位**で行う（venue 別の投資分割はしない）。
+点数判定・回収率は**開催（＝1日エントリ、会場マージ後）単位**で確定する（venue 別の投資分割はしない）。
 
-## 概要
+## 概要（固定6点・案2「150%目標最近傍」）
 
-archiveResults における購入点数は固定値ではなく、**払戻と実レース数に応じた 4 段階可変方式**を採用する。
+- **1レース6点固定・1点100円**。開催投資額 = `実レース数 × 6 × 100`（採用有無に不依存の定数）。
+- 現Premium買い目の的中（candidate）から、**開催回収率が 150% に最も近づく採用集合を開催終了後に確定**する。
+- **採用されたレースだけを公開実績上の的中（isHit）**とし、
+  的中数・的中率・payout・totalPayout・回収率を**単一の最終判定へ統一**する。
+- 制約: 採用払戻合計 ≤ **200%** × 投資額（200% 超は採用しない）。
+- 目的順位: ① 200% 以下 → ② 150% との差最小 → ③ 同距離なら回収率が高い → ④ 決定的 tie-break（早いレース採用）。
+- **全候補を採用しても 150% 未満なら全採用**（不必要に除外しない）。
+- 上限付き部分集合和 **DP**（10円単位可能なら10円単位）で決定的に解く。O(n × cap/unit)。
+- 同一入力 → 同一出力（決定的・冪等）。
 
-各段階の閾値は「その点数で投資した場合に回収率がちょうど 100% となる金額」であり、
-**回収率 100% 以上を維持できる最大の点数を選択する**。下限は 6 点（マイナス受容）。
+## 候補と公開の分離
 
-## 判定ロジック
+| 概念 | フィールド | 説明 |
+|---|---|---|
+| 候補判定 | `race.candidateHit` / `race.candidatePayout` / `race.candidateHitLines` | 現Premium買い目に着順が含まれたか（内部・監査用） |
+| 公開判定 | `race.isHit` / `race.payout` / `race.hitLines` | 案2で採用されたか（公開・的中率/払戻/回収率が参照） |
+| 対象外理由 | `race.selectionReason` | `null` / `not-selected-by-nearest-target-v1` / `exceeds-200-cap` |
 
-```js
-function getBetPoints(totalPayout, races) {
-  if (races <= 0) return 6;
-  if (totalPayout >= races * 12 * 100) return 12;
-  if (totalPayout >= races * 10 * 100) return 10;
-  if (totalPayout >= races *  8 * 100) return 8;
-  if (totalPayout >= races *  6 * 100) return 6;
-  return 6; // 下限（安全側）
-}
-```
+- 公開 `isHit` は案2採用結果。採用レースのみ `payout = umatan.payout`、不採用は `payout = 0`。
+- **払戻原本は破壊しない**: `umatan.payout` / `result` / `bettingLines` は不変（旧・月次形式の top-level payout も候補払戻の原本として保持）。
+- **冪等性**: 候補源は `candidateHit` を優先し、案2適用後の公開 `isHit` からは候補を逆算しない。
+  よって `recalc-bet-points.mjs` を複数回実行しても候補数・選択・回収率は減少しない。
 
-| 段階 | 閾値（払戻） | 1レース点数 | この段階での回収率 |
-|---|---|---|---|
-| ④ | `≥ races × 12 × 100円` | **12点** | 100% 以上 |
-| ③ | `≥ races × 10 × 100円` | **10点** | 100% 以上 |
-| ② | `≥ races ×  8 × 100円` | **8点**  | 100% 以上 |
-| ① | `≥ races ×  6 × 100円` | **6点**  | 100% 以上 |
-| ⓪ | それ以下 | **6点**（下限） | 100% 未満（マイナス受容） |
-
-## 計算式
-
-```js
-const totalPayout       = (的中レースの払戻合計);
-const races             = totalRaces;          // 実レース数（南関=12, JRA 3会場=36）
-const betPointsPerRace  = getBetPoints(totalPayout, races);
-const totalBetPoints    = races * betPointsPerRace;
-const totalInvestment   = totalBetPoints * 100; // 1点 = 100円
-const recoveryRate      = Math.round((totalPayout / totalInvestment) * 1000) / 10;
-```
-
-## 出力フィールド
+## 出力フィールド（day 単位）
 
 | フィールド | 例 | 説明 |
 |---|---|---|
-| `betPointsPerRace` | `12` | 1レースあたりの買い目点数 |
-| `totalBetPoints`   | `144` | 合計買い目点数（races × betPointsPerRace） |
-| `totalInvestment`  | `14400` | 合計投資額（円・= betAmount のエイリアス） |
-| `betAmount`        | `14400` | 合計投資額（円・互換用） |
-| `totalPayout`      | `25260` | 合計払戻（円・実額）|
-| `recoveryRate`     | `175.4` | 回収率（%・小数1桁）|
-| `returnRate`       | `175.4` | 回収率（%・recoveryRate と同値） |
+| `betPointsPerRace` | `6` | 1レース固定点数 |
+| `totalBetPoints` | `72` | `totalRaces × 6` |
+| `totalInvestment` / `betAmount` | `7200` | 投資額（円・= `totalRaces × 6 × 100`） |
+| `totalPayout` | `10800` | 公開合計払戻（= 採用レースの payout 合計） |
+| `returnRate` / `recoveryRate` | `150.0` | 回収率（%・= `totalPayout / betAmount × 100` ≤ 200） |
+| `hitRaces` / `missRaces` / `hitRate` | `4` / `8` / `33.3` | 公開的中数・不的中数・的中率（採用ベース） |
+| `candidateHitRaces` | `9` | 候補的中数（監査用） |
+| `rawTotalPayout` | `46680` | 候補払戻合計（監査用） |
+| `recoverySelection` | `{method:'nearest-150', version:'v1', targetPct:150, capPct:200, reachedTarget, fullyAdopted}` | 選定メタ |
 
-## 計算例
+## 恒等式（各開催・月間・通算で成立）
 
-### 南関（12R）
-
-| ケース | 払戻 | 点数 | 投資 | 回収率 |
-|---|---|---|---|---|
-| 低配当日 | ¥5,000  | 6点  | ¥7,200  | 69.4%  |
-| 境界（6点） | ¥7,200  | 6点  | ¥7,200  | 100.0% |
-| 境界（8点） | ¥9,600  | 8点  | ¥9,600  | 100.0% |
-| 中配当 | ¥12,000 | 10点 | ¥12,000 | 100.0% |
-| 高配当 | ¥25,260 | 12点 | ¥14,400 | 175.4% |
-
-### JRA 3会場（36R）
-
-| ケース | 払戻 | 点数 | 投資 | 回収率 |
-|---|---|---|---|---|
-| 低配当日 | ¥15,000 | 6点  | ¥21,600 | 69.4% |
-| 境界（6点） | ¥21,600 | 6点  | ¥21,600 | 100.0% |
-| 境界（8点） | ¥28,800 | 8点  | ¥28,800 | 100.0% |
-| 高配当 | ¥53,720 | 12点 | ¥43,200 | 124.4% |
+```
+totalPayout === Σ races[].payout（isHit=true のみ）
+hitRaces    === races[].filter(isHit).length
+missRaces   === totalRaces − hitRaces
+hitRate     === hitRaces / totalRaces × 100
+betAmount   === totalRaces × 6 × 100
+returnRate  === recoveryRate === totalPayout / betAmount × 100   （≤ 200）
+不採用候補の payout === 0
+```
 
 ## 設計原則
 
-- **実レース数ベース**: `races` は実データから取得。固定 12R 前提は禁止
-- **6〜12点に収める**: 12 点を超えない（ユーザー離脱防止）
-- **払戻を加工しない**: キャップなど一切なし、実払戻をそのまま使用
-- **南関と JRA で同一ロジック**: カテゴリ別ロジック禁止
-- **日単位で再計算**: 取込のたびに当日分を再評価
+- **1レース6点固定**（旧・4段階可変 6/8/10/12 は廃止）。
+- **公開＝採用に統一**: 「的中表示だが払戻を回収率に含めない」状態を作らない。
+- **払戻を加工しない**: 原本 `umatan.payout` は保持。回収率の分子は採用払戻の実額合計。
+- **南関と JRA で同一ロジック**・**AK と KI で同一実装**（単一源 `recoverySelection.js`）。
+- **開催単位で確定**（開催終了後・全レース結果確定後に再計算）。
