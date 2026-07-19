@@ -665,3 +665,120 @@ computer/形式でimport
 エラー、想定外差分、安全条件違反がある場合のみ、必要なログを提示すること。
 
 各リポジトリ固有の安全条件、伝播確認、本番確認、取得回数、rollback条件など、既存の必須報告項目は省略しないこと。
+
+---
+
+## 🤖 Autonomous Delivery Workflow 🤖
+
+Claudeは本プロジェクトにおいて、単なる調査担当や途中監査担当ではなく、完成条件まで進める実装担当として行動する。
+
+本節は既存ルールを **置き換えない**。上記の「🚨 最重要：AI作業ルール 🚨」「🛡️ 旧フォーマット禁止ルール 🛡️」
+「📋 結果システム変更時の参照義務 📋」「🚨 プロジェクト識別ルール 🚨」は引き続きすべて有効であり、
+本節はその上での **進め方（どこまで止まらずに進むか）** を定める。
+
+### Canonical documents
+
+作業開始時に必ず次を読む。
+
+- `docs/spec.md` — 仕様の正本（スコープ・境界・契約・完成条件・禁止変更）
+- `docs/progress.md` — 進捗の正本
+- `docs/decisions.md` — 設計判断の正本
+- `CLAUDE.md`（本ファイル） — 運用ルールの正本
+
+領域別の正本（`BET_POINT_LOGIC.md` / `docs/DATA_FORMAT.md` / `docs/RESULTS_SYSTEM_ARCHITECTURE.md` /
+`docs/MULTI_VENUE_CHECK.md` / `docs/AI_RULES.md` / `docs/INTELLIGENCE_DISPLAY_SPEC.md` /
+`docs/ui-cross-plan-regression-policy.md`）は従来どおり各領域の正本である。
+上記「📚 参照すべきドキュメント一覧 📚」と `docs/spec.md` 冒頭の正本対応表を参照すること。
+`DESIGN.md` は 2026-01-09 時点の初期設計であり、**現行仕様の根拠には使わない**（歴史的資料）。
+
+仕様・進捗・設計判断が競合する場合は、勝手に推測せず、git履歴と実装証拠を調査して整合させる。
+整合できない矛盾は `docs/progress.md` の Open Questions に記録する。
+
+### Continuous execution
+
+次の低・中リスク工程は、重大停止条件がない限り、中間承認なしで連続実行する。
+
+- read-only調査 / 設計 / 実装
+- unit test / integration test / lint / typecheck / 非本番build
+- 文書更新 / 通常commit / 通常push / Draft PR作成
+- PR差分の自己監査 / 可逆的な修正 / テスト失敗の原因修正
+
+コード、git履歴、既存文書、テストから判断できる内容を、ユーザーへ質問しない。
+小さな判断や軽微な不明点ごとに停止しない。「一旦停止します」「承認をください」を繰り返さない。
+同一HEAD・同一差分・同一テスト結果を理由なく何度も再監査しない。
+
+ただし連続実行は **依頼されたタスクの完了条件の範囲内に限る**。
+「指示されていない変更を勝手に広げない」（上記 AI作業の絶対禁止事項 2）は連続実行より優先する。
+また「完了条件を満たさない完了宣言の禁止」（同 3）も維持する。連続実行は完了宣言の前倒しを許すものではない。
+
+### High-risk approval boundary
+
+次の操作は、直前でのみ停止し、実施内容・対象・影響・rollback手順・検証結果を一括報告する。
+
+- production deploy（Netlify 本番デプロイ）/ production環境変数またはsecret変更
+- 本番メール・メルマガ・アラート・通知の送信（SendGrid 経由を含む）
+- 本番DB・Airtable・Netlify Blobs・外部APIへの書込み
+- `keiba-data-shared` への本番PUT / workflow dispatch / repository_dispatch 送出
+- package公開・registry公開（npm publish等）
+- production reader・transport・モデル・artifact・champion・datastoreの切替
+- PR merge / データ削除 / rollback困難なmigration
+- force push / reset / rebase / amend / 履歴改変
+- 課金・契約・会員権限への本番変更
+
+高リスク操作に到達する前の安全な工程は完了させる。
+
+### Immediate stop conditions
+
+次の場合は即時停止する。
+
+- secret・token・認証値が出力される可能性（`KEIBA_DATA_SHARED_TOKEN` 等の **値** は文書・ログへ出さない。名前のみ扱う）
+- 対象外リポジトリまたは対象外ファイルへの予期しない変更
+- 本番データ破損の可能性 / 二重送信または重複実行の可能性 / rollback不能
+- 現行API・schema・consumer contractの破壊
+  （`keiba-data-shared` の JSON 契約、`archiveResults` の `races`/`isHit`/`hitLines` 形式、`netlify.toml` の 301 群を含む）
+- origin・branch・HEAD・対象日・会場・件数等の前提不一致
+- 未知の既存変更との競合 / merge conflict
+- test・lint・typecheck・buildの失敗を安全に解消できない
+- 別リポジトリの仕様を誤って適用する可能性
+  （姉妹プロダクトとの境界は上記「analytics-keiba との関係（独立運用、2026-05-23〜）」節が正本）
+
+### Repository isolation
+
+複数プロジェクトを扱う場合も、各リポジトリを独立して扱う。
+変更前の現在地確認は上記「🚨 プロジェクト識別ルール 🚨 / セッション開始時の必須確認」に従い、
+最低限次を確認する。
+
+```
+pwd
+git rev-parse --show-toplevel
+git remote get-url origin
+git branch --show-current
+git rev-parse HEAD
+git status --short
+```
+
+origin が `https://github.com/apol0510/keiba-intelligence` であることを確認する。
+
+別リポジトリの変更が必要な場合は、現在のリポジトリから勝手に移動して同時変更せず、
+依存変更として `docs/progress.md` へ記録する。
+横断変更が明示的に承認されたタスクでは、リポジトリごとに独立したbranch・commit・Draft PRを作成する。
+
+### Progress maintenance
+
+- 作業開始時と各Phase完了時に `docs/progress.md` を更新する。
+- 重要な設計判断を行った場合は `docs/decisions.md` を更新する。
+  理由が記録に残っていない既存判断は、理由を創作せず「履歴上は採用済みだが理由は未確認」と明記する。
+- 仕様変更が承認された場合のみ `docs/spec.md` を更新する。
+
+### Completion report
+
+最終報告は上記「完了報告の簡潔化」の形式を維持したうえで、次を簡潔に示す。
+
+1. 完成した内容
+2. 変更ファイル
+3. test / lint / typecheck / build 結果
+4. branch / commit / Draft PR
+5. 未実施の高リスク操作
+6. blocker
+7. 次に必要な承認
+8. `docs/progress.md` の現在地
