@@ -685,10 +685,9 @@ Claudeは本プロジェクトにおいて、単なる調査担当や途中監�
 - `docs/decisions.md` — 設計判断の正本
 - `CLAUDE.md`（本ファイル） — 運用ルールの正本
 
-> **注意**: `docs/spec.md` / `docs/progress.md` / `docs/decisions.md` の 3 本は、本節を追加した PR #69
-> （branch `docs/autonomous-project-workflow`）で新規追加されたものであり、**main へマージされるまでは
-> 当該branch上にしか存在しない**。マージ前の時点で「リポジトリ恒久の正本」として扱わないこと。
-> これらが存在しない場合は、下記「📚 参照すべきドキュメント一覧 📚」と既存の領域別文書を正本とする。
+> **注意**: `docs/spec.md` / `docs/progress.md` / `docs/decisions.md` の 3 本は、本節とあわせて PR #69 で
+> 新規追加された、それぞれ仕様 / 進捗 / 設計判断のリポジトリ正本である。
+> これらが参照できない場合は、下記「📚 参照すべきドキュメント一覧 📚」と既存の領域別文書を正本とする。
 
 領域別の正本（`BET_POINT_LOGIC.md` / `docs/DATA_FORMAT.md` / `docs/RESULTS_SYSTEM_ARCHITECTURE.md` /
 `docs/MULTI_VENUE_CHECK.md` / `docs/AI_RULES.md` / `docs/INTELLIGENCE_DISPLAY_SPEC.md` /
