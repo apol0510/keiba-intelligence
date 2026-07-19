@@ -685,6 +685,11 @@ Claudeは本プロジェクトにおいて、単なる調査担当や途中監�
 - `docs/decisions.md` — 設計判断の正本
 - `CLAUDE.md`（本ファイル） — 運用ルールの正本
 
+> **注意**: `docs/spec.md` / `docs/progress.md` / `docs/decisions.md` の 3 本は、本節を追加した PR #69
+> （branch `docs/autonomous-project-workflow`）で新規追加されたものであり、**main へマージされるまでは
+> 当該branch上にしか存在しない**。マージ前の時点で「リポジトリ恒久の正本」として扱わないこと。
+> これらが存在しない場合は、下記「📚 参照すべきドキュメント一覧 📚」と既存の領域別文書を正本とする。
+
 領域別の正本（`BET_POINT_LOGIC.md` / `docs/DATA_FORMAT.md` / `docs/RESULTS_SYSTEM_ARCHITECTURE.md` /
 `docs/MULTI_VENUE_CHECK.md` / `docs/AI_RULES.md` / `docs/INTELLIGENCE_DISPLAY_SPEC.md` /
 `docs/ui-cross-plan-regression-policy.md`）は従来どおり各領域の正本である。
@@ -693,6 +698,25 @@ Claudeは本プロジェクトにおいて、単なる調査担当や途中監�
 
 仕様・進捗・設計判断が競合する場合は、勝手に推測せず、git履歴と実装証拠を調査して整合させる。
 整合できない矛盾は `docs/progress.md` の Open Questions に記録する。
+
+### Package manager
+
+- package manager は各リポジトリの正本に従う。全リポジトリ一律の npm / pnpm 強制はしない。
+- 正本の優先順位:
+  1. `package.json` の `packageManager` フィールド
+  2. lockfile
+  3. CI / workflow / deploy 設定
+  4. 既存の明示的なプロジェクト固有ルール
+- `package-lock.json` のみ → npm / `pnpm-lock.yaml` のみ → pnpm / `yarn.lock` のみ → yarn。
+- 複数 lockfile が併存する場合、または文書と実装・CI・lockfile が矛盾する場合は、
+  **依存変更を停止**し `docs/progress.md` へ記録する。どちらか一方を勝手に削除・変換しない。
+- lockfile を無断で別形式へ変換しない。
+- `npm install` / `pnpm install` 等を一律禁止も一律許可もしない。上記正本に従って判断する。
+
+本リポジトリの判定（2026-07-20 時点）: npm プロジェクトのルートは `astro-site/` であり、
+lockfile は `astro-site/package-lock.json` のみ、`.github/workflows/*.yml` は `npm ci` / `npm run *` を実行し、
+上記「🔧 開発コマンド 🔧」も `npm run` 系で統一されている。`packageManager` フィールドは未設定。
+lockfile・CI・既存ルールのいずれも npm を指しており、**矛盾はない**。
 
 ### Continuous execution
 
@@ -711,21 +735,33 @@ Claudeは本プロジェクトにおいて、単なる調査担当や途中監�
 「指示されていない変更を勝手に広げない」（上記 AI作業の絶対禁止事項 2）は連続実行より優先する。
 また「完了条件を満たさない完了宣言の禁止」（同 3）も維持する。連続実行は完了宣言の前倒しを許すものではない。
 
+上記の各項目は、次のとおり限定的に解釈する。
+
+- 「通常push」は本タスクの作業branchへの push のみを指す。`main` / `master` への直接 push を
+  許可するものではない。
+- 「テスト失敗の修正」は、本タスクの範囲内で原因が明確に特定でき、かつ後方互換性を壊さない場合に
+  限る。原因不明・範囲外・互換性に影響する場合は停止する。
+- 「Draft PR 作成まで自律実行」は、PR merge および本番反映の事前承認を意味しない。
+
 ### High-risk approval boundary
 
 次の操作は、直前でのみ停止し、実施内容・対象・影響・rollback手順・検証結果を一括報告する。
 
 - production deploy（Netlify 本番デプロイ）/ production環境変数またはsecret変更
-- 本番メール・メルマガ・アラート・通知の送信（SendGrid 経由を含む）
-- 本番DB・Airtable・Netlify Blobs・外部APIへの書込み
+- 本番メール・メルマガ・アラート・通知の送信（SendGrid 経由、および LINE 等の外部通知チャネルを含む）
+- 本番DB・Airtable・Netlify Blobs・KVS（Redis 等）・外部APIへの書込み
 - `keiba-data-shared` への本番PUT / workflow dispatch / repository_dispatch 送出
 - package公開・registry公開（npm publish等）
 - production reader・transport・モデル・artifact・champion・datastoreの切替
 - PR merge / データ削除 / rollback困難なmigration
-- force push / reset / rebase / amend / 履歴改変
+- force push / reset / rebase / amend / revert 等の履歴変更
 - 課金・契約・会員権限への本番変更
 
 高リスク操作に到達する前の安全な工程は完了させる。
+
+本節の一覧は **下限**である。上記「🚨 最重要：AI作業ルール 🚨」「🚨 プロジェクト識別ルール 🚨 / 厳格な制約事項」
+など、リポジトリ固有により厳しい停止条件がある場合は **常に厳しい方が優先する**。
+本節を根拠に既存の停止条件を緩めてはならない。
 
 ### Immediate stop conditions
 
@@ -735,7 +771,7 @@ Claudeは本プロジェクトにおいて、単なる調査担当や途中監�
 - 対象外リポジトリまたは対象外ファイルへの予期しない変更
 - 本番データ破損の可能性 / 二重送信または重複実行の可能性 / rollback不能
 - 現行API・schema・consumer contractの破壊
-  （`keiba-data-shared` の JSON 契約、`archiveResults` の `races`/`isHit`/`hitLines` 形式、`netlify.toml` の 301 群を含む）
+  （`keiba-data-shared` の JSON 契約、`archiveResults` の `races`/`isHit`/`hitLines` 形式、`astro-site/netlify.toml` の 301 群を含む）
 - origin・branch・HEAD・対象日・会場・件数等の前提不一致
 - 未知の既存変更との競合 / merge conflict
 - test・lint・typecheck・buildの失敗を安全に解消できない

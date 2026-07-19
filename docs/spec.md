@@ -1,7 +1,10 @@
 # Project Specification
 
 > 本書は **KEIBA Intelligence（KI）リポジトリのスコープ・境界・完成条件の正本**である。
-> 作成日: 2026-07-20 / 基準コミット: `1875508`（origin/main）
+> 作成日: 2026-07-20 / 基準コミット: `1875508`（作成時点の origin/main）
+>
+> **本書は PR #69（branch `docs/autonomous-project-workflow`）で新規追加された。main へマージされるまでは
+> 当該branch上にのみ存在し、リポジトリ恒久の正本ではない。** マージ後に本注記を削除すること。
 >
 > **正本の分担（競合する記述があれば下表が優先順位の判断基準）**
 >
@@ -49,7 +52,7 @@
 5. **会員機能（Netlify Functions）**
    - マジックリンク認証 / セッション / 無料会員登録 / 銀行振込申込 / メルマガ配信 / 問い合わせ / Gemini チャット・レース解説
    - 実装: `astro-site/netlify/functions/`（17ファイル。`paypal-webhook.js.disabled` は無効化済み）
-6. **自動化ワークフローの運用（GitHub Actions・13ワークフロー）**
+6. **自動化ワークフローの運用（GitHub Actions・14ワークフロー）**
    - `repository_dispatch` 受信 + `schedule` 監視の二重系。詳細は §4。
 7. **異常検知アラート**
    - `scripts/` 系の失敗時に SendGrid でアラートメールを送る経路が存在する（`ALERT_SYSTEM.md`、`send-alert.js`）。
@@ -70,7 +73,7 @@
 
 ```
 keiba-intelligence/
-├── .github/workflows/        # 13 workflows（取込・監視・自己修復）
+├── .github/workflows/        # 14 workflows（取込・監視・自己修復）
 ├── astro-site/               # Astro 5 SSR 本体（npm プロジェクトのルートはここ。repo 直下に package.json は無い）
 │   ├── src/pages/            # /prediction/{jra,nankan}, /free-prediction/*, /archive/*
 │   ├── src/components/       # BetDirectionRows.astro 等
@@ -102,7 +105,7 @@ sharedFetch.mjs ──▶ scripts/import*.js ──▶ astro-site/src/data/*.jso
 GitHub Actions ──▶ main への commit ──▶ Netlify build（npm run build）──▶ 本番
 ```
 
-### GitHub Actions（13ワークフロー）
+### GitHub Actions（14ワークフロー）
 
 | Workflow | トリガー | concurrency group |
 |---|---|---|
@@ -170,7 +173,7 @@ devDependency: `netlify-cli ^23.5.0`。Node は `netlify.toml` で `NODE_VERSION
 4. **的中判定の単一源**
    `checkUmatanHit` は `importResults.js` と `importResultsJra.js` の両方から共通利用する。判定ロジックを複製・分岐しない。
 5. **URL 契約**
-   `netlify.toml` の 301 リダイレクト群（`/archive-jra/*`→`/archive/jra/*`、`/prediction-jra/*`→`/prediction/jra/*` 等）は既存被リンクの互換性維持。削除しない。
+   `astro-site/netlify.toml` の 301 リダイレクト群（`/archive-jra/*`→`/archive/jra/*`、`/prediction-jra/*`→`/prediction/jra/*` 等）は既存被リンクの互換性維持。削除しない。
 6. **UI 横断契約**
    予想画面の UI 修正は JRA/南関 × free/light/premium の **6経路すべて** を対象とする（`docs/ui-cross-plan-regression-policy.md`）。1経路だけ直して完了としない。
 7. **SSR バンドル契約**
@@ -178,9 +181,9 @@ devDependency: `netlify-cli ^23.5.0`。Node は `netlify.toml` で `NODE_VERSION
 
 ## 7. Security and Production Boundaries
 
-- **本番書込みに該当する操作**（本ドキュメント基盤の作業では実施しない）:
-  main への直接 push / workflow dispatch / repository_dispatch 送出 / Netlify 本番デプロイ /
-  Airtable・Netlify Blobs への書込み / SendGrid によるメール・メルマガ送信 / 本番環境変数・secret の変更。
+- **本番書込みに該当する操作と承認境界**: 一覧の正本は `CLAUDE.md`「Autonomous Delivery Workflow /
+  High-risk approval boundary」。本書では重複記載しない。より厳しい停止条件が本書または他の文書にある場合は
+  常に厳しい方が優先する。
 - **secret の取り扱い**: `sharedFetch.mjs` は token・Authorization・token 付き URL を message/log に含めない設計。
   ドキュメントには **名前のみ**記載し、値を書かない。
 - **匿名アクセス禁止**: token 未設定は即時 `TOKEN_MISSING`。匿名 fallback は禁止（2026-06-28 の一連の PR で確立）。
@@ -244,8 +247,11 @@ devDependency: `netlify-cli ^23.5.0`。Node は `netlify.toml` で `NODE_VERSION
 - **`CLAUDE.md` の「メインレース10点ロジック」節（2026-05-08）と F3・5点固定（2026-07-02）の関係が文書上未整理。**
   コード上は F3 が現行（`umatanHit.js` / `BET_POINT_LOGIC.md`）だが、`CLAUDE.md` の 10 点節は残存し、
   同ファイルの文書索引も `BET_POINT_LOGIC.md` を「2段階調整方式」と旧記述のまま参照している。→ 未確定。
-- **`BET_POINT_LOGIC.md` の検証表（南関 217.1% / 的中784 / ¥1,483,110）と現在のテスト実測値（南関 214.8% / 902 / ¥1,673,170）が不一致。**
+- **`BET_POINT_LOGIC.md` の検証表（南関 217.1% / 的中784 / ¥1,483,110、時点の記載なし）と
+  2026-07-20 に実測したテスト出力（南関 214.8% / 902 / ¥1,673,170）が不一致。**
+  どちらも **archive 件数に依存する時点値**であり、恒久的な仕様値ではない。数値そのものを仕様として扱わないこと。
   テスト自体は pass するため、表は執筆時点のスナップショットと推測されるが、明示の記載はない。→ 証拠未確認。
+  実測値の内訳は `docs/progress.md` の Validation results / Open Questions Q2 を参照（重複記載しない）。
 - **`README.md` の「全体進捗 100%完了」および `NEXT_SESSION.md`（2026-01-18 作成）は現状を反映していない可能性が高い。** 最終更新の実態は git 履歴側が正しい。→ 未確定。
 - **`CLAUDE.md` の作業ディレクトリ表記（`/Users/apolon/...`）が現在の実行環境と一致しない。** 影響範囲は未確定。
 - **lint / typecheck の方針**（導入するか、しないと決めたか）は文書・履歴に記録なし。→ 証拠未確認。
