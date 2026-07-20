@@ -68,3 +68,19 @@ export function toComputerIndex(raw) {
 export function isValidComputerIndex(raw) {
   return toComputerIndex(raw) !== null;
 }
+
+/**
+ * 契約を満たす値を **保存形式（文字列）** で返す。満たさなければ null。
+ *
+ * 取り込み結果 JSON の `computerIndex` は従来から文字列で保存されている。
+ * 契約ゲートを通した結果として型が number へ変わると、既存データとの型不一致という
+ * 別の非互換を作ってしまうため、取込境界ではこちらを使う（表示・判定側は数値の
+ * `toComputerIndex` を使う）。
+ *
+ * @param {unknown} raw
+ * @returns {string|null}
+ */
+export function toComputerIndexString(raw) {
+  const n = toComputerIndex(raw);
+  return n == null ? null : String(n);
+}

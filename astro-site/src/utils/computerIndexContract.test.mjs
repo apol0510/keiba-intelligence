@@ -16,6 +16,7 @@ import test from 'node:test';
 import assert from 'node:assert';
 import {
   toComputerIndex,
+  toComputerIndexString,
   isValidComputerIndex,
   COMPUTER_INDEX_MIN,
   COMPUTER_INDEX_MAX,
@@ -116,6 +117,26 @@ test('非整数・非数値・範囲外を拒否する', () => {
 
 test('全角数字は既存の表記ゆれとして受理する', () => {
   assert.equal(toComputerIndex('７８'), 78);
+});
+
+test('取込境界は保存形式（文字列）を維持する — 既存データとの型不一致を作らない', () => {
+  // 取り込み結果 JSON の computerIndex は従来から文字列。契約ゲートで number へ
+  // 変わると既存データと型が食い違うため、文字列版を使うことを固定する。
+  assert.strictEqual(toComputerIndexString('78'), '78');
+  assert.strictEqual(toComputerIndexString(78), '78');
+  assert.strictEqual(typeof toComputerIndexString(78), 'string');
+  assert.strictEqual(toComputerIndexString('4'), null, '偽値は null');
+  assert.strictEqual(toComputerIndexString(null), null);
+  assert.strictEqual(toComputerIndexString(''), null);
+});
+
+test('取込スクリプトは文字列版を使っている（number 化させない）', () => {
+  const SCRIPTS = join(SRC, '..', 'scripts');
+  for (const f of ['importPredictionJra.js', 'importPrediction.js']) {
+    const s = readFileSync(join(SCRIPTS, f), 'utf8');
+    assert.ok(s.includes('toComputerIndexString('), `${f}: 文字列版を使っていない`);
+    assert.ok(!/computerIndex:\s*toComputerIndex\(/.test(s), `${f}: 数値版を代入に使っている（型が変わる）`);
+  }
 });
 
 // ── 契約が「3画面すべて + role 判定経路」に適用されていることを静的に固定する ──
