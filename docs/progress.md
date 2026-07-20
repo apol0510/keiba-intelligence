@@ -46,6 +46,18 @@
 
 **コードの完成宣言は本タスクでは一切行っていない。**
 
+### 2026-07-20 — `computerIndex` 偽値を fail-closed で遮断（工程A）
+
+上流 `keiba-data-shared-admin` PR #152 が**将来データ**の生成を修正した。本リポジトリ側は
+**既に shared に保存済みの不良データ / 既に取り込み済みのデータ**に対する防御を担当する。
+
+- [x] 契約の単一定義 `astro-site/src/utils/computerIndexContract.js`（10–99・欠損は null・固定値補完なし）
+- [x] role/rawScore 判定（`normalizePrediction.js`）へ適用
+- [x] JRA 予想3画面の「総合pt」バッジへ適用（旧: null/空のみのガード → 偽値 1/4/8 が 11/14/18 と表示されていた）
+- [x] 取込境界4箇所（`importPredictionJra.js` ×3 / `importPrediction.js` ×1）で契約外値を null 化
+- [x] regression test 10件（不変条件4種 + 3画面への適用を静的検証）
+- [x] 既存テスト（`test:nankan` / `test:validation` / `validate:archive` / import 系2本）・`npm run build` 通過
+
 ## In Progress
 
 - **本ドキュメント基盤の整備**（PR #69）。以降の追記・更新は Phase 完了ごとに行う。

@@ -10,6 +10,63 @@
 
 ---
 
+## 2026-07-20 — 契約外の `computerIndex` を有効値として使わない（fail-closed）
+
+### Status
+Accepted（マージ後は `main` 上の正本となる）
+
+### Context
+`keiba-data-shared` の JRA racebook には、PDF 由来 XML の「人気指数」列が `computerIndex` として
+書き込まれていた期間がある。この列は埋め込みフォントの PUA 文字で描画されるため、生成側の
+PUA 除去で桁が落ち、**1〜9 の残骸だけが真コンピ指数を騙って残っていた**。
+生成側の恒久対策は keiba-data-shared-admin PR #152 で行われた。
+
+本リポジトリは analytics-keiba と異なり **`sourceComputerIndex` を持たない**。
+racebook の値を直接使うため、偽値が次の2経路にそのまま入っていた。
+
+1. `normalizePrediction.js` の role/rawScore 判定（`parseInt(horse.computerIndex || '0')`）
+2. JRA 予想3画面（`prediction/jra/index.astro`, `free-prediction/jra/[date].astro`,
+   `free-prediction/jra/index.astro`）の「総合pt」バッジ。ガードが `null` / 空だけだったため、
+   **偽値 1/4/8 が 総合pt 11/14/18 として実際に表示されていた**。
+
+上流の修正は将来データにしか効かない。**shared に既に保存済みの不良データ**（20日・44ファイル）と
+**本リポジトリに既に取り込み済みのデータ**は残るため、consumer 側の防御が別途必要である。
+
+### Decision
+**`computerIndex` の有効値を 10–99 の整数に限定し、契約外は「値なし」として fail-closed に扱う。**
+
+- 単一定義を `astro-site/src/utils/computerIndexContract.js` に置く
+- role/rawScore 判定・3画面の総合pt バッジ・取込境界4箇所に同じ契約を適用する
+- **契約外の値を `0` / `10` / `50` 等へ置換しない。AI 補完もしない。** 値なしとして扱うだけ
+
+有効域 10–99 は新設値ではなく、keiba-data-shared-admin の
+`netlify/lib/computer-index-contract.mjs` / `validate-computer-racebook-join.mjs` および
+analytics-keiba の `>= 10` スケールガードに一致させたものである。
+
+### Rationale
+- 偽値は欠損より有害である。`null` は既存ガードが「値なし」として扱えるが、`1/4/8` は
+  truthy かつ有限値のため**ガードをすり抜けて誤った表示・誤った role 判定になる**。
+- 表示だけを直すと role 判定に偽値が残り、role だけを直すと画面に偽値が残る。
+  同一契約を両方へ当てるのが最小で確実である。
+- 有効域を独自に決めず既存契約に合わせることで、consumer contract を壊さない。
+
+### Alternatives Considered
+- **上流修正（PR #152）だけで足りるとする** — 却下。既存 shared 不良データと取込済みデータに効かない。
+- **`sourceComputerIndex` を本リポジトリにも導入する** — 却下（本 PR では）。
+  computer 正本の併読という新しい取込経路が要り、影響範囲が大きい。
+  契約ゲートだけで「偽値を使わない」目的は達成できる。
+- **契約外値を 0 とみなして明示的に代入する** — 却下。`0` は「コンピ指数 0」という別の意味を持ちうるため、
+  値なし（`null`）と区別できなくなる。
+
+### Consequences
+- 不良データ期間の JRA 予想では総合pt バッジが**表示されなくなる**（誤った値を出すよりよい）。
+  上流のバックフィルが完了すれば、正しい値で再表示される。
+- role/rawScore の実挙動は現行と同じ（`COMPI_MIN=45` に対し 1〜9 も `null` も 0 になるため）。
+  変わるのは**意図の明示と、閾値変更時の安全性**である。
+- 有効値（10–99）の表示・判定は一切変わらない。買い目・料金・UI 仕様は変更していない。
+
+---
+
 ## 2026-07-20 — 自律完遂運用のための正本ドキュメント基盤（spec / progress / decisions）を採用する
 
 ### Status

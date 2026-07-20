@@ -31,6 +31,7 @@ const projectRoot = join(__dirname, '..');
 
 // src/utils から正規化関数をインポート
 import { normalizeAndAdjust } from '../src/utils/normalizePrediction.js';
+import { toComputerIndexString } from '../src/utils/computerIndexContract.js';
 
 // メインレース10点ロジック
 import { isMainRace, generateMainRaceUmatanLines } from '../src/utils/mainRaceBetting.js';
@@ -163,7 +164,9 @@ async function fetchRacebookData(date, category = 'jra', client) {
         horses: (r.horses || []).map(h => ({
           number: h.number, name: h.name, totalScore: h.totalScore || 0, assignment: h.assignment || '無',
           jockey: h.jockey || '', trainer: h.trainer || '', seirei: h.sexAge || '',
-          kinryo: h.weight != null ? String(h.weight) : '', computerIndex: h.computerIndex || null,
+          // shared racebook の computerIndex は契約(10-99)を満たす値だけ運ぶ。
+          // 契約外（PUA 除去残骸の 1〜9 等）は値なし=null とし、0 や固定値で補完しない。
+          kinryo: h.weight != null ? String(h.weight) : '', computerIndex: toComputerIndexString(h.computerIndex),
           marks: h.marks || [], ranking: h.ranking || null,
           _pastRaces: h.pastRaces || [],
           // 予想オッズはソースに97.8%存在するが、ここで拾わないと
@@ -210,7 +213,7 @@ function buildHorseDataMapFromRacebook(rbData, targetMap = new Map()) {
         // ここから convertToLegacyFormat で補完する（期待値-25%固定の解消）。
         predictedOdds: horse.predictedOdds ?? null,
         // 人気指数（AI人気指数=+10表示の元値）もracebook由来で運ぶ。2026-05-23
-        computerIndex: horse.computerIndex ?? null
+        computerIndex: toComputerIndexString(horse.computerIndex)
       };
       const pastRaces = horse.pastRaces || horse._pastRaces || [];
       if (pastRaces.length > 0) {
@@ -517,7 +520,8 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
               if (!horseObj.age && rbInfo.age) horseObj.age = rbInfo.age;
               if (rbInfo.sire) horseObj.sire = rbInfo.sire;
               if (rbInfo.predictedOdds != null) horseObj.predictedOdds = rbInfo.predictedOdds;
-              if (rbInfo.computerIndex != null) horseObj.computerIndex = rbInfo.computerIndex;
+              // 契約外値は注入しない（既存 horseObj 側の値も上書きしない）
+              if (toComputerIndexString(rbInfo.computerIndex) != null) horseObj.computerIndex = toComputerIndexString(rbInfo.computerIndex);
             }
           }
           // 過去走データ: racebook由来(_pastRaces) > horseDataMap

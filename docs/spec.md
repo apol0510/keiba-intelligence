@@ -175,6 +175,19 @@ devDependency: `netlify-cli ^23.5.0`。Node は `netlify.toml` で `NODE_VERSION
    `astro-site/netlify.toml` の 301 リダイレクト群（`/archive-jra/*`→`/archive/jra/*`、`/prediction-jra/*`→`/prediction/jra/*` 等）は既存被リンクの互換性維持。削除しない。
 6. **UI 横断契約**
    予想画面の UI 修正は JRA/南関 × free/light/premium の **6経路すべて** を対象とする（`docs/ui-cross-plan-regression-policy.md`）。1経路だけ直して完了としない。
+8. **`computerIndex` 契約（fail-closed / 2026-07-20）**
+   `computerIndex` の有効値は **10–99 の整数**のみ。`null` / 空 / `1`–`9` / 100 以上 / 非整数 / 非数値は
+   **値なし**として扱い、正本値として使用しない。契約外の値を `0` / `10` / `50` 等へ置換しない（推測補完禁止）。
+   - 単一定義: `astro-site/src/utils/computerIndexContract.js`
+   - 適用先: role/rawScore 判定（`normalizePrediction.js`）、JRA 予想3画面の「総合pt」バッジ、
+     取込境界（`importPredictionJra.js` / `importPrediction.js`）
+   - 本リポジトリは analytics-keiba と違い `sourceComputerIndex` を持たないため、
+     shared の値をそのまま使う。生成側（keiba-data-shared-admin）の恒久対策だけでは
+     **既に保存済みの不良データと取込済みデータ**を防げないため、consumer 側にも本契約が必要。
+   - 有効域 10–99 は新設値ではなく、keiba-data-shared-admin / analytics-keiba の既存契約に一致させたもの。
+   - `npm run test:computer-index` が不変条件（偽値を総合pt/role に使わない・有効値は従来どおり・null を補完しない）
+     と、3画面すべてに契約が適用されていることを静的に検証する。
+
 7. **SSR バンドル契約**
    `netlify.toml` の `included_files`（`horseHistories/`, `featureScores/`, `recentHorseHistories/`, `entries/`, `horseStats/`）は SSR ランタイムが fs 読みするために必要。データ種別を増やす際は追記が必要。
 
@@ -220,6 +233,7 @@ devDependency: `netlify-cli ^23.5.0`。Node は `netlify.toml` で `NODE_VERSION
 | 馬単F3・点数検証 | `node scripts/umatanHit.test.mjs` | 不要 | Node 標準 `node:test` |
 | 南関表示ロジック | `npm run test:nankan` | 不要 | recent-races + injection guard |
 | 予想データ検証 | `npm run test:validation` | 不要 | |
+| computerIndex 契約 | `npm run test:computer-index` | 不要 | 偽値の総合pt/role 混入を fail-closed に固定 |
 | ワークフロー静的監査 | `node --test scripts/utils/workflowStaticAudit.test.mjs` | 不要 | yml の env/secret 配線を構造検証 |
 | ビルド | `npm run build` | **要**（依存インストール） | `validate:archive && test:nankan && astro build` |
 | 共有同期検証 | `npm run verify:sync` | **要**（`KEIBA_DATA_SHARED_TOKEN`） | 外部 API を叩くため無条件実行しない |
