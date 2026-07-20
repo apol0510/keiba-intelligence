@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { toComputerIndex } from '../../../utils/computerIndexContract.js';
 import AccessControl from '../../../components/AccessControl.astro';
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
@@ -545,8 +546,8 @@ function generateUmatanBets(horses, raceNumber, venueRaces) {
                                   {/* 総合pt(=人気指数+10)を馬名直後にガラスモーフィズムバッジで表示。
                                       旧 .ai-badge クラス(別UI用 L767)とCSS衝突するため .ai-pt-badge に改名。
                                       ラベルは「AI」だと意味不明だったため「総合pt」に。2026-05-23 */}
-                                  {horse.computerIndex != null && horse.computerIndex !== '' && (
-                                    <span class="ai-pt-badge"><span class="ai-pt-badge-label">総合pt</span>{Math.min(100, Number(horse.computerIndex) + 10)}</span>
+                                  {toComputerIndex(horse.computerIndex) != null && (
+                                    <span class="ai-pt-badge"><span class="ai-pt-badge-label">総合pt</span>{Math.min(100, toComputerIndex(horse.computerIndex) + 10)}</span>
                                   )}
                                   <span class="dhc-role-badge">{horse.role}</span>
                                 </div>

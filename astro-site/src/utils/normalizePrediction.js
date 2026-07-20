@@ -14,6 +14,7 @@
  */
 
 import { adjustPrediction } from './adjustPrediction.js';
+import { toComputerIndex } from './computerIndexContract.js';
 
 /**
  * 競馬場名から競馬場コードに変換
@@ -104,8 +105,12 @@ export function normalizeDetailed(input) {
       const COMPI_MIN = 45;
       let rawScore = horse.PT || horse.totalScore || horse.rawScore || 0;
       if (rawScore === 0) {
-        const ci = parseInt(horse.computerIndex || '0');
-        rawScore = (ci >= COMPI_MIN) ? ci : 0;
+        // 契約(10-99)を満たす値だけを真コンピ指数として使う。契約外（null / 1〜9 /
+        // 100以上 / 非数値）は「値なし」として扱い、0 や固定値で補完しない（fail-closed）。
+        // shared racebook には PUA 除去残骸の 1〜9 が偽値として混入していた期間がある。
+        // 詳細: ./computerIndexContract.js
+        const ci = toComputerIndex(horse.computerIndex);
+        rawScore = (ci != null && ci >= COMPI_MIN) ? ci : 0;
       }
       const role = horse.assignment || horse.role || '無';
 

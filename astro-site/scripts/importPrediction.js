@@ -17,6 +17,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { toComputerIndex } from '../src/utils/computerIndexContract.js';
 import { join, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import crypto from 'crypto';
@@ -178,7 +179,9 @@ function convertRacebookToPredictions(rbData, date) {
           trainer: h.trainer || '',
           seirei: h.sexAge || '',
           kinryo: h.weight != null ? String(h.weight) : '',
-          computerIndex: h.computerIndex || null,
+          // shared racebook の computerIndex は契約(10-99)を満たす値だけ運ぶ。
+          // 契約外（PUA 除去残骸の 1〜9 等）は値なし=null とし、0 や固定値で補完しない。
+          computerIndex: toComputerIndex(h.computerIndex),
           marks: marksObj,
           _pastRaces: h.pastRaces || [],
           _training: h.training || null,
