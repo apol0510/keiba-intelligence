@@ -320,7 +320,7 @@
                   "date": null,
                   "venue": "2東4.26",
                   "distance": null,
-                  "distanceMeters": null,
+                  "distanceMeters": 1600,
                   "rank": 7,
                   "finishStatus": null,
                   "headCount": null,
@@ -470,8 +470,7 @@
               "age": "",
               "weight": 57,
               "sire": "フィレンツェファイア",
-              "predictedOdds": 39,
-              "computerIndex": "6"
+              "predictedOdds": 39
             },
             {
               "horseNumber": 2,
@@ -483,8 +482,7 @@
               "age": "",
               "weight": 57,
               "sire": "ドレフォン",
-              "predictedOdds": 61.4,
-              "computerIndex": "2"
+              "predictedOdds": 61.4
             },
             {
               "horseNumber": 15,
@@ -497,7 +495,6 @@
               "weight": "",
               "sire": "エピファネイア",
               "predictedOdds": 79.8,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -555,7 +552,6 @@
               "weight": "",
               "sire": "マクフィ",
               "predictedOdds": 80.4,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -612,8 +608,7 @@
               "age": "",
               "weight": 54,
               "sire": "ブリックスアンドモルタル",
-              "predictedOdds": 84.1,
-              "computerIndex": "1"
+              "predictedOdds": 84.1
             },
             {
               "horseNumber": 9,
@@ -626,7 +621,6 @@
               "weight": 55,
               "sire": "ロジャーバローズ",
               "predictedOdds": 81.1,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -663,7 +657,6 @@
               "weight": 53,
               "sire": "リオンディーズ",
               "predictedOdds": 83.3,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -700,7 +693,6 @@
               "weight": 55,
               "sire": "オーヴァルエース",
               "predictedOdds": 82.7,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -853,7 +845,7 @@
               "14-3.8.5.12.7.16(抑え10.11.2.15)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.022Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -874,7 +866,75 @@
               "jockey": "川田",
               "trainer": "池江",
               "age": "",
-              "weight": 57
+              "weight": 57,
+              "sire": "オーセンティック",
+              "predictedOdds": 2.4,
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1阪3.8",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑥未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.2",
+                  "time": "1.55.9",
+                  "paceType": "M",
+                  "bodyWeight": 484,
+                  "winner": "ワザオギ",
+                  "jockey": "松山",
+                  "weight": 57,
+                  "courseNote": "C37.8",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "5名12.7",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "39.3",
+                  "time": "1.56.1",
+                  "paceType": "M",
+                  "bodyWeight": 498,
+                  "winner": null,
+                  "jockey": "ルメール",
+                  "weight": 56,
+                  "courseNote": "B38.8",
+                  "distanceGaiji": null
+                },
+                {
+                  "date": null,
+                  "venue": "4京11.16",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 4,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "④新馬",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.7",
+                  "time": "1.54.6",
+                  "paceType": "M",
+                  "bodyWeight": 490,
+                  "winner": "メルカントゥ",
+                  "jockey": "レーン",
+                  "weight": 56,
+                  "courseNote": "C37.1",
+                  "distanceGaiji": ""
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 12,
@@ -1004,7 +1064,96 @@
               "jockey": "坂井",
               "trainer": "福永",
               "age": "",
-              "weight": 57
+              "weight": 57,
+              "sire": "コンスティチューション",
+              "predictedOdds": 4.6,
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "3中4.19",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 8,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑧未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "41.1",
+                  "time": "1.56.0",
+                  "paceType": "H",
+                  "bodyWeight": 524,
+                  "winner": "ジューンセク",
+                  "jockey": "川田",
+                  "weight": 57,
+                  "courseNote": "B38.9",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "1名3.29",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑥未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.1",
+                  "time": "2.02.4",
+                  "paceType": "S",
+                  "bodyWeight": 520,
+                  "winner": "メイショウペ",
+                  "jockey": "松山",
+                  "weight": 57,
+                  "courseNote": "B37.6",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "2京2.10",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 4,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "④未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.2",
+                  "time": "1.56.6",
+                  "paceType": "S",
+                  "bodyWeight": 522,
+                  "winner": "ワンダフルデ",
+                  "jockey": "松山",
+                  "weight": 57,
+                  "courseNote": "坂53.5",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "4京11.29",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 7,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑦新馬",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "39.1",
+                  "time": "1.55.7",
+                  "paceType": "M",
+                  "bodyWeight": 528,
+                  "winner": "バートラガッ",
+                  "jockey": "松山",
+                  "weight": 56,
+                  "courseNote": "坂58.5",
+                  "distanceGaiji": ""
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 16,
@@ -1149,7 +1298,96 @@
               "jockey": "松若",
               "trainer": "小崎",
               "age": "",
-              "weight": 57
+              "weight": 57,
+              "sire": "ヤウポン",
+              "predictedOdds": 27.9,
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1名3.21",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 3,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "③未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.6",
+                  "time": "1.22.7",
+                  "paceType": "H",
+                  "bodyWeight": 508,
+                  "winner": "ペアレンツギ",
+                  "jockey": "三浦",
+                  "weight": 57,
+                  "courseNote": "坂53.8",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "4阪9.27",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 8,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑧未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "42.2",
+                  "time": "1.30.2",
+                  "paceType": "M",
+                  "bodyWeight": 496,
+                  "winner": null,
+                  "jockey": "団野",
+                  "weight": 55,
+                  "courseNote": "坂53.7",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "4阪9.13",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 3,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "③未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.4",
+                  "time": "1.15.3",
+                  "paceType": "M",
+                  "bodyWeight": 492,
+                  "winner": "イダテンシャ",
+                  "jockey": "松若",
+                  "weight": 55,
+                  "courseNote": "坂52.9",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "3名8.16",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 7,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑦新馬",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.1",
+                  "time": "1.09.6",
+                  "paceType": "M",
+                  "bodyWeight": 486,
+                  "winner": "シルバーナイ",
+                  "jockey": "松若",
+                  "weight": 55,
+                  "courseNote": "C36.3",
+                  "distanceGaiji": ""
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 14,
@@ -1275,8 +1513,7 @@
               "age": "",
               "weight": 57,
               "sire": "シニスターミニスター",
-              "predictedOdds": 37.8,
-              "computerIndex": "6"
+              "predictedOdds": 37.8
             },
             {
               "horseNumber": 5,
@@ -1289,7 +1526,6 @@
               "weight": 57,
               "sire": "アメリカンペイトリオット",
               "predictedOdds": 48.3,
-              "computerIndex": "4",
               "recentRaces": [
                 {
                   "date": null,
@@ -1368,7 +1604,6 @@
               "weight": 55,
               "sire": "ダイワメジャー",
               "predictedOdds": 47.7,
-              "computerIndex": "4",
               "recentRaces": [
                 {
                   "date": null,
@@ -1489,7 +1724,6 @@
               "weight": 57,
               "sire": "クリソベリル",
               "predictedOdds": 48.6,
-              "computerIndex": "4",
               "recentRaces": [
                 {
                   "date": null,
@@ -1610,7 +1844,6 @@
               "weight": 52,
               "sire": "オーディブル",
               "predictedOdds": 59.8,
-              "computerIndex": "2",
               "recentRaces": [
                 {
                   "date": null,
@@ -1689,7 +1922,6 @@
               "weight": 57,
               "sire": "ドレフォン",
               "predictedOdds": 76.8,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -1725,8 +1957,7 @@
               "age": "",
               "weight": "",
               "sire": "シニスターミニスター",
-              "predictedOdds": 77.6,
-              "computerIndex": "1"
+              "predictedOdds": 77.6
             },
             {
               "horseNumber": 10,
@@ -1834,7 +2065,7 @@
               "12-1.7.10.16.6.2(抑え14.8.4.5.3.9.11)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.022Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -2389,7 +2620,6 @@
               "weight": 55,
               "sire": "ビッグアーサー",
               "predictedOdds": 32.6,
-              "computerIndex": "8",
               "recentRaces": [
                 {
                   "date": null,
@@ -2510,7 +2740,6 @@
               "weight": 57,
               "sire": "ビッグアーサー",
               "predictedOdds": 33,
-              "computerIndex": "8",
               "recentRaces": [
                 {
                   "date": null,
@@ -2568,7 +2797,6 @@
               "weight": 55,
               "sire": "ダイワメジャー",
               "predictedOdds": 37.8,
-              "computerIndex": "6",
               "recentRaces": [
                 {
                   "date": null,
@@ -2605,7 +2833,6 @@
               "weight": "",
               "sire": "シルバーステート",
               "predictedOdds": 47.1,
-              "computerIndex": "4",
               "recentRaces": [
                 {
                   "date": null,
@@ -2684,7 +2911,6 @@
               "weight": 55,
               "sire": "モズアスコット",
               "predictedOdds": 60.1,
-              "computerIndex": "2",
               "recentRaces": [
                 {
                   "date": null,
@@ -2721,7 +2947,6 @@
               "weight": 57,
               "sire": "ファインニードル",
               "predictedOdds": 78.7,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -2758,7 +2983,6 @@
               "weight": 57,
               "sire": "タワーオブロンドン",
               "predictedOdds": 78.2,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -2858,7 +3082,6 @@
               "weight": 53,
               "sire": "リオンディーズ",
               "predictedOdds": 80.5,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -2979,7 +3202,6 @@
               "weight": 55,
               "sire": "ウインブライト",
               "predictedOdds": 81.4,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -3078,8 +3300,7 @@
               "age": "",
               "weight": 55,
               "sire": "イスラボニータ",
-              "predictedOdds": 82.6,
-              "computerIndex": "1"
+              "predictedOdds": 82.6
             },
             {
               "horseNumber": 4,
@@ -3145,7 +3366,7 @@
               "3-10.5.4.11.7.14(抑え2.16.15.1.8)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.022Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -3862,7 +4083,6 @@
               "weight": 57,
               "sire": "リオンリオン",
               "predictedOdds": 38.4,
-              "computerIndex": "6",
               "recentRaces": [
                 {
                   "date": null,
@@ -3920,7 +4140,6 @@
               "weight": 55,
               "sire": "デクラレーションオブウォー",
               "predictedOdds": 60.8,
-              "computerIndex": "2",
               "recentRaces": [
                 {
                   "date": null,
@@ -3999,7 +4218,6 @@
               "weight": 57,
               "sire": "コントレイル",
               "predictedOdds": 86,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -4057,7 +4275,6 @@
               "weight": 55,
               "sire": "キズナ",
               "predictedOdds": 79.7,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -4136,7 +4353,6 @@
               "weight": "",
               "sire": "レイデオロ",
               "predictedOdds": 79.1,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -4215,7 +4431,6 @@
               "weight": 54,
               "sire": "マインドユアビスケッツ",
               "predictedOdds": 87.4,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -4336,7 +4551,6 @@
               "weight": 57,
               "sire": "ファインニードル",
               "predictedOdds": 84,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -4457,7 +4671,6 @@
               "weight": 55,
               "sire": "ジャスタウェイ",
               "predictedOdds": 77.5,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -4536,7 +4749,6 @@
               "weight": "",
               "sire": "オルフェーヴル",
               "predictedOdds": 86.2,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -4594,7 +4806,6 @@
               "weight": 54,
               "sire": "ブリックスアンドモルタル",
               "predictedOdds": 82.3,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -4768,7 +4979,7 @@
               "13-17.9.6.1.3.15(抑え4.8.2.10.7.5)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.022Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -5335,7 +5546,6 @@
               "weight": 55,
               "sire": "リアルスティール",
               "predictedOdds": 39,
-              "computerIndex": "6",
               "recentRaces": [
                 {
                   "date": null,
@@ -5435,7 +5645,6 @@
               "weight": 55,
               "sire": "エピファネイア",
               "predictedOdds": 61.5,
-              "computerIndex": "2",
               "recentRaces": [
                 {
                   "date": null,
@@ -5556,7 +5765,6 @@
               "weight": 55,
               "sire": "エピファネイア",
               "predictedOdds": 84.7,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -5614,7 +5822,6 @@
               "weight": 55,
               "sire": "ロードカナロア",
               "predictedOdds": 84.3,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -5672,7 +5879,6 @@
               "weight": "",
               "sire": "ゴールドアクター",
               "predictedOdds": 79.1,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -5751,7 +5957,6 @@
               "weight": 54,
               "sire": "キズナ",
               "predictedOdds": 81.5,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -5830,7 +6035,6 @@
               "weight": 55,
               "sire": "ヴァンゴッホ",
               "predictedOdds": 87.1,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -5867,7 +6071,6 @@
               "weight": 57,
               "sire": "カリフォルニアクローム",
               "predictedOdds": 79.9,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -5967,7 +6170,6 @@
               "weight": 52,
               "sire": "グレーターロンドン",
               "predictedOdds": 86.3,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -6046,7 +6248,6 @@
               "weight": 57,
               "sire": "イスラボニータ",
               "predictedOdds": 85.4,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -6220,7 +6421,7 @@
               "4-12.1.13.14.11.8(抑え6.10.2.15.9.7)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.022Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -6964,7 +7165,6 @@
               "weight": 58,
               "sire": "ホッコータルマエ",
               "predictedOdds": 29,
-              "computerIndex": "8",
               "recentRaces": [
                 {
                   "date": null,
@@ -7163,7 +7363,6 @@
               "weight": 58,
               "sire": "フランケル",
               "predictedOdds": 34.2,
-              "computerIndex": "6",
               "recentRaces": [
                 {
                   "date": null,
@@ -7284,7 +7483,6 @@
               "weight": 58,
               "sire": "アメリカンファラオ",
               "predictedOdds": 54.5,
-              "computerIndex": "2",
               "recentRaces": [
                 {
                   "date": null,
@@ -7405,7 +7603,6 @@
               "weight": 54,
               "sire": "オルフェーヴル",
               "predictedOdds": 53.7,
-              "computerIndex": "2",
               "recentRaces": [
                 {
                   "date": null,
@@ -7502,7 +7699,96 @@
               "jockey": "坂井",
               "trainer": "加藤公",
               "age": "",
-              "weight": 58
+              "weight": 58,
+              "sire": "ルーラーシップ",
+              "predictedOdds": 9.1,
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1新5.9",
+                  "distance": null,
+                  "distanceMeters": 1800,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "41.6",
+                  "time": "1.55.9",
+                  "paceType": "H",
+                  "bodyWeight": 466,
+                  "winner": "ハイクオリテ",
+                  "jockey": "舟山",
+                  "weight": 56,
+                  "courseNote": "坂54.6",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "4新10.19",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.0",
+                  "time": "1.53.7",
+                  "paceType": "M",
+                  "bodyWeight": 458,
+                  "winner": null,
+                  "jockey": "鷲頭",
+                  "weight": 56,
+                  "courseNote": "B39.8",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "3京10.4",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.7",
+                  "time": "1.51.9",
+                  "paceType": "M",
+                  "bodyWeight": 460,
+                  "winner": "メイショウヤ",
+                  "jockey": "富田",
+                  "weight": 58,
+                  "courseNote": "B36.3",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "3阪6.7",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "①城崎",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.0",
+                  "time": "外1.47.7",
+                  "paceType": "M",
+                  "bodyWeight": 440,
+                  "winner": null,
+                  "jockey": "松本",
+                  "weight": 58,
+                  "courseNote": "坂52.8",
+                  "distanceGaiji": ""
+                }
+              ],
+              "recentFormSource": "racebook"
             }
           ],
           "bettingLines": {
@@ -7511,7 +7797,7 @@
               "4-2.6.11.12.1.5(抑え3.7.10.8.9)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.022Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -8495,7 +8781,6 @@
               "weight": 56,
               "sire": "オルフェーヴル",
               "predictedOdds": 46.2,
-              "computerIndex": "4",
               "recentRaces": [
                 {
                   "date": null,
@@ -8595,7 +8880,6 @@
               "weight": 56,
               "sire": "ルーラーシップ",
               "predictedOdds": 36.9,
-              "computerIndex": "6",
               "recentRaces": [
                 {
                   "date": null,
@@ -8716,7 +9000,6 @@
               "weight": "",
               "sire": "マインドユアビスケッツ",
               "predictedOdds": 58.9,
-              "computerIndex": "2",
               "recentRaces": [
                 {
                   "date": null,
@@ -8837,7 +9120,6 @@
               "weight": 56,
               "sire": "キズナ",
               "predictedOdds": 77.3,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -8958,7 +9240,6 @@
               "weight": 58,
               "sire": "レインボーライン",
               "predictedOdds": 75.8,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -9076,7 +9357,96 @@
               "jockey": "太宰",
               "trainer": "石橋",
               "age": "",
-              "weight": 58
+              "weight": 58,
+              "sire": "リアルスティール",
+              "predictedOdds": 77.9,
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "2阪4.11",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 9,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.0",
+                  "time": "1.25.9",
+                  "paceType": "M",
+                  "bodyWeight": 472,
+                  "winner": "モズケイスタ",
+                  "jockey": "太宰",
+                  "weight": 58,
+                  "courseNote": "C38.0",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "1阪3.14",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.9",
+                  "time": "1.26.1",
+                  "paceType": "M",
+                  "bodyWeight": 470,
+                  "winner": "コーラルクラ",
+                  "jockey": "太宰",
+                  "weight": 58,
+                  "courseNote": "坂53.3",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "佐賀12.27",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 7,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "❺Ｃ１",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "39.0",
+                  "time": "1.31.4",
+                  "paceType": "M",
+                  "bodyWeight": 479,
+                  "winner": "バロックパー",
+                  "jockey": "山口勲",
+                  "weight": 56,
+                  "courseNote": null,
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "佐賀12.6",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 7,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "Ｃ１",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.9",
+                  "time": "1.25.3",
+                  "paceType": "M",
+                  "bodyWeight": 482,
+                  "winner": "クレドール",
+                  "jockey": "長谷川蓮",
+                  "weight": 55,
+                  "courseNote": null,
+                  "distanceGaiji": null
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 9,
@@ -9205,7 +9575,7 @@
               "14-1.5.9.6.13.3(抑え11.2.8.10.12)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.022Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -9954,7 +10324,7 @@
                   "date": null,
                   "venue": "2東4.26",
                   "distance": null,
-                  "distanceMeters": null,
+                  "distanceMeters": 1400,
                   "rank": 5,
                   "finishStatus": null,
                   "headCount": null,
@@ -10069,7 +10439,6 @@
               "weight": 56,
               "sire": "シルバーステート",
               "predictedOdds": 29.3,
-              "computerIndex": "8",
               "recentRaces": [
                 {
                   "date": null,
@@ -10190,7 +10559,6 @@
               "weight": 58,
               "sire": "ダイワメジャー",
               "predictedOdds": 34.7,
-              "computerIndex": "6",
               "recentRaces": [
                 {
                   "date": null,
@@ -10311,7 +10679,6 @@
               "weight": 56,
               "sire": "ディスクリートキャット",
               "predictedOdds": 55.9,
-              "computerIndex": "2",
               "recentRaces": [
                 {
                   "date": null,
@@ -10432,7 +10799,6 @@
               "weight": "",
               "sire": "リオンディーズ",
               "predictedOdds": 72.2,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -10669,7 +11035,7 @@
               "5-6.10.11.2.3.7(抑え8.1.4.12)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.022Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -11272,7 +11638,6 @@
               "weight": 57,
               "sire": "タリスマニック",
               "predictedOdds": 33.3,
-              "computerIndex": "6",
               "recentRaces": [
                 {
                   "date": null,
@@ -11393,7 +11758,6 @@
               "weight": 57,
               "sire": "トランセンド",
               "predictedOdds": 51.9,
-              "computerIndex": "2",
               "recentRaces": [
                 {
                   "date": null,
@@ -11472,7 +11836,6 @@
               "weight": 57,
               "sire": "サトノアラジン",
               "predictedOdds": 65.2,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -11688,7 +12051,7 @@
               "5-8.7.4.2.1.3(抑え6)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.022Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -12432,7 +12795,6 @@
               "weight": 55,
               "sire": "ヘニーヒューズ",
               "predictedOdds": 29.8,
-              "computerIndex": "8",
               "recentRaces": [
                 {
                   "date": null,
@@ -12553,7 +12915,6 @@
               "weight": 55,
               "sire": "アロゲート",
               "predictedOdds": 32.1,
-              "computerIndex": "8",
               "recentRaces": [
                 {
                   "date": null,
@@ -12674,7 +13035,6 @@
               "weight": 55,
               "sire": "エピファネイア",
               "predictedOdds": 33.7,
-              "computerIndex": "8",
               "recentRaces": [
                 {
                   "date": null,
@@ -12795,7 +13155,6 @@
               "weight": 54,
               "sire": "シニスターミニスター",
               "predictedOdds": 35.3,
-              "computerIndex": "6",
               "recentRaces": [
                 {
                   "date": null,
@@ -12916,7 +13275,6 @@
               "weight": 55,
               "sire": "ヘニーヒューズ",
               "predictedOdds": 55.4,
-              "computerIndex": "2",
               "recentRaces": [
                 {
                   "date": null,
@@ -13037,7 +13395,6 @@
               "weight": 56,
               "sire": "クリエイターⅡ",
               "predictedOdds": 72,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -13158,7 +13515,6 @@
               "weight": 52,
               "sire": "ホッコータルマエ",
               "predictedOdds": 72.2,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -13279,7 +13635,6 @@
               "weight": 54,
               "sire": "アジアエクスプレス",
               "predictedOdds": 72.6,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -13400,7 +13755,6 @@
               "weight": 56,
               "sire": "シニスターミニスター",
               "predictedOdds": 73.4,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -13637,7 +13991,7 @@
               "2-7.8.12.16.5.10(抑え3.11.9.13.1)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.022Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -13898,7 +14252,96 @@
               "jockey": "川又",
               "trainer": "大久保",
               "age": "",
-              "weight": 57
+              "weight": 57,
+              "sire": "ファインニードル",
+              "predictedOdds": 4.2,
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1名3.21",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 11,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "ファル",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "34.1",
+                  "time": "1.20.0",
+                  "paceType": "M",
+                  "bodyWeight": 454,
+                  "winner": "ダイヤモンド",
+                  "jockey": "川又",
+                  "weight": 57,
+                  "courseNote": "坂51.7",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "4京11.15",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 7,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "デイ",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.6",
+                  "time": "外1.34.2",
+                  "paceType": "M",
+                  "bodyWeight": 450,
+                  "winner": null,
+                  "jockey": "高杉",
+                  "weight": 56,
+                  "courseNote": "C37.5",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "1函7.20",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 12,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑫函２歳",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "34.1",
+                  "time": "1.08.4",
+                  "paceType": "M",
+                  "bodyWeight": 448,
+                  "winner": null,
+                  "jockey": "キング",
+                  "weight": 55,
+                  "courseNote": "C38.7",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "門別6.18",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 2,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "アタッ",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.9",
+                  "time": "外1.02.3",
+                  "paceType": "M",
+                  "bodyWeight": 454,
+                  "winner": "タイセイシャ",
+                  "jockey": "落合玄",
+                  "weight": 55,
+                  "courseNote": null,
+                  "distanceGaiji": ""
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 2,
@@ -14271,7 +14714,6 @@
               "weight": 55,
               "sire": "ミッキーアイル",
               "predictedOdds": 31.5,
-              "computerIndex": "8",
               "recentRaces": [
                 {
                   "date": null,
@@ -14392,7 +14834,6 @@
               "weight": 55,
               "sire": "フィレンツェファイア",
               "predictedOdds": 47,
-              "computerIndex": "4",
               "recentRaces": [
                 {
                   "date": null,
@@ -14513,7 +14954,6 @@
               "weight": 55,
               "sire": "アルアイン",
               "predictedOdds": 32.1,
-              "computerIndex": "8",
               "recentRaces": [
                 {
                   "date": null,
@@ -14634,7 +15074,6 @@
               "weight": 57,
               "sire": "タワーオブロンドン",
               "predictedOdds": 46.6,
-              "computerIndex": "4",
               "recentRaces": [
                 {
                   "date": null,
@@ -14734,7 +15173,6 @@
               "weight": 57,
               "sire": "サトノダイヤモンド",
               "predictedOdds": 60.1,
-              "computerIndex": "2",
               "recentRaces": [
                 {
                   "date": null,
@@ -14855,7 +15293,6 @@
               "weight": 55,
               "sire": "ドレフォン",
               "predictedOdds": 59.9,
-              "computerIndex": "2",
               "recentRaces": [
                 {
                   "date": null,
@@ -14976,7 +15413,6 @@
               "weight": 55,
               "sire": "フィレンツェファイア",
               "predictedOdds": 76.3,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -15076,7 +15512,6 @@
               "weight": 55,
               "sire": "ミッキーアイル",
               "predictedOdds": 76.9,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -15197,7 +15632,6 @@
               "weight": 57,
               "sire": "ドレフォン",
               "predictedOdds": 75.7,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -15391,7 +15825,7 @@
               "13-11.5.12.2.4"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.023Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -16132,7 +16566,96 @@
               "jockey": "黛",
               "trainer": "新開",
               "age": "",
-              "weight": 58
+              "weight": 58,
+              "sire": "ルヴァンスレーヴ",
+              "predictedOdds": 25.3,
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "3中4.18",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 7,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑦葛飾",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.2",
+                  "time": "1.11.4",
+                  "paceType": "M",
+                  "bodyWeight": 500,
+                  "winner": "ハヤテノツバ",
+                  "jockey": null,
+                  "weight": null,
+                  "courseNote": "B39.0",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "2中3.1",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 10,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "２　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.1",
+                  "time": "1.11.5",
+                  "paceType": "M",
+                  "bodyWeight": 510,
+                  "winner": "ラストシャリ",
+                  "jockey": null,
+                  "weight": null,
+                  "courseNote": "C38.6",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "5中12.28",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 15,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.4",
+                  "time": "1.12.0",
+                  "paceType": "H",
+                  "bodyWeight": 500,
+                  "winner": "チェルシー",
+                  "jockey": null,
+                  "weight": null,
+                  "courseNote": "C39.0",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "5名12.6",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 8,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.1",
+                  "time": "1.12.9",
+                  "paceType": "M",
+                  "bodyWeight": 494,
+                  "winner": "セルヴァンス",
+                  "jockey": null,
+                  "weight": null,
+                  "courseNote": "B39.1",
+                  "distanceGaiji": ""
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 8,
@@ -16145,7 +16668,6 @@
               "weight": 58,
               "sire": "グァンチャーレ",
               "predictedOdds": 31.3,
-              "computerIndex": "8",
               "recentRaces": [
                 {
                   "date": null,
@@ -16266,7 +16788,6 @@
               "weight": 56,
               "sire": "モズアスコット",
               "predictedOdds": 31.1,
-              "computerIndex": "8",
               "recentRaces": [
                 {
                   "date": null,
@@ -16387,7 +16908,6 @@
               "weight": 56,
               "sire": "ヘニーヒューズ",
               "predictedOdds": 43.8,
-              "computerIndex": "4",
               "recentRaces": [
                 {
                   "date": null,
@@ -16508,7 +17028,6 @@
               "weight": 58,
               "sire": "エピファネイア",
               "predictedOdds": 55.5,
-              "computerIndex": "2",
               "recentRaces": [
                 {
                   "date": null,
@@ -16629,7 +17148,6 @@
               "weight": 56,
               "sire": "ドレフォン",
               "predictedOdds": 35.3,
-              "computerIndex": "6",
               "recentRaces": [
                 {
                   "date": null,
@@ -16750,7 +17268,6 @@
               "weight": "",
               "sire": "モズアスコット",
               "predictedOdds": 70.6,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -16871,7 +17388,6 @@
               "weight": 54,
               "sire": "リアルインパクト",
               "predictedOdds": 72.1,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -16992,7 +17508,6 @@
               "weight": 58,
               "sire": "ワールドエース",
               "predictedOdds": 71.8,
-              "computerIndex": "1",
               "recentRaces": [
                 {
                   "date": null,
@@ -17229,7 +17744,7 @@
               "4-9.7.15.5.6.16(抑え2.8.14.13.11.1)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.023Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         }
       ]
     },
@@ -17263,6 +17778,7 @@
               "weight": 57,
               "sire": "ゴールドドリーム",
               "predictedOdds": 3.3,
+              "computerIndex": "75",
               "recentRaces": [
                 {
                   "date": null,
@@ -17362,6 +17878,7 @@
               "weight": 57,
               "sire": "モズアスコット",
               "predictedOdds": 4,
+              "computerIndex": "72",
               "recentRaces": [
                 {
                   "date": null,
@@ -17482,6 +17999,7 @@
               "weight": 57,
               "sire": "サンダースノー",
               "predictedOdds": 4.3,
+              "computerIndex": "66",
               "recentRaces": [
                 {
                   "date": null,
@@ -17602,6 +18120,7 @@
               "weight": 55,
               "sire": "フィレンツェファイア",
               "predictedOdds": 11.1,
+              "computerIndex": "56",
               "recentRaces": [
                 {
                   "date": null,
@@ -17722,6 +18241,7 @@
               "weight": 52,
               "sire": "ベストウォーリア",
               "predictedOdds": 14.2,
+              "computerIndex": "55",
               "recentRaces": [
                 {
                   "date": null,
@@ -17842,6 +18362,7 @@
               "weight": 57,
               "sire": "キタサンブラック",
               "predictedOdds": 13.1,
+              "computerIndex": "53",
               "recentRaces": [
                 {
                   "date": null,
@@ -17899,6 +18420,7 @@
               "weight": 55,
               "sire": "ハービンジャー",
               "predictedOdds": 27.8,
+              "computerIndex": "49",
               "recentRaces": [
                 {
                   "date": null,
@@ -18019,7 +18541,7 @@
               "weight": 57,
               "sire": "ダノンプレミアム",
               "predictedOdds": 36.3,
-              "computerIndex": "6",
+              "computerIndex": "48",
               "recentRaces": [
                 {
                   "date": null,
@@ -18056,7 +18578,7 @@
               "weight": 52,
               "sire": "アルアイン",
               "predictedOdds": 58.2,
-              "computerIndex": "2",
+              "computerIndex": "47",
               "recentRaces": [
                 {
                   "date": null,
@@ -18177,7 +18699,7 @@
               "weight": 52,
               "sire": "ディスクリートキャット",
               "predictedOdds": 58.8,
-              "computerIndex": "2",
+              "computerIndex": "46",
               "recentRaces": [
                 {
                   "date": null,
@@ -18235,7 +18757,7 @@
               "weight": 55,
               "sire": "シャンハイボビー",
               "predictedOdds": 73.5,
-              "computerIndex": "1",
+              "computerIndex": "44",
               "recentRaces": [
                 {
                   "date": null,
@@ -18356,7 +18878,7 @@
               "weight": 57,
               "sire": "マクフィ",
               "predictedOdds": 76.5,
-              "computerIndex": "1"
+              "computerIndex": "43"
             },
             {
               "horseNumber": 16,
@@ -18369,7 +18891,7 @@
               "weight": 57,
               "sire": "サートゥルナーリア",
               "predictedOdds": 73,
-              "computerIndex": "1",
+              "computerIndex": "42",
               "recentRaces": [
                 {
                   "date": null,
@@ -18396,7 +18918,7 @@
                   "date": null,
                   "venue": "2東4.26",
                   "distance": null,
-                  "distanceMeters": null,
+                  "distanceMeters": 1600,
                   "rank": 7,
                   "finishStatus": null,
                   "headCount": null,
@@ -18469,7 +18991,7 @@
               "weight": 57,
               "sire": "ディスクリートキャット",
               "predictedOdds": 74,
-              "computerIndex": "1",
+              "computerIndex": "41",
               "recentRaces": [
                 {
                   "date": null,
@@ -18527,7 +19049,7 @@
               "weight": 55,
               "sire": "セイウンコウセイ",
               "predictedOdds": 75.5,
-              "computerIndex": "1",
+              "computerIndex": "40",
               "recentRaces": [
                 {
                   "date": null,
@@ -18627,6 +19149,7 @@
               "weight": 52,
               "sire": "タリスマニック",
               "predictedOdds": 6.9,
+              "computerIndex": "63",
               "recentRaces": [
                 {
                   "date": null,
@@ -18743,7 +19266,7 @@
               "4-14.6.9.13.2.3(抑え8.5.11.1)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.023Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -18767,6 +19290,7 @@
               "weight": 57,
               "sire": "キタサンブラック",
               "predictedOdds": 2.7,
+              "computerIndex": "78",
               "recentRaces": [
                 {
                   "date": null,
@@ -18824,6 +19348,7 @@
               "weight": 57,
               "sire": "エピファネイア",
               "predictedOdds": 3.1,
+              "computerIndex": "76",
               "recentRaces": [
                 {
                   "date": null,
@@ -18902,6 +19427,7 @@
               "weight": 57,
               "sire": "キセキ",
               "predictedOdds": 8,
+              "computerIndex": "60",
               "recentRaces": [
                 {
                   "date": null,
@@ -19022,6 +19548,7 @@
               "weight": 57,
               "sire": "コントレイル",
               "predictedOdds": 15.4,
+              "computerIndex": "57",
               "recentRaces": [
                 {
                   "date": null,
@@ -19079,6 +19606,7 @@
               "weight": 57,
               "sire": "ルヴァンスレーヴ",
               "predictedOdds": 12,
+              "computerIndex": "55",
               "recentRaces": [
                 {
                   "date": null,
@@ -19199,6 +19727,7 @@
               "weight": 57,
               "sire": "フィエールマン",
               "predictedOdds": 20.4,
+              "computerIndex": "54",
               "recentRaces": [
                 {
                   "date": null,
@@ -19298,7 +19827,7 @@
               "weight": 55,
               "sire": "ロゴタイプ",
               "predictedOdds": 34.9,
-              "computerIndex": "8",
+              "computerIndex": "50",
               "recentRaces": [
                 {
                   "date": null,
@@ -19325,7 +19854,7 @@
                   "date": null,
                   "venue": "2東4.26",
                   "distance": null,
-                  "distanceMeters": null,
+                  "distanceMeters": 1800,
                   "rank": 2,
                   "finishStatus": null,
                   "headCount": null,
@@ -19419,7 +19948,7 @@
               "weight": 57,
               "sire": "シルバーステート",
               "predictedOdds": 33.9,
-              "computerIndex": "8",
+              "computerIndex": "49",
               "recentRaces": [
                 {
                   "date": null,
@@ -19498,7 +20027,7 @@
               "weight": 57,
               "sire": "バゴ",
               "predictedOdds": 39.2,
-              "computerIndex": "6",
+              "computerIndex": "47",
               "recentRaces": [
                 {
                   "date": null,
@@ -19619,7 +20148,7 @@
               "weight": 55,
               "sire": "キセキ",
               "predictedOdds": 84.4,
-              "computerIndex": "1",
+              "computerIndex": "45",
               "recentRaces": [
                 {
                   "date": null,
@@ -19698,7 +20227,7 @@
               "weight": 57,
               "sire": "ハービンジャー",
               "predictedOdds": 82,
-              "computerIndex": "1",
+              "computerIndex": "44",
               "recentRaces": [
                 {
                   "date": null,
@@ -19735,7 +20264,7 @@
               "weight": 54,
               "sire": "ワールドプレミア",
               "predictedOdds": 79.6,
-              "computerIndex": "1",
+              "computerIndex": "43",
               "recentRaces": [
                 {
                   "date": null,
@@ -19835,7 +20364,7 @@
               "weight": 57,
               "sire": "サートゥルナーリア",
               "predictedOdds": 81.4,
-              "computerIndex": "1",
+              "computerIndex": "42",
               "recentRaces": [
                 {
                   "date": null,
@@ -19956,7 +20485,7 @@
               "weight": 57,
               "sire": "ストーミーシー",
               "predictedOdds": 83.8,
-              "computerIndex": "1",
+              "computerIndex": "41",
               "recentRaces": [
                 {
                   "date": null,
@@ -20014,7 +20543,7 @@
               "weight": 57,
               "sire": "ドーンアプローチ",
               "predictedOdds": 81.2,
-              "computerIndex": "1",
+              "computerIndex": "40",
               "recentRaces": [
                 {
                   "date": null,
@@ -20135,6 +20664,7 @@
               "weight": 55,
               "sire": "ジャスタウェイ",
               "predictedOdds": 6.4,
+              "computerIndex": "59",
               "recentRaces": [
                 {
                   "date": null,
@@ -20251,7 +20781,7 @@
               "2-4.12.6.1.11.7(抑え8.16.14.5)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.023Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -20275,6 +20805,7 @@
               "weight": 55,
               "sire": "セントマークスバシリカ",
               "predictedOdds": 2.5,
+              "computerIndex": "80",
               "recentRaces": [
                 {
                   "date": null,
@@ -20395,6 +20926,7 @@
               "weight": 57,
               "sire": "イスラボニータ",
               "predictedOdds": 3.4,
+              "computerIndex": "76",
               "recentRaces": [
                 {
                   "date": null,
@@ -20515,6 +21047,7 @@
               "weight": 57,
               "sire": "シルバーステート",
               "predictedOdds": 8.9,
+              "computerIndex": "62",
               "recentRaces": [
                 {
                   "date": null,
@@ -20551,6 +21084,7 @@
               "weight": 55,
               "sire": "リオンディーズ",
               "predictedOdds": 7.8,
+              "computerIndex": "56",
               "recentRaces": [
                 {
                   "date": null,
@@ -20650,6 +21184,7 @@
               "weight": 57,
               "sire": "モズアスコット",
               "predictedOdds": 22.5,
+              "computerIndex": "54",
               "recentRaces": [
                 {
                   "date": null,
@@ -20770,6 +21305,7 @@
               "weight": 57,
               "sire": "ファインニードル",
               "predictedOdds": 21.3,
+              "computerIndex": "53",
               "recentRaces": [
                 {
                   "date": null,
@@ -20848,6 +21384,7 @@
               "weight": 54,
               "sire": "ゴールドアクター",
               "predictedOdds": 26.5,
+              "computerIndex": "51",
               "recentRaces": [
                 {
                   "date": null,
@@ -20968,7 +21505,7 @@
               "weight": 55,
               "sire": "ダンカーク",
               "predictedOdds": 39.9,
-              "computerIndex": "6",
+              "computerIndex": "49",
               "recentRaces": [
                 {
                   "date": null,
@@ -21026,7 +21563,7 @@
               "weight": 57,
               "sire": "ファインニードル",
               "predictedOdds": 66.3,
-              "computerIndex": "2"
+              "computerIndex": "48"
             },
             {
               "horseNumber": 13,
@@ -21039,7 +21576,7 @@
               "weight": 57,
               "sire": "アメリカンペイトリオット",
               "predictedOdds": 65.7,
-              "computerIndex": "2",
+              "computerIndex": "47",
               "recentRaces": [
                 {
                   "date": null,
@@ -21139,7 +21676,7 @@
               "weight": 53,
               "sire": "シルバーステート",
               "predictedOdds": 80.3,
-              "computerIndex": "1",
+              "computerIndex": "46",
               "recentRaces": [
                 {
                   "date": null,
@@ -21197,13 +21734,13 @@
               "weight": 52,
               "sire": "ラブリーデイ",
               "predictedOdds": 84.5,
-              "computerIndex": "1",
+              "computerIndex": "45",
               "recentRaces": [
                 {
                   "date": null,
                   "venue": "1福4.26",
                   "distance": null,
-                  "distanceMeters": null,
+                  "distanceMeters": 1200,
                   "rank": 6,
                   "finishStatus": null,
                   "headCount": null,
@@ -21255,7 +21792,7 @@
               "weight": 55,
               "sire": "ミッキーグローリー",
               "predictedOdds": 81.9,
-              "computerIndex": "1",
+              "computerIndex": "44",
               "recentRaces": [
                 {
                   "date": null,
@@ -21313,7 +21850,7 @@
               "weight": 56,
               "sire": "マインドユアビスケッツ",
               "predictedOdds": 86.6,
-              "computerIndex": "1"
+              "computerIndex": "43"
             },
             {
               "horseNumber": 2,
@@ -21326,7 +21863,7 @@
               "weight": 57,
               "sire": "ビーチパトロール",
               "predictedOdds": 85.2,
-              "computerIndex": "1",
+              "computerIndex": "42",
               "recentRaces": [
                 {
                   "date": null,
@@ -21447,7 +21984,7 @@
               "weight": 52,
               "sire": "イスラボニータ",
               "predictedOdds": 85.9,
-              "computerIndex": "1",
+              "computerIndex": "41",
               "recentRaces": [
                 {
                   "date": null,
@@ -21505,7 +22042,7 @@
               "weight": 57,
               "sire": "タリスマニック",
               "predictedOdds": 83.8,
-              "computerIndex": "1",
+              "computerIndex": "40",
               "recentRaces": [
                 {
                   "date": null,
@@ -21626,6 +22163,7 @@
               "weight": 57,
               "sire": "サートゥルナーリア",
               "predictedOdds": 8.3,
+              "computerIndex": "58",
               "recentRaces": [
                 {
                   "date": null,
@@ -21742,7 +22280,7 @@
               "18-4.17.7.11.15.16(抑え8.10.14.13.12.6)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.023Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -21766,6 +22304,7 @@
               "weight": 59,
               "sire": "エピファネイア",
               "predictedOdds": 2.2,
+              "computerIndex": "82",
               "recentRaces": [
                 {
                   "date": null,
@@ -21886,6 +22425,7 @@
               "weight": 60,
               "sire": "スクリーンヒーロー",
               "predictedOdds": 4.2,
+              "computerIndex": "67",
               "recentRaces": [
                 {
                   "date": null,
@@ -22006,6 +22546,7 @@
               "weight": 60,
               "sire": "ドレフォン",
               "predictedOdds": 5.4,
+              "computerIndex": "61",
               "recentRaces": [
                 {
                   "date": null,
@@ -22126,6 +22667,7 @@
               "weight": 60,
               "sire": "アメリカンファラオ",
               "predictedOdds": 15.7,
+              "computerIndex": "56",
               "recentRaces": [
                 {
                   "date": null,
@@ -22246,6 +22788,7 @@
               "weight": 60,
               "sire": "サトノアラジン",
               "predictedOdds": 20.6,
+              "computerIndex": "54",
               "recentRaces": [
                 {
                   "date": null,
@@ -22366,12 +22909,13 @@
               "weight": 59,
               "sire": "ダノンバラード",
               "predictedOdds": 17.3,
+              "computerIndex": "53",
               "recentRaces": [
                 {
                   "date": null,
                   "venue": "3京4.26",
                   "distance": null,
-                  "distanceMeters": null,
+                  "distanceMeters": 2910,
                   "rank": 1,
                   "finishStatus": null,
                   "headCount": null,
@@ -22486,6 +23030,7 @@
               "weight": 57,
               "sire": "リオンディーズ",
               "predictedOdds": 22.1,
+              "computerIndex": "52",
               "recentRaces": [
                 {
                   "date": null,
@@ -22606,6 +23151,7 @@
               "weight": 60,
               "sire": "ジャスタウェイ",
               "predictedOdds": 27.7,
+              "computerIndex": "49",
               "recentRaces": [
                 {
                   "date": null,
@@ -22726,7 +23272,7 @@
               "weight": 57,
               "sire": "エピファネイア",
               "predictedOdds": 44.7,
-              "computerIndex": "4",
+              "computerIndex": "47",
               "recentRaces": [
                 {
                   "date": null,
@@ -22844,7 +23390,118 @@
               "jockey": "坂口",
               "trainer": "秋本",
               "age": "",
-              "weight": 57
+              "weight": 57,
+              "sire": "ゴールドシップ",
+              "predictedOdds": 36,
+              "computerIndex": "46",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "2中3.22",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.7",
+                  "time": "3.17.1",
+                  "paceType": "M",
+                  "bodyWeight": 456,
+                  "winner": "モズバンディⒷ",
+                  "jockey": "土田",
+                  "weight": 57,
+                  "courseNote": "C39.1",
+                  "distanceGaiji": null
+                },
+                {
+                  "date": null,
+                  "venue": "2新8.2",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 2,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.7",
+                  "time": "3.06.2",
+                  "paceType": "M",
+                  "bodyWeight": 434,
+                  "winner": null,
+                  "jockey": "土田",
+                  "weight": 57,
+                  "courseNote": "C39.3",
+                  "distanceGaiji": null
+                },
+                {
+                  "date": null,
+                  "venue": "3東6.22",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑥未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": null,
+                  "time": null,
+                  "paceType": "M",
+                  "bodyWeight": 438,
+                  "winner": "マホロバ",
+                  "jockey": null,
+                  "weight": null,
+                  "courseNote": "B37.8",
+                  "distanceGaiji": null
+                },
+                {
+                  "date": null,
+                  "venue": "1新5.24",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 10,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.5",
+                  "time": "3.14.3",
+                  "paceType": "M",
+                  "bodyWeight": 432,
+                  "winner": "サクセスバラ",
+                  "jockey": "土田",
+                  "weight": 57,
+                  "courseNote": "C38.3",
+                  "distanceGaiji": null
+                },
+                {
+                  "date": null,
+                  "venue": "1新5.3",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 7,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "未勝利",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.4",
+                  "time": "3.10.7",
+                  "paceType": "M",
+                  "bodyWeight": 434,
+                  "winner": "サルサロッサ",
+                  "jockey": "土田",
+                  "weight": 57,
+                  "courseNote": "C39.3",
+                  "distanceGaiji": null
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 1,
@@ -22857,7 +23514,7 @@
               "weight": 57,
               "sire": "ザファクター",
               "predictedOdds": 72.1,
-              "computerIndex": "1",
+              "computerIndex": "41",
               "recentRaces": [
                 {
                   "date": null,
@@ -22978,7 +23635,7 @@
               "weight": 57,
               "sire": "バゴ",
               "predictedOdds": 71.9,
-              "computerIndex": "1",
+              "computerIndex": "40",
               "recentRaces": [
                 {
                   "date": null,
@@ -23099,6 +23756,7 @@
               "weight": 60,
               "sire": "イスラボニータ",
               "predictedOdds": 8,
+              "computerIndex": "60",
               "recentRaces": [
                 {
                   "date": null,
@@ -23215,7 +23873,7 @@
               "7-13.4.10.9.12.8(抑え6.3.11.5)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.023Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -23239,6 +23897,7 @@
               "weight": 57,
               "sire": "サトノダイヤモンド",
               "predictedOdds": 2.7,
+              "computerIndex": "77",
               "recentRaces": [
                 {
                   "date": null,
@@ -23275,6 +23934,7 @@
               "weight": 55,
               "sire": "ルーラーシップ",
               "predictedOdds": 3.4,
+              "computerIndex": "71",
               "recentRaces": [
                 {
                   "date": null,
@@ -23373,7 +24033,8 @@
               "age": "",
               "weight": 55,
               "sire": "キタサンブラック",
-              "predictedOdds": 9.6
+              "predictedOdds": 9.6,
+              "computerIndex": "60"
             },
             {
               "horseNumber": 3,
@@ -23386,6 +24047,7 @@
               "weight": 53,
               "sire": "エピファネイア",
               "predictedOdds": 10.4,
+              "computerIndex": "57",
               "recentRaces": [
                 {
                   "date": null,
@@ -23422,6 +24084,7 @@
               "weight": 55,
               "sire": "ノーネイネヴァー",
               "predictedOdds": 13.2,
+              "computerIndex": "56",
               "recentRaces": [
                 {
                   "date": null,
@@ -23541,7 +24204,8 @@
               "age": "",
               "weight": 57,
               "sire": "レイデオロ",
-              "predictedOdds": 19
+              "predictedOdds": 19,
+              "computerIndex": "54"
             },
             {
               "horseNumber": 11,
@@ -23553,7 +24217,8 @@
               "age": "",
               "weight": 55,
               "sire": "ベンバトル",
-              "predictedOdds": 20.7
+              "predictedOdds": 20.7,
+              "computerIndex": "53"
             },
             {
               "horseNumber": 8,
@@ -23565,7 +24230,8 @@
               "age": "",
               "weight": 57,
               "sire": "ハービンジャー",
-              "predictedOdds": 28.1
+              "predictedOdds": 28.1,
+              "computerIndex": "50"
             },
             {
               "horseNumber": 10,
@@ -23578,7 +24244,7 @@
               "weight": 55,
               "sire": "タニノフランケル",
               "predictedOdds": 38.1,
-              "computerIndex": "6",
+              "computerIndex": "49",
               "recentRaces": [
                 {
                   "date": null,
@@ -23657,7 +24323,7 @@
               "weight": 52,
               "sire": "アニマルキングダム",
               "predictedOdds": 37.5,
-              "computerIndex": "6",
+              "computerIndex": "48",
               "recentRaces": [
                 {
                   "date": null,
@@ -23778,7 +24444,7 @@
               "weight": 57,
               "sire": "シルバーステート",
               "predictedOdds": 57.9,
-              "computerIndex": "2",
+              "computerIndex": "47",
               "recentRaces": [
                 {
                   "date": null,
@@ -23815,7 +24481,7 @@
               "weight": 55,
               "sire": "ルーラーシップ",
               "predictedOdds": 58.9,
-              "computerIndex": "2"
+              "computerIndex": "46"
             },
             {
               "horseNumber": 7,
@@ -23828,7 +24494,7 @@
               "weight": 56,
               "sire": "フィエールマン",
               "predictedOdds": 77.1,
-              "computerIndex": "1"
+              "computerIndex": "42"
             },
             {
               "horseNumber": 6,
@@ -23841,7 +24507,7 @@
               "weight": 57,
               "sire": "デクラレーションオブウォー",
               "predictedOdds": 75.8,
-              "computerIndex": "1",
+              "computerIndex": "41",
               "recentRaces": [
                 {
                   "date": null,
@@ -23962,7 +24628,7 @@
               "weight": 52,
               "sire": "ゴールドシップ",
               "predictedOdds": 76.2,
-              "computerIndex": "1",
+              "computerIndex": "40",
               "recentRaces": [
                 {
                   "date": null,
@@ -23999,6 +24665,7 @@
               "weight": 57,
               "sire": "ダノンスマッシュ",
               "predictedOdds": 8,
+              "computerIndex": "58",
               "recentRaces": [
                 {
                   "date": null,
@@ -24115,7 +24782,7 @@
               "4-2.15.16.3.9.14(抑え11.8.10.13.5.12)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.023Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -24139,6 +24806,7 @@
               "weight": 57,
               "sire": "ヘンリーバローズ",
               "predictedOdds": 2.1,
+              "computerIndex": "82",
               "recentRaces": [
                 {
                   "date": null,
@@ -24217,6 +24885,7 @@
               "weight": 57,
               "sire": "マクフィ",
               "predictedOdds": 3,
+              "computerIndex": "74",
               "recentRaces": [
                 {
                   "date": null,
@@ -24295,6 +24964,7 @@
               "weight": 57,
               "sire": "サートゥルナーリア",
               "predictedOdds": 7,
+              "computerIndex": "61",
               "recentRaces": [
                 {
                   "date": null,
@@ -24394,6 +25064,7 @@
               "weight": 55,
               "sire": "ブリックスアンドモルタル",
               "predictedOdds": 17.7,
+              "computerIndex": "54",
               "recentRaces": [
                 {
                   "date": null,
@@ -24514,6 +25185,7 @@
               "weight": 57,
               "sire": "カリフォルニアクローム",
               "predictedOdds": 19.3,
+              "computerIndex": "53",
               "recentRaces": [
                 {
                   "date": null,
@@ -24634,6 +25306,7 @@
               "weight": 57,
               "sire": "サートゥルナーリア",
               "predictedOdds": 21,
+              "computerIndex": "52",
               "recentRaces": [
                 {
                   "date": null,
@@ -24754,6 +25427,7 @@
               "weight": 57,
               "sire": "インカンテーション",
               "predictedOdds": 22.8,
+              "computerIndex": "51",
               "recentRaces": [
                 {
                   "date": null,
@@ -24853,6 +25527,7 @@
               "weight": 56,
               "sire": "クリソベリル",
               "predictedOdds": 28.6,
+              "computerIndex": "50",
               "recentRaces": [
                 {
                   "date": null,
@@ -24973,7 +25648,7 @@
               "weight": 57,
               "sire": "サトノクラウン",
               "predictedOdds": 31.7,
-              "computerIndex": "8",
+              "computerIndex": "49",
               "recentRaces": [
                 {
                   "date": null,
@@ -25052,7 +25727,7 @@
               "weight": 54,
               "sire": "ロジャーバローズ",
               "predictedOdds": 47.7,
-              "computerIndex": "4",
+              "computerIndex": "47",
               "recentRaces": [
                 {
                   "date": null,
@@ -25173,7 +25848,7 @@
               "weight": 57,
               "sire": "マテラスカイ",
               "predictedOdds": 79.7,
-              "computerIndex": "1",
+              "computerIndex": "40",
               "recentRaces": [
                 {
                   "date": null,
@@ -25231,6 +25906,7 @@
               "weight": 57,
               "sire": "コパノリッキー",
               "predictedOdds": 12.2,
+              "computerIndex": "55",
               "recentRaces": [
                 {
                   "date": null,
@@ -25305,7 +25981,7 @@
               "1-5.4.10.3.12.6(抑え2.11.7.9)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.023Z"
+          "generatedAt": "2026-07-20T09:49:27.323Z"
         },
         {
           "raceInfo": {
@@ -25329,6 +26005,7 @@
               "weight": 57,
               "sire": "エピファネイア",
               "predictedOdds": 3.4,
+              "computerIndex": "74",
               "recentRaces": [
                 {
                   "date": null,
@@ -25407,6 +26084,7 @@
               "weight": 55,
               "sire": "シスキン",
               "predictedOdds": 4.1,
+              "computerIndex": "70",
               "recentRaces": [
                 {
                   "date": null,
@@ -25527,6 +26205,7 @@
               "weight": 57,
               "sire": "モーリス",
               "predictedOdds": 5.9,
+              "computerIndex": "62",
               "recentRaces": [
                 {
                   "date": null,
@@ -25647,6 +26326,7 @@
               "weight": 55,
               "sire": "キズナ",
               "predictedOdds": 8.8,
+              "computerIndex": "58",
               "recentRaces": [
                 {
                   "date": null,
@@ -25767,12 +26447,13 @@
               "weight": 57,
               "sire": "モーリス",
               "predictedOdds": 11,
+              "computerIndex": "55",
               "recentRaces": [
                 {
                   "date": null,
                   "venue": "2東4.26",
                   "distance": null,
-                  "distanceMeters": null,
+                  "distanceMeters": 1600,
                   "rank": 7,
                   "finishStatus": null,
                   "headCount": null,
@@ -25845,6 +26526,7 @@
               "weight": 55,
               "sire": "ベンバトル",
               "predictedOdds": 17.4,
+              "computerIndex": "54",
               "recentRaces": [
                 {
                   "date": null,
@@ -25965,6 +26647,7 @@
               "weight": 55,
               "sire": "モーリス",
               "predictedOdds": 15.9,
+              "computerIndex": "52",
               "recentRaces": [
                 {
                   "date": null,
@@ -26022,6 +26705,7 @@
               "weight": 55,
               "sire": "エピファネイア",
               "predictedOdds": 25.7,
+              "computerIndex": "49",
               "recentRaces": [
                 {
                   "date": null,
@@ -26142,7 +26826,7 @@
               "weight": 55,
               "sire": "キタサンブラック",
               "predictedOdds": 53.1,
-              "computerIndex": "2",
+              "computerIndex": "46",
               "recentRaces": [
                 {
                   "date": null,
@@ -26263,7 +26947,7 @@
               "weight": 57,
               "sire": "シルバーステート",
               "predictedOdds": 68,
-              "computerIndex": "1",
+              "computerIndex": "42",
               "recentRaces": [
                 {
                   "date": null,
@@ -26363,7 +27047,7 @@
               "weight": 55,
               "sire": "フォーウィールドライブ",
               "predictedOdds": 70.4,
-              "computerIndex": "1",
+              "computerIndex": "41",
               "recentRaces": [
                 {
                   "date": null,
@@ -26484,7 +27168,7 @@
               "weight": 52,
               "sire": "タリスマニック",
               "predictedOdds": 70.1,
-              "computerIndex": "1",
+              "computerIndex": "40",
               "recentRaces": [
                 {
                   "date": null,
@@ -26605,6 +27289,7 @@
               "weight": 55,
               "sire": "ダノンスマッシュ",
               "predictedOdds": 5,
+              "computerIndex": "61",
               "recentRaces": [
                 {
                   "date": null,
@@ -26721,7 +27406,7 @@
               "2-11.10.8.9.7.4(抑え13.12.6)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.023Z"
+          "generatedAt": "2026-07-20T09:49:27.324Z"
         },
         {
           "raceInfo": {
@@ -26745,6 +27430,7 @@
               "weight": 56,
               "sire": "フィエールマン",
               "predictedOdds": 4.2,
+              "computerIndex": "74",
               "recentRaces": [
                 {
                   "date": null,
@@ -26844,6 +27530,7 @@
               "weight": 58,
               "sire": "サンダースノー",
               "predictedOdds": 3.8,
+              "computerIndex": "70",
               "recentRaces": [
                 {
                   "date": null,
@@ -26961,7 +27648,97 @@
               "jockey": "長浜",
               "trainer": "相沢",
               "age": "",
-              "weight": 57
+              "weight": 57,
+              "sire": "ゴールドドリーム",
+              "predictedOdds": 5,
+              "computerIndex": "64",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "2東5.3",
+                  "distance": null,
+                  "distanceMeters": 1600,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.9",
+                  "time": "1.38.5",
+                  "paceType": "M",
+                  "bodyWeight": 506,
+                  "winner": "レッドベルダ",
+                  "jockey": "長浜",
+                  "weight": 56,
+                  "courseNote": "B38.6",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "1東2.21",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.3",
+                  "time": "1.37.7",
+                  "paceType": "M",
+                  "bodyWeight": 506,
+                  "winner": "ルヴァレドク",
+                  "jockey": "石川",
+                  "weight": 58,
+                  "courseNote": "B39.3",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "1東2.1",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 14,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.6",
+                  "time": "1.37.7",
+                  "paceType": "M",
+                  "bodyWeight": 506,
+                  "winner": "ツーネサーン",
+                  "jockey": "石川",
+                  "weight": 57,
+                  "courseNote": "C38.4",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "笠松12.3",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 4,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "④師走",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.5",
+                  "time": "1.42.5",
+                  "paceType": "M",
+                  "bodyWeight": 496,
+                  "winner": "ダディーズグ",
+                  "jockey": "丸野勝",
+                  "weight": 57,
+                  "courseNote": null,
+                  "distanceGaiji": ""
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 6,
@@ -26974,6 +27751,7 @@
               "weight": 56,
               "sire": "ドゥラメンテ",
               "predictedOdds": 6.5,
+              "computerIndex": "60",
               "recentRaces": [
                 {
                   "date": null,
@@ -27070,7 +27848,97 @@
               "jockey": "松岡",
               "trainer": "蛯名利",
               "age": "",
-              "weight": 58
+              "weight": 58,
+              "sire": "ビーチパトロール",
+              "predictedOdds": 15.7,
+              "computerIndex": "55",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "2東4.26",
+                  "distance": null,
+                  "distanceMeters": 1600,
+                  "rank": 9,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.3",
+                  "time": "1.38.1",
+                  "paceType": "M",
+                  "bodyWeight": 432,
+                  "winner": "セブンマイス",
+                  "jockey": "松岡",
+                  "weight": 58,
+                  "courseNote": "C38.2",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "船橋3.9",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "①Ｃ１五六",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.8",
+                  "time": "1.38.7",
+                  "paceType": "M",
+                  "bodyWeight": 469,
+                  "winner": "メイショウカ",
+                  "jockey": "張田昂",
+                  "weight": 56,
+                  "courseNote": null,
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "船橋2.9",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 11,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "Ｃ２二三",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "39.8",
+                  "time": "1.38.7",
+                  "paceType": "M",
+                  "bodyWeight": 471,
+                  "winner": "タカミノガコ",
+                  "jockey": "御神本訓",
+                  "weight": 56,
+                  "courseNote": null,
+                  "distanceGaiji": null
+                },
+                {
+                  "date": null,
+                  "venue": "船橋1.20",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "成田",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "40.4",
+                  "time": "1.45.4",
+                  "paceType": "M",
+                  "bodyWeight": 466,
+                  "winner": "リカード",
+                  "jockey": "服部茂",
+                  "weight": 56,
+                  "courseNote": null,
+                  "distanceGaiji": ""
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 7,
@@ -27083,6 +27951,7 @@
               "weight": 56,
               "sire": "オマハビーチ",
               "predictedOdds": 20.6,
+              "computerIndex": "54",
               "recentRaces": [
                 {
                   "date": null,
@@ -27203,6 +28072,7 @@
               "weight": 58,
               "sire": "スワーヴリチャード",
               "predictedOdds": 17.3,
+              "computerIndex": "53",
               "recentRaces": [
                 {
                   "date": null,
@@ -27323,6 +28193,7 @@
               "weight": 55,
               "sire": "シュヴァルグラン",
               "predictedOdds": 28,
+              "computerIndex": "50",
               "recentRaces": [
                 {
                   "date": null,
@@ -27443,7 +28314,7 @@
               "weight": 53,
               "sire": "オルフェーヴル",
               "predictedOdds": 30.8,
-              "computerIndex": "8",
+              "computerIndex": "48",
               "recentRaces": [
                 {
                   "date": null,
@@ -27564,7 +28435,7 @@
               "weight": 58,
               "sire": "モーニン",
               "predictedOdds": 57.8,
-              "computerIndex": "2",
+              "computerIndex": "46",
               "recentRaces": [
                 {
                   "date": null,
@@ -27685,7 +28556,7 @@
               "weight": 58,
               "sire": "レインボーライン",
               "predictedOdds": 75.3,
-              "computerIndex": "1",
+              "computerIndex": "44",
               "recentRaces": [
                 {
                   "date": null,
@@ -27803,7 +28674,118 @@
               "jockey": "石田",
               "trainer": "天間",
               "age": "",
-              "weight": 55
+              "weight": 55,
+              "sire": "キンシャサノキセキ",
+              "predictedOdds": 74.5,
+              "computerIndex": "43",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1新5.16",
+                  "distance": null,
+                  "distanceMeters": 1800,
+                  "rank": 4,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.5",
+                  "time": "1.55.5",
+                  "paceType": "H",
+                  "bodyWeight": 484,
+                  "winner": "ファルコンミ",
+                  "jockey": "石田",
+                  "weight": 55,
+                  "courseNote": "C38.1",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "1福4.11",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.6",
+                  "time": "1.46.4",
+                  "paceType": "H",
+                  "bodyWeight": 486,
+                  "winner": "ルージュマロ",
+                  "jockey": "大久保",
+                  "weight": 55,
+                  "courseNote": "C37.6",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "3中3.29",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.2",
+                  "time": "1.12.9",
+                  "paceType": "M",
+                  "bodyWeight": 490,
+                  "winner": "ルイステソー",
+                  "jockey": "遠藤",
+                  "weight": 55,
+                  "courseNote": "C37.7",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "2中3.14",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 10,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "37.0",
+                  "time": "1.12.3",
+                  "paceType": "M",
+                  "bodyWeight": 498,
+                  "winner": "アイアムイチ",
+                  "jockey": "石田",
+                  "weight": 55,
+                  "courseNote": "C38.7",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "5中12.13",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 16,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.1",
+                  "time": "1.14.4",
+                  "paceType": "M",
+                  "bodyWeight": 502,
+                  "winner": null,
+                  "jockey": "石田",
+                  "weight": 55,
+                  "courseNote": "C39.0",
+                  "distanceGaiji": ""
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 3,
@@ -27813,7 +28795,97 @@
               "jockey": "ゴンサルベス",
               "trainer": "大竹",
               "age": "",
-              "weight": 56
+              "weight": 56,
+              "sire": "ゴールドシップ",
+              "predictedOdds": 77,
+              "computerIndex": "42",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "2東5.9",
+                  "distance": null,
+                  "distanceMeters": 2100,
+                  "rank": 11,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "41.2",
+                  "time": "2.16.6",
+                  "paceType": "M",
+                  "bodyWeight": 534,
+                  "winner": "マウントバーⒷ",
+                  "jockey": "木幡巧",
+                  "weight": 56,
+                  "courseNote": "C37.8",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "1福4.12",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "牝１勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "39.1",
+                  "time": "1.48.5",
+                  "paceType": "M",
+                  "bodyWeight": 526,
+                  "winner": "カスバートテⒷ",
+                  "jockey": "中井",
+                  "weight": 56,
+                  "courseNote": "坂54.1",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "3中3.28",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 2,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "牝１勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "40.5",
+                  "time": "1.56.3",
+                  "paceType": "M",
+                  "bodyWeight": 522,
+                  "winner": "タマモカンパⒷ",
+                  "jockey": "横山琉",
+                  "weight": 56,
+                  "courseNote": "B37.5",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "2中3.1",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 12,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "牝１勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.5",
+                  "time": "1.54.8",
+                  "paceType": "M",
+                  "bodyWeight": 518,
+                  "winner": "パースウェイⒷ",
+                  "jockey": "佐々木",
+                  "weight": 55,
+                  "courseNote": "C38.4",
+                  "distanceGaiji": ""
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 2,
@@ -27826,7 +28898,7 @@
               "weight": 53,
               "sire": "アドマイヤマーズ",
               "predictedOdds": 78,
-              "computerIndex": "1",
+              "computerIndex": "41",
               "recentRaces": [
                 {
                   "date": null,
@@ -27947,7 +29019,7 @@
               "weight": 58,
               "sire": "バゴ",
               "predictedOdds": 77.5,
-              "computerIndex": "1",
+              "computerIndex": "40",
               "recentRaces": [
                 {
                   "date": null,
@@ -28047,6 +29119,7 @@
               "weight": 58,
               "sire": "シルバーステート",
               "predictedOdds": 8.3,
+              "computerIndex": "63",
               "recentRaces": [
                 {
                   "date": null,
@@ -28163,7 +29236,7 @@
               "14-1.10.5.6.13.7(抑え9.12.4.11)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.023Z"
+          "generatedAt": "2026-07-20T09:49:27.324Z"
         },
         {
           "raceInfo": {
@@ -28187,6 +29260,7 @@
               "weight": 58,
               "sire": "カレンブラックヒル",
               "predictedOdds": 2.4,
+              "computerIndex": "81",
               "recentRaces": [
                 {
                   "date": null,
@@ -28307,6 +29381,7 @@
               "weight": 56,
               "sire": "サトノアラジン",
               "predictedOdds": 6.2,
+              "computerIndex": "62",
               "recentRaces": [
                 {
                   "date": null,
@@ -28427,6 +29502,7 @@
               "weight": 58,
               "sire": "モーニン",
               "predictedOdds": 9.3,
+              "computerIndex": "61",
               "recentRaces": [
                 {
                   "date": null,
@@ -28547,6 +29623,7 @@
               "weight": 58,
               "sire": "レッドファルクス",
               "predictedOdds": 7.7,
+              "computerIndex": "59",
               "recentRaces": [
                 {
                   "date": null,
@@ -28667,6 +29744,7 @@
               "weight": 56,
               "sire": "シニスターミニスター",
               "predictedOdds": 12.3,
+              "computerIndex": "57",
               "recentRaces": [
                 {
                   "date": null,
@@ -28787,6 +29865,7 @@
               "weight": 58,
               "sire": "コパノリッキー",
               "predictedOdds": 16.1,
+              "computerIndex": "55",
               "recentRaces": [
                 {
                   "date": null,
@@ -28907,6 +29986,7 @@
               "weight": 56,
               "sire": "キズナ",
               "predictedOdds": 22.7,
+              "computerIndex": "52",
               "recentRaces": [
                 {
                   "date": null,
@@ -29027,6 +30107,7 @@
               "weight": 58,
               "sire": "ロードカナロア",
               "predictedOdds": 28.5,
+              "computerIndex": "51",
               "recentRaces": [
                 {
                   "date": null,
@@ -29147,7 +30228,7 @@
               "weight": 58,
               "sire": "タリスマニック",
               "predictedOdds": 38.5,
-              "computerIndex": "6",
+              "computerIndex": "50",
               "recentRaces": [
                 {
                   "date": null,
@@ -29268,7 +30349,7 @@
               "weight": 58,
               "sire": "ビーチパトロール",
               "predictedOdds": 32.9,
-              "computerIndex": "8",
+              "computerIndex": "49",
               "recentRaces": [
                 {
                   "date": null,
@@ -29389,7 +30470,7 @@
               "weight": 58,
               "sire": "ルヴァンスレーヴ",
               "predictedOdds": 32.5,
-              "computerIndex": "8",
+              "computerIndex": "48",
               "recentRaces": [
                 {
                   "date": null,
@@ -29507,7 +30588,118 @@
               "jockey": "ゴンサルベス",
               "trainer": "大和田",
               "age": "",
-              "weight": 58
+              "weight": 58,
+              "sire": "モーリス",
+              "predictedOdds": 37.9,
+              "computerIndex": "47",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1名3.29",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 6,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑥鈴鹿",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.0",
+                  "time": "1.25.4",
+                  "paceType": "M",
+                  "bodyWeight": 486,
+                  "winner": "コーラルクラ",
+                  "jockey": "田辺",
+                  "weight": 58,
+                  "courseNote": "坂53.6",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "1東1.31",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 13,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "２　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.8",
+                  "time": "1.26.1",
+                  "paceType": "M",
+                  "bodyWeight": 492,
+                  "winner": "ペイシャケイ",
+                  "jockey": "佐々木",
+                  "weight": 58,
+                  "courseNote": "坂53.9",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "5東11.30",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "アプロ",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "38.4",
+                  "time": "1.26.3",
+                  "paceType": "M",
+                  "bodyWeight": 488,
+                  "winner": "シャパリュ",
+                  "jockey": "バルザローナ",
+                  "weight": 58,
+                  "courseNote": "Cモヤ",
+                  "distanceGaiji": null
+                },
+                {
+                  "date": null,
+                  "venue": "2東5.24",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 4,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.2",
+                  "time": "1.25.9",
+                  "paceType": "M",
+                  "bodyWeight": 474,
+                  "winner": null,
+                  "jockey": "レーン",
+                  "weight": 58,
+                  "courseNote": "坂55.9",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "2東5.3",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 14,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "１　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.8",
+                  "time": "1.23.9",
+                  "paceType": "S",
+                  "bodyWeight": 476,
+                  "winner": "モナコブル",
+                  "jockey": "ディー",
+                  "weight": 58,
+                  "courseNote": "坂53.6",
+                  "distanceGaiji": ""
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 6,
@@ -29520,7 +30712,7 @@
               "weight": 58,
               "sire": "モーニン",
               "predictedOdds": 73.6,
-              "computerIndex": "1",
+              "computerIndex": "42",
               "recentRaces": [
                 {
                   "date": null,
@@ -29641,7 +30833,7 @@
               "weight": 58,
               "sire": "ニューイヤーズデイ",
               "predictedOdds": 75.1,
-              "computerIndex": "1",
+              "computerIndex": "41",
               "recentRaces": [
                 {
                   "date": null,
@@ -29762,7 +30954,7 @@
               "weight": 58,
               "sire": "ディスクリートキャット",
               "predictedOdds": 73.8,
-              "computerIndex": "1",
+              "computerIndex": "40",
               "recentRaces": [
                 {
                   "date": null,
@@ -29883,6 +31075,7 @@
               "weight": 58,
               "sire": "モーニン",
               "predictedOdds": 8.6,
+              "computerIndex": "60",
               "recentRaces": [
                 {
                   "date": null,
@@ -29999,7 +31192,7 @@
               "10-3.16.7.14.11.9(抑え4.5.12.2.8.1)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.024Z"
+          "generatedAt": "2026-07-20T09:49:27.324Z"
         },
         {
           "raceInfo": {
@@ -30023,6 +31216,7 @@
               "weight": 56,
               "sire": "サートゥルナーリア",
               "predictedOdds": 1.9,
+              "computerIndex": "86",
               "recentRaces": [
                 {
                   "date": null,
@@ -30143,6 +31337,7 @@
               "weight": 58,
               "sire": "エピファネイア",
               "predictedOdds": 4.3,
+              "computerIndex": "69",
               "recentRaces": [
                 {
                   "date": null,
@@ -30221,6 +31416,7 @@
               "weight": 58,
               "sire": "タワーオブロンドン",
               "predictedOdds": 5.7,
+              "computerIndex": "63",
               "recentRaces": [
                 {
                   "date": null,
@@ -30341,6 +31537,7 @@
               "weight": 58,
               "sire": "サトノダイヤモンド",
               "predictedOdds": 9.3,
+              "computerIndex": "57",
               "recentRaces": [
                 {
                   "date": null,
@@ -30461,6 +31658,7 @@
               "weight": 58,
               "sire": "ヤングマンパワー",
               "predictedOdds": 23.7,
+              "computerIndex": "52",
               "recentRaces": [
                 {
                   "date": null,
@@ -30581,6 +31779,7 @@
               "weight": 58,
               "sire": "アジアエクスプレス",
               "predictedOdds": 29.8,
+              "computerIndex": "51",
               "recentRaces": [
                 {
                   "date": null,
@@ -30701,6 +31900,7 @@
               "weight": 58,
               "sire": "イスラボニータ",
               "predictedOdds": 27.7,
+              "computerIndex": "50",
               "recentRaces": [
                 {
                   "date": null,
@@ -30821,7 +32021,7 @@
               "weight": 58,
               "sire": "レッドファルクス",
               "predictedOdds": 32.9,
-              "computerIndex": "8",
+              "computerIndex": "48",
               "recentRaces": [
                 {
                   "date": null,
@@ -30942,7 +32142,7 @@
               "weight": 58,
               "sire": "マインドユアビスケッツ",
               "predictedOdds": 49.3,
-              "computerIndex": "4",
+              "computerIndex": "47",
               "recentRaces": [
                 {
                   "date": null,
@@ -31060,7 +32260,97 @@
               "jockey": "柴田大",
               "trainer": "和田雄",
               "age": "牝2",
-              "weight": 56
+              "weight": 56,
+              "sire": "リアルスティール",
+              "predictedOdds": 82.5,
+              "computerIndex": "40",
+              "recentRaces": [
+                {
+                  "date": null,
+                  "venue": "1阪3.7",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 5,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "⑤千里山",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.9",
+                  "time": "内2.03.3",
+                  "paceType": "M",
+                  "bodyWeight": 426,
+                  "winner": null,
+                  "jockey": "森田",
+                  "weight": 51,
+                  "courseNote": "C39.8",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "1中1.11",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 4,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "④初咲",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.2",
+                  "time": "内1.49.1",
+                  "paceType": "S",
+                  "bodyWeight": 432,
+                  "winner": "コンドゥイア",
+                  "jockey": "石神道",
+                  "weight": 55,
+                  "courseNote": "C40.0",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "5阪12.27",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 1,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "２　勝",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "35.1",
+                  "time": "内2.00.9",
+                  "paceType": "S",
+                  "bodyWeight": 424,
+                  "winner": "ミュージシャ",
+                  "jockey": "森田",
+                  "weight": 52,
+                  "courseNote": "C39.9",
+                  "distanceGaiji": ""
+                },
+                {
+                  "date": null,
+                  "venue": "5名12.14",
+                  "distance": null,
+                  "distanceMeters": null,
+                  "rank": 4,
+                  "finishStatus": null,
+                  "headCount": null,
+                  "raceName": "一宮",
+                  "popularity": null,
+                  "passingOrder": null,
+                  "last3f": "36.3",
+                  "time": "2.16.4",
+                  "paceType": "S",
+                  "bodyWeight": 424,
+                  "winner": "バルナバ",
+                  "jockey": "石神道",
+                  "weight": 54,
+                  "courseNote": "C39.9",
+                  "distanceGaiji": ""
+                }
+              ],
+              "recentFormSource": "racebook"
             },
             {
               "horseNumber": 11,
@@ -31073,6 +32363,7 @@
               "weight": 58,
               "sire": "モーリス",
               "predictedOdds": 8.5,
+              "computerIndex": "58",
               "recentRaces": [
                 {
                   "date": null,
@@ -31189,7 +32480,7 @@
               "10-1.2.11.7.6.8(抑え9.4.5)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.024Z"
+          "generatedAt": "2026-07-20T09:49:27.324Z"
         },
         {
           "raceInfo": {
@@ -31213,12 +32504,13 @@
               "weight": 58,
               "sire": "コパノリッキー",
               "predictedOdds": 2.3,
+              "computerIndex": "84",
               "recentRaces": [
                 {
                   "date": null,
                   "venue": "2東4.26",
                   "distance": null,
-                  "distanceMeters": null,
+                  "distanceMeters": 1600,
                   "rank": 15,
                   "finishStatus": null,
                   "headCount": null,
@@ -31333,6 +32625,7 @@
               "weight": 58,
               "sire": "ジャスタウェイ",
               "predictedOdds": 3.7,
+              "computerIndex": "70",
               "recentRaces": [
                 {
                   "date": null,
@@ -31453,6 +32746,7 @@
               "weight": 58,
               "sire": "ヘニーヒューズ",
               "predictedOdds": 4.6,
+              "computerIndex": "69",
               "recentRaces": [
                 {
                   "date": null,
@@ -31573,6 +32867,7 @@
               "weight": 57,
               "sire": "ジャスタウェイ",
               "predictedOdds": 20.7,
+              "computerIndex": "55",
               "recentRaces": [
                 {
                   "date": null,
@@ -31693,6 +32988,7 @@
               "weight": 59,
               "sire": "ジョーカプチーノ",
               "predictedOdds": 15.6,
+              "computerIndex": "54",
               "recentRaces": [
                 {
                   "date": null,
@@ -31813,6 +33109,7 @@
               "weight": 57,
               "sire": "ヘニーヒューズ",
               "predictedOdds": 18.9,
+              "computerIndex": "53",
               "recentRaces": [
                 {
                   "date": null,
@@ -31933,6 +33230,7 @@
               "weight": 57,
               "sire": "ドレフォン",
               "predictedOdds": 28.4,
+              "computerIndex": "52",
               "recentRaces": [
                 {
                   "date": null,
@@ -32053,7 +33351,7 @@
               "weight": 58,
               "sire": "エスケンデレヤ",
               "predictedOdds": 36.7,
-              "computerIndex": "8",
+              "computerIndex": "51",
               "recentRaces": [
                 {
                   "date": null,
@@ -32174,7 +33472,7 @@
               "weight": 55,
               "sire": "イントゥミスチーフ",
               "predictedOdds": 36.5,
-              "computerIndex": "8",
+              "computerIndex": "50",
               "recentRaces": [
                 {
                   "date": null,
@@ -32295,7 +33593,7 @@
               "weight": 57,
               "sire": "アドマイヤマーズ",
               "predictedOdds": 49.8,
-              "computerIndex": "4",
+              "computerIndex": "49",
               "recentRaces": [
                 {
                   "date": null,
@@ -32416,7 +33714,7 @@
               "weight": 57,
               "sire": "サトノアラジン",
               "predictedOdds": 65.3,
-              "computerIndex": "2",
+              "computerIndex": "48",
               "recentRaces": [
                 {
                   "date": null,
@@ -32537,7 +33835,7 @@
               "weight": 57,
               "sire": "リアルスティール",
               "predictedOdds": 64.1,
-              "computerIndex": "2",
+              "computerIndex": "47",
               "recentRaces": [
                 {
                   "date": null,
@@ -32658,7 +33956,7 @@
               "weight": 58,
               "sire": "シニスターミニスター",
               "predictedOdds": 64.3,
-              "computerIndex": "2",
+              "computerIndex": "46",
               "recentRaces": [
                 {
                   "date": null,
@@ -32779,7 +34077,7 @@
               "weight": 57,
               "sire": "ディープインパクト",
               "predictedOdds": 81.6,
-              "computerIndex": "1",
+              "computerIndex": "41",
               "recentRaces": [
                 {
                   "date": null,
@@ -32900,7 +34198,7 @@
               "weight": 57,
               "sire": "ルーラーシップ",
               "predictedOdds": 80.8,
-              "computerIndex": "1",
+              "computerIndex": "40",
               "recentRaces": [
                 {
                   "date": null,
@@ -32979,12 +34277,13 @@
               "weight": 57,
               "sire": "ロードカナロア",
               "predictedOdds": 17.2,
+              "computerIndex": "56",
               "recentRaces": [
                 {
                   "date": null,
                   "venue": "2東4.26",
                   "distance": null,
-                  "distanceMeters": null,
+                  "distanceMeters": 1600,
                   "rank": 15,
                   "finishStatus": null,
                   "headCount": null,
@@ -33094,7 +34393,7 @@
               "16-12.6.8.4.14"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.024Z"
+          "generatedAt": "2026-07-20T09:49:27.324Z"
         },
         {
           "raceInfo": {
@@ -33118,6 +34417,7 @@
               "weight": 58,
               "sire": "アジアエクスプレス",
               "predictedOdds": 2.1,
+              "computerIndex": "84",
               "recentRaces": [
                 {
                   "date": null,
@@ -33238,6 +34538,7 @@
               "weight": 58,
               "sire": "ハービンジャー",
               "predictedOdds": 4.4,
+              "computerIndex": "71",
               "recentRaces": [
                 {
                   "date": null,
@@ -33358,6 +34659,7 @@
               "weight": 58,
               "sire": "サンダースノー",
               "predictedOdds": 10.4,
+              "computerIndex": "60",
               "recentRaces": [
                 {
                   "date": null,
@@ -33478,6 +34780,7 @@
               "weight": 58,
               "sire": "エピファネイア",
               "predictedOdds": 17.9,
+              "computerIndex": "56",
               "recentRaces": [
                 {
                   "date": null,
@@ -33598,6 +34901,7 @@
               "weight": 56,
               "sire": "リアルスティール",
               "predictedOdds": 18.3,
+              "computerIndex": "55",
               "recentRaces": [
                 {
                   "date": null,
@@ -33718,6 +35022,7 @@
               "weight": 58,
               "sire": "ホッコータルマエ",
               "predictedOdds": 20.6,
+              "computerIndex": "54",
               "recentRaces": [
                 {
                   "date": null,
@@ -33838,6 +35143,7 @@
               "weight": 58,
               "sire": "シニスターミニスター",
               "predictedOdds": 22.5,
+              "computerIndex": "53",
               "recentRaces": [
                 {
                   "date": null,
@@ -33958,6 +35264,7 @@
               "weight": 58,
               "sire": "ニューイヤーズデイ",
               "predictedOdds": 26.2,
+              "computerIndex": "52",
               "recentRaces": [
                 {
                   "date": null,
@@ -34078,7 +35385,7 @@
               "weight": 57,
               "sire": "バトルプラン",
               "predictedOdds": 50.2,
-              "computerIndex": "4",
+              "computerIndex": "51",
               "recentRaces": [
                 {
                   "date": null,
@@ -34199,7 +35506,7 @@
               "weight": 58,
               "sire": "フェノーメノ",
               "predictedOdds": 40.2,
-              "computerIndex": "6",
+              "computerIndex": "50",
               "recentRaces": [
                 {
                   "date": null,
@@ -34320,7 +35627,7 @@
               "weight": 53,
               "sire": "エイシンフラッシュ",
               "predictedOdds": 67.1,
-              "computerIndex": "2",
+              "computerIndex": "49",
               "recentRaces": [
                 {
                   "date": null,
@@ -34441,7 +35748,7 @@
               "weight": 56,
               "sire": "フリオーソ",
               "predictedOdds": 64.5,
-              "computerIndex": "2",
+              "computerIndex": "48",
               "recentRaces": [
                 {
                   "date": null,
@@ -34562,7 +35869,7 @@
               "weight": 55,
               "sire": "ルーラーシップ",
               "predictedOdds": 66.4,
-              "computerIndex": "2",
+              "computerIndex": "47",
               "recentRaces": [
                 {
                   "date": null,
@@ -34683,7 +35990,7 @@
               "weight": 58,
               "sire": "オンファイア",
               "predictedOdds": 66.6,
-              "computerIndex": "2",
+              "computerIndex": "46",
               "recentRaces": [
                 {
                   "date": null,
@@ -34804,7 +36111,7 @@
               "weight": 56,
               "sire": "ミッキーグローリー",
               "predictedOdds": 82.3,
-              "computerIndex": "1",
+              "computerIndex": "40",
               "recentRaces": [
                 {
                   "date": null,
@@ -34925,6 +36232,7 @@
               "weight": 58,
               "sire": "ドレフォン",
               "predictedOdds": 6,
+              "computerIndex": "59",
               "recentRaces": [
                 {
                   "date": null,
@@ -35041,7 +36349,7 @@
               "8-13.4.12.5.14.3(抑え6.2.10.11.1.9.15.16)"
             ]
           },
-          "generatedAt": "2026-05-29T09:11:48.024Z"
+          "generatedAt": "2026-07-20T09:49:27.324Z"
         }
       ]
     }
