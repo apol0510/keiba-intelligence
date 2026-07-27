@@ -5,17 +5,17 @@
     "venues": [
       "川崎"
     ],
-    "totalRaces": 11,
-    "hitRaces": 6,
+    "totalRaces": 12,
+    "hitRaces": 7,
     "missRaces": 5,
-    "hitRate": 54.5,
-    "betAmount": 5500,
+    "hitRate": 58.3,
+    "betAmount": 6000,
     "betPointsPerRace": 5,
-    "totalBetPoints": 55,
-    "totalInvestment": 5500,
-    "totalPayout": 12600,
-    "returnRate": 229.1,
-    "recoveryRate": 229.1,
+    "totalBetPoints": 60,
+    "totalInvestment": 6000,
+    "totalPayout": 14990,
+    "returnRate": 249.8,
+    "recoveryRate": 249.8,
     "races": [
       {
         "raceNumber": 1,
@@ -370,9 +370,42 @@
         },
         "betType": "馬単",
         "betPoints": 5
+      },
+      {
+        "raceNumber": 12,
+        "raceName": "夏草特別",
+        "venue": "川崎",
+        "result": {
+          "first": {
+            "number": 10,
+            "name": "ラーマ"
+          },
+          "second": {
+            "number": 2,
+            "name": "ジーティーカイソク"
+          },
+          "third": {
+            "number": 7,
+            "name": "ユメドリーム"
+          }
+        },
+        "bettingLines": [
+          "4-2.6.10.7.3.1(抑え11.9)",
+          "2-4.6.10.7.3.1(抑え11.9)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "2-4.6.10.7.3.1(抑え11.9)"
+        ],
+        "umatan": {
+          "combination": "10-2",
+          "payout": 2390
+        },
+        "betType": "馬単",
+        "betPoints": 5
       }
     ],
-    "verifiedAt": "2026-07-27T14:17:29.287Z"
+    "verifiedAt": "2026-07-27T14:18:59.174Z"
   },
   {
     "date": "2026-07-23",
