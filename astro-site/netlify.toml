@@ -58,10 +58,17 @@
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["airtable", "@sendgrid/mail"]
-  # SSR で horseHistories / featureScores / entries JSON を読むため Function bundle に同梱する
-  # (path は netlify.toml と同じ astro-site/ からの相対)。
-  # entries（南関出馬表）は F5 馬詳細表示で SSR runtime に fs 読みするため追加（表示接続は F5f）。
-  included_files = ["src/data/horseHistories/**", "src/data/featureScores/**", "src/data/recentHorseHistories/**", "src/data/entries/**", "src/data/horseStats/**"]
+  # [functions] included_files は**意図的に持たない**（2026-07-30）。
+  #
+  # SSR Function への同梱は次の2経路だけで足りることを実測で確認した。
+  #   1. astro.config.mjs の adapter includeFiles
+  #      → horseHistories / horseStats / recentHorseHistories / entries
+  #   2. @astrojs/netlify の依存トレース（`join(process.cwd(), 'src','data', …)` の静的解析）
+  #      → predictions / featureScores / archiveResults*
+  # ここに全ディレクトリの glob を残すと、ビルド後の
+  # `npm run prune:function-data`（scripts/pruneFunctionBundleData.mjs）で落とした過去日データを
+  # deploy 時に repo から再同梱してしまい、Lambda のサイズ上限超過（deploy 400）が再発しうる。
+  # 同梱範囲を変えたい場合は prune スクリプトの DATASETS で一元管理すること。
 
 # プラグイン
 [[plugins]]
