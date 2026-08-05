@@ -1,0 +1,256 @@
+---
+/**
+ * メール配信停止ページ（KEIBA Intelligence 専用）
+ *
+ * 🔴 GET は確認画面を出すだけ。解除は同ページへの POST でのみ確定する。
+ * 🔴 メールアドレスを URL にも画面にも出さない。
+ * 🔴 JavaScript 無効でも動作する（通常の <form method="post">）。
+ *
+ * 契約の正本: keiba-marketing-automation の
+ *   `engine/tenancy/policy/unsubscribe-token.js`（token `unsub-v1`）
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { OUTCOME } from '../lib/unsubscribe/token.js';
+import { createFixedWindowRateLimiter } from '../lib/unsubscribe/token.js';
+import { createProductionUnsubscribeStore } from '../lib/unsubscribe/store.js';
+import {
+  handleGet, handlePost, readCsrfCookie, RATE_LIMIT, CSRF_COOKIE_NAME,
+} from '../lib/unsubscribe/handler.js';
+
+export const prerender = false;
+
+// rate limiter はモジュールスコープ（同一 SSR インスタンス内で共有）
+const rateLimiter =
+  globalThis.__kiUnsubRateLimiter ??
+  (globalThis.__kiUnsubRateLimiter = createFixedWindowRateLimiter({
+    limit: RATE_LIMIT.POST, windowMs: RATE_LIMIT.WINDOW_MS,
+  }));
+
+const secret = import.meta.env.KMA_UNSUBSCRIBE_TOKEN_SECRET_KEIBA_INTELLIGENCE
+  ?? process.env.KMA_UNSUBSCRIBE_TOKEN_SECRET_KEIBA_INTELLIGENCE
+  ?? '';
+
+// 🔴 本番 store は既定で無効（recipientRef → 顧客レコードの対応付けが未確定のため）
+const store = createProductionUnsubscribeStore({
+  writeEnabled: (process.env.UNSUBSCRIBE_WRITE_ENABLED ?? '') === 'true',
+});
+
+const url = new URL(Astro.request.url);
+const nowMs = Date.now();
+// 🔴 rate limit のキーに email を使わない
+const clientKey = Astro.request.headers.get('x-nf-client-connection-ip')
+  ?? Astro.request.headers.get('x-forwarded-for')
+  ?? 'unknown';
+
+let result;
+let csrfToken = null;
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  result = await handlePost({
+    token: form.get('t'),
+    csrfForm: form.get('csrf'),
+    csrfCookie: readCsrfCookie(Astro.request.headers.get('cookie')),
+    secret, nowMs, rateLimiter, clientKey, store,
+  });
+} else {
+  const got = handleGet({ token: url.searchParams.get('t'), secret, nowMs, rateLimiter, clientKey });
+  result = got;
+  if (got.csrf) {
+    csrfToken = got.csrf.token;
+    Astro.response.headers.append('Set-Cookie', got.csrf.cookie);
+  }
+}
+
+Astro.response.status = result.status;
+// 🔴 検索エンジンにも保存させない
+Astro.response.headers.set('Cache-Control', 'no-store');
+Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+
+// 🔴 監査ログには PII を出さない（tenantId / 相関 ID / 結果 / 時刻 のみ）
+console.log('[unsubscribe]', JSON.stringify(result.audit));
+
+const { outcome } = result.view;
+const token = url.searchParams.get('t') ?? '';
+const rateLimited = result.view.rateLimited === true;
+const temporarilyUnavailable = result.view.temporarilyUnavailable === true;
+---
+
+<BaseLayout title="メール配信の停止" description="KEIBA Intelligence からのお知らせメールの配信を停止します。">
+  <main class="unsub" role="main">
+    <h1 class="unsub__title">メール配信の停止</h1>
+
+    {outcome === OUTCOME.CONFIRMABLE && (
+      <section class="unsub__box" aria-labelledby="confirm-heading">
+        <h2 id="confirm-heading" class="unsub__heading">配信を停止しますか？</h2>
+        <p class="unsub__lead">
+          このリンクのメールアドレス宛に、KEIBA Intelligence からの
+          <strong>お知らせメールの配信を停止</strong>します。
+        </p>
+
+        <div class="unsub__notice" role="note">
+          <p class="unsub__notice-title">ご注意</p>
+          <ul class="unsub__notice-list">
+            <li>これは<strong>メール配信を止める手続き</strong>です。</li>
+            <li>KEIBA Intelligence の<strong>退会（アカウント削除）ではありません</strong>。</li>
+            <li>ご利用中の<strong>有料プランの解約でもありません</strong>。引き続きサイトはご利用いただけます。</li>
+            <li>お手続きに必要な、お支払いや重要なご連絡は引き続きお送りする場合があります。</li>
+          </ul>
+        </div>
+
+        <form method="post" action="/unsubscribe" class="unsub__form">
+          <input type="hidden" name="t" value={token} />
+          <input type="hidden" name="csrf" value={csrfToken} />
+          <button type="submit" class="unsub__button">メール配信を停止する</button>
+        </form>
+
+        <p class="unsub__cancel">
+          停止しない場合は、このページを閉じてください。<a href="/">トップページへ戻る</a>
+        </p>
+      </section>
+    )}
+
+    {outcome === OUTCOME.COMPLETED && (
+      <section class="unsub__box unsub__box--done" aria-labelledby="done-heading">
+        <h2 id="done-heading" class="unsub__heading">配信を停止しました</h2>
+        <p class="unsub__lead">お知らせメールの配信を停止しました。ご利用ありがとうございました。</p>
+        <p class="unsub__note">
+          サイトのご利用は続けられます。<a href="/">トップページへ戻る</a>
+        </p>
+      </section>
+    )}
+
+    {outcome === OUTCOME.ALREADY_UNSUBSCRIBED && (
+      <section class="unsub__box unsub__box--done" aria-labelledby="already-heading">
+        <h2 id="already-heading" class="unsub__heading">すでに停止済みです</h2>
+        <p class="unsub__lead">このメールアドレス宛の配信は、すでに停止されています。</p>
+        <p class="unsub__note"><a href="/">トップページへ戻る</a></p>
+      </section>
+    )}
+
+    {outcome === OUTCOME.EXPIRED && (
+      <section class="unsub__box unsub__box--warn" aria-labelledby="expired-heading">
+        <h2 id="expired-heading" class="unsub__heading">リンクの有効期限が切れています</h2>
+        <p class="unsub__lead">
+          お手数ですが、より新しいメールに記載された配信停止リンクをお試しください。
+        </p>
+        <p class="unsub__note">
+          お困りの場合は<a href="/contact">お問い合わせフォーム</a>からご連絡ください。
+        </p>
+      </section>
+    )}
+
+    {outcome === OUTCOME.INVALID && !rateLimited && !temporarilyUnavailable && (
+      <section class="unsub__box unsub__box--warn" aria-labelledby="invalid-heading">
+        <h2 id="invalid-heading" class="unsub__heading">リンクを確認できませんでした</h2>
+        <p class="unsub__lead">
+          リンクが正しくないか、途中で切れている可能性があります。
+          メール本文のリンク全体をコピーしてお試しください。
+        </p>
+        <p class="unsub__note">
+          お困りの場合は<a href="/contact">お問い合わせフォーム</a>からご連絡ください。
+        </p>
+      </section>
+    )}
+
+    {rateLimited && (
+      <section class="unsub__box unsub__box--warn" aria-labelledby="rate-heading">
+        <h2 id="rate-heading" class="unsub__heading">しばらく時間をおいてください</h2>
+        <p class="unsub__lead">短時間に多くのアクセスがありました。時間をおいて再度お試しください。</p>
+      </section>
+    )}
+
+    {temporarilyUnavailable && (
+      <section class="unsub__box unsub__box--warn" aria-labelledby="unavailable-heading">
+        <h2 id="unavailable-heading" class="unsub__heading">現在お手続きできません</h2>
+        <p class="unsub__lead">
+          一時的にお手続きを完了できませんでした。
+          お手数ですが<a href="/contact">お問い合わせフォーム</a>からご連絡ください。
+        </p>
+      </section>
+    )}
+  </main>
+</BaseLayout>
+
+<style lang="scss">
+  .unsub {
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+    line-height: 1.8;
+
+    &__title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+    }
+
+    &__box {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 0.75rem;
+      padding: 1.5rem 1.25rem;
+      background: rgba(255, 255, 255, 0.04);
+
+      &--done { border-color: rgba(80, 200, 140, 0.5); }
+      &--warn { border-color: rgba(240, 180, 80, 0.5); }
+    }
+
+    &__heading {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin: 0 0 0.75rem;
+    }
+
+    &__lead { margin: 0 0 1rem; }
+
+    &__notice {
+      border-left: 3px solid rgba(240, 180, 80, 0.7);
+      padding: 0.75rem 0 0.75rem 1rem;
+      margin: 0 0 1.5rem;
+      font-size: 0.95rem;
+    }
+
+    &__notice-title { font-weight: 700; margin: 0 0 0.5rem; }
+
+    &__notice-list {
+      margin: 0;
+      padding-left: 1.2rem;
+      li { margin-bottom: 0.35rem; }
+    }
+
+    &__form { margin: 0 0 1rem; }
+
+    &__button {
+      /* 指で押しやすい大きさ（モバイル対応） */
+      display: block;
+      width: 100%;
+      min-height: 3rem;
+      padding: 0.85rem 1rem;
+      font-size: 1rem;
+      font-weight: 700;
+      border: 0;
+      border-radius: 0.5rem;
+      background: #c0392b;
+      color: #fff;
+      cursor: pointer;
+
+      &:hover { background: #a93226; }
+
+      /* キーボード操作時に必ず見える */
+      &:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+    }
+
+    &__cancel, &__note { font-size: 0.9rem; margin: 0; }
+
+    a { text-decoration: underline; }
+  }
+
+  @media (max-width: 480px) {
+    .unsub { padding: 1.5rem 1rem 3rem; }
+  }
+
+  /* 動きを減らす設定を尊重 */
+  @media (prefers-reduced-motion: reduce) {
+    .unsub__button { transition: none; }
+  }
+</style>
