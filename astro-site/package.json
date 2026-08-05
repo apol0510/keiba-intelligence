@@ -25,7 +25,8 @@
     "import:feature-scores": "node scripts/importFeatureScores.js",
     "rebuild:archive": "node scripts/rebuildArchive.js",
     "test:validation": "node scripts/utils/validatePrediction.test.js",
-    "test:computer-index": "node --test src/utils/computerIndexContract.test.mjs"
+    "test:computer-index": "node --test src/utils/computerIndexContract.test.mjs",
+    "test:unsubscribe": "node --test src/lib/unsubscribe/unsubscribe.test.mjs"
   },
   "dependencies": {
     "@astrojs/netlify": "^6.5.8",
