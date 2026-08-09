@@ -5,7 +5,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkSharedResults } from './syncArchiveResults.js';
+import { checkSharedResults, processTrack } from './syncArchiveResults.js';
 import { createSharedClient, SHARED_FETCH_CODES } from './lib/sharedFetch.mjs';
 
 const SECRET = 'ghp_MOCK_TOKEN_syncArchiveResults_test';
@@ -136,4 +136,100 @@ test('10. 統合ファイル 404 → per-venue 全 404 → totalRaces=0, venues=
   const result = await checkSharedResults(DATE, 'nankan', { client, resolveToken: noopResolve });
   assert.equal(result.totalRaces, 0);
   assert.deepEqual(result.venues, []);
+});
+
+// ----- 月ディレクトリ一覧による GET 削減（listingCache 指定時） -----
+
+function mkEntries(names) {
+  return names.map((n) => ({ name: n, path: `p/${n}`, sha: 's', size: 10, type: 'file' }));
+}
+
+test('11. listingCache あり: 一覧に無い日は per-venue GET を撃たない（一覧1回のみ）', async () => {
+  const fetchImpl = mkFetch((url) => {
+    if (url.includes(`jra/results/${YEAR}/${MONTH}?`)) return mkRes(200, mkEntries(['2026-05-31-TOK.json']));
+    throw new Error(`予期しない GET: ${url}`);
+  });
+  const client = createSharedClient({ fetchImpl, env: ENV_OK, sleepImpl: noSleep });
+  const result = await checkSharedResults(DATE, 'jra', { client, resolveToken: noopResolve, listingCache: new Map() });
+  assert.equal(result.totalRaces, 0);
+  assert.deepEqual(result.venues, []);
+  // 従来は 11 GET だったところが、一覧 1 GET だけで済む
+  assert.equal(fetchImpl.calls.length, 1);
+});
+
+test('12. listingCache あり: 存在する会場だけ GET する', async () => {
+  const fetchImpl = mkFetch((url) => {
+    if (url.includes(`jra/results/${YEAR}/${MONTH}?`)) {
+      return mkRes(200, mkEntries([`${DATE}-TOK.json`, `${DATE}-KYO.json`, `${DATE}-HAK.json`]));
+    }
+    if (url.includes('-TOK.json')) return mkRes(200, { races: Array(12).fill({ id: 'r' }) });
+    if (url.includes('-KYO.json')) return mkRes(200, { races: Array(11).fill({ id: 'r' }) });
+    throw new Error(`予期しない GET: ${url}`);
+  });
+  const client = createSharedClient({ fetchImpl, env: ENV_OK, sleepImpl: noSleep });
+  const result = await checkSharedResults(DATE, 'jra', { client, resolveToken: noopResolve, listingCache: new Map() });
+  assert.equal(result.totalRaces, 23);
+  assert.deepEqual(result.venues, ['TOK', 'KYO']);
+  // 一覧1 + TOK + KYO = 3。HAK は JRA_VENUES に無いので触らない
+  assert.equal(fetchImpl.calls.length, 3);
+  assert.ok(!fetchImpl.calls.some((c) => c.url.includes('-HAK.json')), 'HAK を GET してはいけない');
+});
+
+test('13. listingCache は月ディレクトリごとに1回だけ一覧を取る', async () => {
+  const fetchImpl = mkFetch((url) => {
+    if (url.includes('?ref=') && !url.endsWith('.json?ref=main')) return mkRes(200, mkEntries([]));
+    return mkRes(404, 'Not Found');
+  });
+  const client = createSharedClient({ fetchImpl, env: ENV_OK, sleepImpl: noSleep });
+  const cache = new Map();
+  await checkSharedResults('2026-05-12', 'jra', { client, resolveToken: noopResolve, listingCache: cache });
+  await checkSharedResults('2026-05-13', 'jra', { client, resolveToken: noopResolve, listingCache: cache });
+  await checkSharedResults('2026-05-14', 'jra', { client, resolveToken: noopResolve, listingCache: cache });
+  assert.equal(fetchImpl.calls.length, 1, '同月3日ぶんで一覧 GET は1回');
+});
+
+test('14. 一覧が 1000 件に達したら従来の per-venue GET へ落ちる（取りこぼし防止）', async () => {
+  const many = Array.from({ length: 1000 }, (_, i) => `filler-${i}.json`);
+  const fetchImpl = mkFetch((url) => {
+    if (!url.endsWith('.json?ref=main')) return mkRes(200, mkEntries(many));
+    if (url.includes('-TOK.json')) return mkRes(200, { races: Array(12).fill({ id: 'r' }) });
+    return mkRes(404, 'Not Found');
+  });
+  const client = createSharedClient({ fetchImpl, env: ENV_OK, sleepImpl: noSleep });
+  const result = await checkSharedResults(DATE, 'jra', { client, resolveToken: noopResolve, listingCache: new Map() });
+  assert.equal(result.totalRaces, 12);
+  // 一覧1 + 統合1 + 会場10 = 12（＝一覧を信用せず全部撃っている）
+  assert.equal(fetchImpl.calls.length, 12);
+});
+
+// ----- 一時エラーの扱い（processTrack） -----
+
+test('15. rate limit は run を落とさず、その日をスキップして継続する', async () => {
+  const fetchImpl = mkFetch(() => mkRes(403, 'rate limit', { 'x-ratelimit-remaining': '0' }));
+  const client = createSharedClient({ fetchImpl, env: ENV_OK, sleepImpl: noSleep });
+  const { summary } = await processTrack('jra', ['2026-05-12'], new Set(), false, { client, resolveToken: noopResolve });
+  assert.equal(summary.transient.length, 1);
+  assert.equal(summary.transient[0].code, SHARED_FETCH_CODES.RATE_LIMITED);
+  assert.equal(summary.errors.length, 0, '一時エラーは errors に入れない（＝exit 1 にしない）');
+});
+
+test('16. 認証失敗は握り潰さず throw する（exit 1 のまま）', async () => {
+  const fetchImpl = mkFetch(() => mkRes(401, 'Bad credentials'));
+  const client = createSharedClient({ fetchImpl, env: ENV_OK, sleepImpl: noSleep });
+  await assert.rejects(
+    processTrack('jra', ['2026-05-12'], new Set(), false, { client, resolveToken: noopResolve }),
+    (e) => e.code === SHARED_FETCH_CODES.AUTH_FAILED,
+  );
+});
+
+test('17. 一時エラーが3回連続したら走査を打ち切る（レート制限を悪化させない）', async () => {
+  const fetchImpl = mkFetch(() => mkRes(429, 'slow down'));
+  const client = createSharedClient({ fetchImpl, env: ENV_OK, sleepImpl: noSleep });
+  const dates = ['2026-05-10', '2026-05-11', '2026-05-12', '2026-05-13', '2026-05-14'];
+  const { summary } = await processTrack('jra', dates, new Set(), false, { client, resolveToken: noopResolve });
+  assert.equal(summary.errors.length, 0);
+  assert.equal(summary.transient.length, 5, '残り日も transient として記録される');
+  assert.equal(summary.transient[3].code, 'SKIPPED_AFTER_TRANSIENT');
+  // 3日ぶんしか撃たない（retries=2 なので 1日 3 リクエスト × 3日 = 9）
+  assert.equal(fetchImpl.calls.length, 9);
 });
