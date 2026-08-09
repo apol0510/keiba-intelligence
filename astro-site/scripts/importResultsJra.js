@@ -14,6 +14,9 @@ import crypto from 'crypto';
 import { isMainRace } from '../src/utils/mainRaceBetting.js';
 import { checkUmatanHit } from '../src/utils/umatanHit.js';
 import { createSharedClient, resolveSharedToken } from './lib/sharedFetch.mjs';
+import { exitDeferredOrFatal } from './lib/sharedCheckerSupport.mjs';
+
+const LABEL = 'importResultsJra.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -785,9 +788,8 @@ async function main() {
     }
 
   } catch (error) {
-    console.error(`\n❌ エラーが発生しました: ${error.message}`);
-    console.error(error);
-    process.exit(1);
+    // 一時失敗(rate limit/timeout/5xx)は exit 75 で deferred、それ以外は fail-closed。
+    exitDeferredOrFatal(error, { label: LABEL });
   }
 }
 
