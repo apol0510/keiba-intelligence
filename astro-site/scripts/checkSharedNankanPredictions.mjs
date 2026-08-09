@@ -24,10 +24,12 @@
  *
  * exit code:
  *   0 … 確定できた（200=存在 / 認証済み404=未投入）。FOUND=false でも「正常な空」
- *   1 … token 未設定 / 401 / 403 / 429 / 5xx / timeout / その他 fatal（＝確定不能）
+ *   2 … 一時エラー（rate limit / timeout / 5xx）で確定不能。呼び出し側はスキップしてよい
+ *   1 … token 未設定 / 401 / 権限不足 / その他 fatal（＝確定不能。運用者の対応が要る）
  */
 import { pathToFileURL } from 'node:url';
 import { createSharedClient, SharedFetchError, SHARED_FETCH_CODES } from './lib/sharedFetch.mjs';
+import { createMonthIndex, exitWithSharedFetchError } from './lib/sharedCheckerSupport.mjs';
 
 const DEFAULT_VENUES = ['OOI', 'FUN', 'KAW', 'URA'];
 
@@ -89,10 +91,22 @@ export async function checkSharedNankanPredictions({
   const c = client ?? createSharedClient({ env: { [CROSS_REPO_TOKEN_KEY]: token } });
   const [y, m] = args.date.split('-');
 
-  // 1. 統合ファイル優先（required:false → 404 のみ null、他は fatal）
-  const unifiedPath = `nankan/predictions/${y}/${m}/${args.date}.json`;
-  const unifiedData = await c.fetchJson(unifiedPath, { ref: 'main', required: false });
-  if (unifiedData !== null) {
+  // 本 checker は「ファイルが有るか無いか」しか見ない（中身を読まない）。
+  // 月ディレクトリ一覧 1 GET で存在が分かるので、統合＋会場ごとの GET は撃たない。
+  // 一覧が信用できない月（'unknown'）だけ従来どおり個別 GET で確かめ、
+  // 未検証で found と報告しない（誤アラートを作らない）。
+  const dir = `nankan/predictions/${y}/${m}`;
+  const monthIndex = createMonthIndex(c, 'main');
+  async function exists(fileName, label) {
+    const state = await monthIndex.status(dir, fileName);
+    if (state === 'present') return true;
+    if (state === 'absent') return false;
+    logger.error(`\u{1F504} ${label}: month listing untrusted → verifying by GET`);
+    return (await c.fetchJson(`${dir}/${fileName}`, { ref: 'main', required: false })) !== null;
+  }
+
+  // 1. 統合ファイル優先
+  if (await exists(`${args.date}.json`, 'unified')) {
     logger.error(`✅ nankan/predictions unified: found (${args.date})`);
     return { found: true, foundCodes: [] };
   }
@@ -101,13 +115,11 @@ export async function checkSharedNankanPredictions({
   // 2. per-venue フォールバック
   const foundCodes = [];
   for (const code of venues) {
-    const venuePath = `nankan/predictions/${y}/${m}/${args.date}-${code}.json`;
-    const venueData = await c.fetchJson(venuePath, { ref: 'main', required: false });
-    if (venueData === null) {
-      logger.error(`⏭️  nankan/predictions ${code}: not posted yet (authenticated 404)`);
-    } else {
+    if (await exists(`${args.date}-${code}.json`, `${code}`)) {
       foundCodes.push(code);
       logger.error(`✅ nankan/predictions ${code}: found`);
+    } else {
+      logger.error(`⏭️  nankan/predictions ${code}: not posted yet`);
     }
   }
 
@@ -123,8 +135,5 @@ if (isDirectRun) {
       process.stdout.write(`FOUND=${found}\n`);
       process.stdout.write(`FOUND_CODES=${foundCodes.join(' ')}\n`);
     })
-    .catch((e) => {
-      process.stderr.write(`${e?.message ?? String(e)}\n`); // message のみ（token を含まない）
-      process.exit(1);
-    });
+    .catch((e) => exitWithSharedFetchError(e)); // 一時エラーは exit 2、それ以外は exit 1
 }

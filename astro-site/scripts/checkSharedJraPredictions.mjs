@@ -25,10 +25,12 @@
  *
  * exit code:
  *   0 … 全会場・全種別を確定できた（200=存在 / 認証済み404=未投入）。空でも「正常な空」
- *   1 … token 未設定 / 401 / 403 / 429 / 5xx / timeout / その他 fatal（＝確定不能）
+ *   2 … 一時エラー（rate limit / timeout / 5xx）で確定不能。呼び出し側はスキップしてよい
+ *   1 … token 未設定 / 401 / 権限不足 / その他 fatal（＝確定不能。運用者の対応が要る）
  */
 import { pathToFileURL } from 'node:url';
 import { createSharedClient, SharedFetchError, SHARED_FETCH_CODES } from './lib/sharedFetch.mjs';
+import { createMonthIndex, exitWithSharedFetchError } from './lib/sharedCheckerSupport.mjs';
 
 const DEFAULT_VENUES = ['FKS', 'HAN', 'NAK', 'TOK', 'KYO', 'CHU', 'KOK', 'NII', 'SAP', 'HKD'];
 
@@ -91,25 +93,40 @@ export async function checkSharedJraPredictions({
   const racebookCodes = [];
   const computerCodes = [];
 
+  // 本 checker は「ファイルが有るか無いか」しか見ない（中身を読まない）。
+  // 月ディレクトリ一覧 1 GET で存在が分かるので、会場ごとの GET は撃たない。
+  // 従来は 1 日あたり 10会場 × 2種別 = 20 GET を、非開催日でも撃っていた。
+  const rbDir = `jra/racebook/${y}/${m}`;
+  const cpDir = `jra/predictions/computer/${y}/${m}`;
+  const monthIndex = createMonthIndex(c, 'main');
+
+  // 一覧が信用できない月（'unknown'）のみ、従来どおり個別 GET で確かめる。
+  // 未検証で found と報告しない（誤アラートを作らない）。
+  async function existsViaIndexOrFetch(dir, fileName, label) {
+    const state = await monthIndex.status(dir, fileName);
+    if (state === 'present') return true;
+    if (state === 'absent') return false;
+    logger.error(`🔄 ${label}: month listing untrusted → verifying by GET`);
+    return (await c.fetchJson(`${dir}/${fileName}`, { ref: 'main', required: false })) !== null;
+  }
+
   for (const code of venues) {
-    // racebook チェック（required:false → 404 のみ null、他は fatal）
-    const rbPath = `jra/racebook/${y}/${m}/${args.date}-${code}.json`;
-    const rbData = await c.fetchJson(rbPath, { ref: 'main', required: false });
-    if (rbData === null) {
-      logger.error(`⏭️  racebook ${code}: not posted yet (authenticated 404)`);
-    } else {
+    const fileName = `${args.date}-${code}.json`;
+
+    // racebook チェック
+    if (await existsViaIndexOrFetch(rbDir, fileName, `racebook ${code}`)) {
       racebookCodes.push(code);
       logger.error(`✅ racebook ${code}: found`);
+    } else {
+      logger.error(`⏭️  racebook ${code}: not posted yet`);
     }
 
-    // computer 予想チェック（required:false → 404 のみ null、他は fatal）
-    const cpPath = `jra/predictions/computer/${y}/${m}/${args.date}-${code}.json`;
-    const cpData = await c.fetchJson(cpPath, { ref: 'main', required: false });
-    if (cpData === null) {
-      logger.error(`⏭️  computer ${code}: not posted yet (authenticated 404)`);
-    } else {
+    // computer 予想チェック
+    if (await existsViaIndexOrFetch(cpDir, fileName, `computer ${code}`)) {
       computerCodes.push(code);
       logger.error(`✅ computer ${code}: found`);
+    } else {
+      logger.error(`⏭️  computer ${code}: not posted yet`);
     }
   }
 
@@ -125,8 +142,5 @@ if (isDirectRun) {
       process.stdout.write(`RACEBOOK_CODES=${racebookCodes.join(' ')}\n`);
       process.stdout.write(`COMPUTER_CODES=${computerCodes.join(' ')}\n`);
     })
-    .catch((e) => {
-      process.stderr.write(`${e?.message ?? String(e)}\n`); // message のみ（token を含まない）
-      process.exit(1);
-    });
+    .catch((e) => exitWithSharedFetchError(e)); // 一時エラーは exit 2、それ以外は exit 1
 }
