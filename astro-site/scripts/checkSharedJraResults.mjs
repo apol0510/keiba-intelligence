@@ -15,10 +15,12 @@
  *
  * exit code:
  *   0 … 全会場を確定できた（存在 or 認証済み404=未投入）。FOUND_CODES が空でも「正常な空」
- *   1 … token 未設定 / 401 / 403 / 429 / 5xx / timeout / その他 fatal（＝確定不能。成功扱いしない）
+ *   2 … 一時エラー（rate limit / timeout / 5xx）で確定不能。呼び出し側はスキップしてよい
+ *   1 … token 未設定 / 401 / 権限不足 / その他 fatal（＝確定不能。運用者の対応が要る）
  */
 import { pathToFileURL } from 'node:url';
 import { createSharedClient, resolveSharedToken } from './lib/sharedFetch.mjs';
+import { createMonthIndex, exitWithSharedFetchError } from './lib/sharedCheckerSupport.mjs';
 
 const DEFAULT_VENUES = ['TOK', 'KYO', 'HAN', 'NAK', 'CHU', 'KOK', 'NII', 'FKS', 'SAP', 'HKD'];
 
@@ -54,12 +56,24 @@ export async function checkSharedJraResults({
 
   const c = client ?? createSharedClient({ env });
   const [y, m] = args.date.split('-');
+  const dir = `jra/results/${y}/${m}`;
+
+  // 月ディレクトリ一覧を1回取り、存在しない会場ファイルへは GET を撃たない。
+  // 従来は非開催日でも 10 会場ぶん 404 を撃っていた。
+  const monthIndex = createMonthIndex(c, 'main');
 
   const foundCodes = [];
   let totalRaces = 0;
 
   for (const code of venues) {
-    const sharedPath = `jra/results/${y}/${m}/${args.date}-${code}.json`;
+    const fileName = `${args.date}-${code}.json`;
+    // 'absent' のみスキップ。'unknown'（一覧が信用できない月）は従来どおり GET して確かめる。
+    // レース数が必要なので 'present' でも結局 GET する。
+    if ((await monthIndex.status(dir, fileName)) === 'absent') {
+      logger.error(`⏭️  ${code}: not posted yet (month listing)`);
+      continue;
+    }
+    const sharedPath = `${dir}/${fileName}`;
     // required:false … 404 のみ null（未投入）。401/403/429/5xx/timeout/INVALID_* は throw（fatal）。
     const data = await c.fetchJson(sharedPath, { ref: 'main', required: false });
     if (data === null) {
@@ -83,8 +97,5 @@ if (isDirectRun) {
       process.stdout.write(`FOUND_CODES=${foundCodes.join(' ')}\n`);
       process.stdout.write(`TOTAL_RACES=${totalRaces}\n`);
     })
-    .catch((e) => {
-      console.error(e?.message ?? String(e)); // message のみ（token を含まない）
-      process.exit(1);
-    });
+    .catch((e) => exitWithSharedFetchError(e)); // 一時エラーは exit 2、それ以外は exit 1
 }

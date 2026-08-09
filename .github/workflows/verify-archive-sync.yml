@@ -30,6 +30,7 @@ jobs:
           # 過去7日間の日付をチェック
           MISSING_DATES=""
           NO_RESULTS_DATES=""
+          TRANSIENT_DATES=""
           ALERT_NEEDED=false
           NO_RESULTS_ALERT=false
 
@@ -49,8 +50,19 @@ jobs:
             #  - HAS_COMPUTER_PREDICTION: computer 予想のみ（No-Results アラートの発火条件）
             # racebook は出馬表/前処理データであり、単独では結果未登録アラートの根拠にしない。
             # （前倒し/日付誤りで racebook だけ存在する stray ファイルを誤検知しないため）
-            if ! JRA_PRED_OUTPUT=$(node astro-site/scripts/checkSharedJraPredictions.mjs --date "$DATE"); then
-              echo "❌ checkSharedJraPredictions failed (auth/network/token error)"
+            # exit 2 = 一時エラー（rate limit/timeout/5xx）。その日をスキップし run は落とさない。
+            # exit 1 = token/認証/権限。運用者の対応が要るので従来どおり fatal。
+            if JRA_PRED_OUTPUT=$(node astro-site/scripts/checkSharedJraPredictions.mjs --date "$DATE"); then
+              RC=0
+            else
+              RC=$?
+            fi
+            if [ "$RC" -eq 2 ]; then
+              echo "⚠️  $DATE (JRA predictions): shared 一時エラーのため この日の検証をスキップ（次回実行で再試行）"
+              TRANSIENT_DATES="${TRANSIENT_DATES}${DATE}, "
+              continue
+            elif [ "$RC" -ne 0 ]; then
+              echo "❌ checkSharedJraPredictions failed (token/auth/permission error)"
               exit 1
             fi
             RB_CODES=$(echo "$JRA_PRED_OUTPUT" | grep '^RACEBOOK_CODES=' | cut -d= -f2-)
@@ -69,8 +81,19 @@ jobs:
 
             # 結果データがあるかチェック（認証付き per-venue 確認 / 匿名 curl 廃止）
             # 函館は HKD が正準（HAK は誤コード。keiba-data-shared に HKD ファイルのみ存在）
-            if ! JRA_CHECK_OUTPUT=$(node astro-site/scripts/checkSharedJraResults.mjs --date "$DATE"); then
-              echo "❌ checkSharedJraResults failed (auth/network/token error)"
+            # exit 2 = 一時エラー（rate limit/timeout/5xx）。その日をスキップし run は落とさない。
+            # exit 1 = token/認証/権限。運用者の対応が要るので従来どおり fatal。
+            if JRA_CHECK_OUTPUT=$(node astro-site/scripts/checkSharedJraResults.mjs --date "$DATE"); then
+              RC=0
+            else
+              RC=$?
+            fi
+            if [ "$RC" -eq 2 ]; then
+              echo "⚠️  $DATE (JRA results): shared 一時エラーのため この日の検証をスキップ（次回実行で再試行）"
+              TRANSIENT_DATES="${TRANSIENT_DATES}${DATE}, "
+              continue
+            elif [ "$RC" -ne 0 ]; then
+              echo "❌ checkSharedJraResults failed (token/auth/permission error)"
               exit 1
             fi
             RACE_COUNT=$(echo "$JRA_CHECK_OUTPUT" | grep '^TOTAL_RACES=' | cut -d= -f2-)
@@ -150,9 +173,19 @@ jobs:
             echo "no_results_alert=false" >> $GITHUB_OUTPUT
           fi
 
+          if [ -n "$TRANSIENT_DATES" ]; then
+            echo ""
+            echo "⚠️  一時エラーで未検証の日付: ${TRANSIENT_DATES%, }"
+            echo "   （workflow は成功扱い。翌日の実行で再検証される）"
+          fi
+
           if [ "$ALERT_NEEDED" = false ] && [ "$NO_RESULTS_ALERT" = false ]; then
             echo ""
-            echo "✅ All dates synchronized"
+            if [ -n "$TRANSIENT_DATES" ]; then
+              echo "✅ 検証できた日付はすべて同期済み（未検証日は上記のとおり）"
+            else
+              echo "✅ All dates synchronized"
+            fi
           fi
 
       - name: Check Nankan archive sync
@@ -163,6 +196,7 @@ jobs:
           # 過去7日間の日付をチェック
           MISSING_DATES=""
           NO_RESULTS_DATES=""
+          TRANSIENT_DATES=""
           ALERT_NEEDED=false
           NO_RESULTS_ALERT=false
 
@@ -174,8 +208,19 @@ jobs:
             echo "━━━ Checking: $DATE ━━━"
 
             # 予想データがあるかチェック（認証付き Node checker：統合ファイル優先→会場別 fallback）
-            if ! NK_PRED_OUTPUT=$(node astro-site/scripts/checkSharedNankanPredictions.mjs --date "$DATE" --venues OOI,FUN,KAW,URA); then
-              echo "❌ checkSharedNankanPredictions failed (auth/network/token error)"
+            # exit 2 = 一時エラー（rate limit/timeout/5xx）。その日をスキップし run は落とさない。
+            # exit 1 = token/認証/権限。運用者の対応が要るので従来どおり fatal。
+            if NK_PRED_OUTPUT=$(node astro-site/scripts/checkSharedNankanPredictions.mjs --date "$DATE" --venues OOI,FUN,KAW,URA); then
+              RC=0
+            else
+              RC=$?
+            fi
+            if [ "$RC" -eq 2 ]; then
+              echo "⚠️  $DATE (南関 predictions): shared 一時エラーのため この日の検証をスキップ（次回実行で再試行）"
+              TRANSIENT_DATES="${TRANSIENT_DATES}${DATE}, "
+              continue
+            elif [ "$RC" -ne 0 ]; then
+              echo "❌ checkSharedNankanPredictions failed (token/auth/permission error)"
               exit 1
             fi
             NK_PRED_FOUND=$(echo "$NK_PRED_OUTPUT" | grep '^FOUND=' | cut -d= -f2-)
@@ -193,8 +238,19 @@ jobs:
             fi
 
             # 結果データがあるかチェック（認証付き per-venue 確認 / 匿名 curl 廃止）
-            if ! NAN_CHECK_OUTPUT=$(node astro-site/scripts/checkSharedNankanResults.mjs --date "$DATE" --venues OOI,FUN,KAW,URA); then
-              echo "❌ checkSharedNankanResults failed (auth/network/token error)"
+            # exit 2 = 一時エラー（rate limit/timeout/5xx）。その日をスキップし run は落とさない。
+            # exit 1 = token/認証/権限。運用者の対応が要るので従来どおり fatal。
+            if NAN_CHECK_OUTPUT=$(node astro-site/scripts/checkSharedNankanResults.mjs --date "$DATE" --venues OOI,FUN,KAW,URA); then
+              RC=0
+            else
+              RC=$?
+            fi
+            if [ "$RC" -eq 2 ]; then
+              echo "⚠️  $DATE (南関 results): shared 一時エラーのため この日の検証をスキップ（次回実行で再試行）"
+              TRANSIENT_DATES="${TRANSIENT_DATES}${DATE}, "
+              continue
+            elif [ "$RC" -ne 0 ]; then
+              echo "❌ checkSharedNankanResults failed (token/auth/permission error)"
               exit 1
             fi
             RACE_COUNT=$(echo "$NAN_CHECK_OUTPUT" | grep '^TOTAL_RACES=' | cut -d= -f2-)
@@ -270,9 +326,19 @@ jobs:
             echo "no_results_alert=false" >> $GITHUB_OUTPUT
           fi
 
+          if [ -n "$TRANSIENT_DATES" ]; then
+            echo ""
+            echo "⚠️  一時エラーで未検証の日付: ${TRANSIENT_DATES%, }"
+            echo "   （workflow は成功扱い。翌日の実行で再検証される）"
+          fi
+
           if [ "$ALERT_NEEDED" = false ] && [ "$NO_RESULTS_ALERT" = false ]; then
             echo ""
-            echo "✅ All dates synchronized"
+            if [ -n "$TRANSIENT_DATES" ]; then
+              echo "✅ 検証できた日付はすべて同期済み（未検証日は上記のとおり）"
+            else
+              echo "✅ All dates synchronized"
+            fi
           fi
 
       - name: Send alert email (JRA)
