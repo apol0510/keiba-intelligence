@@ -35,6 +35,9 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createSharedClient, SharedFetchError, SHARED_FETCH_CODES } from './lib/sharedFetch.mjs';
+import { exitDeferredOrFatal } from './lib/sharedCheckerSupport.mjs';
+
+const LABEL = 'importEntriesNankan.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -301,8 +304,6 @@ if (isDirectRun) {
       }
     })
     .catch((e) => {
-      if (e instanceof Error && /Usage:/.test(e.message)) { console.error(`❌ ${e.message}`); process.exit(2); }
-      console.error('FATAL:', e.message ?? String(e));
-      process.exit(1);
+      exitDeferredOrFatal(e, { label: LABEL });
     });
 }
