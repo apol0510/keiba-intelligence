@@ -132,18 +132,19 @@
    対応 PR が存在せず、コミット意図を示す文書も見つからない。
 4. Workflow Phase 2（統合）は依然として実施する方針か、それとも 14 workflow の現状維持で確定したのか。
 5. lint / typecheck を導入しない判断は明示的になされたものか、単に未着手か。
-6. **`CLAUDE.md` の「本番 URL 取り扱いルール」表と `astro-site/netlify.toml` の 301 が食い違う。**（2026-08-05 発見・**未修正**）
-   - `CLAUDE.md`（210〜214 行・463 行）: 本番 URL は `https://keiba-intelligence.netlify.app/`（「Netlify サブドメインが本番」）
-   - `astro-site/netlify.toml`（commit `ce4a322` / 2026-06-19 / `fix: redirect netlify subdomain to primary domain`）:
-     `keiba-intelligence.netlify.app/*` → `https://keiba-intelligence.jp/:splat` を **301・`force = true`** で恒久リダイレクト
-   - `astro-site/src/pages/sitemap.xml.js` の `baseUrl` も `https://keiba-intelligence.jp`
+6. ~~**`CLAUDE.md` の「本番 URL 取り扱いルール」表と `astro-site/netlify.toml` の 301 が食い違う。**~~
+   （2026-08-05 発見 → **2026-08-09 解決**。本番 URL は `https://keiba-intelligence.jp/`）
 
-   実装（netlify.toml）のほうが**新しく**、commit message も `keiba-intelligence.jp` を primary domain と明記している。
-   一方 `CLAUDE.md` の表は更新されていない。**どちらが正本かの判断は仕様所有者に委ねる**ため、
-   本タスクでは `CLAUDE.md` を書き換えていない（範囲外の不具合は勝手に修正しない方針に従う）。
+   仕様所有者が `keiba-intelligence.jp` を本番として提示したことで確定。
+   実装側の根拠（`netlify.toml` の 301 `force = true` / `sitemap.xml.js` の baseUrl /
+   `docs/spec.md`）とも一致し、`CLAUDE.md` だけが古かった。
 
-   🔴 **影響**: 配信停止ページは 301 の転送先である `https://keiba-intelligence.jp/unsubscribe` に置く必要がある。
-   `netlify.app` 側へ POST すると 301 でメソッドが GET へ変換され、**フォーム送信が壊れる**ため。
+   併せて **canonical / og:url が「301 で転送される URL」を指していた**のを直した。
+   `astro.config.mjs` の `site` が `netlify.app` のままで、sitemap（`.jp`）と矛盾していた。
+   `results/[year]/[month]/[day].astro` の JSON-LD（image / organizer.url / offers.url）も同様。
+
+   🔴 **残る注意**: `netlify.app` 側へ POST してはいけない。301 でメソッドが GET へ
+   変換され、**フォーム送信が壊れる**（配信停止ページ等）。
 7. **配信停止で `recipientRef` を Customers レコードへ対応付ける方法が未確定。**（2026-08-05）
    KMA 側 onboarding の `audience.adapterId` / `audience.mode` が未確定のため、
    `astro-site/src/lib/unsubscribe/store.js` の本番 store は **既定で無効（fail-closed）**にしてある。

@@ -4,7 +4,10 @@ import netlify from '@astrojs/netlify';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://keiba-intelligence.netlify.app',
+  // 本番は独自ドメイン。`netlify.app` は netlify.toml の 301(force) で恒久転送されるため、
+  // ここを `netlify.app` にすると canonical / og:url が「転送される URL」を指してしまう。
+  // sitemap.xml.js の baseUrl も同じ独自ドメインで、両者を揃える。
+  site: 'https://keiba-intelligence.jp',
   base: '/',
   output: 'server',
   // SSR Function bundle に horseHistories JSON を同梱する。

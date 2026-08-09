@@ -211,9 +211,16 @@ npm run validate:archive
 
 | repo | 本番 URL |
 |---|---|
-| `keiba-intelligence`（本 repo）| `https://keiba-intelligence.netlify.app/`（Netlify サブドメインが本番）|
+| `keiba-intelligence`（本 repo）| `https://keiba-intelligence.jp/`（**独自ドメインが本番**）|
 | `analytics-keiba` | `https://analytics.keiba.link/`（**`analytics.keiba.jp` は使用禁止**・存在しない）|
 
+- **`https://keiba-intelligence.netlify.app/*` は本番案内に使わない。**
+  `netlify.toml` の 301（`force = true`）で独自ドメインへ恒久転送される。
+  転送されるので「見えてはいる」が、本番 URL ではない。
+  - **POST を netlify.app 側へ送ってはいけない。** 301 でメソッドが GET へ変換され、
+    フォーム送信が壊れる（配信停止ページ等）。
+  - `astro.config.mjs` の `site` と `sitemap.xml.js` の `baseUrl` も独自ドメイン。
+    ここを netlify.app に戻すと canonical / og:url が「転送される URL」を指す。
 - `analytics-keiba` の Netlify Deploy Preview URL
   (`deploy-preview-NN--analytics-keiba.netlify.app`) は
   **Deploy Preview 専用**。本番案内に使わない。
@@ -460,7 +467,7 @@ concurrency:
 | **プロジェクト名** | KEIBA Intelligence |
 | **コンセプト** | AI-Powered Intelligence Dashboard for 南関競馬 + 中央競馬 |
 | **GitHubリポジトリ** | https://github.com/apol0510/keiba-intelligence |
-| **本番URL** | https://keiba-intelligence.netlify.app/ |
+| **本番URL** | https://keiba-intelligence.jp/ |
 
 ### 技術スタック
 

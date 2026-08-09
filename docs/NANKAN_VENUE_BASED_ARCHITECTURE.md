@@ -324,7 +324,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ### 本番サイト確認（free-prediction）
 
-**URL:** https://keiba-intelligence.netlify.app/free-prediction
+**URL:** https://keiba-intelligence.jp/free-prediction
 
 **確認項目:**
 - ✅ 船橋タブが表示される
