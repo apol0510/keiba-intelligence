@@ -154,6 +154,23 @@ function handlesCode(body, code) {
 }
 
 /**
+ * コメント行だけを落とす。
+ *
+ * 「旧 checkSharedDailyFile.mjs は…」のような **説明文中のスクリプト名**を
+ * 実行とみなすと、実際には呼んでいない step が違反として上がる（偽陽性）。
+ * 逆に行内の `#` まで削ると `grep -q "#"` のようなコードを壊すため、
+ * 行頭（インデントのみ先行）の `#` だけを対象にする。
+ * exempt マーカーはコメントなので、この関数を通す**前**に判定すること。
+ * @param {string} body
+ */
+export function stripCommentLines(body) {
+  return body
+    .split('\n')
+    .filter((line) => !/^\s*#/.test(line))
+    .join('\n');
+}
+
+/**
  * 1 リポジトリぶんの検査。
  * @param {{workflowsDir: string, scriptsDir: string, packageJsonPath: string}} paths
  * @returns {{file: string, step: string, script: string, expected: number}[]} 違反一覧
@@ -170,18 +187,19 @@ export function findTransientContractViolations({ workflowsDir, scriptsDir, pack
 
     for (const step of splitSteps(text)) {
       if (EXEMPT_MARKER.test(step.body)) continue;
+      const code = stripCommentLines(step.body);
 
       /** この step が実行するスクリプト名 */
       const invoked = new Set();
-      for (const m of step.body.matchAll(/(?:^|[\s/])([\w.-]+\.m?js)\b/g)) invoked.add(m[1]);
-      for (const m of step.body.matchAll(/npm run ([\w:-]+)/g)) {
+      for (const m of code.matchAll(/(?:^|[\s/])([\w.-]+\.m?js)\b/g)) invoked.add(m[1]);
+      for (const m of code.matchAll(/npm run ([\w:-]+)/g)) {
         for (const f of aliases.get(m[1]) ?? []) invoked.add(f);
       }
 
       for (const script of invoked) {
         const expected = expectations.get(script);
         if (expected === undefined) continue;
-        if (!handlesCode(step.body, expected)) {
+        if (!handlesCode(code, expected)) {
           violations.push({ file, step: step.name, script, expected });
         }
       }

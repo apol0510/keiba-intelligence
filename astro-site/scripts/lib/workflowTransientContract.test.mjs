@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import {
   splitSteps,
+  stripCommentLines,
   isScheduled,
   buildNpmAliasMap,
   buildScriptExpectations,
@@ -61,6 +62,22 @@ test('buildNpmAliasMap は npm run alias を実ファイルへ解決する', () 
   assert.ok(aliases.get('verify:sync').includes('verifyArchiveSync.js'));
   assert.ok(aliases.get('import:prediction').includes('importPrediction.js'));
   assert.ok(aliases.get('import:results').includes('importResults.js'));
+});
+
+test('コメント中のスクリプト名は実行とみなさない（偽陽性を出さない）', () => {
+  const body = [
+    '      - name: X',
+    '        run: |',
+    '          # 旧 checkSharedDailyFile.mjs は統合ファイルを見ていた（現在は未使用）',
+    '          node scripts/checkArchiveCoverage.mjs --category jra',
+  ].join('\n');
+  const code = stripCommentLines(body);
+  assert.doesNotMatch(code, /checkSharedDailyFile\.mjs/);
+  assert.match(code, /checkArchiveCoverage\.mjs/);
+});
+
+test('行内の # は残す（grep -q "#" のようなコードを壊さない）', () => {
+  assert.match(stripCommentLines('          grep -q "#" file'), /grep -q "#"/);
 });
 
 test('未処理の非ゼロ潰しは違反として検出される（検査が機能していることの証明）', () => {
