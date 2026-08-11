@@ -82,8 +82,27 @@ export function buildScriptExpectations(scriptsDir) {
     if (name === 'sharedCheckerSupport.mjs' || name === 'workflowTransientContract.mjs') continue;
 
     const src = readFileSync(file, 'utf-8');
-    if (/\bexitDeferredOrFatal\s*\(/.test(src)) map.set(name, EXIT_DEFERRED);
-    else if (/\bexitWithSharedFetchError\s*\(/.test(src)) map.set(name, EXIT_TRANSIENT);
+
+    // (a) 終端ハンドラを呼ぶもの（大半のスクリプトはこちら）
+    if (/\bexitDeferredOrFatal\s*\(/.test(src)) {
+      map.set(name, EXIT_DEFERRED);
+      continue;
+    }
+    if (/\bexitWithSharedFetchError\s*\(/.test(src)) {
+      map.set(name, EXIT_TRANSIENT);
+      continue;
+    }
+
+    // (b) ハンドラを使わず、コードを自前で return / exit するもの
+    //     （checkArchiveCoverage.mjs / checkJraResultsForImport.mjs が該当）。
+    //     どちらの定数を sharedCheckerSupport から import しているかで判定する。
+    //     ここを見ないと、これらの checker が契約検査の穴になる。
+    const imported = /from\s+['"][^'"]*sharedCheckerSupport\.mjs['"]/.test(src)
+      ? src.slice(0, src.search(/from\s+['"][^'"]*sharedCheckerSupport\.mjs['"]/))
+      : '';
+    const importClause = imported.slice(imported.lastIndexOf('import'));
+    if (/\bEXIT_DEFERRED\b/.test(importClause)) map.set(name, EXIT_DEFERRED);
+    else if (/\bEXIT_TRANSIENT\b/.test(importClause)) map.set(name, EXIT_TRANSIENT);
   }
   return map;
 }
