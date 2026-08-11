@@ -11,6 +11,10 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { createSharedClient, resolveSharedToken } from './lib/sharedFetch.mjs';
+import { exitDeferredOrFatal } from './lib/sharedCheckerSupport.mjs';
+
+/** exitDeferredOrFatal のログ接頭辞 */
+const LABEL = 'verifyArchiveSync';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -266,9 +270,10 @@ async function main() {
     process.exit(1);
 
   } catch (error) {
-    console.error(`\n❌ エラーが発生しました: ${error.message}`);
-    console.error(error);
-    process.exit(1);
+    // 一時失敗(rate limit/timeout/5xx)は exit 75 で deferred、それ以外は fail-closed。
+    // 「shared を読めなかった」を「同期ズレ」と同じ exit 1 で返すと、呼び出し側
+    // （auto-sync-check.yml）が存在しないズレの自動修復へ突入してしまう。
+    exitDeferredOrFatal(error, { label: LABEL });
   }
 }
 

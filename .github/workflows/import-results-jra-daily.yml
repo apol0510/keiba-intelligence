@@ -67,9 +67,25 @@ jobs:
           YEAR="${DATE:0:4}"
           MONTH="${DATE:5:2}"
 
-          # 認証付き per-venue JRA 結果確認（匿名 curl は廃止。TOKEN_MISSING 等は exit 1 で失敗扱い）
-          if ! OUTPUT=$(node scripts/checkSharedJraResults.mjs --date "$DATE"); then
-            echo "❌ checkSharedJraResults failed (auth/network/token error)"
+          # 認証付き per-venue JRA 結果確認（匿名 curl は廃止）。
+          # exit 0 … 判定できた（FOUND の真偽を問わない）
+          # exit 2 … 一時エラー（rate limit/timeout/5xx）で確定不能＝deferred。
+          #          取込は見送るが run は落とさない（次回 schedule で再判定される）
+          # exit 1 … token / 認証 / 権限 / 契約違反＝fail-closed（results 無しと誤判定しない）
+          if OUTPUT=$(node scripts/checkSharedJraResults.mjs --date "$DATE"); then
+            CHECK_RC=0
+          else
+            CHECK_RC=$?
+          fi
+          if [ "$CHECK_RC" -eq 2 ]; then
+            echo "⏸️  一時エラーのため JRA 結果の有無を判定できず、取込を見送る（次回 schedule で再判定）"
+            echo "has_missing=false" >> $GITHUB_OUTPUT
+            echo "alert_needed=false" >> $GITHUB_OUTPUT
+            echo "deferred=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          if [ "$CHECK_RC" -ne 0 ]; then
+            echo "❌ checkSharedJraResults failed (auth/token/permission error)"
             exit 1
           fi
           FOUND_CODES=$(echo "$OUTPUT" | grep '^FOUND_CODES=' | cut -d= -f2-)
@@ -91,8 +107,21 @@ jobs:
 
           # racebook（予想）が存在するかも確認 → 「開催想定日」判定に使う（認証付き Node checker）
           # racebook あり・結果なし = 取込漏れ（要アラート）
-          if ! RB_OUTPUT=$(node scripts/checkSharedJraPredictions.mjs --date "$DATE"); then
-            echo "❌ checkSharedJraPredictions failed (auth/network/token error)"
+          # exit 2（一時エラー）は「racebook 無し」と誤判定せず、取込判定ごと見送る。
+          if RB_OUTPUT=$(node scripts/checkSharedJraPredictions.mjs --date "$DATE"); then
+            RB_RC=0
+          else
+            RB_RC=$?
+          fi
+          if [ "$RB_RC" -eq 2 ]; then
+            echo "⏸️  一時エラーのため racebook の有無を判定できず、取込を見送る（次回 schedule で再判定）"
+            echo "has_missing=false" >> $GITHUB_OUTPUT
+            echo "alert_needed=false" >> $GITHUB_OUTPUT
+            echo "deferred=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          if [ "$RB_RC" -ne 0 ]; then
+            echo "❌ checkSharedJraPredictions failed (auth/token/permission error)"
             exit 1
           fi
           RB_CODES=$(echo "$RB_OUTPUT" | grep '^RACEBOOK_CODES=' | cut -d= -f2-)
