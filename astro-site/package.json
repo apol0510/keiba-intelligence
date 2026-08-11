@@ -5,7 +5,7 @@
   "description": "AI-Powered Intelligence Dashboard for 南関競馬",
   "scripts": {
     "dev": "astro dev",
-    "build": "npm run validate:archive && npm run test:nankan && npm run test:prune-function-data && npm run test:archive-sync && npm run test:shared-checkers && astro build && npm run prune:function-data",
+    "build": "npm run validate:archive && npm run test:nankan && npm run test:prune-function-data && npm run test:archive-sync && npm run test:shared-checkers && npm run test:workflow-transient && astro build && npm run prune:function-data",
     "preview": "astro preview",
     "astro": "astro",
     "test:nankan-recent-races": "node src/utils/getDisplayRecentRacesForNankan.test.js",
@@ -15,6 +15,7 @@
     "test:prune-function-data": "node --test scripts/pruneFunctionBundleData.test.mjs",
     "test:archive-sync": "node --test scripts/syncArchiveResults.test.mjs",
     "test:shared-checkers": "node --test scripts/lib/sharedCheckerSupport.test.mjs scripts/checkShared.contract.test.mjs",
+    "test:workflow-transient": "node --test scripts/lib/workflowTransientContract.test.mjs",
     "validate:archive": "node scripts/validateArchiveFormat.js",
     "verify:sync": "node scripts/verifyArchiveSync.js",
     "import:prediction": "node scripts/importPrediction.js",

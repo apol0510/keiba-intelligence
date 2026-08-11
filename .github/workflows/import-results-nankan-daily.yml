@@ -60,9 +60,24 @@ jobs:
         run: |
           DATE="${{ steps.date.outputs.date }}"
 
-          # 認証付き per-venue 存在確認（匿名 curl は廃止。TOKEN_MISSING 等は exit 1 で失敗扱い）
-          if ! OUTPUT=$(node scripts/checkSharedNankanResults.mjs --date "$DATE" --venues OOI,FUN,KAW,URA); then
-            echo "❌ checkSharedNankanResults failed (auth/network/token error)"
+          # 認証付き per-venue 存在確認（匿名 curl は廃止）。
+          # exit 0 … 判定できた（FOUND の真偽を問わない）
+          # exit 2 … 一時エラー（rate limit/timeout/5xx）で確定不能＝deferred。
+          #          取込は見送るが run は落とさない（次回 schedule で再判定される）
+          # exit 1 … token / 認証 / 権限 / 契約違反＝fail-closed（results 無しと誤判定しない）
+          if OUTPUT=$(node scripts/checkSharedNankanResults.mjs --date "$DATE" --venues OOI,FUN,KAW,URA); then
+            CHECK_RC=0
+          else
+            CHECK_RC=$?
+          fi
+          if [ "$CHECK_RC" -eq 2 ]; then
+            echo "⏸️  一時エラーのため南関結果の有無を判定できず、取込を見送る（次回 schedule で再判定）"
+            echo "has_missing=false" >> $GITHUB_OUTPUT
+            echo "deferred=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          if [ "$CHECK_RC" -ne 0 ]; then
+            echo "❌ checkSharedNankanResults failed (auth/token/permission error)"
             exit 1
           fi
           FOUND_CODES=$(echo "$OUTPUT" | grep '^FOUND_CODES=' | cut -d= -f2-)
@@ -91,6 +106,9 @@ jobs:
             fi
           fi
 
+      # exit 75 (EX_TEMPFAIL) = rate limit / timeout / 5xx で今は取得できない＝deferred。
+      # archive への書込は成功時のみなので壊れた中間状態は残らない。run は failure にしない。
+      # exit 1 等（auth / 権限 / schema / 検証失敗）は従来どおり失敗させる。
       - name: Import missing results
         if: steps.check.outputs.has_missing == 'true'
         id: import-results
@@ -99,21 +117,34 @@ jobs:
         run: |
           DATE="${{ steps.date.outputs.date }}"
           echo "📥 Importing Nankan results for: $DATE"
-          npm run import:results -- --date "$DATE"
+          if npm run import:results -- --date "$DATE"; then RC=0; else RC=$?; fi
+          echo "rc=$RC" >> "$GITHUB_OUTPUT"
+          if [ "$RC" -eq 75 ]; then
+            echo "⏸️  importResults: 一時的に shared を取得できず未完了（deferred）。次回実行で再試行。"
+            exit 0
+          fi
+          exit "$RC"
 
       - name: Validate archive format (MANDATORY)
-        if: steps.check.outputs.has_missing == 'true'
+        if: steps.check.outputs.has_missing == 'true' && steps.import-results.outputs.rc == '0'
         run: |
           echo "🔍 Validating archive format..."
           npm run validate:archive
 
+      # 取込が deferred の run では archive は更新されていないため、ズレが残るのは想定内。
+      # verify:sync 自体の exit 75（確認できない）も failure にしない。
       - name: Verify archive sync (MANDATORY)
-        if: steps.check.outputs.has_missing == 'true'
+        if: steps.check.outputs.has_missing == 'true' && steps.import-results.outputs.rc == '0'
         env:
           KEIBA_DATA_SHARED_TOKEN: ${{ secrets.KEIBA_DATA_SHARED_TOKEN }}
         run: |
           echo "🔍 Verifying archive sync with keiba-data-shared..."
-          npm run verify:sync
+          if npm run verify:sync; then RC=0; else RC=$?; fi
+          if [ "$RC" -eq 75 ]; then
+            echo "⏸️  verify:sync: 一時的に shared を取得できず確認不能（deferred）。次回実行で再確認。"
+            exit 0
+          fi
+          exit "$RC"
 
       - name: Check for changes
         id: git-check

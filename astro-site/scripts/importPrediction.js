@@ -22,6 +22,10 @@ import { join, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import crypto from 'crypto';
 import { createSharedClient, resolveSharedToken } from './lib/sharedFetch.mjs';
+import { exitDeferredOrFatal } from './lib/sharedCheckerSupport.mjs';
+
+/** exitDeferredOrFatal のログ接頭辞 */
+const LABEL = 'importPrediction';
 
 // ESモジュールで __dirname を取得
 const __filename = fileURLToPath(import.meta.url);
@@ -927,8 +931,8 @@ export async function importPredictionMain({
 
 const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isDirectRun) {
-  importPredictionMain().catch((e) => {
-    console.error('FATAL:', e?.message ?? String(e));
-    process.exit(1);
-  });
+  // 一時失敗(rate limit/timeout/5xx)は exit 75 で deferred、それ以外は fail-closed。
+  // 会場ループ途中で deferred になった場合、書き終えた会場ぶんはそのまま残す（部分前進）。
+  // 各会場ファイルは単独で妥当な JSON であり、未取得の会場は次回 schedule で追加される。
+  importPredictionMain().catch((e) => exitDeferredOrFatal(e, { label: LABEL }));
 }
