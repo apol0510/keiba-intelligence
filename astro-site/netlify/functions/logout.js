@@ -1,25 +1,30 @@
 /**
  * ログアウトAPI
  *
- * Netlify Blobsからセッションを削除
+ * 🔴 2026-08-28 変更（docs/RENEWAL_2026_08.md §7）:
+ *   署名付きセッション Cookie `ki_session` を失効させる。
+ *   旧 `session_id` Cookie も併せて消す（残っていても無害だが掃除する）。
+ *   Netlify Blobs は使わない（セッションは署名付き Cookie に自己完結している）。
  */
 
-const { getStore } = require('@netlify/blobs');
+import { clearSessionCookie } from '../../src/lib/auth/session.js';
 
-/**
- * メインハンドラー
- */
-exports.handler = async (event) => {
-  // CORS設定（セキュリティ強化：特定ドメインのみ許可）
-  const allowedOrigins = [
-    'https://keiba-intelligence.netlify.app',
-    'https://keiba-intelligence.netlify.app',
-    'http://localhost:4321',
-    'http://localhost:3000'
-  ];
+const ALLOWED_ORIGINS = [
+  'https://keiba-intelligence.jp',
+  'https://www.keiba-intelligence.jp',
+  'https://keiba-intelligence.netlify.app',
+  'http://localhost:4321',
+  'http://localhost:3000',
+];
 
+function isLocalHost(event) {
+  const host = event?.headers?.host || '';
+  return host.startsWith('localhost') || host.startsWith('127.0.0.1');
+}
+
+export async function handler(event) {
   const origin = event.headers.origin || '';
-  const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
 
   const headers = {
     'Access-Control-Allow-Origin': allowOrigin,
@@ -33,46 +38,18 @@ exports.handler = async (event) => {
   }
 
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method Not Allowed' }),
-    };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
   }
 
-  try {
-    // Cookieからセッションid取得
-    const cookies = event.headers.cookie || '';
-    const sessionIdMatch = cookies.match(/session_id=([^;]+)/);
+  const secure = !isLocalHost(event);
+  const legacy = `session_id=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure ? '; Secure' : ''}`;
 
-    if (sessionIdMatch) {
-      const sessionId = sessionIdMatch[1];
-      const store = getStore('sessions');
-
-      // セッション削除
-      await store.delete(sessionId);
-
-      console.log('✅ Session deleted:', sessionId);
-    }
-
-    // セッションCookieを削除してリダイレクト
-    return {
-      statusCode: 302,
-      headers: {
-        'Set-Cookie': 'session_id=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0',
-        'Location': '/login',
-      },
-      body: '',
-    };
-  } catch (error) {
-    console.error('❌ Logout error:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        error: 'Internal Server Error',
-        details: error.message,
-      }),
-    };
-  }
-};
+  return {
+    statusCode: 302,
+    multiValueHeaders: {
+      'Set-Cookie': [clearSessionCookie({ secure }), legacy],
+    },
+    headers: { Location: '/login' },
+    body: '',
+  };
+}

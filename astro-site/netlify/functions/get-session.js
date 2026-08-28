@@ -1,31 +1,38 @@
 /**
  * セッション確認API
  *
- * Netlify Blobsからセッション情報を取得
+ * 🔴 2026-08-28 変更（docs/RENEWAL_2026_08.md §7 / 監査 A-4 の是正）:
+ *   旧実装は Netlify Blobs の `session_id` を読む前提だったが、
+ *   `verify-magic-link` が Blobs もその Cookie も作っていなかったため常に 401 になっていた。
+ *
+ *   本実装は `ki_session`（HMAC 署名付き Cookie）を検証して返す。
+ *   返すのは **tier と表示フラグのみ**。email 以外の顧客情報は返さない。
+ *
+ * 🔴 これは「現在の権限を UI へ知らせる」ための補助 API である。
+ *    ページ側の認可はサーバー描画時の entitlement で行われており、
+ *    この API の応答を書き換えても有料コンテンツは出てこない。
  */
 
-const { getStore } = require('@netlify/blobs');
+import { resolveEntitlement } from '../../src/lib/auth/entitlement.js';
 
-/**
- * メインハンドラー
- */
-exports.handler = async (event) => {
-  // CORS設定（セキュリティ強化：特定ドメインのみ許可）
-  const allowedOrigins = [
-    'https://keiba-intelligence.netlify.app',
-    'https://keiba-intelligence.netlify.app',
-    'http://localhost:4321',
-    'http://localhost:3000'
-  ];
+const ALLOWED_ORIGINS = [
+  'https://keiba-intelligence.jp',
+  'https://www.keiba-intelligence.jp',
+  'https://keiba-intelligence.netlify.app',
+  'http://localhost:4321',
+  'http://localhost:3000',
+];
 
+export async function handler(event) {
   const origin = event.headers.origin || '';
-  const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
 
   const headers = {
     'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Credentials': 'true', // Cookie送信を許可
+    'Access-Control-Allow-Credentials': 'true',
+    'Cache-Control': 'private, no-store',
   };
 
   if (event.httpMethod === 'OPTIONS') {
@@ -33,63 +40,35 @@ exports.handler = async (event) => {
   }
 
   if (event.httpMethod !== 'GET') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method Not Allowed' }),
-    };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
   }
 
-  try {
-    // Cookieからセッションid取得
-    const cookies = event.headers.cookie || '';
-    const sessionIdMatch = cookies.match(/session_id=([^;]+)/);
+  const ent = resolveEntitlement({
+    cookieHeader: event.headers.cookie || null,
+    env: process.env,
+    nowMs: Date.now(),
+  });
 
-    if (!sessionIdMatch) {
-      console.warn('⚠️ No session cookie found');
-      return {
-        statusCode: 401,
-        headers,
-        body: JSON.stringify({ error: 'Not authenticated' }),
-      };
-    }
-
-    const sessionId = sessionIdMatch[1];
-    const store = getStore('sessions');
-
-    // セッション取得
-    const sessionData = await store.get(sessionId);
-
-    if (!sessionData) {
-      console.warn('⚠️ Session not found or expired:', sessionId);
-      return {
-        statusCode: 401,
-        headers,
-        body: JSON.stringify({ error: 'Session not found or expired' }),
-      };
-    }
-
-    const session = JSON.parse(sessionData);
-
-    console.log('✅ Session found:', sessionId, 'for:', session.email);
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        success: true,
-        user: session,
-      }),
-    };
-  } catch (error) {
-    console.error('❌ Get session error:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        error: 'Internal Server Error',
-        details: error.message,
-      }),
-    };
+  if (!ent.authenticated) {
+    // 🔴 失敗理由は返さない（内部区分を外部へ出さない）
+    return { statusCode: 401, headers, body: JSON.stringify({ success: false, authenticated: false }) };
   }
-};
+
+  return {
+    statusCode: 200,
+    headers,
+    body: JSON.stringify({
+      // `success` は既存クライアント（AuthCheck.astro）との互換のため維持する
+      success: true,
+      authenticated: true,
+      user: { email: ent.email },
+      tier: ent.tier,
+      tierLabel: ent.tierLabel,
+      venueAccess: ent.venueAccess,
+      showMarks: ent.showMarks,
+      showBetting: ent.showBetting,
+      showPremiumExtras: ent.showPremiumExtras,
+      expiresAt: ent.expiresAtMs ? new Date(ent.expiresAtMs).toISOString() : null,
+    }),
+  };
+}

@@ -87,7 +87,12 @@ Airtable `Customers.PlanType` の既存値は次のとおり写像する（U-4 �
 | `pro` / `pro-plus` | `premium` |
 | Stripe 由来 | webhook が `light` / `premium` を直接書く |
 
-**fail-closed**: 未知の値・判定不能・セッション破損・例外は **すべて `guest`** として扱う。
+**fail-closed**:
+
+- セッションが無い / 署名が不正 / 期限切れ / 署名鍵未設定 / 例外 → **`guest`**
+- 認証は済んでいるが `PlanType` が未知の値 → **`free`**
+  （メール所有は証明されているので `guest` へは落とさない。有料権限だけを与えない）
+- 有料 tier で有効期限を過ぎている → **`free`**（日付が読めない値では権限を落とさない）
 
 ---
 

@@ -30,6 +30,7 @@
     "test:validation": "node scripts/utils/validatePrediction.test.js",
     "test:computer-index": "node --test src/utils/computerIndexContract.test.mjs",
     "test:narrative": "node --test src/utils/raceNarrative.test.mjs",
+    "test:auth": "node --test src/lib/auth/auth.test.mjs",
     "test:unsubscribe": "node --test src/lib/unsubscribe/unsubscribe.test.mjs"
   },
   "dependencies": {
