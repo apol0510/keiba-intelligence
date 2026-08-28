@@ -387,7 +387,7 @@ KI 側に同等品を作ると仕様が二重化して必ず乖離する。
 - [x] ライト基調のデザインが 7 経路 ＋ トップ・料金・マイページ・アーカイブ・ログインに適用されている
 - [x] `npm run build`（validate:archive / narrative / auth / billing / digest / nankan /
       prune-function-data / archive-sync / shared-checkers / workflow-transient ＋ astro build）が通る
-- [ ] Draft PR 作成（**merge・本番デプロイ・Stripe 本番キー設定・メール実送信は未実施**）
+- [x] Draft PR 作成（[PR #80](https://github.com/apol0510/keiba-intelligence/pull/80)。**merge・本番デプロイ・Stripe 本番キー設定・メール実送信は未実施**）
 
 ### 実施した検証の要約
 

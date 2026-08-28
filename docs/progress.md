@@ -42,7 +42,7 @@
 | P5 | Stripe（checkout / webhook / portal / prices） | **完了**（本番キー・Price 作成は未実施） |
 | P6 | KMA 連携（既定 disabled） | **完了**（KI 側のみ。KMA 側は依存として記録） |
 | P7 | 日次ダイジェスト素材生成 ＋ workflow | **完了** |
-| P8 | 検証・Draft PR | 進行中 |
+| P8 | 検証・Draft PR | **完了**（[PR #80](https://github.com/apol0510/keiba-intelligence/pull/80) Draft） |
 
 ### 実装した内容（2026-08-28）
 
