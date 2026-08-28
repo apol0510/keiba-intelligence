@@ -17,6 +17,37 @@
 
 ## Current Phase
 
+**Phase: KI 大改修 2026-08（無料開放 / 新聞レイアウト / 文章化 / Stripe / 認可是正 / KMA / ライトデザイン）**
+
+着手: 2026-08-28 / ブランチ `feat/ki-renewal-2026-08` / 分岐元 `cfe5fea2`
+スコープ・tier 定義・完成条件の正本: **[`docs/RENEWAL_2026_08.md`](./RENEWAL_2026_08.md)**
+方針決定の記録: `docs/decisions.md`「2026-08-28 — 大改修の方針を確定する」
+
+仕様所有者の確定事項（U-1〜U-4）は `docs/RENEWAL_2026_08.md` §2。要点:
+
+- 未登録は **印と買い目以外すべて公開**／無料会員で**印**／有料で**買い目**
+- デザインは**ライト基調＋競馬新聞の枠色**
+- 価格は**内容を見て後決め**（→ Price ID を env 注入し、金額をコードに書かない）
+- **Stripe がメイン。既存客の互換維持は最優先要件ではない**
+
+### 工程
+
+| # | 工程 | 状態 |
+|---|---|---|
+| P0 | 構想の正本固定（`RENEWAL_2026_08.md` / spec / decisions / progress） | 完了 |
+| P1 | 文章化エンジン `src/utils/raceNarrative.js` ＋テスト | 未 |
+| P2 | 新聞レイアウトコンポーネント | 未 |
+| P3 | ライト基調デザイントークン | 未 |
+| P4 | サーバー側認可（署名 Cookie ＋ 非権限者に描画しない） | 未 |
+| P5 | Stripe（checkout / webhook / portal / prices） | 未 |
+| P6 | KMA 連携（既定 disabled） | 未 |
+| P7 | 日次ダイジェスト素材生成 | 未 |
+| P8 | 検証・Draft PR | 未 |
+
+---
+
+## 前 Phase（完了）
+
 **Phase: 自律完遂運用のためのドキュメント基盤整備（2026-07-20）**
 
 コード変更は一切行っていない。本タスクの成果物は `docs/spec.md` / `docs/progress.md` / `docs/decisions.md` / `CLAUDE.md` の 4 ファイルのみ。

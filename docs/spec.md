@@ -15,6 +15,7 @@
 > | archiveResults の JSON フォーマット | `docs/DATA_FORMAT.md` | 参照のみ |
 > | 結果システム全体設計 | `docs/RESULTS_SYSTEM_ARCHITECTURE.md` / `docs/MULTI_VENUE_CHECK.md` | 参照のみ |
 > | 予想画面の表示仕様 | `docs/INTELLIGENCE_DISPLAY_SPEC.md` / `docs/ui-cross-plan-regression-policy.md` | 参照のみ |
+> | 2026-08 大改修（無料開放 / 新聞レイアウト / 文章化 / Stripe / KMA / デザイン） | **`docs/RENEWAL_2026_08.md`** | 本書の下位正本。改修範囲についてのみ正本 |
 > | 初期設計（2026-01-09 時点） | `DESIGN.md` | **歴史的資料**。決済・自動化スタック等は現状と乖離あり。現行仕様の根拠に使わない |
 >
 > 本書は上記ドメイン文書を **置き換えない**。ドメインの詳細は各正本を読むこと。
@@ -254,6 +255,15 @@ devDependency: `netlify-cli ^23.5.0`。Node は `netlify.toml` で `NODE_VERSION
 9. `KEIBA_DATA_SHARED_TOKEN` 以外のトークンによる共有データ取得、匿名 fallback の再導入
 10. 検証（`validate:archive` / `verify:sync`）をスキップして archive を commit すること
 11. `astro-site/.github/workflows/` を使用中と誤認して編集すること
+
+## 10.5 2026-08 大改修（進行中）
+
+2026-08-28 着手。無料開放の再設計・競馬新聞レイアウト・文章化エンジン・Stripe 月額課金・
+サーバー側認可の是正・KMA 連携・ライト基調デザインを扱う。
+
+**スコープ・tier 定義・完成条件の正本は [`docs/RENEWAL_2026_08.md`](./RENEWAL_2026_08.md)。**
+本書ではその内容を重複させない。§6 Contracts / §10 Prohibited Changes は改修中も有効であり、
+改修が既存契約を変更することはない（同書 §12）。
 
 ## 11. Known Unknowns
 
