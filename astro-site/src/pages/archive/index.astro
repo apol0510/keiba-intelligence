@@ -100,13 +100,13 @@ const pageDescription = '中央競馬（JRA）と南関競馬の的中実績ア�
 </BaseLayout>
 
 <style>
-  .archive-hub { padding: 2rem 0 3rem; color: #e2e8f0; }
+  .archive-hub { padding: 2rem 0 3rem; color: var(--text-primary); }
 
   .page-header {
     text-align: center;
     margin-bottom: 3rem;
     padding: 2.5rem 2rem;
-    background: rgba(30, 41, 59, 0.5);
+    background: var(--bg-secondary);
     border-radius: 16px;
     border: 1px solid rgba(245, 158, 11, 0.3);
   }
@@ -120,8 +120,8 @@ const pageDescription = '中央競馬（JRA）と南関競馬の的中実績ア�
     background-clip: text;
     margin: 0 0 1rem;
   }
-  .page-subtitle { font-size: 1.2rem; color: #cbd5e1; margin-bottom: 0.5rem; }
-  .page-description { font-size: 1rem; color: #94a3b8; max-width: 640px; margin: 0 auto; line-height: 1.7; }
+  .page-subtitle { font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+  .page-description { font-size: 1rem; color: var(--text-tertiary); max-width: 640px; margin: 0 auto; line-height: 1.7; }
 
   .category-grid {
     display: grid;
@@ -131,7 +131,7 @@ const pageDescription = '中央競馬（JRA）と南関競馬の的中実績ア�
   }
 
   .category-card {
-    background: rgba(30, 41, 59, 0.8);
+    background: var(--bg-secondary);
     border: 1px solid rgba(100, 116, 139, 0.3);
     border-radius: 16px;
     padding: 2.5rem;
@@ -152,14 +152,14 @@ const pageDescription = '中央競馬（JRA）と南関競馬の的中実績ア�
   .category-card.jra .card-title { color: #60a5fa; }
   .category-card.nankan .card-title { color: #fbbf24; }
 
-  .card-summary { color: #cbd5e1; font-size: 1rem; line-height: 1.7; }
+  .card-summary { color: var(--text-secondary); font-size: 1rem; line-height: 1.7; }
   .card-venues { display: flex; flex-wrap: wrap; gap: 0.5rem; }
   .venue-tag {
     font-size: 0.85rem;
     padding: 0.35rem 0.75rem;
     border-radius: 999px;
-    background: rgba(15, 23, 42, 0.6);
-    color: #cbd5e1;
+    background: var(--bg-muted);
+    color: var(--text-secondary);
     border: 1px solid rgba(100, 116, 139, 0.4);
   }
 
@@ -180,8 +180,8 @@ const pageDescription = '中央競馬（JRA）と南関競馬の的中実績ア�
   .category-card.jra .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4); }
   .category-card.nankan .btn-primary { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
   .category-card.nankan .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4); }
-  .btn-secondary { background: rgba(15, 23, 42, 0.6); color: #cbd5e1; border-color: rgba(100, 116, 139, 0.4); }
-  .btn-secondary:hover { background: rgba(15, 23, 42, 0.85); border-color: rgba(148, 163, 184, 0.6); }
+  .btn-secondary { background: var(--bg-muted); color: var(--text-secondary); border-color: rgba(100, 116, 139, 0.4); }
+  .btn-secondary:hover { background: var(--bg-muted); border-color: rgba(148, 163, 184, 0.6); }
 
   .back-link { text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid rgba(100, 116, 139, 0.3); }
   .back-link a { color: #60a5fa; text-decoration: none; font-size: 1rem; margin: 0 0.5rem; }
