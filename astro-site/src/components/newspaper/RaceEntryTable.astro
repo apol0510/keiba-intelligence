@@ -1,0 +1,339 @@
+---
+/**
+ * RaceEntryTable.astro — シンプル版出馬表（基本 UI）
+ *
+ * 正本: docs/RENEWAL_2026_08.md §4
+ *
+ * 構成:
+ *   枠 | 馬番 | 馬名 | 印 | 総合pt | 性齢 | 斤量 | 騎手 | 厩舎
+ *   行をクリック/タップすると、**その馬の直下**に詳細アコーディオンが開く。
+ *
+ * 🔴 tier による出し分けは **描画そのものを止める**（CSS で隠さない）:
+ *    - 印（役割マーク）と AI総合pt … `view.showMarks` が false なら **列ごと出さない**
+ *    - 並び順 … showMarks が false のときは **馬番順**（PT 降順は序列＝印が読めるため）
+ *    - 買い目 … このコンポーネントは扱わない
+ *
+ * 🔴 存在しない情報を埋めない。データが無い列は空欄にする（0 や「—」で捏造しない）。
+ *    枠番だけは **馬番と頭数から一意に決まる規則**で算出する（`frameNumber.js`）。
+ */
+
+import HorseDetailPanel from './HorseDetailPanel.astro';
+import { getRoleMark } from '../../utils/sortHorsesByRole.js';
+import { toComputerIndex } from '../../utils/computerIndexContract.js';
+import { resolveFrameNumber } from '../../utils/frameNumber.js';
+
+interface Props {
+  horses: any[];
+  view: { showMarks?: boolean; showBetting?: boolean; tier?: string };
+  raceKey: string;
+  narrativeOf: (horse: any) => any;
+  featuresOf?: (horse: any) => any;
+  pastRacesOf: (horse: any) => any[];
+  statsOf?: (horse: any) => any;
+}
+
+const {
+  horses = [], view, raceKey,
+  narrativeOf, featuresOf, pastRacesOf, statsOf,
+} = Astro.props;
+
+const showMarks = !!view?.showMarks;
+const fieldSize = horses.length;
+
+/** 役割 → 印の色 */
+function markClass(role: string | undefined) {
+  switch (role) {
+    case '本命': return 'mk-honmei';
+    case '対抗': return 'mk-taiko';
+    case '単穴': return 'mk-tana';
+    default: return 'mk-renka';
+  }
+}
+
+/** 表示行を作る（並び替えは呼び出し側が済ませている前提） */
+const rows = horses.map((h: any) => {
+  const frame = resolveFrameNumber(h, fieldSize);
+  const weightNum = typeof h?.weight === 'number' ? h.weight : (h?.weight ? Number(h.weight) : null);
+  return {
+    horse: h,
+    frame,
+    frameClass: frame && frame >= 1 && frame <= 8 ? `waku-${frame}` : 'waku-none',
+    number: h?.horseNumber ?? null,
+    name: h?.horseName || '—',
+    mark: showMarks && h?.role ? getRoleMark(h.role) : null,
+    markClass: markClass(h?.role),
+    pt: showMarks && typeof h?.pt === 'number' && Number.isFinite(h.pt) ? h.pt : null,
+    age: h?.age || null,
+    weight: Number.isFinite(weightNum) ? weightNum : null,
+    jockey: h?.jockey || null,
+    trainer: h?.trainer || null,
+    // コンピ指数は契約（10–99）を通した値だけ。契約外は表示しない
+    compi: toComputerIndex(h?.computerIndex),
+  };
+});
+
+/** 列の出し分け: 1 頭でも値があるときだけ列を出す（空列を作らない） */
+const hasCompi = rows.some((r) => r.compi != null);
+const hasAge = rows.some((r) => r.age);
+const hasWeight = rows.some((r) => r.weight != null);
+const hasJockey = rows.some((r) => r.jockey);
+const hasTrainer = rows.some((r) => r.trainer);
+
+const colCount = 3 // 枠 / 馬番 / 馬名
+  + (showMarks ? 2 : 0)
+  + (hasCompi ? 1 : 0)
+  + (hasAge ? 1 : 0)
+  + (hasWeight ? 1 : 0)
+  + (hasJockey ? 1 : 0)
+  + (hasTrainer ? 1 : 0);
+---
+
+<div class="ret" data-race-key={raceKey}>
+  <table class="ret-table">
+    <thead>
+      <tr>
+        <th class="c-waku">枠</th>
+        <th class="c-num">馬番</th>
+        <th class="c-name">馬名</th>
+        {showMarks && <th class="c-mark">印</th>}
+        {showMarks && <th class="c-pt">総合pt</th>}
+        {hasCompi && <th class="c-compi">コンピ</th>}
+        {hasAge && <th class="c-age">性齢</th>}
+        {hasWeight && <th class="c-weight">斤量</th>}
+        {hasJockey && <th class="c-jockey">騎手</th>}
+        {hasTrainer && <th class="c-trainer">厩舎</th>}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((r, i) => {
+        const rowId = `${raceKey}-h${r.number ?? i}`;
+        return (
+          <>
+            <tr
+              class={`ret-row ${r.frameClass} ${showMarks && r.horse?.role === '本命' ? 'is-honmei' : ''}`}
+              data-row={rowId}
+              tabindex="0"
+              role="button"
+              aria-expanded="false"
+              aria-controls={`detail-${rowId}`}
+            >
+              <td class="c-waku"><span class="waku-badge">{r.frame ?? ''}</span></td>
+              <td class="c-num"><span class="uma-badge">{r.number ?? ''}</span></td>
+              <td class="c-name">
+                <span class="horse-name">{r.name}</span>
+                <span class="ret-caret" aria-hidden="true">▾</span>
+              </td>
+              {showMarks && (
+                <td class="c-mark">
+                  {r.mark ? <span class={`mark ${r.markClass}`} title={r.horse?.role}>{r.mark}</span> : ''}
+                </td>
+              )}
+              {showMarks && <td class="c-pt">{r.pt ?? ''}</td>}
+              {hasCompi && <td class="c-compi">{r.compi ?? ''}</td>}
+              {hasAge && <td class="c-age">{r.age ?? ''}</td>}
+              {hasWeight && <td class="c-weight">{r.weight ?? ''}</td>}
+              {hasJockey && <td class="c-jockey">{r.jockey ?? ''}</td>}
+              {hasTrainer && <td class="c-trainer">{r.trainer ?? ''}</td>}
+            </tr>
+            <tr class="ret-detail" id={`detail-${rowId}`} data-detail={rowId} hidden>
+              <td colspan={colCount}>
+                <HorseDetailPanel
+                  horse={r.horse}
+                  view={view}
+                  narrative={narrativeOf ? narrativeOf(r.horse) : null}
+                  features={featuresOf ? featuresOf(r.horse) : null}
+                  pastRaces={pastRacesOf ? pastRacesOf(r.horse) : []}
+                  stats={statsOf ? statsOf(r.horse) : null}
+                />
+              </td>
+            </tr>
+          </>
+        );
+      })}
+    </tbody>
+  </table>
+
+  <p class="ret-hint">馬名の行をタップすると、その馬の詳細（AI短評・指標・近走・血統など）が開きます。</p>
+</div>
+
+<script>
+  // 行クリックで直下の詳細を開閉する（表示のみ。認可には一切関与しない）
+  function toggleRow(row: HTMLElement) {
+    const key = row.getAttribute('data-row');
+    if (!key) return;
+    const detail = document.querySelector(`tr[data-detail="${key}"]`) as HTMLElement | null;
+    if (!detail) return;
+    const open = !detail.hasAttribute('hidden');
+    if (open) {
+      detail.setAttribute('hidden', '');
+      row.setAttribute('aria-expanded', 'false');
+      row.classList.remove('is-open');
+    } else {
+      detail.removeAttribute('hidden');
+      row.setAttribute('aria-expanded', 'true');
+      row.classList.add('is-open');
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    const row = (e.target as HTMLElement)?.closest?.('.ret-row') as HTMLElement | null;
+    if (!row) return;
+    toggleRow(row);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const ke = e as KeyboardEvent;
+    if (ke.key !== 'Enter' && ke.key !== ' ') return;
+    const row = (ke.target as HTMLElement)?.closest?.('.ret-row') as HTMLElement | null;
+    if (!row) return;
+    ke.preventDefault();
+    toggleRow(row);
+  });
+</script>
+
+<style>
+  .ret {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .ret-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+  }
+
+  .ret-table thead th {
+    background: #f3ece4;
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 7px 6px;
+    white-space: nowrap;
+    border-bottom: 2px solid var(--border-strong);
+  }
+
+  .ret-row {
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color var(--transition-fast);
+  }
+
+  .ret-row:hover,
+  .ret-row:focus-visible { background: #f5f9ff; outline: none; }
+
+  .ret-row.is-open { background: #eef5ff; }
+
+  .ret-row.is-honmei .horse-name { color: var(--mark-honmei); }
+
+  .ret-table td {
+    padding: 8px 6px;
+    font-size: 0.86rem;
+    color: var(--text-primary);
+    vertical-align: middle;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* 枠色 */
+  .waku-1 .waku-badge { background: var(--waku-1-bg); color: var(--waku-1-fg); border-color: var(--border-strong); }
+  .waku-2 .waku-badge { background: var(--waku-2-bg); color: var(--waku-2-fg); }
+  .waku-3 .waku-badge { background: var(--waku-3-bg); color: var(--waku-3-fg); }
+  .waku-4 .waku-badge { background: var(--waku-4-bg); color: var(--waku-4-fg); }
+  .waku-5 .waku-badge { background: var(--waku-5-bg); color: var(--waku-5-fg); }
+  .waku-6 .waku-badge { background: var(--waku-6-bg); color: var(--waku-6-fg); }
+  .waku-7 .waku-badge { background: var(--waku-7-bg); color: var(--waku-7-fg); }
+  .waku-8 .waku-badge { background: var(--waku-8-bg); color: var(--waku-8-fg); }
+  .waku-none .waku-badge { background: var(--bg-muted); color: var(--text-tertiary); }
+
+  .waku-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    font-family: var(--font-num);
+    font-weight: 800;
+    font-size: 0.78rem;
+  }
+
+  .uma-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 4px;
+    border-radius: 5px;
+    background: var(--text-primary);
+    color: var(--text-inverse);
+    font-family: var(--font-num);
+    font-weight: 800;
+    font-size: 0.85rem;
+  }
+
+  .c-name {
+    text-align: left !important;
+    min-width: 8em;
+  }
+
+  .horse-name {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 0.98rem;
+    color: var(--primary-start);
+  }
+
+  .ret-caret {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    transition: transform var(--transition-fast);
+  }
+
+  .ret-row.is-open .ret-caret { transform: rotate(180deg); }
+
+  .mark { font-size: 1.15rem; font-weight: 700; line-height: 1; }
+  .mk-honmei { color: var(--mark-honmei); }
+  .mk-taiko  { color: var(--mark-taiko); }
+  .mk-tana   { color: var(--mark-tana); }
+  .mk-renka  { color: var(--mark-renka); }
+
+  .c-pt, .c-compi { font-family: var(--font-num); font-weight: 800; }
+  .c-pt { color: var(--primary-start); }
+  .c-compi { color: #6d28d9; }
+
+  .c-age, .c-weight { font-family: var(--font-num); color: var(--text-secondary); font-size: 0.8rem; }
+  .c-jockey, .c-trainer { font-size: 0.8rem; color: var(--text-secondary); }
+
+  .ret-detail > td { padding: 0 !important; }
+
+  .ret-hint {
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    background: var(--bg-muted);
+    border-top: 1px solid var(--border-color);
+  }
+
+  /* スマホ: 一覧性を最優先し、厩舎→騎手の順に落とす */
+  @media (max-width: 720px) {
+    .ret-table td, .ret-table thead th { padding: 7px 4px; }
+    .c-trainer { display: none; }
+    .horse-name { font-size: 0.9rem; }
+  }
+
+  @media (max-width: 480px) {
+    .c-jockey { display: none; }
+    .c-age { display: none; }
+    .ret-table td { font-size: 0.8rem; }
+  }
+</style>

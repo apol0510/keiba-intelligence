@@ -1,0 +1,464 @@
+---
+/**
+ * HorseDetailPanel.astro — 出馬表の行を開いたときに出る詳細（アコーディオンの中身）
+ *
+ * 正本: docs/RENEWAL_2026_08.md §4
+ *
+ * 🔴 **上流に存在する情報だけを表示する。** 欠けている項目は
+ *    「—」や 0 で埋めず、**ブロックごと描画しない**（南関と JRA で出る項目が変わる）。
+ *
+ * 🔴 tier による出し分け:
+ *    - AI総合pt … `view.showMarks`（印と同じ扱い）が false なら **描画しない**
+ *    - AI短評 / 特徴量 / 過去走 / 血統 / 距離成績 / 持時計 / 騎手相性 … 全 tier に開放
+ *    - 買い目 … このコンポーネントは扱わない
+ */
+
+import FeatureBars from './FeatureBars.astro';
+
+interface Props {
+  horse: any;
+  view: { showMarks?: boolean; showBetting?: boolean; tier?: string };
+  narrative?: { text?: string; insufficient?: boolean } | null;
+  features?: Record<string, any> | null;
+  /** 正規化済み過去走（raceNarrative.normalizePastRaces の戻り） */
+  pastRaces?: any[];
+  /** 南関 horseStats（無い会場では null） */
+  stats?: any | null;
+  /** 表示する過去走の最大件数 */
+  maxPastRaces?: number;
+}
+
+const {
+  horse, view, narrative = null, features = null,
+  pastRaces = [], stats = null, maxPastRaces = 5,
+} = Astro.props;
+
+const showMarks = !!view?.showMarks;
+const pt = showMarks && typeof horse?.pt === 'number' && Number.isFinite(horse.pt) ? horse.pt : null;
+
+/* ---------- 血統（存在するものだけ） ---------- */
+const profile = stats?.profile || null;
+const pedigree = [
+  { label: '父', value: horse?.sire || profile?.sire || null },
+  { label: '母', value: profile?.dam || null },
+  { label: '母の父', value: profile?.damsire || null },
+].filter((x) => x.value);
+
+/** 馬主・生産者・毛色・生年月日（南関のみ存在） */
+const bio = [
+  { label: '毛色', value: profile?.color || null },
+  { label: '生年月日', value: profile?.birthDate || null },
+  { label: '馬主', value: profile?.owner || null },
+  { label: '生産者', value: profile?.breeder || null },
+].filter((x) => x.value);
+
+/* ---------- 距離成績 ---------- */
+/** 上流の集計（南関）。無ければ過去走から算出したものを使う。 */
+const distanceRowsUpstream = Array.isArray(stats?.finishStatsByDistance)
+  ? stats.finishStatsByDistance.filter((r: any) => r && (r.first || r.second || r.third || r.out))
+  : [];
+
+function computeDistanceRows(races: any[]) {
+  const map = new Map<number, { first: number; second: number; third: number; out: number }>();
+  for (const r of races) {
+    if (r?.distanceMeters == null || r.rank == null) continue;
+    const key = r.distanceMeters;
+    const cur = map.get(key) || { first: 0, second: 0, third: 0, out: 0 };
+    if (r.rank === 1) cur.first += 1;
+    else if (r.rank === 2) cur.second += 1;
+    else if (r.rank === 3) cur.third += 1;
+    else cur.out += 1;
+    map.set(key, cur);
+  }
+  return [...map.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([label, v]) => ({ label: String(label), ...v }));
+}
+
+const distanceRows = distanceRowsUpstream.length ? distanceRowsUpstream : computeDistanceRows(pastRaces);
+
+/* ---------- 持時計（南関のみ） ---------- */
+const bestTimes = Array.isArray(stats?.bestTimes)
+  ? stats.bestTimes.filter((t: any) => t && t.time)
+  : [];
+
+/* ---------- 騎手相性（南関のみ） ---------- */
+const jockeyAll = stats?.jockeyStats?.all || null;
+const jockeyCourse = Array.isArray(stats?.jockeyCourseStats)
+  ? stats.jockeyCourseStats.filter((r: any) => r && r.winRateRaw)
+  : [];
+
+/* ---------- 馬場状態別・間隔別（南関のみ・あれば出す） ---------- */
+const trackCondRows = Array.isArray(stats?.trackConditionStats)
+  ? stats.trackConditionStats.filter((r: any) => r && (r.first || r.second || r.third || r.out))
+  : [];
+
+function rec(v: any) {
+  return `${v.first ?? 0}-${v.second ?? 0}-${v.third ?? 0}-${v.out ?? 0}`;
+}
+
+/* ---------- 過去走 ---------- */
+/** 上流の詳細（南関 recentRacesDetailed）があれば列が増える。 */
+const detailed = Array.isArray(stats?.recentRacesDetailed) ? stats.recentRacesDetailed : null;
+const rows = (detailed && detailed.length ? detailed : pastRaces).slice(0, maxPastRaces);
+const usingDetailed = !!(detailed && detailed.length);
+
+function cell(v: any) {
+  return v === 0 || v ? v : null;
+}
+
+function rankClass(rank: any) {
+  const n = Number(rank);
+  if (n === 1) return 'rk-1';
+  if (n === 2) return 'rk-2';
+  if (n === 3) return 'rk-3';
+  return 'rk-x';
+}
+
+/** 過去走 1 行を共通の見え方へ整える（存在しない項目は null のまま） */
+function pastView(r: any) {
+  const rank = usingDetailed ? cell(r.finish) : cell(r.rank);
+  const passing = usingDetailed
+    ? (typeof r.passingOrder === 'string' && r.passingOrder ? r.passingOrder : null)
+    : (Array.isArray(r.passing) && r.passing.length ? r.passing.join('-') : null);
+  const last3f = usingDetailed ? cell(r.last3f) : (r.last3f != null ? r.last3f.toFixed(1) : null);
+  return {
+    date: cell(r.date),
+    venue: cell(r.venue),
+    raceName: cell(r.raceName),
+    distance: r.distance != null ? r.distance : cell(r.distanceMeters),
+    surface: cell(r.surface),
+    trackCondition: cell(r.trackCondition),
+    headCount: usingDetailed ? cell(r.headCount) : cell(r.headCount),
+    popularity: cell(r.popularity),
+    bodyWeight: cell(r.bodyWeight),
+    time: cell(r.time),
+    last3f,
+    last3fRank: usingDetailed ? cell(r.last3fRank) : null,
+    passing,
+    jockey: usingDetailed ? cell(r.jockey) : null,
+    carriedWeight: usingDetailed ? cell(r.carriedWeight) : null,
+    margin: usingDetailed ? cell(r.margin) : null,
+    opponent: usingDetailed ? cell(r.winnerOrRunnerUp) : cell(r.winner),
+    rank,
+  };
+}
+
+const pastViews = rows.map(pastView);
+const hasFeatures = !!features && Object.keys(features).length > 0;
+---
+
+<div class="hdp">
+  <!-- AI短評（全 tier） -->
+  {narrative?.text && (
+    <section class={`hdp-comment ${narrative.insufficient ? 'is-thin' : ''}`}>
+      <span class="hdp-tag">AI短評</span>
+      <p>{narrative.text}</p>
+    </section>
+  )}
+
+  <div class="hdp-grid">
+    <!-- 指標 -->
+    {(hasFeatures || pt != null) && (
+      <section class="hdp-block">
+        <h5 class="hdp-h5">
+          AI指標
+          {pt != null && <span class="hdp-pt">総合 {pt}<i>pt</i></span>}
+        </h5>
+        <FeatureBars features={features} compact={true} />
+      </section>
+    )}
+
+    <!-- 血統 -->
+    {(pedigree.length > 0 || bio.length > 0) && (
+      <section class="hdp-block">
+        <h5 class="hdp-h5">血統・プロフィール</h5>
+        <dl class="hdp-dl">
+          {pedigree.map((x) => (<><dt>{x.label}</dt><dd>{x.value}</dd></>))}
+          {bio.map((x) => (<><dt>{x.label}</dt><dd>{x.value}</dd></>))}
+        </dl>
+      </section>
+    )}
+
+    <!-- 距離成績 -->
+    {distanceRows.length > 0 && (
+      <section class="hdp-block">
+        <h5 class="hdp-h5">距離成績</h5>
+        <ul class="hdp-chips">
+          {distanceRows.map((r: any) => (
+            <li><b>{r.label}</b><span>〔{rec(r)}〕</span></li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <!-- 持時計 -->
+    {bestTimes.length > 0 && (
+      <section class="hdp-block">
+        <h5 class="hdp-h5">持時計</h5>
+        <ul class="hdp-chips">
+          {bestTimes.map((t: any) => (
+            <li>
+              <b>{t.venue || ''}{t.surface || ''}</b>
+              <span>{t.time}{t.trackCondition ? `（${t.trackCondition}）` : ''}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <!-- 騎手相性 -->
+    {(jockeyAll || jockeyCourse.length > 0) && (
+      <section class="hdp-block">
+        <h5 class="hdp-h5">騎手相性{horse?.jockey ? `（${horse.jockey}）` : ''}</h5>
+        {jockeyAll && (
+          <p class="hdp-line">
+            この馬との通算 〔{rec(jockeyAll)}〕
+            {jockeyAll.winRateRaw && <span class="hdp-sub">勝率 {jockeyAll.winRateRaw}</span>}
+          </p>
+        )}
+        {jockeyCourse.length > 0 && (
+          <ul class="hdp-chips">
+            {jockeyCourse.slice(0, 6).map((r: any) => (
+              <li><b>{r.label}</b><span>{r.winRateRaw}</span></li>
+            ))}
+          </ul>
+        )}
+      </section>
+    )}
+
+    <!-- 馬場状態別 -->
+    {trackCondRows.length > 0 && (
+      <section class="hdp-block">
+        <h5 class="hdp-h5">馬場状態別</h5>
+        <ul class="hdp-chips">
+          {trackCondRows.map((r: any) => (
+            <li><b>{r.label}</b><span>〔{rec(r)}〕</span></li>
+          ))}
+        </ul>
+      </section>
+    )}
+  </div>
+
+  <!-- 過去走 -->
+  {pastViews.length > 0 && (
+    <section class="hdp-block hdp-past">
+      <h5 class="hdp-h5">近走（{pastViews.length}走）</h5>
+      <div class="hdp-past-scroll">
+        <table class="hdp-past-table">
+          <thead>
+            <tr>
+              <th>着</th>
+              <th>日付</th>
+              <th>場</th>
+              <th>レース</th>
+              <th>距離</th>
+              <th>頭</th>
+              <th>人気</th>
+              <th>タイム</th>
+              <th>上3F</th>
+              <th>通過</th>
+              <th>馬体重</th>
+              <th>騎手</th>
+              <th>相手</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pastViews.map((r) => (
+              <tr>
+                <td><span class={`hdp-rank ${rankClass(r.rank)}`}>{r.rank ?? '—'}</span></td>
+                <td>{r.date ?? ''}</td>
+                <td>{r.venue ?? ''}</td>
+                <td class="hdp-race-name">{r.raceName ?? ''}</td>
+                <td>{r.distance != null ? `${r.surface ?? ''}${r.distance}` : ''}{r.trackCondition ? `/${r.trackCondition}` : ''}</td>
+                <td>{r.headCount ?? ''}</td>
+                <td>{r.popularity ?? ''}</td>
+                <td>{r.time ?? ''}</td>
+                <td class="hdp-3f">{r.last3f ?? ''}{r.last3fRank != null ? `(${r.last3fRank})` : ''}</td>
+                <td>{r.passing ?? ''}</td>
+                <td>{r.bodyWeight ?? ''}</td>
+                <td>{r.jockey ?? ''}{r.carriedWeight ? ` ${r.carriedWeight}` : ''}</td>
+                <td class="hdp-opp">{r.opponent ?? ''}{r.margin ? ` ${r.margin}` : ''}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+</div>
+
+<style>
+  .hdp {
+    padding: 12px 14px 16px;
+    background: var(--bg-muted);
+    border-top: 1px solid var(--border-color);
+  }
+
+  .hdp-tag {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--accent-yellow);
+    color: #92700a;
+    margin-bottom: 5px;
+  }
+
+  .hdp-comment {
+    padding: 10px 12px;
+    background: linear-gradient(180deg, #fffdf5 0%, #fff9e8 100%);
+    border: 1px solid #f3e3b3;
+    border-radius: var(--radius-md);
+    margin-bottom: 12px;
+  }
+
+  .hdp-comment.is-thin {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+  }
+
+  .hdp-comment.is-thin .hdp-tag { background: var(--border-color); color: var(--text-tertiary); }
+
+  .hdp-comment p {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+  }
+
+  .hdp-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+
+  .hdp-block {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+  }
+
+  .hdp-h5 {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 0 0 7px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+  }
+
+  .hdp-pt {
+    font-family: var(--font-num);
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: var(--primary-start);
+  }
+
+  .hdp-pt i { font-style: normal; font-size: 0.62rem; margin-left: 1px; color: var(--text-tertiary); }
+
+  .hdp-dl {
+    display: grid;
+    grid-template-columns: 4.5em 1fr;
+    gap: 3px 8px;
+    margin: 0;
+    font-size: 0.8rem;
+  }
+
+  .hdp-dl dt { color: var(--text-tertiary); font-weight: 700; }
+  .hdp-dl dd { margin: 0; color: var(--text-primary); }
+
+  .hdp-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .hdp-chips li {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-muted);
+    font-size: 0.75rem;
+  }
+
+  .hdp-chips b { font-weight: 800; color: var(--text-secondary); }
+  .hdp-chips span { font-family: var(--font-num); color: var(--text-primary); }
+
+  .hdp-line {
+    margin: 0 0 6px;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    font-family: var(--font-num);
+  }
+
+  .hdp-sub { margin-left: 8px; color: var(--text-tertiary); font-size: 0.74rem; }
+
+  /* 過去走テーブル */
+  .hdp-past { margin-top: 10px; }
+
+  .hdp-past-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  .hdp-past-table {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: collapse;
+    font-size: 0.72rem;
+  }
+
+  .hdp-past-table th {
+    background: var(--bg-muted);
+    color: var(--text-tertiary);
+    font-weight: 700;
+    padding: 5px 6px;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .hdp-past-table td {
+    padding: 5px 6px;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    font-family: var(--font-num);
+    color: var(--text-primary);
+  }
+
+  .hdp-past-table tr:last-child td { border-bottom: none; }
+
+  .hdp-race-name,
+  .hdp-opp {
+    font-family: var(--font-sans);
+    max-width: 12em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hdp-3f { color: var(--chart-cyan); font-weight: 700; }
+
+  .hdp-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8em;
+    height: 1.8em;
+    border-radius: 50%;
+    font-weight: 800;
+    background: var(--bg-muted);
+    color: var(--text-secondary);
+  }
+
+  .rk-1 { background: #fef3c7; color: #92400e; }
+  .rk-2 { background: #e0e7ff; color: #3730a3; }
+  .rk-3 { background: #dcfce7; color: #166534; }
+</style>

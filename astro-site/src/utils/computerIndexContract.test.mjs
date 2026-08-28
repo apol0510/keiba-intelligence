@@ -173,11 +173,11 @@ test('computerIndex を読む本番コードは必ず契約を通す', () => {
 });
 
 // 2026-08-28: 総合pt バッジの描画は 3 画面の直書きから共通コンポーネント
-//   `components/newspaper/HorseColumn.astro` へ集約された（docs/RENEWAL_2026_08.md）。
+//   `components/newspaper/RaceEntryTable.astro` へ集約された（docs/RENEWAL_2026_08.md）。
 //   ガードの意図（バッジが契約ゲートを通ること・対象画面から消えないこと）は変えず、
 //   「描画点で契約を通す」＋「対象画面が描画点へ到達する」の 2 段で固定する。
 test('総合pt バッジの描画点が契約ゲートを使っている', () => {
-  const rel = 'components/newspaper/HorseColumn.astro';
+  const rel = 'components/newspaper/RaceEntryTable.astro';
   const s = readFileSync(join(SRC, rel), 'utf8');
   assert.ok(s.includes('総合pt'), `${rel}: 総合pt バッジが見つからない（対象がずれている）`);
   assert.ok(s.includes('toComputerIndex('), `${rel}: 契約ゲート toComputerIndex を通していない`);
@@ -200,9 +200,11 @@ test('JRA 予想3画面が総合pt バッジの描画点へ到達している', 
   }
 });
 
-test('RaceDayBoard → RaceNewspaper → HorseColumn の描画経路が保たれている', () => {
+test('RaceDayBoard → RaceNewspaper → RaceEntryTable → HorseDetailPanel の描画経路が保たれている', () => {
   const board = readFileSync(join(SRC, 'components/newspaper/RaceDayBoard.astro'), 'utf8');
   assert.ok(board.includes('RaceNewspaper'), 'RaceDayBoard が RaceNewspaper を使っていない');
   const paper = readFileSync(join(SRC, 'components/newspaper/RaceNewspaper.astro'), 'utf8');
-  assert.ok(paper.includes('HorseColumn'), 'RaceNewspaper が HorseColumn を使っていない');
+  assert.ok(paper.includes('RaceEntryTable'), 'RaceNewspaper が RaceEntryTable を使っていない');
+  const table = readFileSync(join(SRC, 'components/newspaper/RaceEntryTable.astro'), 'utf8');
+  assert.ok(table.includes('HorseDetailPanel'), 'RaceEntryTable が HorseDetailPanel を使っていない');
 });

@@ -341,16 +341,14 @@ export function featuresResolverFor(featureScoresData, raceNumber) {
   return (horse) => usableFeaturesFor(featureScoresData, raceNumber, horse?.horseNumber);
 }
 
-/** 南関 horseStats 由来の血統補足（無ければ null）。 */
-export function profileResolver() {
+/**
+ * 南関 horseStats（血統・持時計・距離成績・騎手相性・詳細近走）をそのまま返す resolver。
+ * JRA には存在しないため null になる（描画側で項目ごと出さない）。
+ */
+export function statsResolver() {
   return (horse) => {
-    const p = horse?.horseStatsNankan?.profile;
-    if (!p || typeof p !== 'object') return null;
-    return {
-      dam: p.dam || null,
-      damsire: p.damsire || null,
-      owner: p.owner || null,
-    };
+    const st = horse?.horseStatsNankan;
+    return st && typeof st === 'object' ? st : null;
   };
 }
 

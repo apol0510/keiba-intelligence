@@ -15,7 +15,7 @@
  * 🔴 文章生成に bettingLines を渡さない（CLAUDE.md 絶対厳守）。
  */
 
-import HorseColumn from './HorseColumn.astro';
+import RaceEntryTable from './RaceEntryTable.astro';
 import PaceMap from './PaceMap.astro';
 import { buildRaceNarrativeBundle, normalizePastRaces } from '../../utils/raceNarrative.js';
 import { sortHorsesByRole } from '../../utils/sortHorsesByRole.js';
@@ -28,8 +28,8 @@ interface Props {
   resolveRaces?: (horse: any) => any[];
   /** horse → featureScores の当該馬ぶん */
   resolveFeatures?: (horse: any) => any;
-  /** horse → 血統等の補足 */
-  resolveProfile?: (horse: any) => any;
+  /** horse → 南関 horseStats（無い会場では null） */
+  resolveStats?: (horse: any) => any;
   /** 買い目（light 以上のみ描画される） */
   bettingLines?: string[];
   betType?: string;
@@ -43,7 +43,7 @@ const {
   venue,
   resolveRaces,
   resolveFeatures,
-  resolveProfile,
+  resolveStats,
   bettingLines = [],
   betType = '馬単',
   badge = null,
@@ -109,19 +109,16 @@ const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => ty
   <!-- ── 展開予想 ── -->
   <PaceMap paceMap={bundle.paceMap} />
 
-  <!-- ── 馬柱 ── -->
-  <div class="rp-horses">
-    {orderedHorses.map((h: any) => (
-      <HorseColumn
-        horse={h}
-        view={view}
-        narrative={bundle.horses.get(h?.horseNumber) || null}
-        features={resolveFeatures ? resolveFeatures(h) : null}
-        pastRaces={pastOf(h)}
-        profile={resolveProfile ? resolveProfile(h) : null}
-      />
-    ))}
-  </div>
+  <!-- ── 出馬表（行タップで詳細が開く） ── -->
+  <RaceEntryTable
+    horses={orderedHorses}
+    view={view}
+    raceKey={`r${raceInfo?.venue ?? ''}${raceInfo?.raceNumber ?? ''}`}
+    narrativeOf={(h: any) => bundle.horses.get(h?.horseNumber) || null}
+    featuresOf={resolveFeatures}
+    pastRacesOf={pastOf}
+    statsOf={resolveStats}
+  />
 
   <!-- ── 結論（印が見える会員のみ） ── -->
   {showMarks && bundle.conclusion?.text && (
@@ -268,19 +265,6 @@ const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => ty
     font-size: 0.9rem;
     line-height: 1.75;
     color: var(--text-primary);
-  }
-
-  /* 馬柱 */
-  .rp-horses {
-    display: grid;
-    gap: 10px;
-    margin-top: 4px;
-  }
-
-  @media (min-width: 900px) {
-    .rp-horses {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
   }
 
   /* 結論 */

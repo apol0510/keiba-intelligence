@@ -97,12 +97,27 @@ test('RaceNewspaper: 印（役割・PT）は showMarks のときだけ描画す�
   assert.match(src, /showMarks\s*\n?\s*\?\s*sortHorsesByRole/, '未登録時に馬番順へ落としていない');
 });
 
-test('HorseColumn: 印と PT は showMarks の条件下でのみ組み立てる', () => {
-  const src = read('src/components/newspaper/HorseColumn.astro');
+test('RaceEntryTable: 印と総合pt は showMarks の条件下でのみ組み立て、列ごと出さない', () => {
+  const src = read('src/components/newspaper/RaceEntryTable.astro');
   assert.match(src, /const showMarks = !!view\?\.showMarks/);
-  assert.match(src, /const mark = showMarks && horse\?\.role/, '印が showMarks で守られていない');
-  assert.match(src, /const pt = showMarks &&/, 'PT が showMarks で守られていない');
-  assert.match(src, /\{showMarks && \(mark \|\| pt != null\) && \(/, '印ブロックが showMarks で守られていない');
+  assert.match(src, /mark: showMarks && h\?\.role/, '印が showMarks で守られていない');
+  assert.match(src, /pt: showMarks &&/, '総合pt が showMarks で守られていない');
+  // 列そのものを出さない（空列にして CSS で隠す実装を禁止）
+  assert.match(src, /\{showMarks && <th class="c-mark">/, '印の列が showMarks で守られていない');
+  assert.match(src, /\{showMarks && <th class="c-pt">/, '総合pt の列が showMarks で守られていない');
+});
+
+test('HorseDetailPanel: 総合pt は showMarks の条件下でのみ組み立てる', () => {
+  const src = read('src/components/newspaper/HorseDetailPanel.astro');
+  assert.match(src, /const showMarks = !!view\?\.showMarks/);
+  assert.match(src, /const pt = showMarks &&/, '総合pt が showMarks で守られていない');
+});
+
+test('出馬表の行アコーディオンは表示のみで認可に関与しない', () => {
+  const src = code('src/components/newspaper/RaceEntryTable.astro');
+  // クライアント JS で権限を判定していないこと
+  refute(/sessionStorage|localStorage/, src, 'アコーディオンがクライアント保存値を読んでいる');
+  refute(/showBetting\s*=\s*true/, src, 'アコーディオンが買い目を開こうとしている');
 });
 
 test('文章生成に買い目を渡していない（CLAUDE.md 絶対厳守）', () => {
@@ -122,7 +137,8 @@ test('捏造された数値を表示しない（Math.random による期待値�
   const targets = [
     ...PREDICTION_ROUTES,
     'src/components/newspaper/RaceNewspaper.astro',
-    'src/components/newspaper/HorseColumn.astro',
+    'src/components/newspaper/RaceEntryTable.astro',
+    'src/components/newspaper/HorseDetailPanel.astro',
     'src/components/newspaper/FeatureBars.astro',
     'src/components/newspaper/RaceDayBoard.astro',
   ];
@@ -134,8 +150,10 @@ test('捏造された数値を表示しない（Math.random による期待値�
 test('勝率・期待値を紙面に出していない（較正が未検証のため）', () => {
   refute(/winProbability|expectedValue/, code('src/components/newspaper/FeatureBars.astro'),
     'FeatureBars が未検証の勝率・期待値を表示している');
-  refute(/winProbability|expectedValue/, code('src/components/newspaper/HorseColumn.astro'),
-    'HorseColumn が未検証の勝率・期待値を表示している');
+  refute(/winProbability|expectedValue/, code('src/components/newspaper/HorseDetailPanel.astro'),
+    'HorseDetailPanel が未検証の勝率・期待値を表示している');
+  refute(/winProbability|expectedValue/, code('src/components/newspaper/RaceEntryTable.astro'),
+    'RaceEntryTable が未検証の勝率・期待値を表示している');
 });
 
 test('Netlify Functions: セッションは署名付き Cookie を発行・検証している', () => {

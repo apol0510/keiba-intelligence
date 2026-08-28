@@ -12,7 +12,7 @@
 
 import RaceNewspaper from './RaceNewspaper.astro';
 import {
-  racesOf, racesResolverFor, featuresResolverForRace, profileResolver,
+  racesOf, racesResolverFor, featuresResolverForRace, statsResolver,
 } from '../../lib/prediction/loadRaceDay.js';
 import { isMainRace } from '../../utils/mainRaceBetting.js';
 
@@ -25,7 +25,7 @@ interface Props {
 const { day, view, category } = Astro.props;
 
 const resolveRaces = racesResolverFor(category);
-const resolveProfile = profileResolver();
+const resolveStats = statsResolver();
 
 const venues = Array.isArray(day?.venues) ? day.venues : [];
 const isMulti = venues.length > 1;
@@ -107,7 +107,7 @@ const categoryLabel = category === 'jra' ? '中央競馬' : '南関東';
                   venue={category}
                   resolveRaces={resolveRaces}
                   resolveFeatures={featuresResolverForRace(race, venue.featureScores)}
-                  resolveProfile={resolveProfile}
+                  resolveStats={resolveStats}
                   bettingLines={bettingLinesOf(race)}
                   betType="馬単"
                   badge={main ? 'メインレース' : null}
