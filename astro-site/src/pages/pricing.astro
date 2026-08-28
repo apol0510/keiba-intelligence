@@ -1,1940 +1,582 @@
 ---
+/**
+ * /pricing — 料金プラン
+ *
+ * 正本: docs/RENEWAL_2026_08.md §6
+ *
+ * 🔴 2026-08-28 全面改修:
+ *   - 主導線を **Stripe の月額サブスク**にした（低価格帯・5,000円以下）。
+ *   - **価格をコードに書かない**。金額の正本は Stripe の Price であり、
+ *     `/.netlify/functions/stripe-prices` から取得して表示する。
+ *     取得できないプランは「準備中」と出す（推測価格・仮の金額を出さない）。
+ *   - 既存の買い切り・年払い（銀行振込）は削除せず、ページ下部の控えめな導線へ移した。
+ */
+
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { publicPlans } from '../lib/billing/plans.js';
+import { entitlementFromAstro, viewFlags } from '../lib/auth/entitlement.js';
 
-export const prerender = true;
+export const prerender = false;
 
-const recommendedPlans = [
-  {
-    id: 'lifetime',
-    name: '買い切りプラン',
-    price: 88000,
-    period: '',
-    description: '南関4場＋中央競馬（JRA全10場）永久アクセス',
-    features: [
-      { text: '南関4場全レース予想', included: true },
-      { text: 'JRA全10場全レース予想', included: true },
-      { text: '馬単買い目提供', included: true },
-      { text: '的中実績閲覧', included: true },
-      { text: 'データ可視化', included: true },
-      { text: 'Feature Importance Analysis', included: true },
-      { text: '永久アクセス権', included: true, highlight: true },
-    ],
-    cta: '銀行振込で申し込む',
-    ctaLink: '/apply',
-    highlighted: true,
-    badge: '一番お得',
-    lifetimeNote: '永久アクセス（追加料金なし）',
-  },
-  {
-    id: 'yearly',
-    name: '年払いプラン',
-    price: 66000,
-    originalPrice: 144000, // 月払い12,000円×12ヶ月
-    period: '/年',
-    description: '南関4場＋中央競馬（JRA全10場）',
-    features: [
-      { text: '南関4場全レース予想', included: true },
-      { text: 'JRA全10場全レース予想', included: true },
-      { text: '馬単買い目提供', included: true },
-      { text: '的中実績閲覧', included: true },
-      { text: 'データ可視化', included: true },
-      { text: 'Feature Importance Analysis', included: true },
-    ],
-    cta: '銀行振込で申し込む',
-    ctaLink: '/apply',
-    highlighted: true,
-    badge: 'おすすめ',
-    monthlyEquivalent: 5500,
-    dailyPrice: 181,
-    savings: 78000, // 144,000 - 66,000
-  },
-];
+const entitlement = entitlementFromAstro(Astro);
+const view = viewFlags(entitlement);
 
-const lightPlan = {
-  id: 'light',
-  name: 'ライトプラン',
-  price: 6600,
-  period: '/月',
-  description: 'まずはお試しで始めたい方に',
-  features: [
-    { text: '南関4場＋JRA全10場 全レース予想', included: true },
-    { text: 'メインレース馬単買い目', included: true, highlight: true },
-    { text: '的中実績閲覧', included: true },
-    { text: 'データ可視化', included: true },
-    { text: '全レース馬単買い目', included: false },
-  ],
-  cta: '銀行振込で申し込む',
-  ctaLink: '/apply',
-  highlighted: false,
-  badge: 'お試し',
-  dailyPrice: 220,
-};
+// 🔴 サーバー側では Price ID の有無だけを見る（金額は取得しない＝ページを速く返す）
+const plans = publicPlans({
+  ...(typeof process !== 'undefined' && process.env ? process.env : {}),
+  ...(import.meta.env || {}),
+});
 
-const monthlyPlans = [
-  {
-    id: 'monthly-nankan',
-    name: '南関のみ（月払い）',
-    price: 12000,
-    period: '/月',
-    description: '南関4場のみ',
-    features: [
-      { text: '南関4場全レース予想', included: true },
-      { text: '馬単買い目提供', included: true },
-      { text: '的中実績閲覧', included: true },
-      { text: 'データ可視化', included: true },
-      { text: 'JRA予想', included: false },
-    ],
-    cta: '銀行振込で申し込む',
-    ctaLink: '/apply',
-    highlighted: false,
-    warning: '年払いより2.2倍割高',
-    dailyPrice: 400,
-  },
-  {
-    id: 'monthly-jra',
-    name: '中央のみ（月払い）',
-    price: 12000,
-    period: '/月',
-    description: 'JRA全10場のみ',
-    features: [
-      { text: 'JRA全10場全レース予想', included: true },
-      { text: '馬単買い目提供', included: true },
-      { text: '的中実績閲覧', included: true },
-      { text: 'データ可視化', included: true },
-      { text: '南関予想', included: false },
-    ],
-    cta: '銀行振込で申し込む',
-    ctaLink: '/apply',
-    highlighted: false,
-    warning: '年払いより2.2倍割高',
-    dailyPrice: 400,
-  },
+const TIER_MATRIX = [
+  { label: '全頭の馬柱・過去走', guest: true, free: true, paid: true },
+  { label: 'AI短評（1頭ごとの文章）', guest: true, free: true, paid: true },
+  { label: 'AIレース展望・展開予想', guest: true, free: true, paid: true },
+  { label: '特徴量6指標', guest: true, free: true, paid: true },
+  { label: '的中実績・回収率', guest: true, free: true, paid: true },
+  { label: '印（◎○▲△）とAI総合pt', guest: false, free: true, paid: true },
+  { label: 'AI結論（本命の推奨理由）', guest: false, free: true, paid: true },
+  { label: '馬単の買い目', guest: false, free: false, paid: true },
+  { label: '開催日の注目馬・穴馬メール', guest: false, free: false, paid: true },
 ];
 ---
 
 <BaseLayout
   title="料金プラン"
-  description="KEIBA Intelligenceの料金プラン。買い切り¥88,000（永久アクセス、3年利用で月額換算¥2,444）または年払い¥66,000。南関4場＋中央競馬（JRA全10場）全レース対応。"
+  description="KEIBA Intelligence の料金プラン。馬柱・過去走・AI短評・展開予想は登録不要で無料公開。印は無料会員、馬単買い目は月額プランで提供します。"
 >
-  <!-- ヘッダーセクション -->
-  <section class="pricing-header gradient-bg">
-    <div class="container text-center">
-      <h1 class="fade-in">料金プラン</h1>
-      <p class="section-subtitle slide-in">
-        買い切り¥88,000（永久アクセス）または年払い¥66,000。<br>
-        南関4場＋中央競馬（JRA全10場）全レース対応。
+  <div class="container pricing">
+    <!-- ヒーロー -->
+    <header class="pr-hero">
+      <h1>まず無料で、中身を確かめてください</h1>
+      <p class="pr-hero-lead">
+        全レースの馬柱・過去走・<b>AI短評</b>・展開予想は<b>登録なしで全部</b>ご覧いただけます。<br>
+        印は無料会員登録で、馬単の買い目は月額プランで公開します。
       </p>
-    </div>
-  </section>
-
-  <!-- 365日競馬バナー -->
-  <section class="daily-racing-banner">
-    <div class="container">
-      <div class="banner-card">
-        <div class="banner-icon">🏇</div>
-        <h2 class="banner-title">365日、毎日競馬ができる</h2>
-        <p class="banner-subtitle">平日も週末も、年中無休で競馬予想を提供</p>
-
-        <div class="racing-schedule">
-          <div class="schedule-item">
-            <div class="schedule-days">月〜金</div>
-            <div class="schedule-icon">🌙</div>
-            <div class="schedule-venue">南関競馬</div>
-            <div class="schedule-desc">大井・川崎・船橋・浦和</div>
-          </div>
-          <div class="schedule-divider">+</div>
-          <div class="schedule-item">
-            <div class="schedule-days">土・日</div>
-            <div class="schedule-icon">☀️</div>
-            <div class="schedule-venue">中央競馬</div>
-            <div class="schedule-desc">JRA全10場</div>
-          </div>
-        </div>
-
-        <div class="banner-highlight">
-          <div class="lifetime-access-huge">永久アクセス</div>
-          <div class="banner-highlight-text">
-            買い切りプラン <span class="highlight-price">¥88,000</span> なら、<br>
-            この環境が永久に手に入る
-          </div>
-        </div>
+      <div class="pr-hero-actions">
+        <a class="pr-btn pr-btn-ghost" href="/prediction/nankan">今日の予想を見る（無料）</a>
+        {!view.authenticated && <a class="pr-btn pr-btn-primary" href="/register">無料会員に登録</a>}
       </div>
-    </div>
-  </section>
+    </header>
 
-  <!-- おすすめプラン（年払い・買い切り） -->
-  <section class="pricing-plans">
-    <div class="container">
-      <h2 class="section-title text-center">おすすめプラン</h2>
-      <p class="text-center mb-3" style="color: var(--text-secondary);">
-        南関4場＋中央競馬（JRA全10場）セット
-      </p>
-
-      <div class="grid grid-2" style="max-width: 900px; margin: 0 auto;">
-        {recommendedPlans.map((plan) => (
-          <div class={`pricing-card card ${plan.highlighted ? 'featured' : ''} ${plan.id === 'lifetime' ? 'lifetime-special' : ''}`}>
-            {plan.badge && (
-              <div class={`badge ${plan.id === 'lifetime' ? 'badge-lifetime' : 'badge-success'}`}>{plan.badge}</div>
-            )}
-
-            <div class="plan-header">
-              <div class="plan-name">{plan.name}</div>
-              <div class="plan-price">
-                <span class="price">¥{plan.price.toLocaleString()}</span>
-                <span class="period">{plan.period}</span>
-              </div>
-              {plan.monthlyEquivalent && (
-                <div class="monthly-equivalent">
-                  月額換算 ¥{plan.monthlyEquivalent.toLocaleString()}/月
-                </div>
-              )}
-              {plan.dailyPrice && (
-                <div class="daily-price">1日あたり¥{plan.dailyPrice}</div>
-              )}
-              {plan.savings && (
-                <div class="savings-badge">
-                  年間¥{plan.savings.toLocaleString()}お得
-                </div>
-              )}
-              {plan.lifetimeNote && (
-                <div class="lifetime-note-big">{plan.lifetimeNote}</div>
-              )}
-              <div class="plan-description">{plan.description}</div>
-            </div>
-
-            <ul class="plan-features">
-              {plan.features.map((feature) => (
-                <li class={`${feature.included ? 'included' : 'excluded'} ${feature.highlight ? 'highlight' : ''}`}>
-                  {feature.included ? '✅' : '❌'} {feature.text}
-                </li>
-              ))}
-            </ul>
-
-            {plan.id === 'lifetime' && (
-              <>
-                <div class="lifetime-future">
-                  <div class="future-title">🚀 50年後も、追加料金なし</div>
-
-                  <ul class="future-features">
-                    <li>✅ AIは自動で動き続ける（2076年も使える）</li>
-                    <li>✅ 毎日進化し、精度が上がる</li>
-                    <li>✅ ¥88,000以外、一生払わない</li>
-                  </ul>
-
-                  <div class="future-comparison">
-                    <div class="comparison-label">毎月課金型なら50年で</div>
-                    <div class="comparison-monthly">720万円</div>
-                    <div class="comparison-arrow">↓</div>
-                    <div class="comparison-label">買い切りなら</div>
-                    <div class="comparison-lifetime">8万8千円のみ</div>
-                  </div>
-
-                  <div class="future-tagline">
-                    未来を買うなら今
-                  </div>
-                </div>
-              </>
-            )}
-
-            <button
-              class={`btn ${plan.id === 'lifetime' ? 'btn-lifetime' : 'btn-primary'} w-full open-apply-modal`}
-              data-plan={plan.id}
-              data-price={plan.price}
-              data-name={plan.name}
-            >
-              {plan.cta}
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <!-- ライトプラン（お試し） -->
-  <section class="light-plan-section">
-    <div class="container">
-      <h2 class="section-title text-center">まずはお試し</h2>
-      <p class="text-center mb-3" style="color: var(--text-secondary);">
-        全レース予想を閲覧可能。メインレースの買い目付き。
-      </p>
-
-      <div style="max-width: 450px; margin: 0 auto;">
-        <div class="pricing-card card light-card">
-          <div class="badge badge-light">{lightPlan.badge}</div>
-
-          <div class="plan-header">
-            <div class="plan-name">{lightPlan.name}</div>
-            <div class="plan-price">
-              <span class="price">¥{lightPlan.price.toLocaleString()}</span>
-              <span class="period">{lightPlan.period}</span>
-            </div>
-            {lightPlan.dailyPrice && (
-              <div class="daily-price">1日あたり¥{lightPlan.dailyPrice}</div>
-            )}
-            <div class="plan-description">{lightPlan.description}</div>
-          </div>
-
-          <ul class="plan-features">
-            {lightPlan.features.map((feature) => (
-              <li class={`${feature.included ? 'included' : 'excluded'} ${feature.highlight ? 'highlight' : ''}`}>
-                {feature.included ? '✅' : '❌'} {feature.text}
-              </li>
+    <!-- 何がどこまで見えるか -->
+    <section class="pr-matrix-wrap">
+      <h2 class="pr-h2">どこまで見えるか</h2>
+      <div class="pr-matrix-scroll">
+        <table class="pr-matrix">
+          <thead>
+            <tr>
+              <th class="pr-m-label">できること</th>
+              <th>未登録<br><small>¥0</small></th>
+              <th>無料会員<br><small>¥0</small></th>
+              <th class="pr-m-paid">有料プラン<br><small>月額</small></th>
+            </tr>
+          </thead>
+          <tbody>
+            {TIER_MATRIX.map((row) => (
+              <tr>
+                <td class="pr-m-label">{row.label}</td>
+                <td class={row.guest ? 'ok' : 'no'}>{row.guest ? '○' : '—'}</td>
+                <td class={row.free ? 'ok' : 'no'}>{row.free ? '○' : '—'}</td>
+                <td class={`pr-m-paid ${row.paid ? 'ok' : 'no'}`}>{row.paid ? '○' : '—'}</td>
+              </tr>
             ))}
-          </ul>
-
-          <div class="light-upgrade-hint">
-            <p>気に入ったらプロプランへアップグレード可能</p>
-          </div>
-
-          <button
-            class="btn btn-light w-full open-apply-modal"
-            data-plan={lightPlan.id}
-            data-price={lightPlan.price}
-            data-name={lightPlan.name}
-          >
-            {lightPlan.cta}
-          </button>
-        </div>
+          </tbody>
+        </table>
       </div>
-    </div>
-  </section>
+    </section>
 
-  {/* 月払いプラン（割高・非推奨）は非表示（2026-06-15） */}
-  {/*
-  <section class="monthly-plans">
-    <div class="container">
-      <h2 class="section-title text-center">月払いプラン（割高・非推奨）</h2>
-      <p class="text-center mb-3" style="color: #ef4444; font-weight: 700;">
-        ⚠️ 年払いより2.2倍割高です。年払いプランを強くおすすめします。
-      </p>
+    <!-- 月額プラン -->
+    <section class="pr-plans">
+      <h2 class="pr-h2">月額プラン</h2>
+      <p class="pr-plans-note">いつでも解約できます。解約後も無料会員として印までご覧いただけます。</p>
 
-      <div class="grid grid-2" style="max-width: 900px; margin: 0 auto;">
-        {monthlyPlans.map((plan) => (
-          <div class="pricing-card card monthly-warning">
-            {plan.warning && (
-              <div class="badge badge-warning">{plan.warning}</div>
-            )}
+      <div class="pr-plan-grid">
+        {plans.map((plan) => (
+          <article class={`pr-plan ${plan.recommended ? 'is-recommended' : ''}`} data-plan={plan.id}>
+            {plan.recommended && <span class="pr-plan-ribbon">おすすめ</span>}
+            <h3 class="pr-plan-name">{plan.name}</h3>
+            <p class="pr-plan-tagline">{plan.tagline}</p>
 
-            <div class="plan-header">
-              <div class="plan-name">{plan.name}</div>
-              <div class="plan-price">
-                <span class="price">¥{plan.price.toLocaleString()}</span>
-                <span class="period">{plan.period}</span>
-              </div>
-              {plan.dailyPrice && (
-                <div class="daily-price warning-text">1日あたり¥{plan.dailyPrice}</div>
-              )}
-              <div class="plan-description">{plan.description}</div>
-            </div>
+            <p class="pr-plan-price" data-price-for={plan.id}>
+              {plan.purchasable
+                ? <span class="pr-price-loading">価格を取得中…</span>
+                : <span class="pr-price-pending">準備中</span>}
+            </p>
 
-            <ul class="plan-features">
-              {plan.features.map((feature) => (
-                <li class={feature.included ? 'included' : 'excluded'}>
-                  {feature.included ? '✅' : '❌'} {feature.text}
-                </li>
-              ))}
+            <ul class="pr-plan-features">
+              {plan.features.map((f) => <li>{f}</li>)}
             </ul>
 
-            <button
-              class="btn btn-secondary w-full open-apply-modal"
-              data-plan={plan.id}
-              data-price={plan.price}
-              data-name={plan.name}
-            >
-              {plan.cta}
-            </button>
-          </div>
+            {plan.purchasable ? (
+              <button class="pr-btn pr-btn-primary pr-plan-cta" type="button" data-checkout={plan.id}>
+                このプランを申し込む
+              </button>
+            ) : (
+              <button class="pr-btn pr-btn-disabled" type="button" disabled>準備中</button>
+            )}
+          </article>
         ))}
       </div>
-    </div>
-  </section>
-  */}
 
-  <!-- 価格比較表 -->
-  <section class="price-comparison">
-    <div class="container">
-      <h2 class="section-title text-center">価格比較</h2>
+      <p class="pr-plan-msg" id="pr-plan-msg" hidden></p>
 
-      <div class="comparison-table-wrapper">
-        <table class="comparison-table">
-          <thead>
-            <tr>
-              <th>プラン</th>
-              <th>価格</th>
-              <th>月額換算</th>
-              <th>1日あたり</th>
-              <th>お得度</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="highlight-row">
-              <td><strong>買い切り（南関＋中央）</strong></td>
-              <td><strong>¥88,000（永久）</strong></td>
-              <td><strong>¥2,444/月</strong><br><small>（3年利用時）</small></td>
-              <td><strong>¥81/日</strong><br><small>（3年利用時）</small></td>
-              <td><span class="badge badge-success">3年で¥256,000お得</span></td>
-            </tr>
-            <tr class="highlight-row">
-              <td><strong>年払い（南関＋中央）</strong></td>
-              <td><strong>¥66,000/年</strong></td>
-              <td><strong>¥5,500/月</strong></td>
-              <td><strong>¥181/日</strong></td>
-              <td><span class="badge badge-success">年間¥78,000お得</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      {view.showBetting && (
+        <p class="pr-manage">
+          <button class="pr-link-btn" type="button" id="pr-portal">お支払い方法の変更・解約はこちら</button>
+        </p>
+      )}
+    </section>
 
-      <div class="comparison-note">
-        <p>💎 <strong>買い切りプランなら：</strong></p>
-        <ul>
-          <li>3年利用で月額換算¥2,444（年払いの半額以下）</li>
-          <li>5年利用なら月額換算¥1,467（さらにお得）</li>
-          <li>永久アクセス権で将来の値上げリスクなし</li>
-          <li>長期利用すればするほどお得</li>
-        </ul>
-        <p>💡 <strong>年払いプランなら：</strong></p>
-        <ul>
-          <li>月額換算¥5,500で南関＋中央の両方が利用可能</li>
-          <li>1日あたりわずか¥181（缶コーヒー1本分以下）</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- プラン機能比較表 -->
-  <section class="plan-comparison">
-    <div class="container">
-      <h2 class="section-title text-center">プラン機能比較表</h2>
-
-      <div class="comparison-table-wrapper">
-        <table class="comparison-table">
-          <thead>
-            <tr>
-              <th>機能</th>
-              <th class="highlighted">買い切り</th>
-              <th class="highlighted">年払い</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>南関4場全レース予想</td>
-              <td>✅</td>
-              <td>✅</td>
-            </tr>
-            <tr>
-              <td>JRA全10場全レース予想</td>
-              <td>✅</td>
-              <td>✅</td>
-            </tr>
-            <tr>
-              <td>馬単買い目提供</td>
-              <td>✅</td>
-              <td>✅</td>
-            </tr>
-            <tr>
-              <td>的中実績閲覧</td>
-              <td>✅</td>
-              <td>✅</td>
-            </tr>
-            <tr>
-              <td>データ可視化</td>
-              <td>✅</td>
-              <td>✅</td>
-            </tr>
-            <tr>
-              <td>Feature Importance Analysis</td>
-              <td>✅</td>
-              <td>✅</td>
-            </tr>
-            <tr>
-              <td>永久アクセス</td>
-              <td>✅</td>
-              <td>❌</td>
-            </tr>
-            <tr class="highlight-row">
-              <td><strong>月額換算</strong></td>
-              <td><strong>¥2,444</strong><br><small>(3年利用時)</small></td>
-              <td><strong>¥5,500</strong></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- FAQ -->
-  <section class="faq">
-    <div class="container">
-      <h2 class="section-title text-center">よくある質問</h2>
-
-      <div class="faq-grid">
-        <div class="faq-item card">
-          <h3>Q. おすすめのプランはどれですか？</h3>
+    <!-- 銀行振込（控えめ） -->
+    <section class="pr-bank">
+      <details>
+        <summary>年払い・買い切りをご希望の方（銀行振込）</summary>
+        <div class="pr-bank-body">
           <p>
-            <strong>買い切りプラン（¥88,000）</strong>を最もおすすめします。3年利用で月額換算¥2,444（年払いの半額以下）、5年なら¥1,467と、長期利用で圧倒的にお得になります。
+            月額ではなく、まとめてお支払いいただくプランもご用意しています。
+            お申し込み後、振込先をメールでご案内します。
           </p>
-          <p>
-            1年程度の利用を予定されている方は<strong>年払いプラン（¥66,000）</strong>もおすすめです。月額換算¥5,500（1日¥181）でお得にご利用いただけます。
-          </p>
+          <ul>
+            <li><b>年払い</b> — 南関東＋中央、全レースの馬単買い目</li>
+            <li><b>買い切り</b> — 同内容を永久にご利用いただけます</li>
+          </ul>
+          <a class="pr-btn pr-btn-ghost" href="/apply">銀行振込で申し込む</a>
         </div>
+      </details>
+    </section>
 
-        <div class="faq-item card">
-          <h3>Q. 買い切りプランの「永久アクセス」とは？</h3>
-          <p>
-            買い切りプラン（¥88,000）は<strong>一度の購入で永久に利用可能</strong>です。追加料金は一切発生しません。
-            3年利用で月額換算¥2,444、5年なら¥1,467と、利用期間が長いほどお得になります。
-          </p>
-        </div>
-
-        <div class="faq-item card highlight-faq">
-          <h3>Q. 50年後も本当に使えるの？AIは進化する？</h3>
-          <p>
-            <strong>はい、50年後も追加料金なしで使えます。</strong>
-            AIシステムは自動で動き続け、毎日進化を重ねます。2076年のAIがどれだけ進化しているか、誰にもわかりません。
-          </p>
-          <p>
-            でも、ひとつ確実なこと。<strong>あなたが支払うのは2026年の¥88,000だけ</strong>です。
-            毎月課金型のサービスなら50年で720万円。買い切りなら8万8千円のみ。それが買い切りの力です。
-          </p>
-        </div>
-
-        <div class="faq-item card">
-          <h3>Q. 南関のみ・中央のみのプランはありますか？</h3>
-          <p>
-            現在は<strong>南関＋中央セット</strong>の買い切りプラン・年払いプランのみのご提供です。
-            年払い（¥66,000）なら1日あたり¥181で南関4場＋中央（JRA全10場）の両方をご利用いただけます。
-          </p>
-        </div>
-
-        <div class="faq-item card">
-          <h3>Q. 支払い方法は？</h3>
-          <p>
-            現在、<strong>銀行振り込みのみ</strong>対応しています。お申し込み後、振込先情報をメールでお送りします。
-            入金確認後、即座にアクセス権を付与いたします。
-          </p>
-        </div>
-
-        <div class="faq-item card">
-          <h3>Q. 途中解約・返金はできますか？</h3>
-          <p>
-            年払いプラン・買い切りプランともに、<strong>購入後の返金は原則として承っておりません</strong>。
-            無料予想ページで予想の精度を事前にご確認の上、お申し込みください。
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- CTA -->
-  <section class="cta gradient-bg">
-    <div class="container text-center">
-      <h2>今すぐ始めて、勝ち馬を見つけよう</h2>
-      <p class="mb-3">買い切り¥88,000（永久アクセス）または年払い¥66,000</p>
-      <div class="cta-buttons">
-        <button id="open-apply-modal-cta" class="btn btn-primary btn-lg">銀行振込で申し込む</button>
-        <a href="/register" class="btn btn-secondary btn-lg">まずは無料会員登録</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- 申し込みモーダル -->
-  <div id="apply-modal" class="modal hidden">
-    <div class="modal-overlay" id="modal-overlay"></div>
-    <div class="modal-content">
-      <button class="modal-close" id="modal-close">&times;</button>
-
-      <h2 class="modal-title">銀行振込で申し込む</h2>
-
-      <!-- Step 1: プラン選択 -->
-      <div id="step-plan-selection" class="modal-step">
-        <h3>プランを選択してください</h3>
-        <div class="plan-selection-grid">
-          <div class="plan-select-card" data-plan="lifetime" data-price="88000">
-            <div class="plan-badge">一番お得</div>
-            <h4>買い切りプラン</h4>
-            <div class="plan-price">¥88,000</div>
-            <p>永久アクセス（追加料金なし）</p>
-            <button class="btn btn-primary btn-sm select-plan-btn">このプランを選ぶ</button>
-          </div>
-
-          <div class="plan-select-card" data-plan="yearly" data-price="66000">
-            <div class="plan-badge">おすすめ</div>
-            <h4>年払いプラン</h4>
-            <div class="plan-price">¥66,000<span class="plan-period">/年</span></div>
-            <p>月額換算¥5,500</p>
-            <button class="btn btn-primary btn-sm select-plan-btn">このプランを選ぶ</button>
-          </div>
-
-          {/* 月払いプランは非表示（2026-06-15） */}
-          {/*
-          <div class="plan-select-card" data-plan="monthly-nankan" data-price="12000">
-            <h4>南関のみ（月払い）</h4>
-            <div class="plan-price">¥12,000<span class="plan-period">/月</span></div>
-            <p class="plan-warning">年払いより2.2倍割高</p>
-            <button class="btn btn-secondary btn-sm select-plan-btn">このプランを選ぶ</button>
-          </div>
-
-          <div class="plan-select-card" data-plan="monthly-jra" data-price="12000">
-            <h4>中央のみ（月払い）</h4>
-            <div class="plan-price">¥12,000<span class="plan-period">/月</span></div>
-            <p class="plan-warning">年払いより2.2倍割高</p>
-            <button class="btn btn-secondary btn-sm select-plan-btn">このプランを選ぶ</button>
-          </div>
-          */}
-        </div>
-      </div>
-
-      <!-- Step 2: 振込情報・フォーム -->
-      <div id="step-application-form" class="modal-step hidden">
-        <button class="back-btn" id="back-to-plan-selection">← プラン選択に戻る</button>
-
-        <div class="selected-plan-info">
-          <h3>選択プラン: <span id="selected-plan-name"></span></h3>
-          <div class="selected-plan-price">お支払い金額: <span id="selected-plan-price"></span></div>
-        </div>
-
-        <!-- 振込先情報 -->
-        <div class="bank-info-section">
-          <h3>振込先情報</h3>
-          <div class="bank-info-card">
-            <div class="bank-detail">
-              <span class="bank-label">金融機関</span>
-              <span class="bank-value">PayPay銀行</span>
-            </div>
-            <div class="bank-detail">
-              <span class="bank-label">支店名</span>
-              <span class="bank-value">本店営業部</span>
-            </div>
-            <div class="bank-detail">
-              <span class="bank-label">口座種別</span>
-              <span class="bank-value">普通</span>
-            </div>
-            <div class="bank-detail">
-              <span class="bank-label">口座番号</span>
-              <span class="bank-value">8307337</span>
-            </div>
-            <div class="bank-detail">
-              <span class="bank-label">口座名義</span>
-              <span class="bank-value">ｳｴﾌﾞｹｲﾊﾞ</span>
-            </div>
-          </div>
-          <div class="bank-notice">
-            <p>⚠️ 振込手数料はお客様負担となります。</p>
-            <p>💡 振込を完了してから、以下のフォームをご入力ください。</p>
-          </div>
-        </div>
-
-        <!-- 申し込みフォーム -->
-        <form id="application-form" class="application-form">
-          <div class="form-group">
-            <label for="fullName">お名前 <span class="required">*</span></label>
-            <input type="text" id="fullName" name="fullName" required placeholder="山田 太郎">
-          </div>
-
-          <div class="form-group">
-            <label for="email">メールアドレス <span class="required">*</span></label>
-            <input type="email" id="email" name="email" required placeholder="example@example.com">
-          </div>
-
-          <div class="form-group">
-            <label for="transferDate">振込日 <span class="required">*</span></label>
-            <input type="date" id="transferDate" name="transferDate" required>
-          </div>
-
-          <div class="form-group">
-            <label for="transferAmount">振込金額 <span class="required">*</span></label>
-            <input type="number" id="transferAmount" name="transferAmount" required readonly>
-          </div>
-
-          <div class="form-group">
-            <label for="remarks">備考（任意）</label>
-            <textarea id="remarks" name="remarks" rows="3" placeholder="ご質問・ご要望などがあればご記入ください"></textarea>
-          </div>
-
-          <div class="form-notice">
-            <p>✅ フォーム送信後、確認メールをお送りします。</p>
-            <p>✅ 入金確認後、即時にアカウントを有効化いたします。</p>
-          </div>
-
-          <button type="submit" class="btn btn-primary btn-lg w-full" id="submit-btn">
-            申し込みを送信する
-          </button>
-        </form>
-
-        <!-- 送信完了メッセージ -->
-        <div id="success-message" class="success-message hidden">
-          <div class="success-icon">✅</div>
-          <h3>申し込みを受け付けました！</h3>
-          <p>確認メールをお送りしましたので、ご確認ください。</p>
-          <p>入金確認後、即時にアカウントを有効化いたします。</p>
-          <button class="btn btn-secondary" id="close-modal-success">閉じる</button>
-        </div>
-      </div>
-    </div>
+    <!-- FAQ -->
+    <section class="pr-faq">
+      <h2 class="pr-h2">よくあるご質問</h2>
+      <details><summary>無料でどこまで見られますか？</summary>
+        <p>登録なしで、全レースの馬柱・過去走・AI短評・レース展望・展開予想・特徴量をご覧いただけます。無料会員登録をすると、これに印（◎○▲△）とAI総合ptが加わります。</p>
+      </details>
+      <details><summary>買い目は何点ですか？</summary>
+        <p>馬単で、1レースあたりの投資は5点固定です。点数を後から増やしたり、高配当だけを選んで実績に載せたりはしていません。</p>
+      </details>
+      <details><summary>解約はできますか？</summary>
+        <p>いつでも解約できます。解約手続きはマイページから行えます。解約後も無料会員として印までご覧いただけます。</p>
+      </details>
+      <details><summary>回収率はどう計算していますか？</summary>
+        <p>払戻 ÷ 投資 × 100 の実測値です。公開している的中はすべて算入しています。</p>
+      </details>
+    </section>
   </div>
-
-  <style>
-    /* ヘッダー */
-    .pricing-header {
-      padding: var(--spacing-2xl) 0;
-      text-align: center;
-    }
-
-    .pricing-header h1 {
-      font-size: 3rem;
-      margin-bottom: var(--spacing-lg);
-      font-weight: 800;
-      background: linear-gradient(135deg, #e0f2fe 0%, #60a5fa 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .section-subtitle {
-      font-size: 1.25rem;
-      color: var(--text-secondary);
-      line-height: 1.6;
-    }
-
-    /* 365日競馬バナー */
-    .daily-racing-banner {
-      padding: var(--spacing-2xl) 0;
-      background: linear-gradient(135deg,
-        rgba(16, 185, 129, 0.1) 0%,
-        rgba(59, 130, 246, 0.1) 100%);
-    }
-
-    .banner-card {
-      background: var(--bg-tertiary);
-      padding: var(--spacing-2xl);
-      border-radius: var(--radius-lg);
-      border: 2px solid rgba(16, 185, 129, 0.3);
-      text-align: center;
-    }
-
-    .banner-icon {
-      font-size: 4rem;
-      margin-bottom: var(--spacing-md);
-      animation: bounce 2s infinite;
-    }
-
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
-    }
-
-    .banner-title {
-      font-size: 2.5rem;
-      font-weight: 900;
-      background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: var(--spacing-md);
-    }
-
-    .banner-subtitle {
-      font-size: 1.25rem;
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-xl);
-    }
-
-    .racing-schedule {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: var(--spacing-xl);
-      margin-bottom: var(--spacing-xl);
-      flex-wrap: wrap;
-    }
-
-    .schedule-item {
-      background: var(--bg-secondary);
-      padding: var(--spacing-lg);
-      border-radius: var(--radius-md);
-      border: 2px solid rgba(59, 130, 246, 0.3);
-      min-width: 200px;
-    }
-
-    .schedule-days {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #60a5fa;
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .schedule-icon {
-      font-size: 2rem;
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .schedule-venue {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin-bottom: var(--spacing-xs);
-    }
-
-    .schedule-desc {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-    }
-
-    .schedule-divider {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #10b981;
-    }
-
-    .banner-highlight {
-      background: linear-gradient(135deg,
-        rgba(139, 92, 246, 0.2) 0%,
-        rgba(167, 139, 250, 0.2) 100%);
-      padding: var(--spacing-xl);
-      border-radius: var(--radius-md);
-      border: 2px solid rgba(139, 92, 246, 0.5);
-      text-align: center;
-    }
-
-    .lifetime-access-huge {
-      font-size: 3.5rem;
-      font-weight: 900;
-      background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: var(--spacing-md);
-      letter-spacing: 2px;
-      text-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
-      animation: glow 2s ease-in-out infinite;
-    }
-
-    @keyframes glow {
-      0%, 100% { filter: brightness(1); }
-      50% { filter: brightness(1.3); }
-    }
-
-    .banner-highlight-text {
-      font-size: 1.25rem;
-      color: #a78bfa;
-      font-weight: 700;
-    }
-
-    .highlight-price {
-      font-size: 1.5rem;
-      font-weight: 900;
-      color: #c4b5fd;
-    }
-
-    /* プランセクション */
-    .pricing-plans, .light-plan-section, .monthly-plans, .price-comparison, .plan-comparison, .faq {
-      padding: var(--spacing-2xl) 0;
-    }
-
-    .light-plan-section {
-      background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(109, 40, 217, 0.05) 100%);
-    }
-
-    .light-card {
-      border: 2px solid rgba(139, 92, 246, 0.4);
-    }
-
-    .light-card:hover {
-      border-color: rgba(139, 92, 246, 0.7);
-      box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
-    }
-
-    .badge-light {
-      background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
-      color: white;
-    }
-
-    .btn-light {
-      background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
-      color: white;
-      border: none;
-      padding: var(--spacing-md) var(--spacing-xl);
-      border-radius: var(--radius-md);
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .btn-light:hover {
-      background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 16px rgba(139, 92, 246, 0.4);
-    }
-
-    .light-upgrade-hint {
-      text-align: center;
-      padding: var(--spacing-sm) var(--spacing-md);
-      margin-bottom: var(--spacing-md);
-      color: var(--text-secondary);
-      font-size: 0.85rem;
-    }
-
-    .monthly-plans {
-      background: var(--bg-secondary);
-    }
-
-    .section-title {
-      font-size: 2.5rem;
-      margin-bottom: var(--spacing-xl);
-      text-align: center;
-    }
-
-    /* プランカード */
-    .pricing-card {
-      position: relative;
-      text-align: center;
-      padding: var(--spacing-xl);
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .pricing-card:hover {
-      transform: translateY(-5px);
-    }
-
-    .pricing-card.featured {
-      border: 2px solid var(--primary-end);
-      box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
-    }
-
-    .pricing-card.lifetime-special {
-      border: 3px solid #a78bfa;
-      box-shadow: 0 0 40px rgba(167, 139, 250, 0.5);
-      background: linear-gradient(135deg,
-        rgba(139, 92, 246, 0.05) 0%,
-        rgba(167, 139, 250, 0.05) 100%);
-      transform: scale(1.05);
-    }
-
-    .pricing-card.lifetime-special:hover {
-      transform: scale(1.08);
-    }
-
-    .pricing-card.monthly-warning {
-      border: 2px solid rgba(239, 68, 68, 0.3);
-      opacity: 0.85;
-    }
-
-    .pricing-card .badge {
-      position: absolute;
-      top: var(--spacing-md);
-      right: var(--spacing-md);
-      font-size: 0.75rem;
-      padding: 6px 12px;
-    }
-
-    .badge-warning {
-      background: rgba(239, 68, 68, 0.2);
-      border: 1px solid rgba(239, 68, 68, 0.5);
-      color: #ef4444;
-    }
-
-    .badge-lifetime {
-      background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
-      color: white;
-      font-size: 0.875rem;
-      padding: 8px 16px;
-      font-weight: 900;
-      letter-spacing: 0.5px;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-
-    .plan-header {
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .plan-name {
-      font-size: 1.75rem;
-      font-weight: 700;
-      margin-bottom: var(--spacing-md);
-      color: var(--text-primary);
-    }
-
-    .plan-price {
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .price {
-      font-size: 3rem;
-      font-weight: 700;
-      background: var(--primary-gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .period {
-      font-size: 1.125rem;
-      color: var(--text-secondary);
-      margin-left: var(--spacing-xs);
-    }
-
-    .monthly-equivalent {
-      font-size: 1rem;
-      color: #10b981;
-      font-weight: 700;
-      margin-bottom: var(--spacing-xs);
-    }
-
-    .daily-price {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-xs);
-    }
-
-    .daily-price.warning-text {
-      color: #ef4444;
-      font-weight: 700;
-    }
-
-    .savings-badge {
-      display: inline-block;
-      padding: 6px 12px;
-      background: rgba(16, 185, 129, 0.2);
-      border: 1px solid rgba(16, 185, 129, 0.5);
-      border-radius: 12px;
-      font-size: 0.875rem;
-      font-weight: 700;
-      color: #10b981;
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .lifetime-note {
-      font-size: 0.875rem;
-      color: #a78bfa;
-      font-weight: 700;
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .lifetime-note-big {
-      font-size: 1rem;
-      color: #a78bfa;
-      font-weight: 700;
-      margin-bottom: var(--spacing-sm);
-      background: rgba(167, 139, 250, 0.1);
-      padding: var(--spacing-sm);
-      border-radius: var(--radius-sm);
-    }
-
-    .lifetime-calculation {
-      background: var(--bg-secondary);
-      padding: var(--spacing-lg);
-      border-radius: var(--radius-md);
-      margin-bottom: var(--spacing-lg);
-      border: 2px solid rgba(167, 139, 250, 0.3);
-    }
-
-    .calc-title {
-      font-size: 1rem;
-      font-weight: 700;
-      color: #a78bfa;
-      margin-bottom: var(--spacing-md);
-      text-align: center;
-    }
-
-    .calc-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: var(--spacing-md);
-    }
-
-    .calc-item {
-      text-align: center;
-      padding: var(--spacing-sm);
-      background: rgba(167, 139, 250, 0.1);
-      border-radius: var(--radius-sm);
-    }
-
-    .calc-period {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-xs);
-    }
-
-    .calc-value {
-      font-size: 1.25rem;
-      font-weight: 900;
-      color: #a78bfa;
-      font-family: 'Courier New', monospace;
-    }
-
-    .lifetime-future {
-      background: linear-gradient(135deg,
-        rgba(16, 185, 129, 0.1) 0%,
-        rgba(59, 130, 246, 0.1) 100%);
-      padding: var(--spacing-xl);
-      border-radius: var(--radius-md);
-      margin-bottom: var(--spacing-lg);
-      border: 2px solid rgba(16, 185, 129, 0.5);
-    }
-
-    .future-title {
-      font-size: 1.5rem;
-      font-weight: 900;
-      background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: var(--spacing-md);
-      text-align: center;
-    }
-
-    .future-features {
-      list-style: none;
-      margin-bottom: var(--spacing-lg);
-      text-align: left;
-    }
-
-    .future-features li {
-      padding: var(--spacing-sm) 0;
-      color: var(--text-primary);
-      font-size: 1rem;
-      font-weight: 600;
-      line-height: 1.6;
-    }
-
-    .future-comparison {
-      background: var(--bg-secondary);
-      padding: var(--spacing-lg);
-      border-radius: var(--radius-sm);
-      text-align: center;
-      margin-bottom: var(--spacing-md);
-    }
-
-    .comparison-label {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-xs);
-    }
-
-    .comparison-monthly {
-      font-size: 1.75rem;
-      font-weight: 900;
-      color: #ef4444;
-      font-family: 'Courier New', monospace;
-      text-decoration: line-through;
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .comparison-arrow {
-      font-size: 1.5rem;
-      color: #10b981;
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .comparison-lifetime {
-      font-size: 2rem;
-      font-weight: 900;
-      color: #10b981;
-      font-family: 'Courier New', monospace;
-    }
-
-    .future-tagline {
-      font-size: 1.125rem;
-      font-weight: 700;
-      color: #60a5fa;
-      text-align: center;
-      padding: var(--spacing-md);
-      background: rgba(59, 130, 246, 0.1);
-      border-radius: var(--radius-sm);
-    }
-
-    .plan-description {
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-lg);
-      font-size: 0.9rem;
-    }
-
-    /* プラン機能リスト */
-    .plan-features {
-      list-style: none;
-      text-align: left;
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .plan-features li {
-      padding: var(--spacing-sm) 0;
-      color: var(--text-secondary);
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .plan-features li:last-child {
-      border-bottom: none;
-    }
-
-    .plan-features li.included {
-      color: var(--text-primary);
-    }
-
-    .plan-features li.excluded {
-      opacity: 0.5;
-    }
-
-    .plan-features li.highlight {
-      color: #a78bfa;
-      font-weight: 900;
-      font-size: 1.125rem;
-      background: rgba(167, 139, 250, 0.1);
-      padding: var(--spacing-md);
-      border-radius: var(--radius-sm);
-      border: 2px solid rgba(167, 139, 250, 0.5);
-      animation: pulse-slow 3s infinite;
-    }
-
-    @keyframes pulse-slow {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.02); opacity: 0.95; }
-    }
-
-    /* ボタン */
-    .w-full {
-      width: 100%;
-    }
-
-    .btn-lg {
-      padding: var(--spacing-md) var(--spacing-xl);
-      font-size: 1.125rem;
-    }
-
-    .btn-lifetime {
-      background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
-      color: white;
-      font-weight: 900;
-      font-size: 1.125rem;
-      padding: var(--spacing-md) var(--spacing-xl);
-      border: none;
-      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.5);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .btn-lifetime:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 30px rgba(139, 92, 246, 0.7);
-    }
-
-    /* 価格比較表 */
-    .comparison-table-wrapper {
-      overflow-x: auto;
-      margin-bottom: var(--spacing-xl);
-    }
-
-    .comparison-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: var(--bg-tertiary);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-    }
-
-    .comparison-table th,
-    .comparison-table td {
-      padding: var(--spacing-md);
-      text-align: center;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .comparison-table th {
-      background: var(--bg-secondary);
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-    .comparison-table th.highlighted {
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
-      color: #60a5fa;
-    }
-
-    .comparison-table tbody tr:hover {
-      background: rgba(59, 130, 246, 0.05);
-    }
-
-    .comparison-table .highlight-row {
-      background: rgba(16, 185, 129, 0.1);
-      font-weight: 700;
-    }
-
-    .comparison-table .warning-row {
-      background: rgba(239, 68, 68, 0.05);
-      opacity: 0.7;
-    }
-
-    .comparison-note {
-      background: var(--bg-secondary);
-      padding: var(--spacing-xl);
-      border-radius: var(--radius-lg);
-      border: 2px solid rgba(16, 185, 129, 0.3);
-    }
-
-    .comparison-note p {
-      color: var(--text-primary);
-      font-size: 1rem;
-      margin-bottom: var(--spacing-md);
-    }
-
-    .comparison-note ul {
-      list-style: none;
-      margin-bottom: var(--spacing-md);
-    }
-
-    .comparison-note li {
-      padding: var(--spacing-xs) 0;
-      color: var(--text-secondary);
-    }
-
-    .comparison-note li:before {
-      content: '→';
-      margin-right: var(--spacing-xs);
-      color: #10b981;
-    }
-
-    /* FAQ */
-    .faq-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: var(--spacing-lg);
-    }
-
-    .faq-item h3 {
-      font-size: 1.125rem;
-      color: var(--text-primary);
-      margin-bottom: var(--spacing-md);
-    }
-
-    .faq-item p {
-      color: var(--text-secondary);
-      line-height: 1.6;
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .faq-item.highlight-faq {
-      border: 2px solid rgba(16, 185, 129, 0.5);
-      background: linear-gradient(135deg,
-        rgba(16, 185, 129, 0.05) 0%,
-        rgba(59, 130, 246, 0.05) 100%);
-    }
-
-    .faq-item.highlight-faq h3 {
-      background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    /* CTA */
-    .cta {
-      padding: var(--spacing-2xl) 0;
-      margin-top: var(--spacing-2xl);
-    }
-
-    .cta h2 {
-      font-size: 2rem;
-      color: var(--text-primary);
-      margin-bottom: var(--spacing-md);
-    }
-
-    .cta p {
-      font-size: 1.125rem;
-      color: var(--text-secondary);
-    }
-
-    .cta-buttons {
-      display: flex;
-      gap: var(--spacing-md);
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    /* レスポンシブ */
-    @media (max-width: 1024px) {
-      .faq-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .racing-schedule {
-        flex-direction: column;
-      }
-
-      .calc-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .future-title {
-        font-size: 1.25rem;
-      }
-
-      .comparison-monthly {
-        font-size: 1.5rem;
-      }
-
-      .comparison-lifetime {
-        font-size: 1.75rem;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .pricing-header h1 {
-        font-size: 2rem;
-      }
-
-      .section-title {
-        font-size: 1.75rem;
-      }
-
-      .banner-title {
-        font-size: 1.75rem;
-      }
-
-      .lifetime-access-huge {
-        font-size: 2.5rem;
-      }
-
-      .banner-highlight-text {
-        font-size: 1rem;
-      }
-
-      .highlight-price {
-        font-size: 1.25rem;
-      }
-
-      .grid-2 {
-        grid-template-columns: 1fr;
-      }
-
-      .pricing-card.lifetime-special {
-        transform: scale(1);
-      }
-
-      .pricing-card.lifetime-special:hover {
-        transform: scale(1.02);
-      }
-
-      .cta-buttons {
-        flex-direction: column;
-      }
-
-      .comparison-table {
-        font-size: 0.875rem;
-      }
-
-      .comparison-table th,
-      .comparison-table td {
-        padding: var(--spacing-sm);
-      }
-    }
-
-    /* モーダル */
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 9999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal.hidden {
-      display: none;
-    }
-
-    .modal-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(5px);
-    }
-
-    .modal-content {
-      position: relative;
-      background: var(--card-bg);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      border-radius: var(--radius-lg);
-      max-width: 900px;
-      max-height: 90vh;
-      overflow-y: auto;
-      padding: var(--spacing-2xl);
-      margin: var(--spacing-lg);
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-    }
-
-    .modal-close {
-      position: absolute;
-      top: var(--spacing-lg);
-      right: var(--spacing-lg);
-      background: transparent;
-      border: none;
-      color: var(--text-secondary);
-      font-size: 2rem;
-      cursor: pointer;
-      transition: color 0.3s;
-      line-height: 1;
-    }
-
-    .modal-close:hover {
-      color: var(--color-accent);
-    }
-
-    .modal-title {
-      font-size: 2rem;
-      font-weight: 800;
-      margin-bottom: var(--spacing-xl);
-      background: linear-gradient(135deg, #e0f2fe 0%, #60a5fa 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .modal-step {
-      animation: fadeIn 0.3s;
-    }
-
-    .modal-step.hidden {
-      display: none;
-    }
-
-    /* プラン選択グリッド */
-    .plan-selection-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: var(--spacing-lg);
-      margin-top: var(--spacing-xl);
-    }
-
-    .plan-select-card {
-      background: rgba(30, 41, 59, 0.8);
-      border: 2px solid rgba(59, 130, 246, 0.3);
-      border-radius: var(--radius-md);
-      padding: var(--spacing-lg);
-      text-align: center;
-      transition: all 0.3s;
-      cursor: pointer;
-      position: relative;
-    }
-
-    .plan-select-card:hover {
-      border-color: var(--color-accent);
-      transform: translateY(-4px);
-      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
-    }
-
-    .plan-select-card .plan-badge {
-      position: absolute;
-      top: -10px;
-      right: -10px;
-      background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-alt) 100%);
-      color: white;
-      padding: 4px 12px;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      font-weight: 700;
-    }
-
-    .plan-select-card h4 {
-      font-size: 1.125rem;
-      font-weight: 700;
-      margin-bottom: var(--spacing-md);
-      color: var(--text-primary);
-    }
-
-    .plan-select-card .plan-price {
-      font-size: 1.75rem;
-      font-weight: 900;
-      color: var(--color-accent);
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .plan-select-card .plan-period {
-      font-size: 1rem;
-      font-weight: 400;
-    }
-
-    .plan-select-card p {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-md);
-    }
-
-    .plan-select-card .plan-warning {
-      color: #ef4444;
-      font-weight: 600;
-    }
-
-    .select-plan-btn {
-      width: 100%;
-      margin-top: var(--spacing-sm);
-    }
-
-    /* 選択プラン情報 */
-    .selected-plan-info {
-      background: rgba(59, 130, 246, 0.1);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      border-radius: var(--radius-md);
-      padding: var(--spacing-lg);
-      margin-bottom: var(--spacing-xl);
-      text-align: center;
-    }
-
-    .selected-plan-info h3 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: var(--spacing-sm);
-      color: var(--text-primary);
-    }
-
-    .selected-plan-price {
-      font-size: 1.5rem;
-      font-weight: 900;
-      color: var(--color-accent);
-    }
-
-    /* 銀行情報 */
-    .bank-info-section {
-      margin-bottom: var(--spacing-xl);
-    }
-
-    .bank-info-section h3 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: var(--spacing-md);
-      color: var(--text-primary);
-    }
-
-    .bank-info-card {
-      background: rgba(30, 41, 59, 0.8);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      border-radius: var(--radius-md);
-      padding: var(--spacing-lg);
-      margin-bottom: var(--spacing-md);
-    }
-
-    .bank-detail {
-      display: flex;
-      justify-content: space-between;
-      padding: var(--spacing-sm) 0;
-      border-bottom: 1px solid rgba(100, 116, 139, 0.2);
-    }
-
-    .bank-detail:last-child {
-      border-bottom: none;
-    }
-
-    .bank-label {
-      color: var(--text-secondary);
-      font-weight: 600;
-    }
-
-    .bank-value {
-      color: var(--text-primary);
-      font-weight: 700;
-      font-family: 'Courier New', monospace;
-    }
-
-    .bank-notice {
-      background: rgba(251, 191, 36, 0.1);
-      border: 1px solid rgba(251, 191, 36, 0.3);
-      border-radius: var(--radius-sm);
-      padding: var(--spacing-md);
-    }
-
-    .bank-notice p {
-      margin: var(--spacing-xs) 0;
-      font-size: 0.875rem;
-    }
-
-    /* フォーム */
-    .application-form {
-      margin-top: var(--spacing-xl);
-    }
-
-    .form-group {
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--spacing-md);
-    }
-
-    .form-group label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: var(--spacing-sm);
-      color: var(--text-primary);
-    }
-
-    .required {
-      color: #ef4444;
-    }
-
-    .form-group input,
-    .form-group textarea {
-      width: 100%;
-      padding: var(--spacing-md);
-      background: rgba(30, 41, 59, 0.8);
-      border: 1px solid rgba(100, 116, 139, 0.3);
-      border-radius: var(--radius-sm);
-      color: var(--text-primary);
-      font-size: 1rem;
-      transition: border-color 0.3s;
-    }
-
-    .form-group input:focus,
-    .form-group textarea:focus {
-      outline: none;
-      border-color: var(--color-accent);
-    }
-
-    .form-group small {
-      display: block;
-      margin-top: var(--spacing-xs);
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-    }
-
-    .form-notice {
-      background: rgba(59, 130, 246, 0.1);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      border-radius: var(--radius-sm);
-      padding: var(--spacing-md);
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .form-notice p {
-      margin: var(--spacing-xs) 0;
-      font-size: 0.875rem;
-    }
-
-    /* 成功メッセージ */
-    .success-message {
-      text-align: center;
-      padding: var(--spacing-2xl);
-    }
-
-    .success-message.hidden {
-      display: none;
-    }
-
-    .success-icon {
-      font-size: 4rem;
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .success-message h3 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: var(--spacing-md);
-      color: var(--text-primary);
-    }
-
-    .success-message p {
-      margin-bottom: var(--spacing-sm);
-      color: var(--text-secondary);
-    }
-
-    /* 戻るボタン */
-    .back-btn {
-      background: transparent;
-      border: none;
-      color: var(--color-accent);
-      font-weight: 600;
-      cursor: pointer;
-      margin-bottom: var(--spacing-lg);
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-xs);
-      transition: opacity 0.3s;
-    }
-
-    .back-btn:hover {
-      opacity: 0.8;
-    }
-
-    /* レスポンシブ */
-    @media (max-width: 768px) {
-      .modal-content {
-        padding: var(--spacing-lg);
-        margin: var(--spacing-md);
-      }
-
-      .plan-selection-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .form-row {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
-
-  <script>
-    // モーダル要素取得
-    const modal = document.getElementById('apply-modal');
-    const modalOverlay = document.getElementById('modal-overlay');
-    const modalClose = document.getElementById('modal-close');
-    const stepPlanSelection = document.getElementById('step-plan-selection');
-    const stepApplicationForm = document.getElementById('step-application-form');
-    const applicationForm = document.getElementById('application-form');
-    const successMessage = document.getElementById('success-message');
-    const backBtn = document.getElementById('back-to-plan-selection');
-
-    // 選択プラン情報
-    let selectedPlan = {
-      type: '',
-      name: '',
-      price: 0
-    };
-
-    // モーダルを開く（プラン選択から）
-    document.querySelectorAll('.open-apply-modal').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const planType = btn.dataset.plan;
-        const planPrice = parseInt(btn.dataset.price);
-        const planName = btn.dataset.name;
-
-        // プランが指定されている場合は直接フォームへ
-        if (planType && planPrice && planName) {
-          selectedPlan = { type: planType, name: planName, price: planPrice };
-          showApplicationForm();
-        } else {
-          // プラン選択画面を表示
-          showPlanSelection();
-        }
-        modal.classList.remove('hidden');
-      });
-    });
-
-    // モーダルを開く（CTAボタンから）
-    document.getElementById('open-apply-modal-cta')?.addEventListener('click', () => {
-      showPlanSelection();
-      modal.classList.remove('hidden');
-    });
-
-    // モーダルを閉じる
-    const closeModal = () => {
-      modal.classList.add('hidden');
-      resetModal();
-    };
-
-    modalOverlay.addEventListener('click', closeModal);
-    modalClose.addEventListener('click', closeModal);
-    document.getElementById('close-modal-success')?.addEventListener('click', closeModal);
-
-    // プラン選択画面を表示
-    const showPlanSelection = () => {
-      stepPlanSelection.classList.remove('hidden');
-      stepApplicationForm.classList.add('hidden');
-    };
-
-    // 申し込みフォーム画面を表示
-    const showApplicationForm = () => {
-      stepPlanSelection.classList.add('hidden');
-      stepApplicationForm.classList.remove('hidden');
-
-      // 選択プラン情報を表示
-      document.getElementById('selected-plan-name').textContent = selectedPlan.name;
-      document.getElementById('selected-plan-price').textContent = `¥${selectedPlan.price.toLocaleString()}`;
-
-      // 振込金額フィールドに自動入力
-      document.getElementById('transferAmount').value = selectedPlan.price;
-
-      // フォーム・成功メッセージをリセット
-      applicationForm.classList.remove('hidden');
-      successMessage.classList.add('hidden');
-    };
-
-    // プラン選択ボタンのイベント
-    document.querySelectorAll('.select-plan-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const card = btn.closest('.plan-select-card');
-        selectedPlan = {
-          type: card.dataset.plan,
-          name: card.querySelector('h4').textContent,
-          price: parseInt(card.dataset.price)
-        };
-        showApplicationForm();
-      });
-    });
-
-    // 戻るボタン
-    backBtn.addEventListener('click', showPlanSelection);
-
-    // モーダルリセット
-    const resetModal = () => {
-      applicationForm.reset();
-      applicationForm.classList.remove('hidden');
-      successMessage.classList.add('hidden');
-      showPlanSelection();
-    };
-
-    // フォーム送信
-    applicationForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const submitBtn = document.getElementById('submit-btn');
-      const originalText = submitBtn.textContent;
-      submitBtn.disabled = true;
-      submitBtn.textContent = '送信中...';
-
-      try {
-        const formData = {
-          fullName: document.getElementById('fullName').value,
-          email: document.getElementById('email').value,
-          transferDate: document.getElementById('transferDate').value,
-          transferTime: '',  // 不要（空文字列）
-          transferAmount: selectedPlan.price,
-          transferName: '',  // 不要（空文字列）
-          remarks: document.getElementById('remarks').value,
-          productName: selectedPlan.name,
-          planType: selectedPlan.type,
-          timestamp: new Date().toISOString()
-        };
-
-        console.log('📤 送信データ:', formData);
-
-        const response = await fetch('/.netlify/functions/bank-transfer-application', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`送信エラー: ${response.status} - ${errorText}`);
-        }
-
-        const result = await response.json();
-        console.log('✅ 送信成功:', result);
-
-        // 成功メッセージを表示
-        applicationForm.classList.add('hidden');
-        successMessage.classList.remove('hidden');
-        successMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-      } catch (error) {
-        console.error('❌ 送信エラー:', error);
-        alert('送信に失敗しました。もう一度お試しください。\n\nエラー: ' + error.message);
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-      }
-    });
-  </script>
 </BaseLayout>
+
+<script>
+  // 価格は Stripe から取得する（金額をコードに持たない）
+  async function loadPrices() {
+    const msg = document.getElementById('pr-plan-msg');
+    try {
+      const res = await fetch('/.netlify/functions/stripe-prices');
+      if (!res.ok) throw new Error('unavailable');
+      const data = await res.json();
+
+      for (const p of (data.plans || [])) {
+        const el = document.querySelector(`[data-price-for="${p.id}"]`);
+        if (!el) continue;
+        if (!p.available || typeof p.amount !== 'number') {
+          el.innerHTML = '<span class="pr-price-pending">準備中</span>';
+          continue;
+        }
+        const yen = new Intl.NumberFormat('ja-JP').format(Math.round(p.amount));
+        const unit = p.interval ? `/${p.interval}` : '';
+        el.innerHTML = `<span class="pr-price-amount">¥${yen}</span><span class="pr-price-unit">${unit}</span>`;
+      }
+    } catch {
+      document.querySelectorAll('[data-price-for]').forEach((el) => {
+        el.innerHTML = '<span class="pr-price-pending">準備中</span>';
+      });
+      if (msg) {
+        msg.hidden = false;
+        msg.textContent = '現在お申し込みを受け付けられません。しばらくしてからお試しください。';
+      }
+    }
+  }
+
+  async function startCheckout(planId, button) {
+    const msg = document.getElementById('pr-plan-msg');
+    const original = button.textContent;
+    button.disabled = true;
+    button.textContent = '手続きへ移動中…';
+    if (msg) msg.hidden = true;
+
+    try {
+      const res = await fetch('/.netlify/functions/stripe-create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ plan: planId }),
+      });
+
+      if (res.status === 401) {
+        window.location.href = '/login?redirect=/pricing';
+        return;
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      throw new Error(data.error || 'unavailable');
+    } catch {
+      if (msg) {
+        msg.hidden = false;
+        msg.textContent = '現在お申し込みを受け付けられません。しばらくしてからお試しください。';
+      }
+      button.disabled = false;
+      button.textContent = original;
+    }
+  }
+
+  async function openPortal(button) {
+    const msg = document.getElementById('pr-plan-msg');
+    button.disabled = true;
+    try {
+      const res = await fetch('/.netlify/functions/stripe-portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      throw new Error('unavailable');
+    } catch {
+      if (msg) {
+        msg.hidden = false;
+        msg.textContent = 'お手続きページを開けませんでした。お問い合わせください。';
+      }
+      button.disabled = false;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (document.querySelector('[data-price-for]')) loadPrices();
+
+    document.querySelectorAll('[data-checkout]').forEach((btn) => {
+      btn.addEventListener('click', () => startCheckout(btn.getAttribute('data-checkout'), btn));
+    });
+
+    const portal = document.getElementById('pr-portal');
+    if (portal) portal.addEventListener('click', () => openPortal(portal));
+  });
+</script>
+
+<style>
+  .pricing { padding-bottom: 48px; }
+
+  /* ヒーロー */
+  .pr-hero {
+    text-align: center;
+    padding: 32px 16px 28px;
+    background: linear-gradient(180deg, #f0f7ff 0%, #fff8f0 100%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    margin-bottom: 32px;
+  }
+
+  .pr-hero h1 {
+    font-size: 2rem;
+    margin-bottom: 12px;
+  }
+
+  .pr-hero-lead {
+    font-size: 0.98rem;
+    line-height: 1.85;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+  }
+
+  .pr-hero-lead b { color: var(--secondary-start); }
+
+  .pr-hero-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .pr-btn {
+    display: inline-block;
+    padding: 12px 26px;
+    border-radius: var(--radius-pill);
+    font-weight: 800;
+    font-size: 0.95rem;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  }
+
+  .pr-btn-primary {
+    background: var(--primary-gradient);
+    color: var(--text-inverse);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
+  }
+
+  .pr-btn-primary:hover { transform: translateY(-1px); color: var(--text-inverse); }
+
+  .pr-btn-ghost {
+    background: var(--bg-secondary);
+    border-color: var(--primary-start);
+    color: var(--primary-start);
+  }
+
+  .pr-btn-ghost:hover { background: var(--bg-muted); color: var(--primary-start); }
+
+  .pr-btn-disabled {
+    background: var(--bg-muted);
+    color: var(--text-tertiary);
+    cursor: not-allowed;
+  }
+
+  .pr-h2 {
+    font-family: var(--font-serif);
+    font-size: 1.45rem;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  /* 比較表 */
+  .pr-matrix-wrap { margin-bottom: 40px; }
+
+  .pr-matrix-scroll { overflow-x: auto; }
+
+  .pr-matrix {
+    width: 100%;
+    min-width: 520px;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .pr-matrix th,
+  .pr-matrix td {
+    padding: 10px 12px;
+    text-align: center;
+    font-size: 0.86rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .pr-matrix thead th {
+    background: var(--bg-muted);
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.35;
+  }
+
+  .pr-matrix thead th small {
+    font-weight: 600;
+    color: var(--text-tertiary);
+    font-size: 0.72rem;
+  }
+
+  .pr-m-label { text-align: left !important; font-weight: 600; }
+
+  .pr-matrix .ok { color: var(--success); font-weight: 800; }
+  .pr-matrix .no { color: var(--text-tertiary); }
+
+  .pr-matrix .pr-m-paid { background: rgba(249, 115, 22, 0.06); }
+  .pr-matrix thead .pr-m-paid { background: rgba(249, 115, 22, 0.14); }
+
+  .pr-matrix tbody tr:last-child td { border-bottom: none; }
+
+  /* プラン */
+  .pr-plans { margin-bottom: 40px; }
+
+  .pr-plans-note {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+  }
+
+  .pr-plan-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .pr-plan {
+    position: relative;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 24px 20px;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .pr-plan.is-recommended {
+    border-color: var(--secondary-start);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .pr-plan-ribbon {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 16px;
+    border-radius: var(--radius-pill);
+    background: var(--secondary-gradient);
+    color: var(--text-inverse);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  .pr-plan-name {
+    font-family: var(--font-serif);
+    font-size: 1.35rem;
+    margin-bottom: 4px;
+  }
+
+  .pr-plan-tagline {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+  }
+
+  .pr-plan-price {
+    min-height: 48px;
+    margin-bottom: 16px;
+  }
+
+  .pr-price-amount {
+    font-family: var(--font-num);
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+
+  .pr-price-unit {
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+    font-weight: 700;
+  }
+
+  .pr-price-loading,
+  .pr-price-pending {
+    font-size: 1rem;
+    color: var(--text-tertiary);
+    font-weight: 700;
+  }
+
+  .pr-plan-features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px;
+    text-align: left;
+  }
+
+  .pr-plan-features li {
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+    padding: 6px 0 6px 22px;
+    position: relative;
+    line-height: 1.5;
+  }
+
+  .pr-plan-features li::before {
+    content: '✓';
+    position: absolute;
+    left: 2px;
+    color: var(--success);
+    font-weight: 800;
+  }
+
+  .pr-plan-cta { width: 100%; }
+
+  .pr-plan-msg {
+    max-width: 760px;
+    margin: 16px auto 0;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    background: rgba(220, 38, 38, 0.08);
+    color: #991b1b;
+    font-size: 0.86rem;
+    text-align: center;
+  }
+
+  .pr-manage { text-align: center; margin-top: 18px; }
+
+  .pr-link-btn {
+    background: none;
+    border: none;
+    color: var(--primary-start);
+    font-weight: 700;
+    font-size: 0.86rem;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  /* 銀行振込（控えめ） */
+  .pr-bank {
+    max-width: 760px;
+    margin: 0 auto 40px;
+  }
+
+  .pr-bank details {
+    background: var(--bg-muted);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 12px 16px;
+  }
+
+  .pr-bank summary {
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+  }
+
+  .pr-bank-body {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  .pr-bank-body ul { margin: 10px 0 14px 18px; }
+
+  /* FAQ */
+  .pr-faq { max-width: 760px; margin: 0 auto; }
+
+  .pr-faq details {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 12px 16px;
+    margin-bottom: 8px;
+  }
+
+  .pr-faq summary {
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--text-primary);
+  }
+
+  .pr-faq p {
+    margin: 10px 0 0;
+    font-size: 0.86rem;
+    line-height: 1.75;
+    color: var(--text-secondary);
+  }
+
+  @media (max-width: 640px) {
+    .pr-hero h1 { font-size: 1.5rem; }
+    .pr-hero-lead { font-size: 0.88rem; }
+  }
+</style>

@@ -57,7 +57,7 @@
 # Functions設定
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["airtable", "@sendgrid/mail"]
+  external_node_modules = ["airtable", "@sendgrid/mail", "stripe"]
   # [functions] included_files は**意図的に持たない**（2026-07-30）。
   #
   # SSR Function への同梱は次の2経路だけで足りることを実測で確認した。
