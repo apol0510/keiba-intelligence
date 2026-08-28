@@ -237,11 +237,19 @@ export function nankanRacesResolver() {
 }
 
 /**
- * JRA の過去走。`loadHorseHistoriesJra` が注入した `recentRacesFromHistories` を優先し、
- * 無ければ legacy `recentRaces` を使う。
+ * JRA の過去走。情報量の多い順に選ぶ:
+ *   1. `historyForDetails`（人気・頭数・馬場・馬体重・1着馬・日付を持つ。最大 20 走 → 5 走に切る）
+ *   2. `recentRacesFromHistories`（着順・距離・時計のみ）
+ *   3. legacy `recentRaces`
+ *
+ * ⚠️ JRA の上流データには **上がり3F と通過順が無い**。そのため JRA では
+ *    脚質判定・上がり比較・展開予想が出せない（推測で埋めない）。
+ *    上流での補完が必要。docs/progress.md の Open Questions を参照。
  */
 export function jraRacesResolver() {
   return (horse) => {
+    const detailed = horse?.historyForDetails;
+    if (Array.isArray(detailed) && detailed.length) return detailed.slice(0, 5);
     const injected = horse?.recentRacesFromHistories;
     if (Array.isArray(injected) && injected.length) return injected;
     return Array.isArray(horse?.recentRaces) ? horse.recentRaces : [];

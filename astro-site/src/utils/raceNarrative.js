@@ -83,6 +83,19 @@ function parsePassing(v) {
 }
 
 /**
+ * 日付の正規化。`YYYY-MM-DD` と JRA 側の表示用 `YY/MM/DD` の両方を受ける。
+ * それ以外は null（推測で年を補わない）。
+ */
+export function normalizeDate(v) {
+  if (typeof v !== 'string' || !v.trim()) return null;
+  const s = v.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
+  if (m) return `20${m[1]}-${m[2]}-${m[3]}`;
+  return null;
+}
+
+/**
  * 過去走 1 件を共通形へ正規化する。
  * 取れなかった項目は null のまま返す（0 や既定値で埋めない）。
  */
@@ -94,11 +107,11 @@ export function normalizePastRace(raw) {
   const passing = parsePassing(raw.passingOrder);
 
   return {
-    date: typeof raw.date === 'string' && raw.date ? raw.date : null,
+    date: normalizeDate(raw.date) || normalizeDate(raw._dateStr),
     venue: normalizeVenue(raw.venue),
     raceName: raw.raceName || null,
-    distanceMeters: toDistanceMeters(raw.distanceMeters ?? raw.distance ?? null),
-    surface: toSurface(raw.surface, raw.displayDistance, raw.distance),
+    distanceMeters: toDistanceMeters(raw.distanceMeters ?? raw.distance ?? raw._displayDistance ?? null),
+    surface: toSurface(raw.surface, raw.displayDistance, raw._displayDistance, raw.distance),
     trackCondition: raw.trackCondition || null,
     rank: rank != null && rank > 0 ? rank : null,
     finishStatus: raw.finishStatus || null,
