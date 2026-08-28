@@ -1,0 +1,416 @@
+---
+/**
+ * RaceNewspaper.astro — 1 レース＝1 紙面
+ *
+ * 正本: docs/RENEWAL_2026_08.md §4
+ *
+ * 🔴 tier による出し分けは **描画そのものを止める**（CSS で隠さない。監査 A-1 の是正）:
+ *      guest   … 馬柱・過去走・特徴量・AI短評・レース展望・展開予想（**馬番順**）
+ *      free    … ＋ 印（役割マーク・PT・PT 順の並び）・AI結論
+ *      light+  … ＋ 買い目
+ *
+ * 🔴 買い目は `view.showBetting` が true のときだけ `bettingLines` を描画する。
+ *    false のときは **買い目の文字列を一切 HTML に出さない**。
+ *
+ * 🔴 文章生成に bettingLines を渡さない（CLAUDE.md 絶対厳守）。
+ */
+
+import HorseColumn from './HorseColumn.astro';
+import PaceMap from './PaceMap.astro';
+import { buildRaceNarrativeBundle, normalizePastRaces } from '../../utils/raceNarrative.js';
+import { sortHorsesByRole } from '../../utils/sortHorsesByRole.js';
+
+interface Props {
+  race: any;
+  view: { tier?: string; showMarks?: boolean; showBetting?: boolean; showPremiumExtras?: boolean; authenticated?: boolean };
+  venue?: 'nankan' | 'jra';
+  /** horse → 生の過去走配列。南関 entries 等の差異を吸収する */
+  resolveRaces?: (horse: any) => any[];
+  /** horse → featureScores の当該馬ぶん */
+  resolveFeatures?: (horse: any) => any;
+  /** horse → 血統等の補足 */
+  resolveProfile?: (horse: any) => any;
+  /** 買い目（light 以上のみ描画される） */
+  bettingLines?: string[];
+  betType?: string;
+  /** レース見出しの上に出す小さなラベル（例: メインレース） */
+  badge?: string | null;
+}
+
+const {
+  race,
+  view,
+  venue,
+  resolveRaces,
+  resolveFeatures,
+  resolveProfile,
+  bettingLines = [],
+  betType = '馬単',
+  badge = null,
+} = Astro.props;
+
+const showMarks = !!view?.showMarks;
+const showBetting = !!view?.showBetting;
+
+const raceInfo = race?.raceInfo || {};
+const allHorses: any[] = Array.isArray(race?.horses) ? race.horses : [];
+
+/**
+ * 並び順:
+ *   showMarks=false → **馬番順**（PT 降順にすると序列＝印が読めてしまう）
+ *   showMarks=true  → 役割順（本命→対抗→…）
+ */
+const orderedHorses = showMarks
+  ? sortHorsesByRole(allHorses)
+  : [...allHorses].sort((a, b) => (a?.horseNumber ?? 99) - (b?.horseNumber ?? 99));
+
+/** 文章一式。買い目は渡さない。 */
+const bundle = buildRaceNarrativeBundle(
+  { raceInfo, horses: allHorses },
+  {
+    allowMarks: showMarks,
+    resolveRaces: resolveRaces || ((h: any) => h?.recentRaces),
+    resolveFeatures,
+  },
+);
+
+const pastOf = (h: any) => normalizePastRaces(resolveRaces ? resolveRaces(h) : h?.recentRaces);
+
+const distanceLabel = raceInfo?.distance ? `${raceInfo.distance}m` : null;
+const headCount = allHorses.length || raceInfo?.horseCount || null;
+const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => typeof l === 'string' && l.trim()) : [];
+---
+
+<section class="racepaper" data-race-number={raceInfo?.raceNumber} data-tier={view?.tier}>
+  <!-- ── レースヘッダー ── -->
+  <header class="rp-head">
+    <div class="rp-title-row">
+      <span class="rp-rno">{raceInfo?.raceNumber ?? '—'}<i>R</i></span>
+      <div class="rp-title-main">
+        {badge && <span class="rp-badge">{badge}</span>}
+        <h3 class="rp-name">{raceInfo?.raceName || `${raceInfo?.raceNumber ?? ''}R`}</h3>
+        <p class="rp-cond">
+          {raceInfo?.venue && <span>{raceInfo.venue}</span>}
+          {distanceLabel && <span>{distanceLabel}</span>}
+          {headCount && <span>{headCount}頭</span>}
+          {raceInfo?.startTime && <span class="rp-time">{raceInfo.startTime}発走</span>}
+        </p>
+      </div>
+    </div>
+
+    {bundle.race?.text && (
+      <div class="rp-outlook">
+        <span class="rp-outlook-tag">レース展望</span>
+        <p>{bundle.race.text}</p>
+      </div>
+    )}
+  </header>
+
+  <!-- ── 展開予想 ── -->
+  <PaceMap paceMap={bundle.paceMap} />
+
+  <!-- ── 馬柱 ── -->
+  <div class="rp-horses">
+    {orderedHorses.map((h: any) => (
+      <HorseColumn
+        horse={h}
+        view={view}
+        narrative={bundle.horses.get(h?.horseNumber) || null}
+        features={resolveFeatures ? resolveFeatures(h) : null}
+        pastRaces={pastOf(h)}
+        profile={resolveProfile ? resolveProfile(h) : null}
+      />
+    ))}
+  </div>
+
+  <!-- ── 結論（印が見える会員のみ） ── -->
+  {showMarks && bundle.conclusion?.text && (
+    <div class="rp-conclusion">
+      <span class="rp-conclusion-tag">結論</span>
+      <p>{bundle.conclusion.text}</p>
+    </div>
+  )}
+
+  <!-- ── 買い目（有料のみ。非権限者には HTML ごと出さない） ── -->
+  {showBetting && validBetting.length > 0 && (
+    <div class="rp-betting">
+      <header class="rp-betting-head">
+        <span class="rp-betting-tag">{betType}</span>
+        <span class="rp-betting-note">1点100円</span>
+      </header>
+      <ul class="rp-betting-lines">
+        {validBetting.map((line) => <li>{line}</li>)}
+      </ul>
+    </div>
+  )}
+
+  <!-- ── 上位導線（権限が無いときだけ出す） ── -->
+  {!showMarks && (
+    <aside class="rp-upsell rp-upsell-free">
+      <p class="up-lead">この先は<b>無料会員</b>で見られます</p>
+      <p class="up-desc">印（◎○▲△）とAI総合ptを公開します。登録は<b>メールアドレスだけ・無料</b>です。</p>
+      <a class="up-btn" href="/register">無料会員に登録する</a>
+      <a class="up-sub" href="/login">ログイン</a>
+    </aside>
+  )}
+
+  {showMarks && !showBetting && (
+    <aside class="rp-upsell rp-upsell-paid">
+      <p class="up-lead">買い目は<b>有料プラン</b>で公開しています</p>
+      <p class="up-desc">全レースの{betType}買い目と的中実績をそのまま受け取れます。</p>
+      <a class="up-btn" href="/pricing">プランを見る</a>
+    </aside>
+  )}
+</section>
+
+<style>
+  .racepaper {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+
+  /* ヘッダー */
+  .rp-head {
+    border-bottom: 3px double var(--text-primary);
+    padding-bottom: 12px;
+  }
+
+  .rp-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .rp-rno {
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: center;
+    min-width: 54px;
+    padding: 6px 8px;
+    border-radius: var(--radius-md);
+    background: var(--text-primary);
+    color: var(--text-inverse);
+    font-family: var(--font-num);
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .rp-rno i {
+    font-style: normal;
+    font-size: 0.7rem;
+    margin-left: 2px;
+  }
+
+  .rp-title-main { flex: 1; min-width: 0; }
+
+  .rp-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    background: var(--secondary-gradient);
+    color: var(--text-inverse);
+    margin-bottom: 3px;
+  }
+
+  .rp-name {
+    font-family: var(--font-serif);
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text-primary);
+    line-height: 1.25;
+  }
+
+  .rp-cond {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin: 4px 0 0;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .rp-time { color: var(--secondary-start); }
+
+  /* レース展望 */
+  .rp-outlook {
+    margin-top: 12px;
+    padding: 11px 13px;
+    background: linear-gradient(180deg, #eff6ff 0%, #e9f2ff 100%);
+    border: 1px solid #c7dcfa;
+    border-radius: var(--radius-md);
+  }
+
+  .rp-outlook-tag,
+  .rp-conclusion-tag {
+    display: inline-block;
+    font-size: 0.63rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--primary-start);
+    color: var(--text-inverse);
+    margin-bottom: 5px;
+  }
+
+  .rp-outlook p,
+  .rp-conclusion p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.75;
+    color: var(--text-primary);
+  }
+
+  /* 馬柱 */
+  .rp-horses {
+    display: grid;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  @media (min-width: 900px) {
+    .rp-horses {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* 結論 */
+  .rp-conclusion {
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: #fff7ed;
+    border: 1px solid #fcd9b6;
+    border-radius: var(--radius-md);
+  }
+
+  .rp-conclusion-tag {
+    background: var(--secondary-start);
+  }
+
+  /* 買い目 */
+  .rp-betting {
+    margin-top: 14px;
+    padding: 13px 15px;
+    background: var(--bg-secondary);
+    border: 2px solid var(--primary-start);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+  }
+
+  .rp-betting-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .rp-betting-tag {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--primary-gradient);
+    color: var(--text-inverse);
+  }
+
+  .rp-betting-note {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+  }
+
+  .rp-betting-lines {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+
+  .rp-betting-lines li {
+    font-family: var(--font-num);
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: var(--text-primary);
+    background: var(--bg-muted);
+    border-radius: var(--radius-md);
+    padding: 8px 12px;
+  }
+
+  /* 上位導線 */
+  .rp-upsell {
+    margin-top: 14px;
+    padding: 16px;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    border: 2px dashed var(--border-strong);
+    background: var(--bg-secondary);
+  }
+
+  .rp-upsell-free {
+    border-color: var(--primary-start);
+    background: linear-gradient(180deg, #f0f7ff 0%, #e8f1ff 100%);
+  }
+
+  .rp-upsell-paid {
+    border-color: var(--secondary-start);
+    background: linear-gradient(180deg, #fff8f0 0%, #ffefe0 100%);
+  }
+
+  .up-lead {
+    margin: 0 0 4px;
+    font-family: var(--font-serif);
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .up-desc {
+    margin: 0 0 12px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .up-btn {
+    display: inline-block;
+    padding: 11px 26px;
+    border-radius: var(--radius-pill);
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--text-inverse);
+    background: var(--primary-gradient);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+    transition: transform var(--transition-fast);
+  }
+
+  .rp-upsell-paid .up-btn {
+    background: var(--secondary-gradient);
+    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.3);
+  }
+
+  .up-btn:hover { transform: translateY(-1px); color: var(--text-inverse); }
+
+  .up-sub {
+    display: inline-block;
+    margin-left: 12px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--primary-start);
+  }
+
+  @media (max-width: 600px) {
+    .racepaper { padding: 12px 10px; }
+    .rp-name { font-size: 1.15rem; }
+    .rp-rno { min-width: 46px; font-size: 1.25rem; }
+  }
+</style>

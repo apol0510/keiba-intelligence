@@ -1,0 +1,268 @@
+---
+/**
+ * RaceDayBoard.astro — 開催 1 日ぶんの紙面（会場タブ + 全レース）
+ *
+ * 正本: docs/RENEWAL_2026_08.md §4
+ *
+ * 🔴 6 経路（JRA/南関 × guest/free/paid）がこの 1 コンポーネントを共有する。
+ *    片肺修正による退行を構造的に防ぐ（docs/ui-cross-plan-regression-policy.md）。
+ *
+ * 🔴 tier による出し分けは RaceNewspaper が担当する。ここでは view をそのまま渡すだけ。
+ */
+
+import RaceNewspaper from './RaceNewspaper.astro';
+import {
+  racesOf, racesResolverFor, featuresResolverForRace, profileResolver,
+} from '../../lib/prediction/loadRaceDay.js';
+import { isMainRace } from '../../utils/mainRaceBetting.js';
+
+interface Props {
+  day: { category: string; date: string | null; venues: any[]; error: string | null };
+  view: { tier?: string; showMarks?: boolean; showBetting?: boolean; showPremiumExtras?: boolean; authenticated?: boolean };
+  category: 'nankan' | 'jra';
+}
+
+const { day, view, category } = Astro.props;
+
+const resolveRaces = racesResolverFor(category);
+const resolveProfile = profileResolver();
+
+const venues = Array.isArray(day?.venues) ? day.venues : [];
+const isMulti = venues.length > 1;
+
+/** 買い目は形が 2 種類ある（配列 / { umatan: [...] }）。どちらも受ける。 */
+function bettingLinesOf(race: any): string[] {
+  const b = race?.bettingLines;
+  if (Array.isArray(b)) return b.filter((x) => typeof x === 'string');
+  if (b && Array.isArray(b.umatan)) return b.umatan.filter((x: any) => typeof x === 'string');
+  return [];
+}
+
+function formatDate(d: string | null) {
+  if (!d) return '';
+  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return d;
+  const days = ['日', '月', '火', '水', '木', '金', '土'];
+  const w = days[new Date(`${d}T00:00:00+09:00`).getDay()] || '';
+  return `${Number(m[2])}月${Number(m[3])}日(${w})`;
+}
+
+const categoryLabel = category === 'jra' ? '中央競馬' : '南関東';
+---
+
+{day?.error && venues.length === 0 ? (
+  <div class="rdb-empty">
+    <p class="rdb-empty-title">本日の予想はまだ公開されていません</p>
+    <p class="rdb-empty-desc">開催前日の夜に更新されます。過去の的中実績はいつでもご覧いただけます。</p>
+    <a class="rdb-empty-link" href={category === 'jra' ? '/archive/jra' : '/archive/nankan'}>的中実績を見る</a>
+  </div>
+) : (
+  <div class="raceday" data-category={category} data-tier={view?.tier}>
+    <!-- 日付・会場ヘッダー -->
+    <header class="rdb-head">
+      <div class="rdb-date">
+        <span class="rdb-cat">{categoryLabel}</span>
+        <strong>{formatDate(day?.date)}</strong>
+      </div>
+      <p class="rdb-lead">
+        全レースの馬柱・過去走・AI短評・展開予想を<b>無料で公開</b>しています。
+      </p>
+    </header>
+
+    {venues.map((venue: any, vIndex: number) => {
+      const races = racesOf(venue);
+      const total = races.length;
+      return (
+        <section class="rdb-venue" data-venue={venue.venueName}>
+          {isMulti && (
+            <h2 class="rdb-venue-title">
+              <span class="rdb-venue-mark">{venue.venueName}</span>
+              <span class="rdb-venue-sub">全{total}レース</span>
+            </h2>
+          )}
+
+          <!-- レース早送りナビ -->
+          {total > 1 && (
+            <nav class="rdb-nav" aria-label={`${venue.venueName} レース一覧`}>
+              {races.map((r: any) => {
+                const rn = r?.raceInfo?.raceNumber;
+                const main = isMainRace(rn, total);
+                return (
+                  <a class={`rdb-nav-item ${main ? 'is-main' : ''}`} href={`#race-${vIndex}-${rn}`}>
+                    {rn}<i>R</i>
+                  </a>
+                );
+              })}
+            </nav>
+          )}
+
+          {races.map((race: any) => {
+            const rn = race?.raceInfo?.raceNumber;
+            const main = isMainRace(rn, total);
+            return (
+              <div id={`race-${vIndex}-${rn}`} class="rdb-race-anchor">
+                <RaceNewspaper
+                  race={race}
+                  view={view}
+                  venue={category}
+                  resolveRaces={resolveRaces}
+                  resolveFeatures={featuresResolverForRace(race, venue.featureScores)}
+                  resolveProfile={resolveProfile}
+                  bettingLines={bettingLinesOf(race)}
+                  betType="馬単"
+                  badge={main ? 'メインレース' : null}
+                />
+              </div>
+            );
+          })}
+        </section>
+      );
+    })}
+  </div>
+)}
+
+<style>
+  .rdb-head {
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 3px double var(--text-primary);
+  }
+
+  .rdb-date {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .rdb-cat {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--primary-gradient);
+    color: var(--text-inverse);
+  }
+
+  .rdb-date strong {
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    color: var(--text-primary);
+  }
+
+  .rdb-lead {
+    margin: 8px 0 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .rdb-lead b { color: var(--secondary-start); }
+
+  .rdb-venue { margin-bottom: 32px; }
+
+  .rdb-venue-title {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 12px;
+    font-size: 1.2rem;
+  }
+
+  .rdb-venue-mark {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: var(--radius-md);
+    background: var(--text-primary);
+    color: var(--text-inverse);
+  }
+
+  .rdb-venue-sub {
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+    font-weight: 600;
+  }
+
+  .rdb-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 14px;
+    padding: 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+  }
+
+  .rdb-nav-item {
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: center;
+    min-width: 40px;
+    padding: 6px 8px;
+    border-radius: var(--radius-md);
+    background: var(--bg-muted);
+    color: var(--text-primary);
+    font-family: var(--font-num);
+    font-weight: 800;
+    font-size: 0.9rem;
+    transition: all var(--transition-fast);
+  }
+
+  .rdb-nav-item i {
+    font-style: normal;
+    font-size: 0.62rem;
+    margin-left: 1px;
+    color: var(--text-tertiary);
+  }
+
+  .rdb-nav-item:hover {
+    background: var(--primary-gradient);
+    color: var(--text-inverse);
+  }
+
+  .rdb-nav-item:hover i { color: rgba(255, 255, 255, 0.8); }
+
+  .rdb-nav-item.is-main {
+    background: var(--accent-yellow);
+    color: #7a5c00;
+    box-shadow: inset 0 0 0 1px #e6bd00;
+  }
+
+  .rdb-race-anchor { scroll-margin-top: 84px; }
+
+  /* データなし */
+  .rdb-empty {
+    text-align: center;
+    padding: 56px 20px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+  }
+
+  .rdb-empty-title {
+    font-family: var(--font-serif);
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0 0 8px;
+    color: var(--text-primary);
+  }
+
+  .rdb-empty-desc {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    margin: 0 0 18px;
+  }
+
+  .rdb-empty-link {
+    display: inline-block;
+    padding: 10px 24px;
+    border-radius: var(--radius-pill);
+    background: var(--primary-gradient);
+    color: var(--text-inverse);
+    font-weight: 700;
+  }
+
+  .rdb-empty-link:hover { color: var(--text-inverse); }
+</style>

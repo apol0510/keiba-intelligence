@@ -1,0 +1,459 @@
+---
+/**
+ * HorseColumn.astro — 馬柱カード 1 頭ぶん（競馬新聞の 1 列に相当）
+ *
+ * 正本: docs/RENEWAL_2026_08.md §4
+ *
+ * 🔴 tier による出し分けは **描画そのものを止める**（CSS で隠さない）。
+ *    - 印（役割マーク・PT）… `view.showMarks` が false なら **HTML に出さない**
+ *    - 買い目 … このコンポーネントは扱わない
+ *
+ * 🔴 データが無い項目は行ごと出さない（「-」や 0 で埋めない）。
+ */
+
+import FeatureBars from './FeatureBars.astro';
+import { getRoleMark } from '../../utils/sortHorsesByRole.js';
+
+interface Props {
+  horse: any;
+  view: { showMarks?: boolean; showBetting?: boolean; tier?: string };
+  narrative?: { text?: string; insufficient?: boolean } | null;
+  features?: Record<string, any> | null;
+  pastRaces?: any[];
+  /** 表示する過去走の件数（残りは折りたたみ） */
+  visiblePastCount?: number;
+  /** 血統・持ち時計など（南関 horseStats 由来。無ければ非表示） */
+  profile?: { dam?: string | null; damsire?: string | null; owner?: string | null } | null;
+}
+
+const {
+  horse,
+  view,
+  narrative = null,
+  features = null,
+  pastRaces = [],
+  visiblePastCount = 3,
+  profile = null,
+} = Astro.props;
+
+const showMarks = !!view?.showMarks;
+
+const num = horse?.horseNumber ?? null;
+const waku = horse?.frameNumber ?? horse?.wakuNumber ?? null;
+/** 枠番が無ければ馬番から推定しない（誤色を出さない）。中立色にする。 */
+const wakuClass = waku && waku >= 1 && waku <= 8 ? `waku-${waku}` : 'waku-none';
+
+const mark = showMarks && horse?.role ? getRoleMark(horse.role) : null;
+const markClass = (() => {
+  switch (horse?.role) {
+    case '本命': return 'mk-honmei';
+    case '対抗': return 'mk-taiko';
+    case '単穴': return 'mk-tana';
+    default: return 'mk-renka';
+  }
+})();
+
+const pt = showMarks && typeof horse?.pt === 'number' && Number.isFinite(horse.pt) ? horse.pt : null;
+
+/** 血統表記: 父（母父） */
+const sire = horse?.sire || null;
+const damsire = profile?.damsire || null;
+const pedigree = sire ? (damsire ? `${sire}（${damsire}）` : sire) : null;
+
+/** 馬齢・性別 */
+const age = horse?.age || null;
+const weightNum = typeof horse?.weight === 'number' ? horse.weight : (horse?.weight ? Number(horse.weight) : null);
+const carried = Number.isFinite(weightNum) ? weightNum : null;
+
+const jockey = horse?.jockey || null;
+const trainer = horse?.trainer || null;
+
+const shown = pastRaces.slice(0, visiblePastCount);
+const hidden = pastRaces.slice(visiblePastCount);
+
+/** 馬体重の増減（直近2走） */
+const bwDelta = (() => {
+  const a = pastRaces[0]?.bodyWeight;
+  const b = pastRaces[1]?.bodyWeight;
+  if (typeof a !== 'number' || typeof b !== 'number') return null;
+  return a - b;
+})();
+
+function rankClass(rank: number | null | undefined) {
+  if (rank === 1) return 'rk-1';
+  if (rank === 2) return 'rk-2';
+  if (rank === 3) return 'rk-3';
+  return 'rk-x';
+}
+
+function distLabel(r: any) {
+  if (!r?.distanceMeters) return null;
+  return `${r.surface || ''}${r.distanceMeters}`;
+}
+---
+
+<article class={`hcol ${wakuClass} ${showMarks && horse?.role === '本命' ? 'is-honmei' : ''}`} data-horse-number={num}>
+  <!-- ヘッダー: 枠 / 馬番 / 馬名 / 印 -->
+  <header class="hcol-head">
+    <div class="hcol-nums">
+      {waku && <span class="waku-badge">{waku}</span>}
+      {num != null && <span class="uma-badge">{num}</span>}
+    </div>
+
+    <div class="hcol-name">
+      <h4 class="horse-name">{horse?.horseName || '—'}</h4>
+      {pedigree && <p class="pedigree">{pedigree}</p>}
+    </div>
+
+    {showMarks && (mark || pt != null) && (
+      <div class="hcol-mark">
+        {mark && <span class={`mark ${markClass}`} title={horse?.role}>{mark}</span>}
+        {pt != null && <span class="pt">{pt}<i>pt</i></span>}
+      </div>
+    )}
+  </header>
+
+  <!-- 属性行 -->
+  <ul class="hcol-meta">
+    {age && <li>{age}</li>}
+    {carried != null && <li>斤{carried}</li>}
+    {jockey && <li class="meta-jockey">{jockey}</li>}
+    {trainer && <li>{trainer}厩</li>}
+    {bwDelta != null && bwDelta !== 0 && (
+      <li class={bwDelta > 0 ? 'bw-plus' : 'bw-minus'}>{bwDelta > 0 ? '+' : ''}{bwDelta}kg</li>
+    )}
+  </ul>
+
+  <!-- AI短評（文章）: 未登録にも出す。これが無料の価値の中心 -->
+  {narrative?.text && (
+    <div class={`hcol-comment ${narrative.insufficient ? 'is-thin' : ''}`}>
+      <span class="comment-tag">短評</span>
+      <p>{narrative.text}</p>
+    </div>
+  )}
+
+  <!-- 特徴量 -->
+  <FeatureBars features={features} />
+
+  <!-- 過去走（圧縮馬柱） -->
+  {shown.length > 0 && (
+    <div class="hcol-past">
+      {shown.map((r: any, i: number) => (
+        <div class="past-row">
+          <span class={`past-rank ${rankClass(r.rank)}`}>{r.rank ?? (r.finishStatus || '—')}</span>
+          <span class="past-main">
+            <b>{r.venue || '—'}</b>
+            {distLabel(r) && <span class="past-dist">{distLabel(r)}</span>}
+            {r.raceName && <span class="past-name">{r.raceName}</span>}
+          </span>
+          <span class="past-sub">
+            {r.time && <span>{r.time}</span>}
+            {r.last3f != null && <span class="past-3f">上{r.last3f.toFixed(1)}</span>}
+            {r.passing?.length > 0 && <span class="past-pass">{r.passing.join('-')}</span>}
+            {r.popularity != null && <span class="past-pop">{r.popularity}人</span>}
+          </span>
+        </div>
+      ))}
+
+      {hidden.length > 0 && (
+        <details class="past-more">
+          <summary>さらに{hidden.length}走を見る</summary>
+          {hidden.map((r: any) => (
+            <div class="past-row">
+              <span class={`past-rank ${rankClass(r.rank)}`}>{r.rank ?? (r.finishStatus || '—')}</span>
+              <span class="past-main">
+                <b>{r.venue || '—'}</b>
+                {distLabel(r) && <span class="past-dist">{distLabel(r)}</span>}
+                {r.raceName && <span class="past-name">{r.raceName}</span>}
+              </span>
+              <span class="past-sub">
+                {r.time && <span>{r.time}</span>}
+                {r.last3f != null && <span class="past-3f">上{r.last3f.toFixed(1)}</span>}
+                {r.passing?.length > 0 && <span class="past-pass">{r.passing.join('-')}</span>}
+              </span>
+            </div>
+          ))}
+        </details>
+      )}
+    </div>
+  )}
+</article>
+
+<style>
+  .hcol {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-left: 6px solid var(--waku-line, var(--border-strong));
+    border-radius: var(--radius-lg);
+    padding: 12px 14px 14px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+  }
+
+  .hcol:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .hcol.is-honmei {
+    border-color: var(--mark-honmei);
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12), var(--shadow-md);
+  }
+
+  /* 枠色（新聞の枠番配色） */
+  .waku-1 { --waku-line: var(--waku-1-line); --waku-bg: var(--waku-1-bg); --waku-fg: var(--waku-1-fg); }
+  .waku-2 { --waku-line: var(--waku-2-line); --waku-bg: var(--waku-2-bg); --waku-fg: var(--waku-2-fg); }
+  .waku-3 { --waku-line: var(--waku-3-line); --waku-bg: var(--waku-3-bg); --waku-fg: var(--waku-3-fg); }
+  .waku-4 { --waku-line: var(--waku-4-line); --waku-bg: var(--waku-4-bg); --waku-fg: var(--waku-4-fg); }
+  .waku-5 { --waku-line: var(--waku-5-line); --waku-bg: var(--waku-5-bg); --waku-fg: var(--waku-5-fg); }
+  .waku-6 { --waku-line: var(--waku-6-line); --waku-bg: var(--waku-6-bg); --waku-fg: var(--waku-6-fg); }
+  .waku-7 { --waku-line: var(--waku-7-line); --waku-bg: var(--waku-7-bg); --waku-fg: var(--waku-7-fg); }
+  .waku-8 { --waku-line: var(--waku-8-line); --waku-bg: var(--waku-8-bg); --waku-fg: var(--waku-8-fg); }
+  .waku-none { --waku-line: var(--border-strong); --waku-bg: var(--bg-muted); --waku-fg: var(--text-secondary); }
+
+  .hcol-head {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: start;
+    gap: 10px;
+  }
+
+  .hcol-nums {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .waku-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    background: var(--waku-bg);
+    color: var(--waku-fg);
+    border: 1px solid var(--border-color);
+    font-family: var(--font-num);
+    font-weight: 700;
+    font-size: 0.78rem;
+  }
+
+  .uma-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 5px;
+    border-radius: 6px;
+    background: var(--text-primary);
+    color: var(--text-inverse);
+    font-family: var(--font-num);
+    font-weight: 800;
+    font-size: 0.95rem;
+  }
+
+  .horse-name {
+    font-family: var(--font-serif);
+    font-size: 1.12rem;
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 0;
+    color: var(--text-primary);
+    letter-spacing: 0.01em;
+  }
+
+  .pedigree {
+    margin: 2px 0 0;
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    line-height: 1.3;
+  }
+
+  .hcol-mark {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+
+  .mark {
+    font-size: 1.5rem;
+    line-height: 1;
+    font-weight: 700;
+  }
+  .mk-honmei { color: var(--mark-honmei); }
+  .mk-taiko  { color: var(--mark-taiko); }
+  .mk-tana   { color: var(--mark-tana); }
+  .mk-renka  { color: var(--mark-renka); }
+
+  .pt {
+    font-family: var(--font-num);
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--primary-start);
+  }
+  .pt i {
+    font-style: normal;
+    font-size: 0.6rem;
+    margin-left: 1px;
+    color: var(--text-tertiary);
+  }
+
+  .hcol-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+  }
+
+  .hcol-meta li {
+    font-size: 0.72rem;
+    padding: 1px 7px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-muted);
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .meta-jockey {
+    background: rgba(37, 99, 235, 0.10) !important;
+    color: var(--primary-start) !important;
+  }
+
+  .bw-plus  { background: rgba(249, 115, 22, 0.12) !important; color: #b45309 !important; }
+  .bw-minus { background: rgba(8, 145, 178, 0.12) !important; color: #0e7490 !important; }
+
+  /* AI短評 */
+  .hcol-comment {
+    position: relative;
+    margin: 10px 0 0;
+    padding: 9px 11px 9px 12px;
+    background: linear-gradient(180deg, #fffdf5 0%, #fff9e8 100%);
+    border: 1px solid #f3e3b3;
+    border-radius: var(--radius-md);
+  }
+
+  .hcol-comment.is-thin {
+    background: var(--bg-muted);
+    border-color: var(--border-color);
+  }
+
+  .comment-tag {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: #92700a;
+    background: var(--accent-yellow);
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin-bottom: 4px;
+  }
+
+  .hcol-comment.is-thin .comment-tag {
+    background: var(--border-color);
+    color: var(--text-tertiary);
+  }
+
+  .hcol-comment p {
+    margin: 0;
+    font-size: 0.86rem;
+    line-height: 1.65;
+    color: var(--text-primary);
+  }
+
+  /* 過去走 */
+  .hcol-past {
+    margin-top: 10px;
+    border-top: 1px dashed var(--border-color);
+    padding-top: 8px;
+  }
+
+  .past-row {
+    display: grid;
+    grid-template-columns: 2.1em 1fr;
+    grid-template-areas: 'rank main' 'rank sub';
+    gap: 0 8px;
+    padding: 4px 0;
+    border-bottom: 1px dotted var(--border-color);
+  }
+
+  .past-row:last-child { border-bottom: none; }
+
+  .past-rank {
+    grid-area: rank;
+    align-self: center;
+    justify-self: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9em;
+    height: 1.9em;
+    border-radius: 50%;
+    font-family: var(--font-num);
+    font-weight: 800;
+    font-size: 0.82rem;
+    background: var(--bg-muted);
+    color: var(--text-secondary);
+  }
+
+  .rk-1 { background: #fef3c7; color: #92400e; }
+  .rk-2 { background: #e0e7ff; color: #3730a3; }
+  .rk-3 { background: #dcfce7; color: #166534; }
+
+  .past-main {
+    grid-area: main;
+    font-size: 0.76rem;
+    color: var(--text-primary);
+    display: flex;
+    gap: 5px;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+
+  .past-main b { font-weight: 700; }
+
+  .past-dist {
+    font-family: var(--font-num);
+    color: var(--text-secondary);
+  }
+
+  .past-name {
+    color: var(--text-tertiary);
+    font-size: 0.7rem;
+  }
+
+  .past-sub {
+    grid-area: sub;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-family: var(--font-num);
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+  }
+
+  .past-3f { color: var(--chart-cyan); font-weight: 700; }
+  .past-pass { letter-spacing: 0.02em; }
+
+  .past-more {
+    margin-top: 4px;
+  }
+
+  .past-more summary {
+    cursor: pointer;
+    font-size: 0.72rem;
+    color: var(--primary-start);
+    font-weight: 700;
+    padding: 4px 0;
+    list-style: none;
+  }
+
+  .past-more summary::-webkit-details-marker { display: none; }
+  .past-more summary::before { content: '▸ '; }
+  .past-more[open] summary::before { content: '▾ '; }
+</style>
