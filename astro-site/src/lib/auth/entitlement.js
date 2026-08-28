@@ -17,6 +17,7 @@ import {
   tierLabel, tierAtLeast, applyExpiry, normalizeVenueAccess,
 } from './tiers.js';
 import { verifySession, readSessionToken } from './session.js';
+import { applyPreview } from './previewMode.js';
 
 export { TIER } from './tiers.js';
 
@@ -107,7 +108,13 @@ export function entitlementFromAstro(Astro, { venue, nowMs } = {}) {
     ...(typeof process !== 'undefined' && process.env ? process.env : {}),
     ...(import.meta && import.meta.env ? import.meta.env : {}),
   };
-  return resolveEntitlement({ cookieHeader, env, venue, nowMs });
+  const base = resolveEntitlement({ cookieHeader, env, venue, nowMs });
+
+  // Deploy Preview 限定の「無料会員の見え方」プレビュー（本番ホストでは無効・印までしか開かない）
+  return applyPreview(base, {
+    host: Astro?.request?.headers?.get?.('host') || '',
+    searchParams: Astro?.url?.searchParams || null,
+  });
 }
 
 /**
@@ -123,6 +130,8 @@ export function viewFlags(entitlement) {
     showBetting: !!e.showBetting,
     showPremiumExtras: !!e.showPremiumExtras,
     authenticated: !!e.authenticated,
+    // Deploy Preview の見え方プレビュー中か（画面に明示するために渡す）
+    preview: !!e.preview,
   });
 }
 

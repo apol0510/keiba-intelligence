@@ -9,7 +9,10 @@
  */
 
 interface Props {
-  view: { tier?: string; tierLabel?: string; showMarks?: boolean; showBetting?: boolean; authenticated?: boolean };
+  view: {
+    tier?: string; tierLabel?: string; showMarks?: boolean;
+    showBetting?: boolean; authenticated?: boolean; preview?: boolean;
+  };
 }
 
 const { view } = Astro.props;
@@ -26,6 +29,13 @@ const nextStep = !view?.showMarks
   ? { href: '/register', label: '無料会員に登録して印を見る', tone: 'free' }
   : (!view?.showBetting ? { href: '/pricing', label: 'プランを見て買い目を受け取る', tone: 'paid' } : null);
 ---
+
+{view?.preview && (
+  <p class="tier-preview-note">
+    🔎 <b>プレビュー表示中</b>：無料会員に登録したときの見え方です（実際にはログインしていません）。
+    買い目は有料プランのため、このプレビューでは開きません。
+  </p>
+)}
 
 <div class={`tier-ribbon ${nextStep ? `tone-${nextStep.tone}` : 'tone-full'}`}>
   <div class="tr-status">
@@ -45,6 +55,17 @@ const nextStep = !view?.showMarks
 </div>
 
 <style>
+  .tier-preview-note {
+    margin: 0 0 10px;
+    padding: 9px 14px;
+    border-radius: var(--radius-md);
+    background: #fff7ed;
+    border: 1px dashed var(--secondary-start);
+    color: #9a3412;
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+
   .tier-ribbon {
     display: flex;
     align-items: center;
