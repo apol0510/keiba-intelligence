@@ -378,16 +378,26 @@ KI 側に同等品を作ると仕様が二重化して必ず乖離する。
 
 ## 10. 完成条件
 
-- [ ] `src/utils/raceNarrative.js` が全頭に文章を生成し、テストが通る
-- [ ] 新聞レイアウトコンポーネントが 6 経路で描画される
-- [ ] 未登録レスポンスに **印・PT・買い目の markup が含まれない**ことをテストで固定
-- [ ] 無料会員で印が出て、買い目が出ないことをテストで固定
-- [ ] Stripe の checkout / webhook / portal / prices が実装され、価格がコードにハードコードされていない
-- [ ] KMA 連携が既定 disabled で実装され、有効化しなくても既存挙動が壊れない
-- [ ] ライト基調のデザインが 6 経路に適用されている
-- [ ] `npm run validate:archive` / `node scripts/umatanHit.test.mjs` / `npm run test:nankan` /
-      `npm run test:validation` / `npm run test:computer-index` / `npm run build` が通る
+- [x] `src/utils/raceNarrative.js` が全頭に文章を生成し、テストが通る（26件）
+- [x] 新聞レイアウトコンポーネントが **7 経路**で描画される（`/prediction/[slug]` を追加）
+- [x] 未登録レスポンスに **印・PT・買い目の markup が含まれない**ことを実測＋静的テストで固定
+- [x] 無料会員で印が出て、買い目が出ないことを実測＋静的テストで固定
+- [x] Stripe の checkout / webhook / portal / prices が実装され、価格がコードにハードコードされていない
+- [x] KMA 連携が既定 disabled で実装され、有効化しなくても既存挙動が壊れない
+- [x] ライト基調のデザインが 7 経路 ＋ トップ・料金・マイページ・アーカイブ・ログインに適用されている
+- [x] `npm run build`（validate:archive / narrative / auth / billing / digest / nankan /
+      prune-function-data / archive-sync / shared-checkers / workflow-transient ＋ astro build）が通る
 - [ ] Draft PR 作成（**merge・本番デプロイ・Stripe 本番キー設定・メール実送信は未実施**）
+
+### 実施した検証の要約
+
+| 検証 | 結果 |
+|---|---|
+| tier 別の実描画（dev server・7経路） | guest: 買い目0/印0、free: 印あり買い目0、light+: 買い目あり |
+| guest レスポンス中の買い目パターン | **0 件**（`\d+-\d+(\.\d+)+`） |
+| `npm run build` | 通過 |
+| `node scripts/umatanHit.test.mjs` | 5/5 通過（南関 215.1% / JRA 212.1%。archive 依存の時点値） |
+| `node --test scripts/utils/workflowStaticAudit.test.mjs` | 84/91（**失敗 7 件は本改修前から既存**。Open Questions Q10） |
 
 ---
 

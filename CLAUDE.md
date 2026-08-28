@@ -483,10 +483,23 @@ concurrency:
 
 ### 価格設定
 
+> ⚠️ **2026-08-28 更新**: 課金は **Stripe の月額サブスクが主導線**になった。
+> 金額は **Stripe 側の Price が正本**であり、コードにも本表にも書かない
+> （価格は仕様所有者が改修完了後に決める）。正本は
+> [`docs/RENEWAL_2026_08.md`](./docs/RENEWAL_2026_08.md) §6。
+> 銀行振込（買い切り・年払い）は削除せず `/pricing` 下部の控えめな導線として残している。
+
+| tier | 到達条件 | 見えるもの |
+|------|---------|-----------|
+| 未登録（guest） | 誰でも | 全頭の馬柱・過去走・特徴量・**AI短評**・**AIレース展望**・展開予想（馬番順） |
+| 無料会員（free） | メール登録＋認証 | 上記 ＋ **印（役割マーク・PT・PT順の並び）**・AI結論 |
+| 有料ライト（light） | Stripe 月額 | 上記 ＋ **馬単の買い目**（対象会場） |
+| 有料プレミアム（premium） | Stripe 月額 | 上記 ＋ **全会場の買い目** ＋ 穴馬レポート ＋ 優先メルマガ |
+
+旧プラン（既存会員向けに維持。新規導線は控えめ）:
+
 | プラン | 価格 | 内容 |
 |--------|------|------|
-| フリー | ¥0 | 予想閲覧のみ（上位5頭、買い目なし） |
-| **無料会員** | **¥0（登録必要）** | **全頭予想・買い目一部・AI分析・メルマガ** |
 | 買い切り | ¥88,000（永久） | 南関＋中央、全レース馬単買い目、永久アクセス |
 | 年払い | ¥66,000/年 | 南関＋中央、全レース馬単買い目 |
 
@@ -519,6 +532,23 @@ GITHUB_BRANCH=main
 
 # SendGrid Marketing Campaigns（必須）
 SENDGRID_CUSTOM_FIELD_INTELLIGENCE=e2_T
+
+# ── 2026-08-28 追加（docs/RENEWAL_2026_08.md）。🔴 いずれも未設定＝fail-closed ──
+# セッション署名鍵（未設定なら全閲覧者が guest 扱いになり、印・買い目が出ない）
+SESSION_SIGNING_SECRET=（ランダムな長い文字列）
+
+# Stripe（未設定なら課金導線は「準備中」表示。金額はコードに書かない）
+STRIPE_SECRET_KEY=sk_live_xxxxx
+STRIPE_WEBHOOK_SECRET=whsec_xxxxx
+STRIPE_PRICE_LIGHT=price_xxxxx
+STRIPE_PRICE_PREMIUM=price_xxxxx
+STRIPE_PORTAL_RETURN_URL=https://keiba-intelligence.jp/mypage
+
+# KMA連携（未設定・false なら一切通信しない）
+KMA_ENROLL_ENABLED=false
+KMA_ENROLL_WRITE_ENABLED=false
+KMA_BASE_URL=https://keiba-marketing-automation.netlify.app
+KMA_ADMIN_TOKEN=（KMA の ADMIN_API_TOKEN と同一値）
 ```
 
 ---

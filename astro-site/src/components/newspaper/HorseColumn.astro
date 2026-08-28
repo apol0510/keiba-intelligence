@@ -13,6 +13,7 @@
 
 import FeatureBars from './FeatureBars.astro';
 import { getRoleMark } from '../../utils/sortHorsesByRole.js';
+import { toComputerIndex } from '../../utils/computerIndexContract.js';
 
 interface Props {
   horse: any;
@@ -54,6 +55,15 @@ const markClass = (() => {
 })();
 
 const pt = showMarks && typeof horse?.pt === 'number' && Number.isFinite(horse.pt) ? horse.pt : null;
+
+/**
+ * コンピ指数（総合pt バッジ）。
+ * 🔴 `computerIndexContract.js` の契約（10–99 の整数）を通した値だけを表示する。
+ *    契約外（null / 空 / 1–9 / 100 以上 / 非整数）は **表示しない**。
+ *    偽値を 0 / 10 / 50 等へ置換しない（docs/decisions.md 2026-07-20）。
+ * 🔴 これは外部データであって KI の印ではないため、tier で閉じない（guest にも見せる）。
+ */
+const compi = toComputerIndex(horse?.computerIndex);
 
 /** 血統表記: 父（母父） */
 const sire = horse?.sire || null;
@@ -119,6 +129,7 @@ function distLabel(r: any) {
     {carried != null && <li>斤{carried}</li>}
     {jockey && <li class="meta-jockey">{jockey}</li>}
     {trainer && <li>{trainer}厩</li>}
+    {compi != null && <li class="meta-compi" title="コンピ指数（総合pt）">総合pt {compi}</li>}
     {bwDelta != null && bwDelta !== 0 && (
       <li class={bwDelta > 0 ? 'bw-plus' : 'bw-minus'}>{bwDelta > 0 ? '+' : ''}{bwDelta}kg</li>
     )}
@@ -317,6 +328,12 @@ function distLabel(r: any) {
     background: var(--bg-muted);
     color: var(--text-secondary);
     font-weight: 600;
+  }
+
+  .meta-compi {
+    background: rgba(124, 58, 237, 0.10) !important;
+    color: #6d28d9 !important;
+    font-family: var(--font-num);
   }
 
   .meta-jockey {

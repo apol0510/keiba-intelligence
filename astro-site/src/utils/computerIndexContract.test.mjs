@@ -172,7 +172,20 @@ test('computerIndex を読む本番コードは必ず契約を通す', () => {
     `computerIndex を契約を通さず直接数値化している箇所がある:\n  ${offenders.join('\n  ')}`);
 });
 
-test('総合pt バッジを持つ3画面が契約ゲートを使っている', () => {
+// 2026-08-28: 総合pt バッジの描画は 3 画面の直書きから共通コンポーネント
+//   `components/newspaper/HorseColumn.astro` へ集約された（docs/RENEWAL_2026_08.md）。
+//   ガードの意図（バッジが契約ゲートを通ること・対象画面から消えないこと）は変えず、
+//   「描画点で契約を通す」＋「対象画面が描画点へ到達する」の 2 段で固定する。
+test('総合pt バッジの描画点が契約ゲートを使っている', () => {
+  const rel = 'components/newspaper/HorseColumn.astro';
+  const s = readFileSync(join(SRC, rel), 'utf8');
+  assert.ok(s.includes('総合pt'), `${rel}: 総合pt バッジが見つからない（対象がずれている）`);
+  assert.ok(s.includes('toComputerIndex('), `${rel}: 契約ゲート toComputerIndex を通していない`);
+  assert.ok(!/computerIndex\s*!=\s*null\s*&&\s*[^&]*computerIndex\s*!==\s*''/.test(s),
+    `${rel}: 旧 null/空だけのガードが残っている（偽値がすり抜ける）`);
+});
+
+test('JRA 予想3画面が総合pt バッジの描画点へ到達している', () => {
   const pages = [
     'pages/prediction/jra/index.astro',
     'pages/free-prediction/jra/[date].astro',
@@ -180,9 +193,16 @@ test('総合pt バッジを持つ3画面が契約ゲートを使っている', (
   ];
   for (const rel of pages) {
     const s = readFileSync(join(SRC, rel), 'utf8');
-    assert.ok(s.includes('総合pt'), `${rel}: 総合pt バッジが見つからない（対象がずれている）`);
-    assert.ok(s.includes('toComputerIndex('), `${rel}: 契約ゲート toComputerIndex を通していない`);
-    assert.ok(!/computerIndex\s*!=\s*null\s*&&\s*[^&]*computerIndex\s*!==\s*''/.test(s),
-      `${rel}: 旧 null/空だけのガードが残っている（偽値がすり抜ける）`);
+    const direct = s.includes('toComputerIndex(');
+    const viaBoard = s.includes('RaceDayBoard');
+    assert.ok(direct || viaBoard,
+      `${rel}: 総合pt バッジの描画点へ到達していない（直接ゲートも RaceDayBoard 経由も無い）`);
   }
+});
+
+test('RaceDayBoard → RaceNewspaper → HorseColumn の描画経路が保たれている', () => {
+  const board = readFileSync(join(SRC, 'components/newspaper/RaceDayBoard.astro'), 'utf8');
+  assert.ok(board.includes('RaceNewspaper'), 'RaceDayBoard が RaceNewspaper を使っていない');
+  const paper = readFileSync(join(SRC, 'components/newspaper/RaceNewspaper.astro'), 'utf8');
+  assert.ok(paper.includes('HorseColumn'), 'RaceNewspaper が HorseColumn を使っていない');
 });
