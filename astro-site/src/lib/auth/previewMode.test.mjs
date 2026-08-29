@@ -195,6 +195,18 @@ test('プレビューの適用点は entitlementFromAstro のみ（Functions 側
   assert.deepEqual(offenders, [], `Functions がプレビュー経路を使っている: ${offenders.join(', ')}`);
 });
 
+test('preview-status は秘密値を返さない', () => {
+  const src = read('netlify/functions/preview-status.js');
+  // 値そのものを body に入れていない
+  assert.ok(!/paid\s*[,}]/.test(src.replace(/paidPreview\w+/g, '')), '合言葉の値を返している疑い');
+  assert.ok(!/JSON\.stringify\([\s\S]*?:\s*paid[,\s}]/.test(src), '合言葉の値を返している');
+  assert.ok(!/:\s*secret[,\s}]/.test(src), '署名鍵の値を返している');
+  assert.match(src, /paidPreviewKeyConfigured/, '設定の有無を返していない');
+  // 本番では 404
+  assert.match(src, /isPreviewHost\(host\)/, '本番ホストの判定が無い');
+  assert.match(src, /statusCode: 404/, '本番で 404 を返していない');
+});
+
 test('TierRibbon がプレビュー中であることを画面に出す', () => {
   const src = read('src/components/newspaper/TierRibbon.astro');
   assert.match(src, /view\?\.preview/, 'preview フラグを見ていない');
