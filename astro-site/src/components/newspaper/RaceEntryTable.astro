@@ -29,11 +29,15 @@
 
 import HorseDetailPanel from './HorseDetailPanel.astro';
 import { assignFreeMarks } from '../../utils/attentionMarks.js';
+
+/** 印の記号 → CSS クラス（新聞と同じく ◎ を最も目立たせる）。 */
+const MARK_CLASS: Record<string, string> = { '◎': 'd', '○': 'c', '▲': 'f', '△': 't' };
 import { toComputerIndex } from '../../utils/computerIndexContract.js';
 import { resolveFrameNumber } from '../../utils/frameNumber.js';
 
 interface Props {
   horses: any[];
+  raceInfo?: any;
   view: { showMarks?: boolean; showBetting?: boolean; tier?: string };
   raceKey: string;
   narrativeOf: (horse: any) => any;
@@ -43,7 +47,7 @@ interface Props {
 }
 
 const {
-  horses = [], view, raceKey,
+  horses = [], view, raceKey, raceInfo = null,
   narrativeOf, featuresOf, pastRacesOf, statsOf,
 } = Astro.props;
 
@@ -68,10 +72,14 @@ const maskScore = showAttention && !showRanked;
 const fieldSize = horses.length;
 
 /**
- * 無料会員向けの印（馬番 → '◎△' のような文字列）。
- * KI 評価から決定論的に算出する。有料 tier では印を出さないため作らない。
+ * 無料会員向けの印（馬番 → '◎◎○▲' のような文字列）。
+ * 🔴 **実在する指数だけ**から決定論的に算出する（新聞の総合印と同じ作り方）。
+ *    指数 1 本 = 記者 1 人。データが無い指数は軸にしない。
+ * 有料 tier では印を出さないため作らない。
  */
-const freeMarks = showMarkColumn ? assignFreeMarks(horses) : new Map<number, string>();
+const freeMarks = showMarkColumn
+  ? assignFreeMarks(horses, { pastRacesOf, raceInfo })
+  : new Map<number, string>();
 
 /**
  * 閉じた行に出す抜粋。
@@ -169,7 +177,11 @@ const colCount = 3 // 枠 / 馬番 / 馬名
               </td>
               {showMarkColumn && (
                 <td class="c-mark">
-                  {r.freeMark ? <span class="mark mk-free">{r.freeMark}</span> : ''}
+                  {r.freeMark
+                    ? <span class="mark mk-free">{[...r.freeMark].map((c: string) => (
+                        <i class={`mk mk-${MARK_CLASS[c] || 'x'}`}>{c}</i>
+                      ))}</span>
+                    : ''}
                 </td>
               )}
               {showScoreColumn && (
@@ -421,13 +433,20 @@ const colCount = 3 // 枠 / 馬番 / 馬名
   .num-base { background: rgba(124, 58, 237, 0.10); color: #6d28d9; }
 
   .mark { font-size: 1.25rem; font-weight: 700; line-height: 1; }
-  .c-mark { min-width: 4.6em; }
-  /* 無料の重複印。1 セルに複数並ぶため字間を詰める */
+  /* 🔴 指数ごとの印を合算するため、1 セルに最大 5 文字並ぶ */
+  .c-mark { min-width: 6.2em; }
   .mk-free {
-    color: var(--text-primary);
-    letter-spacing: -0.04em;
+    display: inline-flex;
+    gap: 1px;
+    font-size: 1.05rem;
     white-space: nowrap;
   }
+  /* 新聞と同じ濃淡。◎ を最も強く、△ を最も淡く */
+  .mk { font-style: normal; line-height: 1; }
+  .mk-d { color: #d8433a; }
+  .mk-c { color: #1f6fd0; }
+  .mk-f { color: var(--text-primary); }
+  .mk-t { color: var(--text-muted, #9aa3af); }
 
   .c-age, .c-weight { font-family: var(--font-num); color: var(--text-secondary); font-size: 0.8rem; }
   .c-jockey, .c-trainer { font-size: 0.8rem; color: var(--text-secondary); }

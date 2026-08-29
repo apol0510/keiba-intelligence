@@ -4,12 +4,16 @@
  * 実行: node --test src/utils/attentionMarks.test.mjs （astro-site 直下から）
  *
  * 仕様（docs/RENEWAL_2026_08.md §2 R-3・2026-08-29 確定）:
- *   1. 「印」1 列に **複数の印を重複付与**する
- *   2. ◎○▲ は各 3〜5 頭、△ は約 10 頭（買い目の相手 5〜6 頭より広く）
- *   3. **本命は分かってよい**（評価最上位だけが「◎△」という一意の組み合わせ）
- *   4. **必ず空欄を残す**（2 頭以上）
- *   5. ランダム・ダミーを使わず、KI 評価から決定論的に算出する
- *   6. 画面の並びは常に馬番昇順
+ *   1. 印は **指数から作る**。指数 1 本 ＝ 新聞の記者 1 人。
+ *      各軸が 1 位◎ / 2 位○ / 3 位▲ / 4〜10 位△ を出し、1 列に合算する。
+ *   2. **同じ記号が重なる**（'◎◎○▲' のように）。重なり ＝ 指数の一致。
+ *   3. 🔴 **1 頭だけを特別扱いする処理を入れない。**
+ *      印の多さは指数が一致した結果であって、順位から足したものではない。
+ *   4. **データが無い軸は使わない**（捏造しない）。軸が減れば印も減る。
+ *   5. △ は買い目の相手（5〜6 頭）より広く保つ。
+ *   6. **必ず空欄を残す**。
+ *   7. ランダム・時刻に依存しない（決定論的）。
+ *   8. 画面の並びは常に馬番昇順。
  */
 
 import { test } from 'node:test';
@@ -19,153 +23,205 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  assignFreeMarks, markCounts, evaluationOrder, computeMarkBands, sortByHorseNumber,
-  MARK_SYMBOLS, MARK_COUNT_MIN, MARK_COUNT_MAX, minBlankFor,
+  assignFreeMarks, markCounts, evaluationOrder, availableAxes, poolSizeFor,
+  downPerAxis, sortByHorseNumber,
+  MARK_SYMBOLS, MAX_AXES, MIN_AXIS_SAMPLES, POOL_TARGET, minBlankFor,
 } from './attentionMarks.js';
-import { loadNankanRaceDay, loadJraRaceDay, racesOf } from '../lib/prediction/loadRaceDay.js';
+import { normalizePastRaces } from './raceNarrative.js';
+import { loadNankanRaceDay, loadJraRaceDay, racesOf, racesResolverFor } from '../lib/prediction/loadRaceDay.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
 
 const ROLES = ['本命', '対抗', '単穴', '連下最上位'];
+const RACE_INFO = { venue: '川崎', distance: 1400 };
 
+/**
+ * 指数が出そろう出走表を作る。
+ * 各馬に、順位とは **別の傾向**を持つ過去走を持たせて軸ごとの順位を散らす
+ * （軸がすべて同じ並びになると「複数軸で見ている」ことを検証できない）。
+ */
 function field(n) {
-  return Array.from({ length: n }, (_, i) => ({
-    horseNumber: i + 1, horseName: `馬${i + 1}`,
-    role: ROLES[i] || '連下', pt: 200 - i,
-  }));
+  return Array.from({ length: n }, (_, i) => {
+    const k = i + 1;
+    return {
+      horseNumber: k,
+      horseName: `馬${k}`,
+      role: ROLES[i] || '連下',
+      pt: 200 - i,
+      computerIndex: 90 - ((i * 7) % 60),
+      recentRaces: [0, 1, 2].map((j) => ({
+        rank: ((i + j * 3) % 9) + 1,
+        last3f: 36.0 + (((i * 5 + j * 2) % 40) / 10),
+        distance: 1200 + (((i + j) % 4) * 200),
+        venue: (i + j) % 3 === 0 ? '川崎' : '大井',
+        paceType: (i + j) % 2 === 0 ? 'H' : 'M',
+        passingOrder: `${((i + j) % 8) + 1}-${((i + j) % 8) + 1}`,
+        date: `2026-0${(j % 6) + 1}-10`,
+      })),
+    };
+  });
 }
 
-function marksInEvalOrder(horses) {
-  const m = assignFreeMarks(horses);
+const pastRacesOf = (h) => normalizePastRaces(h?.recentRaces || []);
+const OPTS = { pastRacesOf, raceInfo: RACE_INFO };
+
+const marksOf = (horses, opts = OPTS) => {
+  const m = assignFreeMarks(horses, opts);
   return evaluationOrder(horses).map((h) => m.get(h.horseNumber));
-}
+};
 
-/* ---------- 1. 重複付与 ---------- */
+/* ---------- 1. 指数から作る（新聞の総合印） ---------- */
 
-test('1 頭に複数の印が付く（重複付与）', () => {
-  const marks = marksInEvalOrder(field(12));
-  assert.ok(marks.some((m) => m.length > 1), '複数印が 1 つも無い');
-  assert.ok(marks.some((m) => m === '◎○△'), '◎○△ の重なりが無い');
-  assert.ok(marks.some((m) => m === '○▲△'), '○▲△ の重なりが無い');
+test('複数の指数が軸として使われる', () => {
+  const axes = availableAxes(field(12), pastRacesOf, RACE_INFO);
+  assert.ok(axes.length >= 3, `軸が ${axes.length} 本しかない`);
+  assert.ok(axes.length <= MAX_AXES, `軸が上限 ${MAX_AXES} を超えている`);
+  assert.ok(axes.some((a) => a.key === 'total'), '総合指数が軸に入っていない');
+  assert.ok(axes.some((a) => a.key === 'base'), '基礎指数が軸に入っていない');
+  // 軸ごとに順位が違う（全部同じ並びなら「複数指数」の意味が無い）
+  const firsts = new Set(axes.map((a) => [...a.values.entries()].sort((x, y) => y[1] - x[1])[0][0]));
+  assert.ok(firsts.size >= 2, '全軸の 1 位が同じ馬（軸が実質 1 本）');
 });
 
-test('12 頭立ては ◎4 ○5 ▲5 △10 空欄2（確定した基準形）', () => {
-  const c = markCounts(field(12));
-  assert.equal(c['◎'], 4);
-  assert.equal(c['○'], 5);
-  assert.equal(c['▲'], 5);
-  assert.equal(c['△'], 10);
-  assert.equal(c.blank, 2);
+test('同じ記号が重なる（指数の一致がそのまま印の数になる）', () => {
+  const marks = marksOf(field(12));
+  assert.ok(marks.some((m) => /(.)\1/u.test(m)), '同じ記号の重なりが 1 つも無い');
+  assert.ok(marks.some((m) => m.length >= 3), '印が 3 つ以上の馬が居ない');
 });
 
-/* ---------- 2. 頭数の目安 ---------- */
+test('各軸は 1位◎ 2位○ 3位▲ 4位以下△ を出す', () => {
+  const horses = field(12);
+  const axes = availableAxes(horses, pastRacesOf, RACE_INFO);
+  const marks = assignFreeMarks(horses, OPTS);
+  const down = downPerAxis(poolSizeFor(horses.length));
 
-test('8 頭以上で ◎ と ○ は 3〜5 頭', () => {
-  for (let n = 8; n <= 18; n += 1) {
-    const c = markCounts(field(n));
-    for (const s of ['◎', '○']) {
-      assert.ok(c[s] >= MARK_COUNT_MIN && c[s] <= MARK_COUNT_MAX, `${n}頭: ${s} が ${c[s]} 頭`);
-    }
-  }
+  // 軸の数だけ ◎ が配られる（同じ馬に重なることもある）
+  const total = (sym) => [...marks.values()].reduce((n, m) => n + [...m].filter((c) => c === sym).length, 0);
+  assert.equal(total('◎'), axes.length, '◎ の総数が軸の本数と一致しない');
+  assert.equal(total('○'), axes.length, '○ の総数が軸の本数と一致しない');
+  assert.equal(total('▲'), axes.length, '▲ の総数が軸の本数と一致しない');
+  assert.equal(total('△'), axes.length * down, '△ の総数が 軸×1軸あたりの△ と一致しない');
 });
 
-test('8 頭以上で ▲ は 3〜5 頭', () => {
-  for (let n = 8; n <= 18; n += 1) {
-    const c = markCounts(field(n));
-    assert.ok(c['▲'] >= MARK_COUNT_MIN && c['▲'] <= MARK_COUNT_MAX, `${n}頭: ▲ が ${c['▲']} 頭`);
-  }
+test('downPerAxis: 各軸は上位 POOL_TARGET 頭まで印を出す', () => {
+  assert.equal(downPerAxis(14), POOL_TARGET - 3);
+  assert.equal(downPerAxis(10), POOL_TARGET - 3);
+  assert.equal(downPerAxis(6), 3);
+  assert.equal(downPerAxis(3), 0);
+  assert.equal(downPerAxis(0), 0);
 });
+
+/* ---------- 2. 🔴 1 頭だけを特別扱いしない（今回の失敗の再発防止） ---------- */
+
+test('実装に「評価順 1 位なら印を足す」ような特別扱いが無い', () => {
+  const src = read('src/utils/attentionMarks.js');
+  assert.ok(!/rank\s*===\s*1/.test(src), '評価順 1 位を特別扱いする分岐が残っている');
+  assert.ok(!/i\s*===\s*0\s*\?/.test(src), '先頭の馬だけを特別扱いする分岐が残っている');
+  // 印は軸のランキングからのみ付く
+  assert.match(src, /ranked\[i\]/, '軸のランキングから印を付けていない');
+});
+
+test('印の強さは「指数の一致」で決まる（順位だけでは決まらない）', () => {
+  const strong = (s) => [...s].filter((c) => '◎○▲'.includes(c)).length;
+
+  const before = assignFreeMarks(field(12), OPTS).get(1);
+
+  // 評価順 1 位の馬だけ、他の指数の支持を失わせる
+  const horses = field(12);
+  horses[0].recentRaces = horses[0].recentRaces.map((r) => ({ ...r, rank: 12, last3f: 41.5 }));
+  horses[0].computerIndex = 12;
+  const after = assignFreeMarks(horses, OPTS).get(1);
+
+  assert.ok(strong(after) < strong(before),
+    `指数の支持を失っても ◎○▲ が減らない（${before} → ${after}）`);
+  assert.ok(after.includes('◎'), '総合指数の ◎ は残るはず');
+});
+
+/* ---------- 3. データが無い軸は使わない ---------- */
+
+test('過去走が無ければ軸が減り、印も減る（捏造しない）', () => {
+  const bare = field(12).map((h) => ({ ...h, recentRaces: [], computerIndex: null }));
+  const axes = availableAxes(bare, () => [], null);
+  assert.equal(axes.length, 1, '過去走・基礎指数が無いのに軸が増えている');
+  assert.equal(axes[0].key, 'total');
+
+  const rich = availableAxes(field(12), pastRacesOf, RACE_INFO).length;
+  assert.ok(rich > 1, 'データがあるのに軸が増えない');
+
+  const cBare = markCounts(bare, { pastRacesOf: () => [], raceInfo: null });
+  const cRich = markCounts(field(12), OPTS);
+  assert.ok(cBare['◎'] <= cRich['◎'], 'データが無いほうが ◎ が多い');
+});
+
+test('軸が 1 本も無ければ印を出さない', () => {
+  const none = [{ horseNumber: 1, pt: null }, { horseNumber: 2, pt: null }, { horseNumber: 3, pt: null }];
+  const m = assignFreeMarks(none, { pastRacesOf: () => [], raceInfo: null });
+  assert.deepEqual([...m.values()], ['', '', '']);
+});
+
+test('全頭同じ値の指数は軸にしない（順位が付かない）', () => {
+  const flat = field(12).map((h) => ({ ...h, computerIndex: 55 }));
+  const axes = availableAxes(flat, pastRacesOf, RACE_INFO);
+  assert.ok(!axes.some((a) => a.key === 'base'), '全頭同値の基礎指数が軸になっている');
+});
+
+test('サンプルが少なすぎる指数は軸にしない', () => {
+  const few = field(12).map((h, i) => ({ ...h, computerIndex: i < MIN_AXIS_SAMPLES - 1 ? 80 - i : null }));
+  const axes = availableAxes(few, pastRacesOf, RACE_INFO);
+  assert.ok(!axes.some((a) => a.key === 'base'), `${MIN_AXIS_SAMPLES} 頭未満でも軸になっている`);
+});
+
+/* ---------- 4. △ の広さと空欄 ---------- */
 
 test('△ は買い目の相手（5〜6 頭）より広い', () => {
-  // 9 頭以上では △ が 7 頭以上あり、相手 5〜6 頭を特定できない
-  for (let n = 9; n <= 18; n += 1) {
-    const c = markCounts(field(n));
-    assert.ok(c['△'] >= 7, `${n}頭: △ が ${c['△']} 頭しかない（相手を絞り込めてしまう）`);
+  for (const n of [8, 10, 12, 14, 16, 18]) {
+    const c = markCounts(field(n), OPTS);
+    const min = n >= 12 ? 8 : 5;
+    assert.ok(c['△'] >= min, `${n}頭立てで △=${c['△']}（相手を絞り込めてしまう）`);
   }
 });
 
-test('12 頭以上で △ は 10 頭以上', () => {
-  for (let n = 12; n <= 18; n += 1) {
-    assert.ok(markCounts(field(n))['△'] >= 10, `${n}頭: △ が少ない`);
+test('必ず空欄を残す', () => {
+  for (const n of [8, 10, 12, 14, 16, 18]) {
+    const c = markCounts(field(n), OPTS);
+    assert.ok(c.blank >= minBlankFor(n), `${n}頭立てで空欄=${c.blank}`);
   }
 });
 
-test('必ず空欄を残す（12 頭以上は 2 頭、少頭数は 1 頭）', () => {
-  for (let n = 7; n <= 18; n += 1) {
-    const need = minBlankFor(n);
-    assert.ok(markCounts(field(n)).blank >= need, `${n}頭: 空欄が ${need} 頭未満`);
+test('全頭に印が付くことはない', () => {
+  for (const n of [7, 8, 9, 10, 12, 16, 18]) {
+    const marks = marksOf(field(n));
+    assert.ok(marks.some((m) => m === ''), `${n}頭立てで空欄が 0`);
   }
 });
 
-test('少頭数でも △ が狭くならない（相手を絞り込めないこと）', () => {
-  // 8 頭立てで △=6 だと、本命を除いた残りが相手 5〜6 頭と一致してしまう
-  for (let n = 8; n <= 11; n += 1) {
-    const c = markCounts(field(n));
-    assert.ok(c['△'] >= n - 2, `${n}頭: △ が ${c['△']} 頭（狭すぎる）`);
-  }
-});
-
-/* ---------- 3. 本命は分かる ---------- */
-
-test('評価最上位だけが 4 つすべての印（◎○▲△）を持つ', () => {
-  for (let n = 7; n <= 18; n += 1) {
-    const marks = marksInEvalOrder(field(n));
-    assert.equal(marks[0], '◎○▲△', `${n}頭: 最上位の印が ${marks[0]}`);
-    const same = marks.filter((m) => m === '◎○▲△').length;
-    assert.equal(same, 1, `${n}頭: 4 つ揃いの馬が ${same} 頭（本命が特定できない）`);
-  }
-});
-
-test('本命が「印の数が最も多い馬」になる（弱く見えてはいけない）', () => {
-  // 当初は最上位を「◎△」にして一意にしていたが、2〜4 位の「◎○△」より
-  // 印が少なく **弱く見える**ため本命として読めなかった（2026-08-29 修正）。
-  for (let n = 7; n <= 18; n += 1) {
-    const marks = marksInEvalOrder(field(n));
-    const max = Math.max(...marks.map((m) => m.length));
-    assert.equal(marks[0].length, max, `${n}頭: 最上位の印が最多でない`);
-    assert.equal(marks.filter((m) => m.length === max).length, 1,
-      `${n}頭: 印が最多の馬が複数いる`);
-    // 2 位以降は必ず最上位より印が少ない
-    for (let i = 1; i < marks.length; i += 1) {
-      assert.ok(marks[i].length < marks[0].length,
-        `${n}頭: ${i + 1} 位の印が最上位と同数以上（${marks[i]}）`);
-    }
-  }
-});
-
-/* ---------- 4. 決定論（ランダム・ダミーを使わない） ---------- */
+/* ---------- 5. 決定論 ---------- */
 
 test('同じ入力からは常に同じ印になる', () => {
-  const a = [...assignFreeMarks(field(14)).entries()].sort();
-  const b = [...assignFreeMarks(field(14)).entries()].sort();
+  const a = marksOf(field(14));
+  const b = marksOf(field(14));
   assert.deepEqual(a, b);
 });
 
 test('入力の並び順を変えても印が変わらない', () => {
-  const f = field(14);
-  const a = [...assignFreeMarks(f).entries()].sort();
-  const b = [...assignFreeMarks([...f].reverse()).entries()].sort();
-  assert.deepEqual(a, b, '入力順に依存している');
-});
-
-test('印は KI 評価に連動する（評価を落とすと印が変わる）', () => {
-  const f = field(12).map((h) => ({ ...h, role: '連下' }));
-  const before = assignFreeMarks(f);
-  const after = assignFreeMarks(f.map((h) => (h.horseNumber === 1 ? { ...h, pt: 0 } : h)));
-  assert.notEqual(before.get(1), after.get(1), '評価を落としても印が変わらない');
+  const horses = field(14);
+  const shuffled = [...horses].reverse();
+  const m1 = assignFreeMarks(horses, OPTS);
+  const m2 = assignFreeMarks(shuffled, OPTS);
+  for (const h of horses) assert.equal(m2.get(h.horseNumber), m1.get(h.horseNumber), `馬${h.horseNumber}`);
 });
 
 test('実装がランダム・時刻に依存していない', () => {
   const src = read('src/utils/attentionMarks.js');
-  assert.ok(!/Math\.random/.test(src), 'ランダムを使っている');
-  assert.ok(!/Date\.now|new Date/.test(src), '時刻に依存している');
+  assert.ok(!/Math\.random/.test(src), 'Math.random を使っている');
+  assert.ok(!/Date\.now|new Date\(/.test(src), '時刻に依存している');
 });
 
-/* ---------- 5. 並び順 ---------- */
+/* ---------- 6. 並び順 ---------- */
 
 test('sortByHorseNumber: 常に馬番昇順（評価の影響を受けない）', () => {
-  const byPt = [...field(12)].sort((a, b) => a.pt - b.pt);
+  const byPt = [...field(12)].sort((a, b) => b.pt - a.pt).reverse();
   assert.deepEqual(
     sortByHorseNumber(byPt).map((h) => h.horseNumber),
     [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
@@ -173,29 +229,36 @@ test('sortByHorseNumber: 常に馬番昇順（評価の影響を受けない）'
   assert.deepEqual(sortByHorseNumber(null), []);
 });
 
-/* ---------- 6. 実データ ---------- */
+/* ---------- 7. 実データ ---------- */
 
-test('実データ: 全レースで印の頭数・空欄・本命の一意性を満たす', () => {
+test('実データ: 全レースで △ の広さ・空欄・軸の本数を満たす', () => {
   let checked = 0;
   const bad = [];
-  for (const load of [loadNankanRaceDay, loadJraRaceDay]) {
+  for (const [cat, load] of [['nankan', loadNankanRaceDay], ['jra', loadJraRaceDay]]) {
     const day = load(ROOT);
     if (day.error && !day.venues.length) continue;
+    const resolve = racesResolverFor(cat);
+    const past = (h) => normalizePastRaces(resolve(h));
     for (const venue of day.venues) {
       for (const race of racesOf(venue)) {
         const horses = race?.horses || [];
         if (horses.length < 8) continue;
         checked += 1;
-        const c = markCounts(horses);
-        const marks = marksInEvalOrder(horses);
-        const label = `${venue.venueName}${race.raceInfo.raceNumber}R(${horses.length}頭)`;
+        const info = race.raceInfo || {};
+        const opts = { pastRacesOf: past, raceInfo: info };
+        const c = markCounts(horses, opts);
+        const axes = availableAxes(
+          evaluationOrder(horses).slice(0, poolSizeFor(horses.length)), past, info,
+        );
+        const label = `${venue.venueName}${info.raceNumber}R(${horses.length}頭)`;
 
-        for (const s of ['◎', '○', '▲']) {
-          if (c[s] < MARK_COUNT_MIN || c[s] > MARK_COUNT_MAX) bad.push(`${label}: ${s}=${c[s]}`);
-        }
-        if (c['△'] < 7) bad.push(`${label}: △=${c['△']}（相手を絞り込めてしまう）`);
+        if (axes.length < 1) bad.push(`${label}: 軸が 0 本`);
+        if (axes.length > MAX_AXES) bad.push(`${label}: 軸が ${axes.length} 本`);
+        if (c['◎'] < 1) bad.push(`${label}: ◎=0`);
+        if (c['△'] < 4) bad.push(`${label}: △=${c['△']}（相手を絞り込めてしまう）`);
         if (c.blank < minBlankFor(horses.length)) bad.push(`${label}: 空欄=${c.blank}`);
-        if (marks.filter((m) => m === marks[0]).length !== 1) bad.push(`${label}: 最上位が一意でない`);
+        // 全頭に印は付かない
+        if (c.blank === 0) bad.push(`${label}: 空欄が 0`);
       }
     }
   }
@@ -203,13 +266,38 @@ test('実データ: 全レースで印の頭数・空欄・本命の一意性を
   assert.deepEqual(bad.slice(0, 5), [], `${bad.length} 件の逸脱`);
 });
 
-/* ---------- 7. 配線 ---------- */
+test('実データ: 印が最も多い馬は指数の支持を受けた馬になる', () => {
+  const day = loadNankanRaceDay(ROOT);
+  if (day.error && !day.venues.length) return;
+  const past = (h) => normalizePastRaces(racesResolverFor('nankan')(h));
+  let checked = 0;
+  for (const venue of day.venues) {
+    for (const race of racesOf(venue)) {
+      const horses = race?.horses || [];
+      if (horses.length < 8) continue;
+      const info = race.raceInfo || {};
+      const m = assignFreeMarks(horses, { pastRacesOf: past, raceInfo: info });
+      const best = [...m.entries()].sort((a, b) => b[1].length - a[1].length)[0];
+      assert.ok(best[1].includes('◎'), `${info.raceNumber}R: 印が最多の馬に ◎ が無い（${best[1]}）`);
+      checked += 1;
+    }
+  }
+  assert.ok(checked > 0, '検査対象が 0 レース');
+});
 
-test('RaceEntryTable が重複印の仕組みを使っている', () => {
+/* ---------- 8. 配線 ---------- */
+
+test('RaceEntryTable が指数ベースの印を使っている', () => {
   const src = read('src/components/newspaper/RaceEntryTable.astro');
-  assert.match(src, /assignFreeMarks\(/, '重複印の算出を使っていない');
-  assert.match(src, /freeMark/, '印の描画が重複印を使っていない');
+  assert.match(src, /assignFreeMarks\(horses,\s*\{[^}]*pastRacesOf/s, '過去走を渡していない（軸が総合指数だけになる）');
+  assert.match(src, /raceInfo/, 'レース情報を渡していない（距離・コース適性の軸が使えない）');
+  assert.match(src, /freeMark/, '印の描画が無い');
   assert.ok(!/role-tag/.test(src), '役割バッジが残っている');
+});
+
+test('RaceNewspaper が raceInfo を出馬表へ渡している', () => {
+  const src = read('src/components/newspaper/RaceNewspaper.astro');
+  assert.match(src, /raceInfo=\{raceInfo\}/, 'raceInfo を渡していない');
 });
 
 test('印は ◎○▲△ の 4 種類だけ', () => {
