@@ -1,55 +1,71 @@
 /**
- * attentionMarks.js — 無料会員向けの印（範囲を広げ、本命を一意に特定させない）
+ * attentionMarks.js — 無料会員に見せる印（重複付与・ヒモは広め）
  *
- * 正本: docs/RENEWAL_2026_08.md §3 / §4
+ * 正本: docs/RENEWAL_2026_08.md §2 R-3
  *
- * ── 仕様（2026-08-29 改訂）─────────────────────────────────────
- * 「印」は **1 列だけ**。1 頭に **複数の印を重複して付ける**。
+ * ── 仕様（2026-08-29 確定）─────────────────────────────────────
+ * 「印」は 1 列。**1 頭に複数の印**が付く（新聞で複数の記者印が並ぶのと同じ密度）。
  *
  *   ◎ … 3〜5 頭
  *   ○ … 3〜5 頭
  *   ▲ … 3〜5 頭
- *   △ … 約 10 頭
- *   それ以外の馬は **空欄**
+ *   △ … 約 10 頭（ヒモ。**買い目の相手 5〜6 頭より広く**取る）
+ *   それ以外は空欄
  *
- * 各印の範囲は KI 評価順の帯（バンド）として重なり合う。
- * 例（△=10 頭のレース）:
+ * 評価順のバンドを重ねる。12 頭立ての例:
  *
- *   評価順  1   2   3   4   5   6   7   8   9  10  11〜
- *   ◎     ●   ●   ●   ●
- *   ○             ●   ●   ●   ●
- *   ▲                     ●   ●   ●   ●   ●
- *   △     ●   ●   ●   ●   ●   ●   ●   ●   ●   ●
- *   表示  ◎△ ◎△ ◎○△ ◎○△ ○△ ○▲△ ▲△ ▲△ ▲△ ▲△ （空欄）
+ *   評価順  1    2     3     4     5     6   7   8   9   10  11〜
+ *   ◎     ●    ●     ●     ●
+ *   ○          ●     ●     ●     ●
+ *   ▲                            ●     ●   ●   ●   ●
+ *   △     ●    ●     ●     ●     ●     ●   ●   ●   ●   ●
+ *   表示  ◎△  ◎○△  ◎○△  ◎○△  ○▲△  ▲△ ▲△ ▲△ ▲△  △  （空欄）
  *
- * 🔴 **最上位の 2 頭は必ず同じ印の組み合わせになる**（◎ は 3 頭以上、
- *    ○ と ▲ は評価順 3 位以降から始まるため）。
- *    したがって印の組み合わせから **本命を一意に特定できない**。
+ * ── 何を見せ、何を残すか ────────────────────────────────────
+ * 馬単は **軸と相手の両方**がそろって初めて買える。
  *
- * 🔴 **ランダム・ダミーを使わない。** 印は既存の KI 評価
+ *   - **本命は分かってよい**（○ は評価順 2 位から始まるため、
+ *     評価最上位だけが「◎ と △ のみ」という一意の組み合わせになる）。
+ *   - 守るのは **相手が誰か**。KI の買い目の相手は 5〜6 頭
+ *     （実データ 48 レースで確認）。△ を約 10 頭と広く取ることで、
+ *     そこから正解の 5〜6 頭は絞り込めない。
+ *
+ * ── 🔴 決めごと ───────────────────────────────────────────────
+ *  - **ランダム・ダミーを使わない。** 印は既存の KI 評価
  *    （役割の順序 → pt 降順 → 馬番昇順）から決定論的に算出する。
- *    同じ入力からは常に同じ印になる。
- *
- * 🔴 役割語（本命 / 対抗 / …）そのものは画面に出さない。
- *    本モジュールが返すのは印の文字列だけであり、役割名を含まない。
+ *  - **役割語（本命 / 対抗 / …）は画面に出さない。** 返すのは印の文字だけ。
+ *  - **必ず空欄の馬を残す**（全頭に印が付くと印の意味が消える）。
+ *  - 画面の並びは常に馬番昇順（印の算出順とは別）。
  */
 
-/** 表示に使う印。この順序は **表示順**であり、評価順の情報ではない。 */
 export const MARK_SYMBOLS = Object.freeze(['◎', '○', '▲', '△']);
 
-/** 各印の頭数の目安。 */
+/** ◎○▲ の頭数の目安。 */
 export const MARK_COUNT_MIN = 3;
 export const MARK_COUNT_MAX = 5;
-export const TRIANGLE_TARGET = 10;
+/** △ の目安（買い目の相手 5〜6 頭より広く保つ）。 */
+export const POOL_TARGET = 10;
+export const POOL_MAX = 14;
+/**
+ * 必ず残す空欄の頭数。
+ * 🔴 少頭数（12 頭未満）では 1 頭に減らす。
+ *    空欄を 2 頭残すと △ が狭くなり、買い目の相手（5〜6 頭）を
+ *    絞り込めてしまうため（8 頭立てで実際に発生した）。
+ */
+export const MIN_BLANK_LARGE = 2;
+export const MIN_BLANK_SMALL = 1;
+export const SMALL_FIELD = 12;
+
+export function minBlankFor(fieldSize) {
+  return fieldSize >= SMALL_FIELD ? MIN_BLANK_LARGE : MIN_BLANK_SMALL;
+}
 
 /** KI 評価の順序（役割 → pt → 馬番）。**画面には出さない**。 */
 const ROLE_ORDER = Object.freeze({
   本命: 1, 対抗: 2, 単穴: 3, 連下最上位: 4, 連下: 5, 補欠: 6, 無: 7,
 });
 
-function clamp(v, lo, hi) {
-  return Math.min(hi, Math.max(lo, v));
-}
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 function ptOf(horse) {
   const v = horse?.pt;
@@ -59,8 +75,6 @@ function ptOf(horse) {
 /**
  * KI 評価順に並べる（決定論的）。
  * 役割の順序 → pt 降順 → 馬番昇順。同じ入力からは常に同じ並び。
- *
- * 🔴 この並びは **印の算出にだけ使う**。画面の並びは常に馬番昇順。
  */
 export function evaluationOrder(horses) {
   const list = Array.isArray(horses) ? horses.filter((h) => h && h.horseNumber != null) : [];
@@ -80,46 +94,37 @@ export function evaluationOrder(horses) {
 /**
  * 出走頭数から各印のバンド（評価順の範囲・1 始まり・両端含む）を決める。
  *
- * 🔴 ○ と ▲ の開始位置は **必ず 3 位以降**。◎ は 3 頭以上。
- *    これにより評価順 1 位と 2 位の印が必ず一致し、本命を特定できない。
- *
- * @param {number} fieldSize 出走頭数
+ * 🔴 ○ は必ず評価順 **2 位から**始まる。
+ *    これにより評価最上位だけが「◎△」という一意の組み合わせになり、
+ *    本命が分かる（2026-08-29 の仕様変更で「分かってよい」ことになった）。
  */
 export function computeMarkBands(fieldSize) {
   const n = Number.isInteger(fieldSize) ? fieldSize : 0;
-  if (n <= 0) return { triangleEnd: 0, doubleEnd: 0, circle: [0, 0], filled: [0, 0] };
+  if (n < 3) return { pool: 0, double: 0, circle: [0, 0], filled: [0, 0] };
 
-  // △ の頭数。空欄の馬を必ず残す（印の意味が消えるため）。
-  const d = n <= 3 ? Math.max(0, n - 1) : Math.min(TRIANGLE_TARGET, n - 2);
-  if (d < MARK_COUNT_MIN) {
-    // 極小頭数では △ のみ（バンドを作れない）
-    return { triangleEnd: d, doubleEnd: 0, circle: [0, 0], filled: [0, 0] };
-  }
+  // △ の頭数。必ず空欄を残す。
+  // 🔴 少頭数では「残せるだけ広く」取る（△ が狭いと相手を絞り込めてしまう）。
+  const cap = Math.min(POOL_MAX, n - minBlankFor(n));
+  const pool = n < SMALL_FIELD ? Math.max(3, cap) : clamp(Math.round(n * 0.8), 3, cap);
+  if (pool < MARK_COUNT_MIN) return { pool, double: 0, circle: [0, 0], filled: [0, 0] };
 
-  const doubleEnd = Math.min(d, clamp(Math.round(d * 0.4), MARK_COUNT_MIN, MARK_COUNT_MAX));
-  const circleCount = clamp(Math.round(d * 0.4), MARK_COUNT_MIN, MARK_COUNT_MAX);
-  const circleStart = 3;                                   // 🔴 必ず 3 位以降
-  const circleEnd = Math.min(d, circleStart + circleCount - 1);
+  const double = Math.min(pool, clamp(Math.round(pool * 0.4), MARK_COUNT_MIN, MARK_COUNT_MAX));
 
-  const filledCount = clamp(Math.round(d * 0.5), MARK_COUNT_MIN, MARK_COUNT_MAX);
-  const filledEnd = d;
-  const filledStart = Math.max(3, filledEnd - filledCount + 1); // 🔴 必ず 3 位以降
+  const circleCount = clamp(Math.round(pool * 0.4), MARK_COUNT_MIN, MARK_COUNT_MAX);
+  const circleStart = 2;                                   // 🔴 必ず 2 位から
+  const circleEnd = Math.min(pool, circleStart + circleCount - 1);
 
-  return {
-    triangleEnd: d,
-    doubleEnd,
-    circle: [circleStart, circleEnd],
-    filled: [filledStart, filledEnd],
-  };
+  const filledCount = clamp(Math.round(pool * 0.5), MARK_COUNT_MIN, MARK_COUNT_MAX);
+  const filledStart = Math.min(pool, circleEnd);           // ○ の末尾と 1 頭重ねる
+  const filledEnd = Math.min(pool, filledStart + filledCount - 1);
+
+  return { pool, double, circle: [circleStart, circleEnd], filled: [filledStart, filledEnd] };
 }
 
 const inBand = (rank, [start, end]) => start > 0 && rank >= start && rank <= end;
 
 /**
- * 馬番 → 印文字列（例: '◎△' / '○▲△' / ''）の Map を作る。
- *
- * @param {Array} horses
- * @returns {Map<number, string>}
+ * 馬番 → 印文字列（例: '◎△' / '◎○△' / '▲△' / ''）の Map を作る。
  */
 export function assignFreeMarks(horses) {
   const ordered = evaluationOrder(horses);
@@ -129,10 +134,10 @@ export function assignFreeMarks(horses) {
   ordered.forEach((horse, i) => {
     const rank = i + 1;
     let marks = '';
-    if (bands.doubleEnd > 0 && rank <= bands.doubleEnd) marks += '◎';
+    if (bands.double > 0 && rank <= bands.double) marks += '◎';
     if (inBand(rank, bands.circle)) marks += '○';
     if (inBand(rank, bands.filled)) marks += '▲';
-    if (bands.triangleEnd > 0 && rank <= bands.triangleEnd) marks += '△';
+    if (bands.pool > 0 && rank <= bands.pool) marks += '△';
     out.set(horse.horseNumber, marks);
   });
 
