@@ -144,6 +144,47 @@ test('出馬表の行アコーディオンは表示のみで認可に関与し�
   refute(/showBetting\s*=\s*true/, src, 'アコーディオンが買い目を開こうとしている');
 });
 
+/**
+ * テンプレート部（frontmatter `---` の外・`<style>` を除く）を返す。
+ * ここに書いた文字列は **HTML として出力される**（HTML コメントも含む）。
+ */
+function template(p) {
+  const src = read(p);
+  const m = src.match(/^---[\s\S]*?\n---\n/);
+  const body = m ? src.slice(m[0].length) : src;
+  return body.replace(/<style[\s\S]*?<\/style>/g, ' ');
+}
+
+test('予想画面のテンプレートに役割語・序列印の文字列を書かない（HTML に残さない）', () => {
+  const RANK_WORDS = ['本命', '対抗', '単穴', '連下', '補欠', 'ヒモ'];
+  const RANK_MARKS = ['◎', '○', '▲', '△', '☆'];
+  const files = [
+    ...PREDICTION_ROUTES,
+    'src/components/newspaper/RaceDayBoard.astro',
+    'src/components/newspaper/RaceNewspaper.astro',
+    'src/components/newspaper/RaceEntryTable.astro',
+    'src/components/newspaper/HorseDetailPanel.astro',
+    'src/components/newspaper/TierRibbon.astro',
+  ];
+  for (const f of files) {
+    const body = template(f);
+    for (const w of [...RANK_WORDS, ...RANK_MARKS]) {
+      assert.ok(!body.includes(w),
+        `${f}: テンプレートに「${w}」がある（HTML コメント含め出力される）`);
+    }
+  }
+});
+
+test('会員導線のコピーに序列印を書かない', () => {
+  for (const f of ['src/pages/index.astro', 'src/pages/pricing.astro',
+    'src/pages/mypage.astro', 'src/pages/register.astro']) {
+    const body = template(f);
+    for (const m of ['◎', '▲']) {
+      assert.ok(!body.includes(m), `${f}: コピーに序列印「${m}」がある`);
+    }
+  }
+});
+
 test('文章生成に買い目を渡していない（CLAUDE.md 絶対厳守）', () => {
   const rn = read('src/components/newspaper/RaceNewspaper.astro');
   // buildRaceNarrativeBundle への引数に bettingLines を含めない

@@ -127,7 +127,7 @@ const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => ty
     defaultOpenHorseNumber={defaultOpenHorseNumber}
   />
 
-  <!-- ── 結論（本命を名指しするため **有料 tier のみ**） ── -->
+  <!-- ── 結論ブロック（有料 tier のみ） ── -->
   {showBetting && bundle.conclusion?.text && (
     <div class="rp-conclusion">
       <span class="rp-conclusion-tag">結論</span>
