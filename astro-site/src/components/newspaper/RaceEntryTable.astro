@@ -238,11 +238,17 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     white-space: nowrap; border: 0;
   }
 
+  /*
+   * 🔴 `overflow: hidden` を使わない。
+   *    祖先に overflow があると `position: sticky` の基準が変わり、
+   *    列見出しが固定されずスクロールで完全に消える
+   *    （2026-08-29 に実測。見出しが画面外へ出て列名が読めなくなっていた）。
+   *    角丸はセル側で作る。
+   */
   .ret {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    overflow: hidden;
     box-shadow: var(--shadow-sm);
   }
 
@@ -254,9 +260,10 @@ const colCount = 3 // 枠 / 馬番 / 馬名
 
   /* ── ヘッダー: 紙の茶色をやめ、静かなラベル行にする ── */
   .ret-table thead th {
+    /* サイトヘッダーの真下に固定する（重なると列名が読めない） */
     position: sticky;
-    top: 0;
-    z-index: 2;
+    top: var(--nav-height, 84px);
+    z-index: 5;
     background: var(--bg-secondary);
     color: var(--text-tertiary);
     font-size: 0.66rem;
@@ -437,6 +444,13 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     padding: 0 !important;
     border-bottom: 1px solid var(--border-color);
   }
+
+  /* .ret の overflow を外したぶん、角丸はセルで作る */
+  .ret-table thead th:first-child { border-top-left-radius: var(--radius-lg); }
+  .ret-table thead th:last-child { border-top-right-radius: var(--radius-lg); }
+  .ret-table tbody tr:last-child > td:first-child { border-bottom-left-radius: var(--radius-lg); }
+  .ret-table tbody tr:last-child > td:last-child { border-bottom-right-radius: var(--radius-lg); }
+  .ret-table tbody tr:last-child > td { border-bottom: none; }
 
   /* ── スマホ: 一覧性を保ちつつ短評は残す ── */
   @media (max-width: 780px) {

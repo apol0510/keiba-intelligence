@@ -216,6 +216,30 @@ test('RaceDayBoard: レース切替がスクロールに依存しない（不具
   assert.match(src, /function selectRace\(/, 'レース選択の実装が無い');
 });
 
+test('RaceEntryTable: 列見出しが sticky として機能する条件を壊していない', () => {
+  // 2026-08-29: 祖先の overflow で sticky が無効化され、列見出しがスクロールで
+  //   完全に消えていた（実測 theadTop=-365px）。列名が読めないと
+  //   「印」「AI指数」等の内容が判別できないため、条件を固定する。
+  const src = read('src/components/newspaper/RaceEntryTable.astro');
+
+  // .ret に overflow を付けない（sticky の基準が変わる）
+  const retBlock = src.slice(src.indexOf('\n  .ret {'), src.indexOf('.ret-table {'));
+  assert.ok(!/overflow\s*:/.test(retBlock), '.ret に overflow が復活している（sticky が壊れる）');
+
+  // 見出しはサイトヘッダーの下へ固定する
+  assert.match(src, /\.ret-table thead th \{[\s\S]*?position:\s*sticky/, '列見出しが sticky でない');
+  assert.match(src, /top:\s*var\(--nav-height/, '列見出しがヘッダーの高さを考慮していない');
+  assert.ok(!/\.ret-table thead th \{[\s\S]*?top:\s*0;/.test(src), '見出しが top:0 でヘッダーに隠れる');
+});
+
+test('BaseLayout: ナビの実寸を --nav-height へ反映している', () => {
+  const src = read('src/layouts/BaseLayout.astro');
+  assert.match(src, /--nav-height/, 'ナビ高さの反映が無い');
+  assert.match(src, /offsetHeight/, '実寸を測っていない（固定値だと崩れる）');
+  const css = read('src/styles/global.scss');
+  assert.match(css, /--nav-height:/, 'トークンの既定値が無い');
+});
+
 test('RaceDayBoard: 描画前に契約検証を通している（fail-closed）', () => {
   const src = read('src/components/newspaper/RaceDayBoard.astro');
   assert.match(src, /verifiedRaceDay\(/, '契約検証を通していない');

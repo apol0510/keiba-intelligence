@@ -107,6 +107,10 @@
   --radius-xl: 1.25rem;
   --radius-pill: 999px;
 
+  /* サイトヘッダーの高さ（sticky な表見出しをこの下に固定するために使う）。
+     実測値は BaseLayout の inline script が上書きする。 */
+  --nav-height: 84px;
+
   /* トランジション */
   --transition-fast: 150ms ease-in-out;
   --transition-base: 250ms ease-in-out;

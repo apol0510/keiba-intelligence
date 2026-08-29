@@ -777,6 +777,20 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
   </script>
 
   <!-- AI Chat Widget -->
+  <!-- sticky な表見出しをヘッダーの真下に固定するため、ナビの実寸を CSS 変数へ反映する -->
+  <script is:inline>
+    (function () {
+      function syncNavHeight() {
+        var nav = document.querySelector('.main-nav');
+        if (!nav) return;
+        document.documentElement.style.setProperty('--nav-height', nav.offsetHeight + 'px');
+      }
+      syncNavHeight();
+      window.addEventListener('resize', syncNavHeight);
+      window.addEventListener('orientationchange', syncNavHeight);
+    })();
+  </script>
+
   <AIChat />
 </body>
 </html>
