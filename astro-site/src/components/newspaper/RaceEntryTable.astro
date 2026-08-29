@@ -60,11 +60,19 @@ function markClass(role: string | undefined) {
   }
 }
 
-/** 短評の 1 文目だけを抜く（長い場合は語尾を落とす）。 */
-function excerptOf(text: string | null | undefined) {
-  if (typeof text !== 'string' || !text.trim()) return null;
-  const first = text.split('。')[0];
-  const s = first ? `${first}。` : text;
+/**
+ * 閉じた行に出す抜粋。
+ *
+ * 🔴 役割語（「本命に推す。」「ヒモまで。」）は **抜粋に使わない**。
+ *    それだけだと無料会員のほうが未登録より情報が乏しくなるため
+ *    （役割は名前の横のタグで別途示している）。
+ *    `narrative.sentences` は役割語を含まない本文だけなのでそこから取る。
+ */
+function excerptOf(narrative: any) {
+  const body = Array.isArray(narrative?.sentences) ? narrative.sentences : [];
+  const first = body.find((x: any) => typeof x === 'string' && x.trim());
+  const s = first || (typeof narrative?.text === 'string' ? narrative.text : '');
+  if (!s.trim()) return null;
   return s.length > 60 ? `${s.slice(0, 59)}…` : s;
 }
 
@@ -75,7 +83,7 @@ const rows = horses.map((h: any) => {
   return {
     horse: h,
     narrative,
-    excerpt: excerptOf(narrative?.text),
+    excerpt: excerptOf(narrative),
     frame,
     frameClass: frame && frame >= 1 && frame <= 8 ? `waku-${frame}` : 'waku-none',
     number: h?.horseNumber ?? null,

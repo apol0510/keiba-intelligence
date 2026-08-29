@@ -14,6 +14,7 @@
  */
 
 import FeatureBars from './FeatureBars.astro';
+import { cleanPedigreeName } from '../../utils/pedigreeName.js';
 
 interface Props {
   horse: any;
@@ -38,10 +39,17 @@ const pt = showMarks && typeof horse?.pt === 'number' && Number.isFinite(horse.p
 
 /* ---------- 血統（存在するものだけ） ---------- */
 const profile = stats?.profile || null;
+
+/**
+ * 🔴 上流の `profile.damsire` には、馬名ではなく「性齢 毛色 生年月日 中同名」が
+ *    入っているレコードがある（実データ 437 件中 164 件）。列ずれと見られる。
+ *    そのまま出すと母の父として誤情報になるため、**馬名として妥当な値だけ**表示する。
+ *    こちらで値を補完・修正はしない（上流が直れば自動的に表示される）。
+ */
 const pedigree = [
-  { label: '父', value: horse?.sire || profile?.sire || null },
-  { label: '母', value: profile?.dam || null },
-  { label: '母の父', value: profile?.damsire || null },
+  { label: '父', value: cleanPedigreeName(horse?.sire) || cleanPedigreeName(profile?.sire) },
+  { label: '母', value: cleanPedigreeName(profile?.dam) },
+  { label: '母の父', value: cleanPedigreeName(profile?.damsire) },
 ].filter((x) => x.value);
 
 /** 馬主・生産者・毛色・生年月日（南関のみ存在） */

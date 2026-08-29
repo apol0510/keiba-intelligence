@@ -568,6 +568,7 @@ export function buildHorseNarrative(horse, ctx = {}) {
   if (!facts.hasData) {
     return {
       text: '過去走のデータが取得できていないため、今回は数値のみでの評価となる。',
+      lead: null,
       sentences: ['過去走のデータが取得できていないため、今回は数値のみでの評価となる。'],
       facts,
       insufficient: true,
@@ -587,6 +588,7 @@ export function buildHorseNarrative(horse, ctx = {}) {
   if (!sentences.length) {
     return {
       text: '判断材料になる過去走の記録が不足している。',
+      lead: null,
       sentences: ['判断材料になる過去走の記録が不足している。'],
       facts,
       insufficient: true,
@@ -594,6 +596,12 @@ export function buildHorseNarrative(horse, ctx = {}) {
   }
 
   // 役割語は allowMarks のときだけ添える（guest には出さない）
+  //
+  // 🔴 `sentences` には **役割語を含めない**。
+  //    一覧の抜粋（閉じた行に出す 1 文）が「ヒモまで。」だけになってしまい、
+  //    無料会員のほうが未登録より情報が乏しくなるため（2026-08-29 修正）。
+  //    役割語は `lead` として分けて返し、`text` にだけ連結する。
+  let lead = null;
   if (ctx.allowMarks && horse?.role) {
     const ROLE_LEAD = {
       本命: '本命に推す。',
@@ -603,11 +611,16 @@ export function buildHorseNarrative(horse, ctx = {}) {
       連下: 'ヒモまで。',
       補欠: '評価は控えめ。',
     };
-    const lead = ROLE_LEAD[horse.role];
-    if (lead) sentences.unshift(lead);
+    lead = ROLE_LEAD[horse.role] || null;
   }
 
-  return { text: sentences.join(''), sentences, facts, insufficient: false };
+  return {
+    text: `${lead || ''}${sentences.join('')}`,
+    lead,
+    sentences,
+    facts,
+    insufficient: false,
+  };
 }
 
 /* ============================================================
