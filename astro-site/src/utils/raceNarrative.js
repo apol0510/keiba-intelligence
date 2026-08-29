@@ -13,8 +13,10 @@
  *      埋めない。1 つも取れなければ「データ不足」と明示する。
  *   3. **買い目を扱わない**。bettingLines / hitLines を引数に取らないし、馬番の組み合わせを
  *      出力しない（CLAUDE.md 絶対厳守）。
- *   4. **印は tier で制御する**。role（本命/対抗/…）と pt に触れる文は `allowMarks: true` の
- *      ときだけ生成する。未登録（guest）向け出力には役割語を一切含めない。
+ *   4. **役割語を文章に入れない**。role（本命/対抗/単穴/連下/補欠）や
+ *      「上位評価」等、KI の評価順位を推測させる語を **どの tier の短評にも出さない**
+ *      （2026-08-29 仕様確定）。役割に基づく結論は `buildConclusionNarrative` が担い、
+ *      呼び出し側が有料 tier にだけ描画する。
  *
  * データ元の差異吸収:
  *   過去走は prediction JSON（recentRaces）/ entries(南関) / horseHistories(JRA) /
@@ -555,7 +557,7 @@ function sentenceCondition(facts, seed) {
  *
  * @param {object} horse
  * @param {object} ctx  buildHorseFacts と同じ。加えて:
- * @param {boolean} [ctx.allowMarks=false]  true のとき役割語（本命/対抗…）を文頭に添える
+ * @param {boolean} [ctx.allowMarks=false]  結論文の生成可否にのみ使う（短評には影響しない）
  * @param {number}  [ctx.maxSentences=3]
  * @returns {{ text: string, sentences: string[], facts: object, insufficient: boolean }}
  */
@@ -595,28 +597,12 @@ export function buildHorseNarrative(horse, ctx = {}) {
     };
   }
 
-  // 役割語は allowMarks のときだけ添える（guest には出さない）
-  //
-  // 🔴 `sentences` には **役割語を含めない**。
-  //    一覧の抜粋（閉じた行に出す 1 文）が「ヒモまで。」だけになってしまい、
-  //    無料会員のほうが未登録より情報が乏しくなるため（2026-08-29 修正）。
-  //    役割語は `lead` として分けて返し、`text` にだけ連結する。
-  let lead = null;
-  if (ctx.allowMarks && horse?.role) {
-    const ROLE_LEAD = {
-      本命: '本命に推す。',
-      対抗: '対抗に取る。',
-      単穴: '単穴として警戒。',
-      連下最上位: 'ヒモの最上位。',
-      連下: 'ヒモまで。',
-      補欠: '評価は控えめ。',
-    };
-    lead = ROLE_LEAD[horse.role] || null;
-  }
-
+  // 🔴 役割語（本命 / 対抗 / 単穴 / 連下 / 補欠 …）は **どの tier でも文章に入れない**
+  //    （2026-08-29 仕様確定）。短評から本命順位を推測できてはいけない。
+  //    役割に基づく結論は `buildConclusionNarrative` が担い、有料 tier だけに出す。
   return {
-    text: `${lead || ''}${sentences.join('')}`,
-    lead,
+    text: sentences.join(''),
+    lead: null,
     sentences,
     facts,
     insufficient: false,

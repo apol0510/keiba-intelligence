@@ -56,6 +56,21 @@
 | DRM | `src/lib/kma/client.js`（既定disabled）＋ `src/lib/digest/buildDailyDigest.js` ＋ `scripts/generateDailyDigest.mjs` ＋ `generate-daily-digest.yml` |
 | デザイン | `global.scss` のライト転換＋枠色8色、`BaseLayout` ナビ、`/`・`/pricing`・`/mypage`・`/archive`・`/login` 等の統一 |
 
+### 2026-08-29 — 無料会員に本命順位を漏らさない仕様へ改訂
+
+当初実装は無料会員に ◎○▲△・AI指数・評価順の並び・役割バッジを出しており、
+**本命順位がそのまま読める**状態だった（有料の結論を無料で渡していたに等しい）。
+仕様所有者の指示により R-1〜R-6（`docs/RENEWAL_2026_08.md` §2）へ改訂した。
+
+| # | 規則 | 実装 |
+|---|---|---|
+| R-1 | 役割バッジを全 tier で出さない（HTML にも残さない） | `RaceEntryTable` から `role-tag` を削除 |
+| R-2 | 出馬表は常に馬番昇順 | `attentionMarks.sortByHorseNumber` |
+| R-3 | 無料の印は 2〜5 頭・同一種類・序列なし | `attentionMarks.attentionHorseNumbers`（Set を返す） |
+| R-4 | 短評に役割語を入れない | `raceNarrative` の `lead` を廃止 |
+| R-5 | AI指数は有料 tier のみ | `showBetting` で制御 |
+| R-6 | AI結論は有料 tier のみ（生成もしない） | `allowMarks: showBetting` |
+
 ### 実測で確認した tier 別の描画（2026-08-28・dev server）
 
 `/prediction/nankan` に署名 Cookie を付けずに GET / 各 tier の Cookie を付けて GET した実測。

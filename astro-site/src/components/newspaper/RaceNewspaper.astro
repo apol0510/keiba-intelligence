@@ -5,9 +5,11 @@
  * 正本: docs/RENEWAL_2026_08.md §4
  *
  * 🔴 tier による出し分けは **描画そのものを止める**（CSS で隠さない。監査 A-1 の是正）:
- *      guest   … 馬柱・過去走・特徴量・AI短評・レース展望・展開予想（**馬番順**）
- *      free    … ＋ 印（役割マーク・PT・PT 順の並び）・AI結論
- *      light+  … ＋ 買い目
+ *      guest   … 馬柱・過去走・特徴量・AI短評・レース展望・展開予想
+ *      free    … ＋ **注目印**（2〜5 頭・同一種類・序列なし）
+ *      light+  … ＋ ◎○▲△ の印・AI指数・AI結論・買い目
+ *
+ * 🔴 並び順は **全 tier で馬番昇順**。評価順に並べ替えない（順位が漏れるため）。
  *
  * 🔴 買い目は `view.showBetting` が true のときだけ `bettingLines` を描画する。
  *    false のときは **買い目の文字列を一切 HTML に出さない**。
@@ -18,7 +20,7 @@
 import RaceEntryTable from './RaceEntryTable.astro';
 import PaceMap from './PaceMap.astro';
 import { buildRaceNarrativeBundle, normalizePastRaces } from '../../utils/raceNarrative.js';
-import { sortHorsesByRole } from '../../utils/sortHorsesByRole.js';
+import { sortByHorseNumber } from '../../utils/attentionMarks.js';
 
 interface Props {
   race: any;
@@ -56,19 +58,17 @@ const raceInfo = race?.raceInfo || {};
 const allHorses: any[] = Array.isArray(race?.horses) ? race.horses : [];
 
 /**
- * 並び順:
- *   showMarks=false → **馬番順**（PT 降順にすると序列＝印が読めてしまう）
- *   showMarks=true  → 役割順（本命→対抗→…）
+ * 並び順は **常に馬番昇順**（2026-08-29 仕様確定）。
+ * 🔴 AI 評価による並べ替えを行わない。並び順から本命順位が読めてはいけない。
  */
-const orderedHorses = showMarks
-  ? sortHorsesByRole(allHorses)
-  : [...allHorses].sort((a, b) => (a?.horseNumber ?? 99) - (b?.horseNumber ?? 99));
+const orderedHorses = sortByHorseNumber(allHorses);
 
 /** 文章一式。買い目は渡さない。 */
 const bundle = buildRaceNarrativeBundle(
   { raceInfo, horses: allHorses },
   {
-    allowMarks: showMarks,
+    // 🔴 結論（本命の名指し）は有料 tier のみ生成する。無料には HTML ごと出さない。
+    allowMarks: showBetting,
     resolveRaces: resolveRaces || ((h: any) => h?.recentRaces),
     resolveFeatures,
   },
@@ -78,16 +78,9 @@ const pastOf = (h: any) => normalizePastRaces(resolveRaces ? resolveRaces(h) : h
 
 /**
  * 各レースで 1 頭だけ既定で開く（アコーディオンに気づかない問題への対策）。
- * 印が見える会員は本命、未登録は先頭（＝馬番順の 1 番）。
+ * 🔴 **常に先頭（馬番が最小の馬）**。本命を開くと順位が漏れるため tier で変えない。
  */
-const defaultOpenHorseNumber = (() => {
-  if (!orderedHorses.length) return null;
-  if (showMarks) {
-    const honmei = orderedHorses.find((h: any) => h?.role === '本命');
-    if (honmei?.horseNumber != null) return honmei.horseNumber;
-  }
-  return orderedHorses[0]?.horseNumber ?? null;
-})();
+const defaultOpenHorseNumber = orderedHorses[0]?.horseNumber ?? null;
 
 const distanceLabel = raceInfo?.distance ? `${raceInfo.distance}m` : null;
 const headCount = allHorses.length || raceInfo?.horseCount || null;
@@ -134,8 +127,8 @@ const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => ty
     defaultOpenHorseNumber={defaultOpenHorseNumber}
   />
 
-  <!-- ── 結論（印が見える会員のみ） ── -->
-  {showMarks && bundle.conclusion?.text && (
+  <!-- ── 結論（本命を名指しするため **有料 tier のみ**） ── -->
+  {showBetting && bundle.conclusion?.text && (
     <div class="rp-conclusion">
       <span class="rp-conclusion-tag">結論</span>
       <p>{bundle.conclusion.text}</p>
@@ -158,8 +151,8 @@ const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => ty
   <!-- ── 上位導線（権限が無いときだけ出す） ── -->
   {!showMarks && (
     <aside class="rp-upsell rp-upsell-free">
-      <p class="up-lead">この先は<b>無料会員</b>で見られます</p>
-      <p class="up-desc">印（◎○▲△）とAI指数を公開します。登録は<b>メールアドレスだけ・無料</b>です。</p>
+      <p class="up-lead">注目馬の印は<b>無料会員</b>で見られます</p>
+      <p class="up-desc">注目馬の印を公開します（2〜5頭）。登録は<b>メールアドレスだけ・無料</b>です。</p>
       <a class="up-btn" href="/register">無料会員に登録する</a>
       <a class="up-sub" href="/login">ログイン</a>
     </aside>

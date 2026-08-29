@@ -34,7 +34,7 @@ const venueNames = day.venues.map((v) => v.venueName).join('・');
 const title = day.date
   ? `${venueNames || '南関東'}の予想（${day.date}） - KEIBA Intelligence`
   : '南関東競馬 AI予想 - KEIBA Intelligence';
-const description = '南関東4競馬場（大井・川崎・船橋・浦和）の全レース馬柱・過去走・AI短評・展開予想を無料公開。印と馬単買い目は会員向けに提供しています。';
+const description = '南関東4競馬場（大井・川崎・船橋・浦和）の全レース馬柱・過去走・AI短評・展開予想を無料公開。注目馬の印は無料会員、◎○▲△の印と馬単買い目は有料プランで提供しています。';
 ---
 
 <BaseLayout title={title} description={description}>

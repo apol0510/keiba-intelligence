@@ -21,19 +21,20 @@ const items = [
   { label: '全頭の馬柱・過去走', open: true },
   { label: 'AI短評・レース展望', open: true },
   { label: '展開予想・特徴量', open: true },
-  { label: '印（◎○▲△）とAI指数', open: !!view?.showMarks },
+  { label: '注目馬の印（2〜5頭）', open: !!view?.showMarks },
+  { label: '◎○▲△の印・AI指数', open: !!view?.showBetting },
   { label: '馬単の買い目', open: !!view?.showBetting },
 ];
 
 const nextStep = !view?.showMarks
-  ? { href: '/register', label: '無料会員に登録して印を見る', tone: 'free' }
+  ? { href: '/register', label: '無料会員に登録して注目馬を見る', tone: 'free' }
   : (!view?.showBetting ? { href: '/pricing', label: 'プランを見て買い目を受け取る', tone: 'paid' } : null);
 ---
 
 {view?.preview && (
   <p class="tier-preview-note">
     🔎 <b>プレビュー表示中</b>：無料会員に登録したときの見え方です（実際にはログインしていません）。
-    買い目は有料プランのため、このプレビューでは開きません。
+    ◎○▲△の印・AI指数・買い目は有料プランのため、このプレビューでは開きません。
   </p>
 )}
 

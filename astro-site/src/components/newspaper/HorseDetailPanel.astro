@@ -8,7 +8,8 @@
  *    「—」や 0 で埋めず、**ブロックごと描画しない**（南関と JRA で出る項目が変わる）。
  *
  * 🔴 tier による出し分け:
- *    - AI総合pt … `view.showMarks`（印と同じ扱い）が false なら **描画しない**
+ *    - AI指数 … `view.showBetting`（有料 tier）が false なら **描画しない**
+ *      （数値があれば本命順位が復元できるため、無料会員にも出さない）
  *    - AI短評 / 特徴量 / 過去走 / 血統 / 距離成績 / 持時計 / 騎手相性 … 全 tier に開放
  *    - 買い目 … このコンポーネントは扱わない
  */
@@ -34,8 +35,9 @@ const {
   pastRaces = [], stats = null, maxPastRaces = 5,
 } = Astro.props;
 
-const showMarks = !!view?.showMarks;
-const pt = showMarks && typeof horse?.pt === 'number' && Number.isFinite(horse.pt) ? horse.pt : null;
+/** 🔴 AI指数は **有料 tier のみ**。数値があれば本命順位が完全に復元できるため。 */
+const showScore = !!view?.showBetting;
+const pt = showScore && typeof horse?.pt === 'number' && Number.isFinite(horse.pt) ? horse.pt : null;
 
 /* ---------- 血統（存在するものだけ） ---------- */
 const profile = stats?.profile || null;

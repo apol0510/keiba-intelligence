@@ -200,7 +200,7 @@ test('buildHorseNarrative: データ不足を一般論で埋めず、明示す�
   assert.doesNotMatch(out.text, /調子は良さそう|期待できる|好走が見込める/);
 });
 
-test('buildHorseNarrative: allowMarks=false では役割語を出さない', () => {
+test('buildHorseNarrative: 未登録向けにも役割語を出さない', () => {
   const out = buildHorseNarrative(mkHorse({ role: '本命' }), {
     raceInfo: RACE_INFO, allowMarks: false,
   });
@@ -209,30 +209,35 @@ test('buildHorseNarrative: allowMarks=false では役割語を出さない', () 
   }
 });
 
-test('buildHorseNarrative: allowMarks=true では役割語を先頭に添える', () => {
-  const out = buildHorseNarrative(mkHorse({ role: '本命' }), {
-    raceInfo: RACE_INFO, allowMarks: true,
-  });
-  assert.ok(out.text.startsWith('本命に推す。'), out.text);
-  assert.equal(out.lead, '本命に推す。');
-});
+/**
+ * 🔴 2026-08-29 仕様確定:
+ *    短評から本命順位を推測できてはいけない。役割語は **どの tier でも** 出さない。
+ */
+const RANK_WORDS = ['本命', '対抗', '単穴', '連下', '補欠', 'ヒモ', '上位評価', '推す', '軸'];
 
-test('buildHorseNarrative: sentences に役割語を混ぜない（抜粋が役割語だけになるのを防ぐ）', () => {
-  const ROLE_LEADS = ['本命に推す。', '対抗に取る。', '単穴として警戒。', 'ヒモの最上位。', 'ヒモまで。', '評価は控えめ。'];
-  for (const role of ['本命', '対抗', '単穴', '連下最上位', '連下', '補欠']) {
-    const out = buildHorseNarrative(mkHorse({ role }), { raceInfo: RACE_INFO, allowMarks: true });
-    assert.ok(out.sentences.length > 0, `${role}: 本文が空`);
-    for (const s of out.sentences) {
-      assert.ok(!ROLE_LEADS.includes(s), `${role}: sentences に役割語 "${s}" が混ざっている`);
+test('buildHorseNarrative: どの役割・どの tier でも役割語を出さない', () => {
+  for (const role of ['本命', '対抗', '単穴', '連下最上位', '連下', '補欠', '無', null]) {
+    for (const allowMarks of [true, false]) {
+      const out = buildHorseNarrative(mkHorse({ role }), { raceInfo: RACE_INFO, allowMarks });
+      for (const w of RANK_WORDS) {
+        assert.ok(!out.text.includes(w), `role=${role} allowMarks=${allowMarks}: 「${w}」が短評に含まれる → ${out.text}`);
+      }
+      assert.equal(out.lead, null, `role=${role}: lead が残っている`);
+      for (const sentence of out.sentences) {
+        for (const w of RANK_WORDS) {
+          assert.ok(!sentence.includes(w), `role=${role}: sentences に「${w}」が含まれる`);
+        }
+      }
     }
-    // 一覧の抜粋に使う 1 文目が実質的な内容であること
-    assert.ok(out.sentences[0].length > 8, `${role}: 抜粋が短すぎる（${out.sentences[0]}）`);
   }
 });
 
-test('buildHorseNarrative: allowMarks=false では lead を作らない', () => {
-  const out = buildHorseNarrative(mkHorse({ role: '本命' }), { raceInfo: RACE_INFO, allowMarks: false });
-  assert.equal(out.lead, null);
+test('buildHorseNarrative: 役割を変えても文章が変わらない（役割が推測できない）', () => {
+  const base = buildHorseNarrative(mkHorse({ role: null }), { raceInfo: RACE_INFO, allowMarks: true }).text;
+  for (const role of ['本命', '対抗', '単穴', '連下最上位', '連下', '補欠']) {
+    const out = buildHorseNarrative(mkHorse({ role }), { raceInfo: RACE_INFO, allowMarks: true });
+    assert.equal(out.text, base, `role=${role} で文章が変わっている（役割が漏れる）`);
+  }
 });
 
 test('buildHorseNarrative: 買い目らしき馬番の並びを出力しない', () => {

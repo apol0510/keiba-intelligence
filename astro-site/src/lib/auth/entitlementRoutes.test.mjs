@@ -90,27 +90,51 @@ test('RaceNewspaper: 買い目は showBetting のときだけ描画する（CSS 
   refute(/pro-user-only/, src, 'CSS で隠す旧方式のクラスが復活している');
 });
 
-test('RaceNewspaper: 印（役割・PT）は showMarks のときだけ描画する', () => {
+/* ---------- 順位を推測させない（2026-08-29 仕様確定） ---------- */
+
+test('RaceNewspaper: 並び順は常に馬番昇順（評価順に並べ替えない）', () => {
   const src = read('src/components/newspaper/RaceNewspaper.astro');
-  assert.match(src, /const showMarks = !!view\?\.showMarks/);
-  // 並び順も tier で分ける（PT 降順は序列＝印が読めるため）
-  assert.match(src, /showMarks\s*\n?\s*\?\s*sortHorsesByRole/, '未登録時に馬番順へ落としていない');
+  assert.match(src, /sortByHorseNumber\(allHorses\)/, '馬番昇順で並べていない');
+  refute(/sortHorsesByRole/, code('src/components/newspaper/RaceNewspaper.astro'),
+    '評価順の並べ替えが復活している');
+  // 既定で開く行も tier で変えない（本命を開くと順位が漏れる）
+  refute(/role === '本命'/, code('src/components/newspaper/RaceNewspaper.astro'),
+    '既定オープンが本命に依存している');
 });
 
-test('RaceEntryTable: 印と総合pt は showMarks の条件下でのみ組み立て、列ごと出さない', () => {
+test('RaceEntryTable: 役割バッジを描画しない（HTML に残さない）', () => {
   const src = read('src/components/newspaper/RaceEntryTable.astro');
-  assert.match(src, /const showMarks = !!view\?\.showMarks/);
-  assert.match(src, /mark: showMarks && h\?\.role/, '印が showMarks で守られていない');
-  assert.match(src, /pt: showMarks &&/, '総合pt が showMarks で守られていない');
-  // 列そのものを出さない（空列にして CSS で隠す実装を禁止）
-  assert.match(src, /\{showMarks && <th class="c-mark">/, '印の列が showMarks で守られていない');
-  assert.match(src, /\{showMarks && <th class="c-pt">/, '総合pt の列が showMarks で守られていない');
+  refute(/role-tag/, src, '役割バッジが復活している');
+  refute(/\{r\.role\s*&&/, src, '役割を直接描画している');
+  refute(/is-honmei/, src, '本命の行強調が残っている（順位が漏れる）');
 });
 
-test('HorseDetailPanel: 総合pt は showMarks の条件下でのみ組み立てる', () => {
+test('RaceEntryTable: 序列のある印と AI指数は有料 tier のみ', () => {
+  const src = read('src/components/newspaper/RaceEntryTable.astro');
+  assert.match(src, /const showRanked = !!view\?\.showBetting/, '序列印の判定が showBetting でない');
+  assert.match(src, /mark: showRanked && h\?\.role/, '◎○▲△ が showRanked で守られていない');
+  assert.match(src, /pt: showRanked &&/, 'AI指数 が showRanked で守られていない');
+  assert.match(src, /\{showRanked && <th class="c-pt">/, 'AI指数の列が showRanked で守られていない');
+});
+
+test('RaceEntryTable: 無料会員の印は序列を持たない同一種類の注目印', () => {
+  const src = read('src/components/newspaper/RaceEntryTable.astro');
+  assert.match(src, /const showAttention = !!view\?\.showMarks/, '注目印の判定が showMarks でない');
+  assert.match(src, /attentionHorseNumbers\(/, '注目印の集合を使っていない');
+  assert.match(src, /ATTENTION_MARK/, '単一の注目印を使っていない');
+  assert.match(src, /\{showAttention && <th class="c-mark">/, '印の列が showAttention で守られていない');
+});
+
+test('HorseDetailPanel: AI指数は有料 tier のみ', () => {
   const src = read('src/components/newspaper/HorseDetailPanel.astro');
-  assert.match(src, /const showMarks = !!view\?\.showMarks/);
-  assert.match(src, /const pt = showMarks &&/, '総合pt が showMarks で守られていない');
+  assert.match(src, /const showScore = !!view\?\.showBetting/, 'AI指数の判定が showBetting でない');
+  assert.match(src, /const pt = showScore &&/, 'AI指数 が showScore で守られていない');
+});
+
+test('RaceNewspaper: AI結論（本命の名指し）は有料 tier のみ生成・描画する', () => {
+  const src = read('src/components/newspaper/RaceNewspaper.astro');
+  assert.match(src, /allowMarks: showBetting/, '結論の生成が showBetting で守られていない');
+  assert.match(src, /\{showBetting && bundle\.conclusion\?\.text && \(/, '結論の描画が showBetting で守られていない');
 });
 
 test('出馬表の行アコーディオンは表示のみで認可に関与しない', () => {

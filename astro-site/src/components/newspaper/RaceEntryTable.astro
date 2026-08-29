@@ -8,17 +8,17 @@
  *   枠 | 馬番 | 馬名＋AI短評1行 | 印 | AI指数 | 基礎指数 | 性齢 | 斤量 | 騎手 | 厩舎 | 詳細
  *   行をクリック/タップすると、**その馬の直下**に詳細アコーディオンが開く。
  *
- * 🔴 2026-08-29 変更:
- *   - **閉じた状態でも AI短評の 1 文目を出す**。文章は本改修の中心であり、
- *     アコーディオンに畳んで見えなくしてはいけない。
- *   - 「詳細 ▾」ボタンを置き、開けることを明示する（気づかない問題の解消）。
- *   - 各レースで 1 頭だけ既定で開く（操作を学習させる）。
- *   - 「コンピ」は裏側の呼称。表では **基礎指数** と表示する。
- *   - KI 自身のスコアは **AI指数**（旧「総合pt」。旧 JRA 画面では総合pt が
- *     コンピ指数の表示名だったため、名称の衝突を避けて改称した）。
+ * 🔴 2026-08-29 仕様確定（順位を推測させない）:
+ *   1. **役割バッジ（本命 / 対抗 / 単穴 / 連下 …）を全 tier で出さない。HTML にも残さない。**
+ *   2. **並びは常に馬番昇順**。AI 評価による並べ替えを行わない。
+ *   3. **無料会員の印は序列を持たない**。◎○▲△ をやめ、2〜5 頭に
+ *      **同一種類の「注目」印**だけを付ける（`attentionMarks.js`）。
+ *   4. **AI指数（pt）も無料会員には出さない**。数値があれば順位が完全に復元できるため。
+ *   → 序列のある印（◎○▲△）と AI指数は **有料 tier（買い目が見える会員）だけ**に描画する。
  *
  * 🔴 tier による出し分けは **描画そのものを止める**（CSS で隠さない）:
- *    - 印・AI指数 … `view.showMarks` が false なら **列ごと出さない**
+ *    - 注目印  … `view.showMarks` が false なら **列ごと出さない**
+ *    - ◎○▲△・AI指数 … `view.showBetting` が false なら **列ごと出さない**
  *    - 買い目 … このコンポーネントは扱わない
  *
  * 🔴 存在しない情報を埋めない。値が 1 頭も無い列は出さない。
@@ -27,6 +27,9 @@
 
 import HorseDetailPanel from './HorseDetailPanel.astro';
 import { getRoleMark } from '../../utils/sortHorsesByRole.js';
+import {
+  attentionHorseNumbers, ATTENTION_MARK, ATTENTION_LABEL,
+} from '../../utils/attentionMarks.js';
 import { toComputerIndex } from '../../utils/computerIndexContract.js';
 import { resolveFrameNumber } from '../../utils/frameNumber.js';
 
@@ -48,8 +51,15 @@ const {
   defaultOpenHorseNumber = null,
 } = Astro.props;
 
-const showMarks = !!view?.showMarks;
+/** 注目印（序列なし）を出してよいか。無料会員以上。 */
+const showAttention = !!view?.showMarks;
+/** 序列のある印（◎○▲△）と AI指数を出してよいか。**有料 tier のみ**。 */
+const showRanked = !!view?.showBetting;
+
 const fieldSize = horses.length;
+
+/** 注目に含まれる馬番の集合（順序を持たない）。 */
+const attention = showAttention && !showRanked ? attentionHorseNumbers(horses) : new Set<number>();
 
 function markClass(role: string | undefined) {
   switch (role) {
@@ -88,10 +98,13 @@ const rows = horses.map((h: any) => {
     frameClass: frame && frame >= 1 && frame <= 8 ? `waku-${frame}` : 'waku-none',
     number: h?.horseNumber ?? null,
     name: h?.horseName || '—',
-    mark: showMarks && h?.role ? getRoleMark(h.role) : null,
+    // 🔴 序列のある印は有料 tier のみ。無料は注目印（同一種類）だけ。
+    mark: showRanked && h?.role ? getRoleMark(h.role) : null,
     markClass: markClass(h?.role),
-    role: showMarks ? (h?.role || null) : null,
-    pt: showMarks && typeof h?.pt === 'number' && Number.isFinite(h.pt) ? h.pt : null,
+    // 🔴 注目印は集合に含まれるかどうかだけ。強弱を持たせない。
+    attention: attention.has(h?.horseNumber),
+    // 🔴 AI指数は有料 tier のみ（数値があれば順位が復元できるため）
+    pt: showRanked && typeof h?.pt === 'number' && Number.isFinite(h.pt) ? h.pt : null,
     age: h?.age || null,
     weight: Number.isFinite(weightNum) ? weightNum : null,
     jockey: h?.jockey || null,
@@ -108,7 +121,8 @@ const hasJockey = rows.some((r) => r.jockey);
 const hasTrainer = rows.some((r) => r.trainer);
 
 const colCount = 3 // 枠 / 馬番 / 馬名
-  + (showMarks ? 2 : 0)
+  + (showAttention ? 1 : 0)
+  + (showRanked ? 1 : 0)
   + (hasBaseIndex ? 1 : 0)
   + (hasAge ? 1 : 0)
   + (hasWeight ? 1 : 0)
@@ -124,8 +138,8 @@ const colCount = 3 // 枠 / 馬番 / 馬名
         <th class="c-waku"><span class="sr">枠</span></th>
         <th class="c-num">馬番</th>
         <th class="c-name">馬名 ／ AI短評</th>
-        {showMarks && <th class="c-mark">印</th>}
-        {showMarks && <th class="c-pt">AI指数</th>}
+        {showAttention && <th class="c-mark">{showRanked ? '印' : ATTENTION_LABEL}</th>}
+        {showRanked && <th class="c-pt">AI指数</th>}
         {hasBaseIndex && <th class="c-base">基礎指数</th>}
         {hasAge && <th class="c-age">性齢</th>}
         {hasWeight && <th class="c-weight">斤量</th>}
@@ -141,7 +155,7 @@ const colCount = 3 // 枠 / 馬番 / 馬名
         return (
           <>
             <tr
-              class={`ret-row ${r.frameClass} ${showMarks && r.horse?.role === '本命' ? 'is-honmei' : ''} ${isOpen ? 'is-open' : ''}`}
+              class={`ret-row ${r.frameClass} ${isOpen ? 'is-open' : ''}`}
               data-row={rowId}
               tabindex="0"
               role="button"
@@ -152,15 +166,16 @@ const colCount = 3 // 枠 / 馬番 / 馬名
               <td class="c-num"><span class="uma-badge">{r.number ?? ''}</span></td>
               <td class="c-name">
                 <span class="horse-name">{r.name}</span>
-                {r.role && <span class={`role-tag ${r.markClass}`}>{r.role}</span>}
                 {r.excerpt && <span class="horse-excerpt">{r.excerpt}</span>}
               </td>
-              {showMarks && (
+              {showAttention && (
                 <td class="c-mark">
-                  {r.mark ? <span class={`mark ${r.markClass}`} title={r.horse?.role}>{r.mark}</span> : ''}
+                  {showRanked
+                    ? (r.mark ? <span class={`mark ${r.markClass}`}>{r.mark}</span> : '')
+                    : (r.attention ? <span class="mark mk-attention" title={ATTENTION_LABEL}>{ATTENTION_MARK}</span> : '')}
                 </td>
               )}
-              {showMarks && <td class="c-pt">{r.pt != null ? <span class="num-pill num-pt">{r.pt}</span> : ''}</td>}
+              {showRanked && <td class="c-pt">{r.pt != null ? <span class="num-pill num-pt">{r.pt}</span> : ''}</td>}
               {hasBaseIndex && (
                 <td class="c-base">{r.baseIndex != null ? <span class="num-pill num-base">{r.baseIndex}</span> : ''}</td>
               )}
@@ -300,9 +315,6 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     border-bottom-color: transparent;
   }
 
-  /* 本命は左端に色を差す（背景全体は塗らない＝一覧の静けさを保つ） */
-  .ret-row.is-honmei .horse-name { color: var(--mark-honmei); }
-
   /* ── 枠色チップ ── */
   .c-waku { width: 30px; padding-left: 10px !important; padding-right: 0 !important; }
 
@@ -362,22 +374,6 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     letter-spacing: 0.01em;
   }
 
-  .role-tag {
-    display: inline-block;
-    margin-left: 6px;
-    padding: 1px 7px;
-    border-radius: var(--radius-pill);
-    font-size: 0.62rem;
-    font-weight: 800;
-    vertical-align: 2px;
-    background: var(--bg-muted);
-    color: var(--text-secondary);
-  }
-
-  .role-tag.mk-honmei { background: rgba(220, 38, 38, 0.10); color: var(--mark-honmei); }
-  .role-tag.mk-taiko  { background: rgba(37, 99, 235, 0.10); color: var(--mark-taiko); }
-  .role-tag.mk-tana   { background: rgba(249, 115, 22, 0.12); color: #b45309; }
-
   /* 🔴 閉じた状態でも短評を見せる（文章は本改修の中心） */
   .horse-excerpt {
     display: block;
@@ -409,6 +405,8 @@ const colCount = 3 // 枠 / 馬番 / 馬名
   .mk-taiko  { color: var(--mark-taiko); }
   .mk-tana   { color: var(--mark-tana); }
   .mk-renka  { color: var(--mark-renka); }
+  /* 注目印は 1 種類だけ。強弱・序列を付けない */
+  .mk-attention { color: var(--secondary-start); }
 
   .c-age, .c-weight { font-family: var(--font-num); color: var(--text-secondary); font-size: 0.8rem; }
   .c-jockey, .c-trainer { font-size: 0.8rem; color: var(--text-secondary); }
