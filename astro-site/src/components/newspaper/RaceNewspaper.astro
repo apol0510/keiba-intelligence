@@ -76,11 +76,6 @@ const bundle = buildRaceNarrativeBundle(
 
 const pastOf = (h: any) => normalizePastRaces(resolveRaces ? resolveRaces(h) : h?.recentRaces);
 
-/**
- * 各レースで 1 頭だけ既定で開く（アコーディオンに気づかない問題への対策）。
- * 🔴 **常に先頭（馬番が最小の馬）**。本命を開くと順位が漏れるため tier で変えない。
- */
-const defaultOpenHorseNumber = orderedHorses[0]?.horseNumber ?? null;
 
 const distanceLabel = raceInfo?.distance ? `${raceInfo.distance}m` : null;
 const headCount = allHorses.length || raceInfo?.horseCount || null;
@@ -124,7 +119,6 @@ const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => ty
     featuresOf={resolveFeatures}
     pastRacesOf={pastOf}
     statsOf={resolveStats}
-    defaultOpenHorseNumber={defaultOpenHorseNumber}
   />
 
   <!-- ── 結論ブロック（有料 tier のみ） ── -->

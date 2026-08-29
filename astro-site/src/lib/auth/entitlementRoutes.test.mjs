@@ -140,6 +140,20 @@ test('RaceNewspaper: AI結論（本命の名指し）は有料 tier のみ生成
   assert.match(src, /\{showBetting && bundle\.conclusion\?\.text && \(/, '結論の描画が showBetting で守られていない');
 });
 
+test('出馬表の詳細は既定ですべて閉じている', () => {
+  const src = read('src/components/newspaper/RaceEntryTable.astro');
+  // 詳細行は無条件に hidden（条件付き hidden＝既定で開く実装を禁止）
+  assert.match(src, /class="ret-detail"[^>]*data-detail=\{rowId\} hidden>/,
+    '詳細行が既定で閉じていない');
+  assert.match(src, /aria-expanded="false"/, 'aria-expanded が false 固定でない');
+  const body = code('src/components/newspaper/RaceEntryTable.astro');
+  assert.ok(!/defaultOpenHorseNumber/.test(body), '既定オープンの仕組みが残っている');
+  assert.ok(!/is-open'\s*:/.test(body), '初期状態で is-open を付けている');
+
+  const paper = code('src/components/newspaper/RaceNewspaper.astro');
+  assert.ok(!/defaultOpenHorseNumber/.test(paper), 'RaceNewspaper が既定オープンを渡している');
+});
+
 test('出馬表の行アコーディオンは表示のみで認可に関与しない', () => {
   const src = code('src/components/newspaper/RaceEntryTable.astro');
   // クライアント JS で権限を判定していないこと

@@ -41,15 +41,18 @@ interface Props {
   featuresOf?: (horse: any) => any;
   pastRacesOf: (horse: any) => any[];
   statsOf?: (horse: any) => any;
-  /** 既定で開いておく馬番（1 頭だけ。操作に気づいてもらうため） */
-  defaultOpenHorseNumber?: number | null;
 }
 
 const {
   horses = [], view, raceKey,
   narrativeOf, featuresOf, pastRacesOf, statsOf,
-  defaultOpenHorseNumber = null,
 } = Astro.props;
+
+/**
+ * 🔴 詳細アコーディオンは **既定ですべて閉じる**（2026-08-29 仕様確定）。
+ *    1 頭を自動で開くと一覧性が落ち、どの馬が開いているかで評価を推測させる余地も残る。
+ *    開けることは「AI短評の 1 行表示」と「詳細 ▾」ボタンで示す。
+ */
 
 /** 印（無料の重複印）を出してよいか。無料会員以上。 */
 const showAttention = !!view?.showMarks;
@@ -154,15 +157,14 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     <tbody>
       {rows.map((r, i) => {
         const rowId = `${raceKey}-h${r.number ?? i}`;
-        const isOpen = defaultOpenHorseNumber != null && r.number === defaultOpenHorseNumber;
         return (
           <>
             <tr
-              class={`ret-row ${r.frameClass} ${isOpen ? 'is-open' : ''}`}
+              class={`ret-row ${r.frameClass}`}
               data-row={rowId}
               tabindex="0"
               role="button"
-              aria-expanded={isOpen ? 'true' : 'false'}
+              aria-expanded="false"
               aria-controls={`detail-${rowId}`}
             >
               <td class="c-waku"><span class="waku-chip">{r.frame ?? ''}</span></td>
@@ -193,7 +195,7 @@ const colCount = 3 // 枠 / 馬番 / 馬名
                 </span>
               </td>
             </tr>
-            <tr class="ret-detail" id={`detail-${rowId}`} data-detail={rowId} hidden={!isOpen}>
+            <tr class="ret-detail" id={`detail-${rowId}`} data-detail={rowId} hidden>
               <td colspan={colCount}>
                 <HorseDetailPanel
                   horse={r.horse}
