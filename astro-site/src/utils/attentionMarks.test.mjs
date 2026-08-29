@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 import {
   assignFreeMarks, markCounts, evaluationOrder, availableAxes, poolSizeFor,
   downPerAxis, sortByHorseNumber,
-  MARK_SYMBOLS, MAX_AXES, MIN_AXIS_SAMPLES, POOL_TARGET, minBlankFor,
+  MARK_SYMBOLS, MAX_AXES, MIN_AXIS_SAMPLES, DOWN_PER_AXIS, minBlankFor,
 } from './attentionMarks.js';
 import { normalizePastRaces } from './raceNarrative.js';
 import { loadNankanRaceDay, loadJraRaceDay, racesOf, racesResolverFor } from '../lib/prediction/loadRaceDay.js';
@@ -104,12 +104,43 @@ test('各軸は 1位◎ 2位○ 3位▲ 4位以下△ を出す', () => {
   assert.equal(total('△'), axes.length * down, '△ の総数が 軸×1軸あたりの△ と一致しない');
 });
 
-test('downPerAxis: 各軸は上位 POOL_TARGET 頭まで印を出す', () => {
-  assert.equal(downPerAxis(14), POOL_TARGET - 3);
-  assert.equal(downPerAxis(10), POOL_TARGET - 3);
-  assert.equal(downPerAxis(6), 3);
+test('downPerAxis: 4 で固定（軸の本数でも頭数でも変えない）', () => {
+  assert.equal(DOWN_PER_AXIS, 4);
+  for (const pool of [7, 8, 10, 12, 14]) assert.equal(downPerAxis(pool), DOWN_PER_AXIS);
+  assert.equal(downPerAxis(6), 3); // プールに収まらない分だけ削る
   assert.equal(downPerAxis(3), 0);
   assert.equal(downPerAxis(0), 0);
+});
+
+test('🔴 △ の集合が買い目の相手の集合と一致しない（漏洩防止）', () => {
+  const day = loadNankanRaceDay(ROOT);
+  if (day.error && !day.venues.length) return;
+  const past = (h) => normalizePastRaces(racesResolverFor('nankan')(h));
+  let checked = 0;
+  const leaks = [];
+  for (const venue of day.venues) {
+    for (const race of racesOf(venue)) {
+      const horses = race?.horses || [];
+      if (horses.length < 8) continue;
+      const lines = race?.bettingLines?.umatan || [];
+      const partners = new Set();
+      for (const line of lines) {
+        const rhs = String(line).split('-')[1];
+        if (!rhs) continue;
+        for (const p of rhs.replace(/\(.*/, '').split('.')) {
+          if (p.trim()) partners.add(Number(p.trim()));
+        }
+      }
+      if (!partners.size) continue;
+      checked += 1;
+      const m = assignFreeMarks(horses, { pastRacesOf: past, raceInfo: race.raceInfo || {} });
+      const down = new Set([...m.entries()].filter(([, s]) => s.includes('△')).map(([k]) => k));
+      const same = down.size === partners.size && [...partners].every((p) => down.has(p));
+      if (same) leaks.push(`${race.raceInfo.raceNumber}R: △ が買い目の相手と完全一致`);
+    }
+  }
+  assert.ok(checked > 0, '買い目を持つレースが 0');
+  assert.deepEqual(leaks, [], leaks.join(' / '));
 });
 
 /* ---------- 2. 🔴 1 頭だけを特別扱いしない（今回の失敗の再発防止） ---------- */
@@ -177,7 +208,7 @@ test('サンプルが少なすぎる指数は軸にしない', () => {
 test('△ は買い目の相手（5〜6 頭）より広い', () => {
   for (const n of [8, 10, 12, 14, 16, 18]) {
     const c = markCounts(field(n), OPTS);
-    const min = n >= 12 ? 8 : 5;
+    const min = n >= 12 ? 6 : 4;
     assert.ok(c['△'] >= min, `${n}頭立てで △=${c['△']}（相手を絞り込めてしまう）`);
   }
 });
@@ -266,7 +297,11 @@ test('実データ: 全レースで △ の広さ・空欄・軸の本数を満�
   assert.deepEqual(bad.slice(0, 5), [], `${bad.length} 件の逸脱`);
 });
 
-test('実データ: 印が最も多い馬は指数の支持を受けた馬になる', () => {
+test('実データ: 印が最も重い馬は ◎ を持つ（新聞と同じ重みで読める）', () => {
+  // 新聞の読み方と同じ重み。△ の数だけでは上に来ない
+  const WEIGHT = { '◎': 4, '○': 3, '▲': 2, '△': 1 };
+  const weigh = (s) => [...s].reduce((n, c) => n + (WEIGHT[c] || 0), 0);
+
   const day = loadNankanRaceDay(ROOT);
   if (day.error && !day.venues.length) return;
   const past = (h) => normalizePastRaces(racesResolverFor('nankan')(h));
@@ -277,8 +312,8 @@ test('実データ: 印が最も多い馬は指数の支持を受けた馬にな
       if (horses.length < 8) continue;
       const info = race.raceInfo || {};
       const m = assignFreeMarks(horses, { pastRacesOf: past, raceInfo: info });
-      const best = [...m.entries()].sort((a, b) => b[1].length - a[1].length)[0];
-      assert.ok(best[1].includes('◎'), `${info.raceNumber}R: 印が最多の馬に ◎ が無い（${best[1]}）`);
+      const best = [...m.entries()].sort((a, b) => weigh(b[1]) - weigh(a[1]))[0];
+      assert.ok(best[1].includes('◎'), `${info.raceNumber}R: 印が最も重い馬に ◎ が無い（${best[1]}）`);
       checked += 1;
     }
   }
