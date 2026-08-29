@@ -544,6 +544,10 @@ STRIPE_PRICE_LIGHT=price_xxxxx
 STRIPE_PRICE_PREMIUM=price_xxxxx
 STRIPE_PORTAL_RETURN_URL=https://keiba-intelligence.jp/mypage
 
+# Deploy Preview の有料プレビュー用の合言葉（未設定なら有料プレビューは成立しない）
+# 🔴 本番ホストでは常に無効。Deploy Preview / ブランチデプロイ / localhost のみで効く
+PREVIEW_PAID_KEY=（ランダムな長い文字列）
+
 # KMA連携（未設定・false なら一切通信しない）
 KMA_ENROLL_ENABLED=false
 KMA_ENROLL_WRITE_ENABLED=false

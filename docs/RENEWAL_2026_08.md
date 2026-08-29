@@ -373,6 +373,29 @@ Stripe 課金の開始には **サーバー側認可が前提**である（§7�
 **順序**: [1] → [2] → [4] → [3] → [5]。
 [3] を [1] より先に入れると、サーバーが権限を判定できず全員が guest 表示に落ちる。
 
+### 7.2.5 Deploy Preview のプレビュー表示（`?view=`）
+
+仕様所有者が各 tier の見え方を **ログインせずに** 確認するための仕組み
+（`src/lib/auth/previewMode.js`）。
+
+| URL | 必要なもの | 開くもの |
+|---|---|---|
+| `?view=free` | なし | 印まで（買い目は開かない） |
+| `?view=light&key=…` | env `PREVIEW_PAID_KEY` と一致する合言葉 | 買い目まで（対象会場） |
+| `?view=premium&key=…` | 同上 | 全会場の買い目まで |
+
+🔴 安全契約:
+
+1. **本番ホストでは常に無効**（`keiba-intelligence.jp` / `www.` / 本番 netlify エイリアス）。
+   有効なのは Deploy Preview / ブランチデプロイ / localhost のみ。
+2. **有料プレビューは合言葉必須**。Deploy Preview の URL は公開されているため、
+   合言葉が無いと買い目が誰でも読める（監査 A-1 と同じ穴になる）。
+3. **env `PREVIEW_PAID_KEY` 未設定なら有料プレビューは成立しない**（fail-closed）。
+   合言葉をコードに書かない。
+4. 合言葉の照合は **timing-safe**。長さが違えば即座に拒否。
+5. 本物のセッションが同等以上なら **何もしない**（権限を下げも上げもしない）。
+6. `authenticated` は false のまま。画面に「プレビュー表示中」を必ず出す。
+
 ### 7.3 適用範囲
 
 `docs/ui-cross-plan-regression-policy.md` に従い、**6 経路すべて**に適用する。

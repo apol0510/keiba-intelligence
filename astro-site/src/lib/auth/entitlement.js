@@ -110,10 +110,14 @@ export function entitlementFromAstro(Astro, { venue, nowMs } = {}) {
   };
   const base = resolveEntitlement({ cookieHeader, env, venue, nowMs });
 
-  // Deploy Preview 限定の「無料会員の見え方」プレビュー（本番ホストでは無効・印までしか開かない）
+  // Deploy Preview 限定のプレビュー表示（本番ホストでは常に無効）
+  //   ?view=free              … 合言葉なし。印まで
+  //   ?view=light|premium&key= … 合言葉（env PREVIEW_PAID_KEY）が一致したときだけ
   return applyPreview(base, {
     host: Astro?.request?.headers?.get?.('host') || '',
     searchParams: Astro?.url?.searchParams || null,
+    env,
+    venue,
   });
 }
 
