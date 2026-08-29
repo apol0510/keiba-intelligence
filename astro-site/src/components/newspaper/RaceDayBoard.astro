@@ -1,13 +1,28 @@
 ---
 /**
- * RaceDayBoard.astro — 開催 1 日ぶんの紙面（会場タブ + 全レース）
+ * RaceDayBoard.astro — 開催 1 日ぶんの紙面（会場タブ ＋ レースタブ）
  *
  * 正本: docs/RENEWAL_2026_08.md §4
  *
- * 🔴 6 経路（JRA/南関 × guest/free/paid）がこの 1 コンポーネントを共有する。
+ * 🔴 全経路（JRA/南関 × guest/free/paid）がこの 1 コンポーネントを共有する。
  *    片肺修正による退行を構造的に防ぐ（docs/ui-cross-plan-regression-policy.md）。
  *
  * 🔴 tier による出し分けは RaceNewspaper が担当する。ここでは view をそのまま渡すだけ。
+ *
+ * 🔴 2026-08-29 修正（重大・merge 前）:
+ *    旧実装はレース一覧を **ページ内アンカー（`#race-v-rn`）へのジャンプ**で行い、
+ *    全レースを縦に積んでいた。JRA は 3 会場 36 レースで文書高が 24,000px を超えるため、
+ *    `html { scroll-behavior: smooth }`（global.scss）配下でジャンプが成立せず、
+ *    **`scrollY` が 0 のまま動かない**（Chrome で再現。`auto` に切ると 19,097px へ正常移動）。
+ *    結果として「11R を選んだのに 1R が表示されたまま」に見えていた。
+ *
+ *    → **レースもタブ化し、選択したレースだけを表示する**。
+ *      スクロール距離に依存しなくなるため、この不一致は原理的に起こらない。
+ *      会場タブと同じ操作体系に揃う。
+ *
+ * 🔴 表示の一致は「同じ `rn` からタブとパネルの両方を作る」ことで担保する。
+ *    タブのラベル・`data-race-tab`・パネルの `data-race-panel`・`id` はすべて
+ *    同一の `venueIndex` / `rn` から生成し、取り違えの余地を作らない。
  */
 
 import RaceNewspaper from './RaceNewspaper.astro';
@@ -15,6 +30,7 @@ import {
   racesOf, racesResolverFor, featuresResolverForRace, statsResolver,
 } from '../../lib/prediction/loadRaceDay.js';
 import { isMainRace } from '../../utils/mainRaceBetting.js';
+import { verifiedRaceDay } from '../../lib/prediction/raceDayContract.js';
 
 interface Props {
   day: { category: string; date: string | null; venues: any[]; error: string | null };
@@ -22,7 +38,15 @@ interface Props {
   category: 'nankan' | 'jra';
 }
 
-const { day, view, category } = Astro.props;
+const { day: rawDay, view, category } = Astro.props;
+
+/**
+ * 🔴 描画前に venue / date / raceNumber の整合性を検証する（fail-closed）。
+ *    契約を満たさないレースは **描画しない**。
+ *    別レースの予想をそのレースのものとして見せるより、出さない方が安全である。
+ *    契約は `src/lib/prediction/raceDayContract.js`。
+ */
+const { day, dropped } = verifiedRaceDay(rawDay);
 
 const resolveRaces = racesResolverFor(category);
 const resolveStats = statsResolver();
@@ -48,6 +72,30 @@ function formatDate(d: string | null) {
 }
 
 const categoryLabel = category === 'jra' ? '中央競馬' : '南関東';
+
+/**
+ * 会場ごとに「レース番号の一覧」を先に確定させる。
+ * タブとパネルはこの同一配列から作るため、取り違えが起きない。
+ */
+const venueViews = venues.map((venue: any, venueIndex: number) => {
+  const races = racesOf(venue);
+  const total = races.length;
+  return {
+    venue,
+    venueIndex,
+    venueName: venue?.venueName ?? '—',
+    total,
+    entries: races.map((race: any) => {
+      const rn = race?.raceInfo?.raceNumber ?? null;
+      return {
+        race,
+        rn,
+        key: `${venueIndex}-${rn}`,
+        isMain: rn != null && isMainRace(rn, total),
+      };
+    }),
+  };
+});
 ---
 
 {day?.error && venues.length === 0 ? (
@@ -67,112 +115,168 @@ const categoryLabel = category === 'jra' ? '中央競馬' : '南関東';
       <p class="rdb-lead">
         全レースの馬柱・過去走・AI短評・展開予想を<b>無料で公開</b>しています。
       </p>
+      {dropped.length > 0 && (
+        <p class="rdb-dropped">
+          データの整合性を確認できなかったレースが {dropped.length} 件あり、表示していません。
+        </p>
+      )}
     </header>
 
     <!-- 会場タブ（複数会場開催のときだけ） -->
     {isMulti && (
       <nav class="rdb-tabs" role="tablist" aria-label="開催会場">
-        {venues.map((venue: any, vIndex: number) => (
+        {venueViews.map((v) => (
           <button
-            class={`rdb-tab ${vIndex === 0 ? 'is-active' : ''}`}
+            class={`rdb-tab ${v.venueIndex === 0 ? 'is-active' : ''}`}
             type="button"
             role="tab"
-            aria-selected={vIndex === 0 ? 'true' : 'false'}
-            aria-controls={`venue-${vIndex}`}
-            data-venue-tab={vIndex}
+            aria-selected={v.venueIndex === 0 ? 'true' : 'false'}
+            aria-controls={`venue-${v.venueIndex}`}
+            data-venue-tab={String(v.venueIndex)}
           >
-            <span class="rdb-tab-name">{venue.venueName}</span>
-            <span class="rdb-tab-sub">{racesOf(venue).length}R</span>
+            <span class="rdb-tab-name">{v.venueName}</span>
+            <span class="rdb-tab-sub">{v.total}R</span>
           </button>
         ))}
       </nav>
     )}
 
-    {venues.map((venue: any, vIndex: number) => {
-      const races = racesOf(venue);
-      const total = races.length;
-      return (
-        <section
-          class="rdb-venue"
-          id={`venue-${vIndex}`}
-          data-venue={venue.venueName}
-          data-venue-panel={vIndex}
-          hidden={isMulti && vIndex !== 0}
-        >
-          {isMulti && (
-            <h2 class="rdb-venue-title">
-              <span class="rdb-venue-mark">{venue.venueName}</span>
-              <span class="rdb-venue-sub">全{total}レース</span>
-            </h2>
-          )}
+    {venueViews.map((v) => (
+      <section
+        class="rdb-venue"
+        id={`venue-${v.venueIndex}`}
+        data-venue={v.venueName}
+        data-venue-panel={String(v.venueIndex)}
+        hidden={isMulti && v.venueIndex !== 0}
+      >
+        <!-- レースタブ（選択したレースだけを表示する） -->
+        {v.entries.length > 1 && (
+          <nav class="rdb-races" role="tablist" aria-label={`${v.venueName} レース`}>
+            {v.entries.map((e, i) => (
+              <button
+                class={`rdb-race-tab ${e.isMain ? 'is-main' : ''} ${i === 0 ? 'is-active' : ''}`}
+                type="button"
+                role="tab"
+                aria-selected={i === 0 ? 'true' : 'false'}
+                aria-controls={`race-${e.key}`}
+                data-race-tab={e.key}
+                data-venue-index={String(v.venueIndex)}
+              >
+                {e.rn ?? '—'}<i>R</i>
+              </button>
+            ))}
+          </nav>
+        )}
 
-          <!-- レース早送りナビ -->
-          {total > 1 && (
-            <nav class="rdb-nav" aria-label={`${venue.venueName} レース一覧`}>
-              {races.map((r: any) => {
-                const rn = r?.raceInfo?.raceNumber;
-                const main = isMainRace(rn, total);
-                return (
-                  <a class={`rdb-nav-item ${main ? 'is-main' : ''}`} href={`#race-${vIndex}-${rn}`}>
-                    {rn}<i>R</i>
-                  </a>
-                );
-              })}
-            </nav>
-          )}
-
-          {races.map((race: any) => {
-            const rn = race?.raceInfo?.raceNumber;
-            const main = isMainRace(rn, total);
-            return (
-              <div id={`race-${vIndex}-${rn}`} class="rdb-race-anchor">
-                <RaceNewspaper
-                  race={race}
-                  view={view}
-                  venue={category}
-                  resolveRaces={resolveRaces}
-                  resolveFeatures={featuresResolverForRace(race, venue.featureScores)}
-                  resolveStats={resolveStats}
-                  bettingLines={bettingLinesOf(race)}
-                  betType="馬単"
-                  badge={main ? 'メインレース' : null}
-                />
-              </div>
-            );
-          })}
-        </section>
-      );
-    })}
+        {v.entries.map((e, i) => (
+          <div
+            id={`race-${e.key}`}
+            class="rdb-race-panel"
+            data-race-panel={e.key}
+            data-venue-index={String(v.venueIndex)}
+            data-race-number={e.rn == null ? '' : String(e.rn)}
+            hidden={v.entries.length > 1 && i !== 0}
+          >
+            <RaceNewspaper
+              race={e.race}
+              view={view}
+              venue={category}
+              resolveRaces={resolveRaces}
+              resolveFeatures={featuresResolverForRace(e.race, v.venue.featureScores)}
+              resolveStats={resolveStats}
+              bettingLines={bettingLinesOf(e.race)}
+              betType="馬単"
+              badge={e.isMain ? 'メインレース' : null}
+            />
+          </div>
+        ))}
+      </section>
+    ))}
   </div>
 )}
 
 <script>
-  // 会場タブの切り替え（表示のみ。認可には一切関与しない）
-  document.addEventListener('DOMContentLoaded', () => {
-    const tabs = Array.from(document.querySelectorAll('[data-venue-tab]')) as HTMLElement[];
-    if (!tabs.length) return;
-    const panels = Array.from(document.querySelectorAll('[data-venue-panel]')) as HTMLElement[];
+  /*
+   * 会場タブ / レースタブの切り替え（表示のみ。認可には一切関与しない）。
+   *
+   * 🔴 スクロールでの移動は行わない。
+   *    長大ページ + `scroll-behavior: smooth` ではアンカージャンプが成立せず、
+   *    「選んだレースと表示されているレースが違う」状態を生むため
+   *    （2026-08-29 に Chrome で再現・修正）。
+   */
+  function initRaceDayBoard() {
+    const board = document.querySelector('.raceday');
+    if (!board) return;
 
-    function select(index: string) {
-      tabs.forEach((t) => {
+    const venueTabs = Array.from(board.querySelectorAll('[data-venue-tab]')) as HTMLElement[];
+    const venuePanels = Array.from(board.querySelectorAll('[data-venue-panel]')) as HTMLElement[];
+    const raceTabs = Array.from(board.querySelectorAll('[data-race-tab]')) as HTMLElement[];
+    const racePanels = Array.from(board.querySelectorAll('[data-race-panel]')) as HTMLElement[];
+
+    function show(el: HTMLElement, on: boolean) {
+      if (on) el.removeAttribute('hidden');
+      else el.setAttribute('hidden', '');
+    }
+
+    function selectRace(key: string, updateHash: boolean) {
+      const target = racePanels.find((p) => p.getAttribute('data-race-panel') === key);
+      if (!target) return false;
+      const venueIndex = target.getAttribute('data-venue-index');
+
+      racePanels.forEach((p) => {
+        if (p.getAttribute('data-venue-index') !== venueIndex) return;
+        show(p, p.getAttribute('data-race-panel') === key);
+      });
+      raceTabs.forEach((t) => {
+        if (t.getAttribute('data-venue-index') !== venueIndex) return;
+        const on = t.getAttribute('data-race-tab') === key;
+        t.classList.toggle('is-active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+
+      if (updateHash && window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', `#race-${key}`);
+      }
+      return true;
+    }
+
+    function selectVenue(index: string) {
+      venueTabs.forEach((t) => {
         const on = t.getAttribute('data-venue-tab') === index;
         t.classList.toggle('is-active', on);
         t.setAttribute('aria-selected', on ? 'true' : 'false');
       });
-      panels.forEach((p) => {
-        const on = p.getAttribute('data-venue-panel') === index;
-        if (on) p.removeAttribute('hidden');
-        else p.setAttribute('hidden', '');
-      });
+      venuePanels.forEach((p) => show(p, p.getAttribute('data-venue-panel') === index));
     }
 
-    tabs.forEach((t) => {
+    venueTabs.forEach((t) => {
       t.addEventListener('click', () => {
         const idx = t.getAttribute('data-venue-tab');
-        if (idx != null) select(idx);
+        if (idx != null) selectVenue(idx);
       });
     });
-  });
+
+    raceTabs.forEach((t) => {
+      t.addEventListener('click', () => {
+        const key = t.getAttribute('data-race-tab');
+        if (key) selectRace(key, true);
+      });
+    });
+
+    // 直リンク（#race-{venueIndex}-{raceNumber}）に対応する
+    function applyHash() {
+      const m = /^#race-(\d+)-(\d+)$/.exec(window.location.hash || '');
+      if (!m) return;
+      selectVenue(m[1]);
+      selectRace(`${m[1]}-${m[2]}`, false);
+    }
+
+    applyHash();
+    window.addEventListener('hashchange', applyHash);
+  }
+
+  initRaceDayBoard();
+  document.addEventListener('astro:page-load', initRaceDayBoard);
 </script>
 
 <style>
@@ -225,6 +329,63 @@ const categoryLabel = category === 'jra' ? '中央競馬' : '南関東';
 
   .rdb-tab.is-active .rdb-tab-sub { color: var(--primary-end); }
 
+  /* レースタブ */
+  .rdb-races {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 14px;
+    padding: 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+  }
+
+  .rdb-race-tab {
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: center;
+    min-width: 44px;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: var(--bg-muted);
+    color: var(--text-secondary);
+    font-family: var(--font-num);
+    font-weight: 800;
+    font-size: 0.92rem;
+    cursor: pointer;
+    transition: all 140ms ease;
+  }
+
+  .rdb-race-tab i {
+    font-style: normal;
+    font-size: 0.62rem;
+    margin-left: 1px;
+    color: var(--text-tertiary);
+  }
+
+  .rdb-race-tab:hover {
+    background: var(--bg-secondary);
+    border-color: var(--primary-start);
+    color: var(--primary-start);
+  }
+
+  .rdb-race-tab.is-main {
+    background: #fff7e0;
+    color: #8a6a00;
+    box-shadow: inset 0 0 0 1px #f0d68a;
+  }
+
+  .rdb-race-tab.is-active {
+    background: var(--primary-gradient);
+    color: var(--text-inverse);
+    border-color: transparent;
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.28);
+  }
+
+  .rdb-race-tab.is-active i { color: rgba(255, 255, 255, 0.85); }
+
   .rdb-head {
     margin-bottom: 18px;
     padding-bottom: 12px;
@@ -262,78 +423,16 @@ const categoryLabel = category === 'jra' ? '中央競馬' : '南関東';
 
   .rdb-lead b { color: var(--secondary-start); }
 
-  .rdb-venue { margin-bottom: 32px; }
-
-  .rdb-venue-title {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin: 0 0 12px;
-    font-size: 1.2rem;
-  }
-
-  .rdb-venue-mark {
-    font-family: var(--font-serif);
-    font-weight: 700;
-    padding: 3px 12px;
+  .rdb-dropped {
+    margin: 8px 0 0;
+    padding: 8px 12px;
     border-radius: var(--radius-md);
-    background: var(--text-primary);
-    color: var(--text-inverse);
-  }
-
-  .rdb-venue-sub {
+    background: rgba(217, 119, 6, 0.10);
+    color: #92400e;
     font-size: 0.78rem;
-    color: var(--text-tertiary);
-    font-weight: 600;
   }
 
-  .rdb-nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-bottom: 14px;
-    padding: 8px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-  }
-
-  .rdb-nav-item {
-    display: inline-flex;
-    align-items: baseline;
-    justify-content: center;
-    min-width: 40px;
-    padding: 6px 8px;
-    border-radius: var(--radius-md);
-    background: var(--bg-muted);
-    color: var(--text-primary);
-    font-family: var(--font-num);
-    font-weight: 800;
-    font-size: 0.9rem;
-    transition: all var(--transition-fast);
-  }
-
-  .rdb-nav-item i {
-    font-style: normal;
-    font-size: 0.62rem;
-    margin-left: 1px;
-    color: var(--text-tertiary);
-  }
-
-  .rdb-nav-item:hover {
-    background: var(--primary-gradient);
-    color: var(--text-inverse);
-  }
-
-  .rdb-nav-item:hover i { color: rgba(255, 255, 255, 0.8); }
-
-  .rdb-nav-item.is-main {
-    background: var(--accent-yellow);
-    color: #7a5c00;
-    box-shadow: inset 0 0 0 1px #e6bd00;
-  }
-
-  .rdb-race-anchor { scroll-margin-top: 84px; }
+  .rdb-venue { margin-bottom: 32px; }
 
   /* データなし */
   .rdb-empty {
