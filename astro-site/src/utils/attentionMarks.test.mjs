@@ -50,10 +50,10 @@ test('1 頭に複数の印が付く（重複付与）', () => {
   assert.ok(marks.some((m) => m === '○▲△'), '○▲△ の重なりが無い');
 });
 
-test('12 頭立ては ◎4 ○4 ▲5 △10 空欄2（確定した基準形）', () => {
+test('12 頭立ては ◎4 ○5 ▲5 △10 空欄2（確定した基準形）', () => {
   const c = markCounts(field(12));
   assert.equal(c['◎'], 4);
-  assert.equal(c['○'], 4);
+  assert.equal(c['○'], 5);
   assert.equal(c['▲'], 5);
   assert.equal(c['△'], 10);
   assert.equal(c.blank, 2);
@@ -108,19 +108,29 @@ test('少頭数でも △ が狭くならない（相手を絞り込めないこ
 
 /* ---------- 3. 本命は分かる ---------- */
 
-test('評価最上位だけが「◎△」という一意の組み合わせになる', () => {
+test('評価最上位だけが 4 つすべての印（◎○▲△）を持つ', () => {
   for (let n = 7; n <= 18; n += 1) {
     const marks = marksInEvalOrder(field(n));
-    assert.equal(marks[0], '◎△', `${n}頭: 最上位の印が ${marks[0]}`);
-    const same = marks.filter((m) => m === marks[0]).length;
-    assert.equal(same, 1, `${n}頭: 同じ印の馬が ${same} 頭（本命が特定できない）`);
+    assert.equal(marks[0], '◎○▲△', `${n}頭: 最上位の印が ${marks[0]}`);
+    const same = marks.filter((m) => m === '◎○▲△').length;
+    assert.equal(same, 1, `${n}頭: 4 つ揃いの馬が ${same} 頭（本命が特定できない）`);
   }
 });
 
-test('○ は評価順 2 位から始まる（最上位を一意にするため）', () => {
+test('本命が「印の数が最も多い馬」になる（弱く見えてはいけない）', () => {
+  // 当初は最上位を「◎△」にして一意にしていたが、2〜4 位の「◎○△」より
+  // 印が少なく **弱く見える**ため本命として読めなかった（2026-08-29 修正）。
   for (let n = 7; n <= 18; n += 1) {
-    const b = computeMarkBands(n);
-    assert.equal(b.circle[0], 2, `${n}頭: ○ が ${b.circle[0]} 位から`);
+    const marks = marksInEvalOrder(field(n));
+    const max = Math.max(...marks.map((m) => m.length));
+    assert.equal(marks[0].length, max, `${n}頭: 最上位の印が最多でない`);
+    assert.equal(marks.filter((m) => m.length === max).length, 1,
+      `${n}頭: 印が最多の馬が複数いる`);
+    // 2 位以降は必ず最上位より印が少ない
+    for (let i = 1; i < marks.length; i += 1) {
+      assert.ok(marks[i].length < marks[0].length,
+        `${n}頭: ${i + 1} 位の印が最上位と同数以上（${marks[i]}）`);
+    }
   }
 });
 

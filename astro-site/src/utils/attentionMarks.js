@@ -14,12 +14,17 @@
  *
  * 評価順のバンドを重ねる。12 頭立ての例:
  *
- *   評価順  1    2     3     4     5     6   7   8   9   10  11〜
- *   ◎     ●    ●     ●     ●
- *   ○          ●     ●     ●     ●
- *   ▲                            ●     ●   ●   ●   ●
- *   △     ●    ●     ●     ●     ●     ●   ●   ●   ●   ●
- *   表示  ◎△  ◎○△  ◎○△  ◎○△  ○▲△  ▲△ ▲△ ▲△ ▲△  △  （空欄）
+ *   評価順   1      2     3     4     5     6   7   8   9  10  11〜
+ *   ◎      ●      ●     ●     ●
+ *   ○      ●      ●     ●     ●     ●
+ *   ▲      ●                        ●     ●   ●   ●
+ *   △      ●      ●     ●     ●     ●     ●   ●   ●   ●   ●
+ *   表示  ◎○▲△  ◎○△  ◎○△  ◎○△  ○▲△  ▲△ ▲△ ▲△  △   △  （空欄）
+ *
+ * 🔴 **評価最上位だけが 4 つすべての印を持つ**。
+ *    印が多い馬ほど強い、という直感どおりに読めるようにするため。
+ *    （当初は最上位を「◎△」にして一意にしていたが、印が 2 つしかないため
+ *      2〜4 位の「◎○△」より弱く見えるという致命的な読み違いが起きた。2026-08-29 修正）
  *
  * ── 何を見せ、何を残すか ────────────────────────────────────
  * 馬単は **軸と相手の両方**がそろって初めて買える。
@@ -100,25 +105,28 @@ export function evaluationOrder(horses) {
  */
 export function computeMarkBands(fieldSize) {
   const n = Number.isInteger(fieldSize) ? fieldSize : 0;
-  if (n < 3) return { pool: 0, double: 0, circle: [0, 0], filled: [0, 0] };
+  if (n < 3) return { pool: 0, double: 0, circle: 0, filled: [0, 0] };
 
   // △ の頭数。必ず空欄を残す。
   // 🔴 少頭数では「残せるだけ広く」取る（△ が狭いと相手を絞り込めてしまう）。
   const cap = Math.min(POOL_MAX, n - minBlankFor(n));
   const pool = n < SMALL_FIELD ? Math.max(3, cap) : clamp(Math.round(n * 0.8), 3, cap);
-  if (pool < MARK_COUNT_MIN) return { pool, double: 0, circle: [0, 0], filled: [0, 0] };
+  if (pool < MARK_COUNT_MIN) return { pool, double: 0, circle: 0, filled: [0, 0] };
 
-  const double = Math.min(pool, clamp(Math.round(pool * 0.4), MARK_COUNT_MIN, MARK_COUNT_MAX));
-
-  const circleCount = clamp(Math.round(pool * 0.4), MARK_COUNT_MIN, MARK_COUNT_MAX);
-  const circleStart = 2;                                   // 🔴 必ず 2 位から
-  const circleEnd = Math.min(pool, circleStart + circleCount - 1);
-
+  // 各印の「頭数」を先に決める（3〜5 頭）
+  const doubleCount = clamp(Math.round(pool * 0.4), MARK_COUNT_MIN, MARK_COUNT_MAX);
+  const circleCount = clamp(Math.round(pool * 0.5), MARK_COUNT_MIN, MARK_COUNT_MAX);
   const filledCount = clamp(Math.round(pool * 0.5), MARK_COUNT_MIN, MARK_COUNT_MAX);
-  const filledStart = Math.min(pool, circleEnd);           // ○ の末尾と 1 頭重ねる
-  const filledEnd = Math.min(pool, filledStart + filledCount - 1);
 
-  return { pool, double, circle: [circleStart, circleEnd], filled: [filledStart, filledEnd] };
+  const double = Math.min(pool, doubleCount);   // ◎ = 1..double
+  const circle = Math.min(pool, circleCount);   // ○ = 1..circle（最上位を含む）
+
+  // ▲ = {1} ∪ [start, end]
+  // 🔴 start は ◎ の範囲より後ろ（重なると最上位以外も 4 つ揃ってしまう）
+  const filledStart = Math.max(circle, double + 1);
+  const filledEnd = Math.min(pool, filledStart + Math.max(0, filledCount - 2));
+
+  return { pool, double, circle, filled: [filledStart, filledEnd] };
 }
 
 const inBand = (rank, [start, end]) => start > 0 && rank >= start && rank <= end;
@@ -135,8 +143,9 @@ export function assignFreeMarks(horses) {
     const rank = i + 1;
     let marks = '';
     if (bands.double > 0 && rank <= bands.double) marks += '◎';
-    if (inBand(rank, bands.circle)) marks += '○';
-    if (inBand(rank, bands.filled)) marks += '▲';
+    if (bands.circle > 0 && rank <= bands.circle) marks += '○';
+    // 🔴 最上位は必ず ▲ も持つ（4 つすべて＝一番強く見える）
+    if (bands.pool > 0 && (rank === 1 || inBand(rank, bands.filled))) marks += '▲';
     if (bands.pool > 0 && rank <= bands.pool) marks += '△';
     out.set(horse.horseNumber, marks);
   });
