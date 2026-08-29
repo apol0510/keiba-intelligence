@@ -76,6 +76,19 @@ const bundle = buildRaceNarrativeBundle(
 
 const pastOf = (h: any) => normalizePastRaces(resolveRaces ? resolveRaces(h) : h?.recentRaces);
 
+/**
+ * 各レースで 1 頭だけ既定で開く（アコーディオンに気づかない問題への対策）。
+ * 印が見える会員は本命、未登録は先頭（＝馬番順の 1 番）。
+ */
+const defaultOpenHorseNumber = (() => {
+  if (!orderedHorses.length) return null;
+  if (showMarks) {
+    const honmei = orderedHorses.find((h: any) => h?.role === '本命');
+    if (honmei?.horseNumber != null) return honmei.horseNumber;
+  }
+  return orderedHorses[0]?.horseNumber ?? null;
+})();
+
 const distanceLabel = raceInfo?.distance ? `${raceInfo.distance}m` : null;
 const headCount = allHorses.length || raceInfo?.horseCount || null;
 const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => typeof l === 'string' && l.trim()) : [];
@@ -118,6 +131,7 @@ const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => ty
     featuresOf={resolveFeatures}
     pastRacesOf={pastOf}
     statsOf={resolveStats}
+    defaultOpenHorseNumber={defaultOpenHorseNumber}
   />
 
   <!-- ── 結論（印が見える会員のみ） ── -->
@@ -145,7 +159,7 @@ const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => ty
   {!showMarks && (
     <aside class="rp-upsell rp-upsell-free">
       <p class="up-lead">この先は<b>無料会員</b>で見られます</p>
-      <p class="up-desc">印（◎○▲△）とAI総合ptを公開します。登録は<b>メールアドレスだけ・無料</b>です。</p>
+      <p class="up-desc">印（◎○▲△）とAI指数を公開します。登録は<b>メールアドレスだけ・無料</b>です。</p>
       <a class="up-btn" href="/register">無料会員に登録する</a>
       <a class="up-sub" href="/login">ログイン</a>
     </aside>

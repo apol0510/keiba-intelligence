@@ -69,11 +69,36 @@ const categoryLabel = category === 'jra' ? '中央競馬' : '南関東';
       </p>
     </header>
 
+    <!-- 会場タブ（複数会場開催のときだけ） -->
+    {isMulti && (
+      <nav class="rdb-tabs" role="tablist" aria-label="開催会場">
+        {venues.map((venue: any, vIndex: number) => (
+          <button
+            class={`rdb-tab ${vIndex === 0 ? 'is-active' : ''}`}
+            type="button"
+            role="tab"
+            aria-selected={vIndex === 0 ? 'true' : 'false'}
+            aria-controls={`venue-${vIndex}`}
+            data-venue-tab={vIndex}
+          >
+            <span class="rdb-tab-name">{venue.venueName}</span>
+            <span class="rdb-tab-sub">{racesOf(venue).length}R</span>
+          </button>
+        ))}
+      </nav>
+    )}
+
     {venues.map((venue: any, vIndex: number) => {
       const races = racesOf(venue);
       const total = races.length;
       return (
-        <section class="rdb-venue" data-venue={venue.venueName}>
+        <section
+          class="rdb-venue"
+          id={`venue-${vIndex}`}
+          data-venue={venue.venueName}
+          data-venue-panel={vIndex}
+          hidden={isMulti && vIndex !== 0}
+        >
           {isMulti && (
             <h2 class="rdb-venue-title">
               <span class="rdb-venue-mark">{venue.venueName}</span>
@@ -121,7 +146,85 @@ const categoryLabel = category === 'jra' ? '中央競馬' : '南関東';
   </div>
 )}
 
+<script>
+  // 会場タブの切り替え（表示のみ。認可には一切関与しない）
+  document.addEventListener('DOMContentLoaded', () => {
+    const tabs = Array.from(document.querySelectorAll('[data-venue-tab]')) as HTMLElement[];
+    if (!tabs.length) return;
+    const panels = Array.from(document.querySelectorAll('[data-venue-panel]')) as HTMLElement[];
+
+    function select(index: string) {
+      tabs.forEach((t) => {
+        const on = t.getAttribute('data-venue-tab') === index;
+        t.classList.toggle('is-active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      panels.forEach((p) => {
+        const on = p.getAttribute('data-venue-panel') === index;
+        if (on) p.removeAttribute('hidden');
+        else p.setAttribute('hidden', '');
+      });
+    }
+
+    tabs.forEach((t) => {
+      t.addEventListener('click', () => {
+        const idx = t.getAttribute('data-venue-tab');
+        if (idx != null) select(idx);
+      });
+    });
+  });
+</script>
+
 <style>
+  /* 会場タブ */
+  .rdb-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+    padding: 5px;
+    background: var(--bg-muted);
+    border-radius: var(--radius-pill);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rdb-tab {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    flex: 1 0 auto;
+    justify-content: center;
+    padding: 9px 18px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 800;
+    font-size: 0.92rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 140ms ease;
+  }
+
+  .rdb-tab:hover { color: var(--text-primary); }
+
+  .rdb-tab.is-active {
+    background: var(--bg-secondary);
+    color: var(--primary-start);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .rdb-tab-name { font-family: var(--font-serif); }
+
+  .rdb-tab-sub {
+    font-family: var(--font-num);
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    font-weight: 700;
+  }
+
+  .rdb-tab.is-active .rdb-tab-sub { color: var(--primary-end); }
+
   .rdb-head {
     margin-bottom: 18px;
     padding-bottom: 12px;
