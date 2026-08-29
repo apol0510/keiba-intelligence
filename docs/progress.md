@@ -60,7 +60,7 @@
 
 当初実装は無料会員に ◎○▲△・AI指数・評価順の並び・役割バッジを出しており、
 **本命順位がそのまま読める**状態だった（有料の結論を無料で渡していたに等しい）。
-仕様所有者の指示により R-1〜R-7（`docs/RENEWAL_2026_08.md` §2）へ改訂した。
+仕様所有者の指示により R-1〜R-8（`docs/RENEWAL_2026_08.md` §2）へ改訂した。
 
 | # | 規則 | 実装 |
 |---|---|---|
@@ -68,9 +68,10 @@
 | R-2 | 出馬表は常に馬番昇順 | `attentionMarks.sortByHorseNumber` |
 | R-3 | 無料の印は 1 列に重複付与（◎3〜5/○3〜5/▲3〜5/△約10・空欄あり）。評価順 1・2 位は必ず同じ組み合わせ | `attentionMarks.assignFreeMarks`（評価順 → バンド。ランダム不使用） |
 | R-4 | 短評に役割語を入れない | `raceNarrative` の `lead` を廃止 |
-| R-5 | AI指数は有料 tier のみ | `showBetting` で制御 |
+| R-5 | AI指数の実数値は有料のみ。無料はモザイク（値を HTML に含めない） | `maskScore` で `•••` を描画 |
 | R-6 | AI結論は有料 tier のみ（生成もしない） | `allowMarks: showBetting` |
 | R-7 | 詳細アコーディオンは既定ですべて閉じる（自動で開かない） | `RaceEntryTable` の `defaultOpenHorseNumber` を廃止 |
+| R-8 | 有料 tier では印を出さない（列ごと非表示） | `showMarkColumn = showMarks && !showBetting` |
 
 ### 実測で確認した tier 別の描画（2026-08-28・dev server）
 

@@ -26,7 +26,7 @@ const venueNames = day.venues.map((v) => v.venueName).join('・');
 const title = day.date
   ? `${venueNames || '中央競馬'}の予想（${day.date}） - KEIBA Intelligence`
   : '中央競馬 AI予想 - KEIBA Intelligence';
-const description = '中央競馬（JRA）全10場の全レース馬柱・過去走・AI短評・展開予想を無料公開。印（◎○▲△）は無料会員、評価を絞った印と馬単買い目は有料プランで提供しています。';
+const description = '中央競馬（JRA）全10場の全レース馬柱・過去走・AI短評・展開予想を無料公開。印（◎○▲△）は無料会員、AI指数の数値と馬単買い目は有料プランで提供しています。';
 ---
 
 <BaseLayout title={title} description={description}>

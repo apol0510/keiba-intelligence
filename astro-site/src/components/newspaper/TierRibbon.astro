@@ -22,7 +22,7 @@ const items = [
   { label: 'AI短評・レース展望', open: true },
   { label: '展開予想・特徴量', open: true },
   { label: '印（◎○▲△・複数付与）', open: !!view?.showMarks },
-  { label: '評価を絞った印・AI指数', open: !!view?.showBetting },
+  { label: 'AI指数（無料はモザイク）', open: !!view?.showBetting },
   { label: '馬単の買い目', open: !!view?.showBetting },
 ];
 
@@ -34,7 +34,7 @@ const nextStep = !view?.showMarks
 {view?.preview && (
   <p class="tier-preview-note">
     🔎 <b>プレビュー表示中</b>：無料会員に登録したときの見え方です（実際にはログインしていません）。
-    評価を絞った印・AI指数・買い目は有料プランのため、このプレビューでは開きません。
+    AI指数・AI結論・買い目は有料プランのため、このプレビューでは開きません。
   </p>
 )}
 

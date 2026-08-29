@@ -109,12 +109,25 @@ test('RaceEntryTable: 役割バッジを描画しない（HTML に残さない�
   refute(/is-honmei/, src, '本命の行強調が残っている（順位が漏れる）');
 });
 
-test('RaceEntryTable: 序列のある印と AI指数は有料 tier のみ', () => {
+test('RaceEntryTable: 印の列は無料会員のみ（有料では出さない・R-8）', () => {
   const src = read('src/components/newspaper/RaceEntryTable.astro');
-  assert.match(src, /const showRanked = !!view\?\.showBetting/, '序列印の判定が showBetting でない');
-  assert.match(src, /mark: showRanked && h\?\.role/, '◎○▲△ が showRanked で守られていない');
-  assert.match(src, /pt: showRanked &&/, 'AI指数 が showRanked で守られていない');
-  assert.match(src, /\{showRanked && <th class="c-pt">/, 'AI指数の列が showRanked で守られていない');
+  assert.match(src, /const showMarkColumn = showAttention && !showRanked/, '印の列が無料限定でない');
+  assert.match(src, /\{showMarkColumn && <th class="c-mark">/, '印の列が showMarkColumn で守られていない');
+  // 有料向けの役割印を組み立てない
+  const body = code('src/components/newspaper/RaceEntryTable.astro');
+  refute(/getRoleMark/, body, '有料向けの役割印を作っている（印は有料で出さない）');
+});
+
+test('RaceEntryTable: AI指数の実数値は有料 tier のみ。無料はモザイクで値を持たない', () => {
+  const src = read('src/components/newspaper/RaceEntryTable.astro');
+  assert.match(src, /const showRanked = !!view\?\.showBetting/, 'AI指数の判定が showBetting でない');
+  assert.match(src, /const maskScore = showAttention && !showRanked/, 'モザイク判定が無い');
+  assert.match(src, /pt: showRanked &&/, 'AI指数の実数値が showRanked で守られていない');
+  // モザイクは値ではなくプレースホルダを描画する
+  assert.match(src, /maskScore\s*\n?\s*\? <span class="num-pill num-masked"/, 'モザイクを描画していない');
+  assert.match(src, /num-masked[\s\S]*?filter:\s*blur/, 'モザイクの見た目が無い');
+  // 🔴 CSS のぼかしだけで実数値を隠す実装を禁止（開発者ツールで読めるため）
+  assert.ok(!/num-masked[^>]*>\{r\.pt\}/.test(src), 'モザイク内に実数値を描画している');
 });
 
 test('RaceEntryTable: 無料会員の印は「印」1 列に重複付与する', () => {
@@ -122,16 +135,18 @@ test('RaceEntryTable: 無料会員の印は「印」1 列に重複付与する',
   assert.match(src, /const showAttention = !!view\?\.showMarks/, '印の判定が showMarks でない');
   assert.match(src, /assignFreeMarks\(/, '重複印の算出を使っていない');
   assert.match(src, /freeMark/, '重複印を描画していない');
-  assert.match(src, /\{showAttention && <th class="c-mark">/, '印の列が showAttention で守られていない');
+  assert.match(src, /\{showMarkColumn && <th class="c-mark">/, '印の列が showMarkColumn で守られていない');
   // 評価項目別の列を増やさない（印は 1 列だけ）
   const heads = [...src.matchAll(/<th class="c-([a-z]+)"/g)].map((m) => m[1]);
   assert.equal(heads.filter((h) => h === 'mark').length, 1, '印の列が 1 つでない');
 });
 
-test('HorseDetailPanel: AI指数は有料 tier のみ', () => {
+test('HorseDetailPanel: AI指数の実数値は有料 tier のみ。無料はモザイク', () => {
   const src = read('src/components/newspaper/HorseDetailPanel.astro');
   assert.match(src, /const showScore = !!view\?\.showBetting/, 'AI指数の判定が showBetting でない');
+  assert.match(src, /const maskScore = !!view\?\.showMarks && !showScore/, 'モザイク判定が無い');
   assert.match(src, /const pt = showScore &&/, 'AI指数 が showScore で守られていない');
+  assert.match(src, /hdp-pt-masked/, '詳細のモザイクが無い');
 });
 
 test('RaceNewspaper: AI結論（本命の名指し）は有料 tier のみ生成・描画する', () => {
