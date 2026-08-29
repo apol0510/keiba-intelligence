@@ -66,7 +66,7 @@
 |---|---|---|
 | R-1 | 役割バッジを全 tier で出さない（HTML にも残さない） | `RaceEntryTable` から `role-tag` を削除 |
 | R-2 | 出馬表は常に馬番昇順 | `attentionMarks.sortByHorseNumber` |
-| R-3 | 無料の印は 2〜5 頭・同一種類・序列なし | `attentionMarks.attentionHorseNumbers`（Set を返す） |
+| R-3 | 無料の印は 1 列に重複付与（◎3〜5/○3〜5/▲3〜5/△約10・空欄あり）。評価順 1・2 位は必ず同じ組み合わせ | `attentionMarks.assignFreeMarks`（評価順 → バンド。ランダム不使用） |
 | R-4 | 短評に役割語を入れない | `raceNarrative` の `lead` を廃止 |
 | R-5 | AI指数は有料 tier のみ | `showBetting` で制御 |
 | R-6 | AI結論は有料 tier のみ（生成もしない） | `allowMarks: showBetting` |

@@ -6,8 +6,8 @@
  *
  * 🔴 tier による出し分けは **描画そのものを止める**（CSS で隠さない。監査 A-1 の是正）:
  *      guest   … 馬柱・過去走・特徴量・AI短評・レース展望・展開予想
- *      free    … ＋ **注目印**（2〜5 頭・同一種類・序列なし）
- *      light+  … ＋ ◎○▲△ の印・AI指数・AI結論・買い目
+ *      free    … ＋ **印（◎○▲△・1 頭に複数付与・該当しない馬は空欄）**
+ *      light+  … ＋ **評価を絞った単一の印**・AI指数・AI結論・買い目
  *
  * 🔴 並び順は **全 tier で馬番昇順**。評価順に並べ替えない（順位が漏れるため）。
  *
@@ -151,8 +151,8 @@ const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => ty
   <!-- ── 上位導線（権限が無いときだけ出す） ── -->
   {!showMarks && (
     <aside class="rp-upsell rp-upsell-free">
-      <p class="up-lead">注目馬の印は<b>無料会員</b>で見られます</p>
-      <p class="up-desc">注目馬の印を公開します（2〜5頭）。登録は<b>メールアドレスだけ・無料</b>です。</p>
+      <p class="up-lead">印は<b>無料会員</b>で見られます</p>
+      <p class="up-desc">印（◎○▲△）を公開します。1頭に複数の印が付きます。登録は<b>メールアドレスだけ・無料</b>です。</p>
       <a class="up-btn" href="/register">無料会員に登録する</a>
       <a class="up-sub" href="/login">ログイン</a>
     </aside>

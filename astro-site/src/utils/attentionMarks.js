@@ -1,31 +1,55 @@
 /**
- * attentionMarks.js — 無料会員向けの「注目」印（序列を出さない印）
+ * attentionMarks.js — 無料会員向けの印（範囲を広げ、本命を一意に特定させない）
  *
  * 正本: docs/RENEWAL_2026_08.md §3 / §4
  *
- * ── 仕様（2026-08-29 確定）─────────────────────────────────────
- * 無料会員には **本命順位を推測できない印**だけを出す。
+ * ── 仕様（2026-08-29 改訂）─────────────────────────────────────
+ * 「印」は **1 列だけ**。1 頭に **複数の印を重複して付ける**。
  *
- *   - ◎○▲△ のような **序列のある印を使わない**
- *   - **2〜5 頭**にだけ、**同一種類の印**（注目）を付ける
- *   - 出馬表は常に馬番昇順で並べるため、印の並び順からも序列は読めない
+ *   ◎ … 3〜5 頭
+ *   ○ … 3〜5 頭
+ *   ▲ … 3〜5 頭
+ *   △ … 約 10 頭
+ *   それ以外の馬は **空欄**
  *
- * 🔴 役割（本命 / 対抗 / 単穴 / 連下 …）そのものは画面に出さない。
- *    この関数が返すのは「注目に含まれる馬番の集合」だけであり、順序を持たない。
+ * 各印の範囲は KI 評価順の帯（バンド）として重なり合う。
+ * 例（△=10 頭のレース）:
  *
- * 🔴 AI指数（pt）も無料会員には出さない。数値があれば順位が完全に復元できるため。
- *    数値の表示可否は呼び出し側（有料 tier のみ）で制御する。
+ *   評価順  1   2   3   4   5   6   7   8   9  10  11〜
+ *   ◎     ●   ●   ●   ●
+ *   ○             ●   ●   ●   ●
+ *   ▲                     ●   ●   ●   ●   ●
+ *   △     ●   ●   ●   ●   ●   ●   ●   ●   ●   ●
+ *   表示  ◎△ ◎△ ◎○△ ◎○△ ○△ ○▲△ ▲△ ▲△ ▲△ ▲△ （空欄）
+ *
+ * 🔴 **最上位の 2 頭は必ず同じ印の組み合わせになる**（◎ は 3 頭以上、
+ *    ○ と ▲ は評価順 3 位以降から始まるため）。
+ *    したがって印の組み合わせから **本命を一意に特定できない**。
+ *
+ * 🔴 **ランダム・ダミーを使わない。** 印は既存の KI 評価
+ *    （役割の順序 → pt 降順 → 馬番昇順）から決定論的に算出する。
+ *    同じ入力からは常に同じ印になる。
+ *
+ * 🔴 役割語（本命 / 対抗 / …）そのものは画面に出さない。
+ *    本モジュールが返すのは印の文字列だけであり、役割名を含まない。
  */
 
-/** 注目の母集団とする役割（順序の意味は持たせない）。 */
-export const ATTENTION_ROLES = Object.freeze(['本命', '対抗', '単穴', '連下最上位']);
+/** 表示に使う印。この順序は **表示順**であり、評価順の情報ではない。 */
+export const MARK_SYMBOLS = Object.freeze(['◎', '○', '▲', '△']);
 
-export const ATTENTION_MIN = 2;
-export const ATTENTION_MAX = 5;
+/** 各印の頭数の目安。 */
+export const MARK_COUNT_MIN = 3;
+export const MARK_COUNT_MAX = 5;
+export const TRIANGLE_TARGET = 10;
 
-/** 表示に使う単一の印。種類を増やすと序列に見えるため 1 種類だけ。 */
-export const ATTENTION_MARK = '★';
-export const ATTENTION_LABEL = '注目';
+/** KI 評価の順序（役割 → pt → 馬番）。**画面には出さない**。 */
+const ROLE_ORDER = Object.freeze({
+  本命: 1, 対抗: 2, 単穴: 3, 連下最上位: 4, 連下: 5, 補欠: 6, 無: 7,
+});
+
+function clamp(v, lo, hi) {
+  return Math.min(hi, Math.max(lo, v));
+}
 
 function ptOf(horse) {
   const v = horse?.pt;
@@ -33,48 +57,95 @@ function ptOf(horse) {
 }
 
 /**
- * 注目印を付ける馬番の集合を返す。
+ * KI 評価順に並べる（決定論的）。
+ * 役割の順序 → pt 降順 → 馬番昇順。同じ入力からは常に同じ並び。
+ *
+ * 🔴 この並びは **印の算出にだけ使う**。画面の並びは常に馬番昇順。
+ */
+export function evaluationOrder(horses) {
+  const list = Array.isArray(horses) ? horses.filter((h) => h && h.horseNumber != null) : [];
+  return [...list].sort((a, b) => {
+    const ra = ROLE_ORDER[a?.role] ?? 99;
+    const rb = ROLE_ORDER[b?.role] ?? 99;
+    if (ra !== rb) return ra - rb;
+    const pa = ptOf(a);
+    const pb = ptOf(b);
+    if (pa != null && pb != null && pa !== pb) return pb - pa;
+    if (pa == null && pb != null) return 1;
+    if (pa != null && pb == null) return -1;
+    return Number(a.horseNumber) - Number(b.horseNumber);
+  });
+}
+
+/**
+ * 出走頭数から各印のバンド（評価順の範囲・1 始まり・両端含む）を決める。
+ *
+ * 🔴 ○ と ▲ の開始位置は **必ず 3 位以降**。◎ は 3 頭以上。
+ *    これにより評価順 1 位と 2 位の印が必ず一致し、本命を特定できない。
+ *
+ * @param {number} fieldSize 出走頭数
+ */
+export function computeMarkBands(fieldSize) {
+  const n = Number.isInteger(fieldSize) ? fieldSize : 0;
+  if (n <= 0) return { triangleEnd: 0, doubleEnd: 0, circle: [0, 0], filled: [0, 0] };
+
+  // △ の頭数。空欄の馬を必ず残す（印の意味が消えるため）。
+  const d = n <= 3 ? Math.max(0, n - 1) : Math.min(TRIANGLE_TARGET, n - 2);
+  if (d < MARK_COUNT_MIN) {
+    // 極小頭数では △ のみ（バンドを作れない）
+    return { triangleEnd: d, doubleEnd: 0, circle: [0, 0], filled: [0, 0] };
+  }
+
+  const doubleEnd = Math.min(d, clamp(Math.round(d * 0.4), MARK_COUNT_MIN, MARK_COUNT_MAX));
+  const circleCount = clamp(Math.round(d * 0.4), MARK_COUNT_MIN, MARK_COUNT_MAX);
+  const circleStart = 3;                                   // 🔴 必ず 3 位以降
+  const circleEnd = Math.min(d, circleStart + circleCount - 1);
+
+  const filledCount = clamp(Math.round(d * 0.5), MARK_COUNT_MIN, MARK_COUNT_MAX);
+  const filledEnd = d;
+  const filledStart = Math.max(3, filledEnd - filledCount + 1); // 🔴 必ず 3 位以降
+
+  return {
+    triangleEnd: d,
+    doubleEnd,
+    circle: [circleStart, circleEnd],
+    filled: [filledStart, filledEnd],
+  };
+}
+
+const inBand = (rank, [start, end]) => start > 0 && rank >= start && rank <= end;
+
+/**
+ * 馬番 → 印文字列（例: '◎△' / '○▲△' / ''）の Map を作る。
  *
  * @param {Array} horses
- * @param {object} [o]
- * @param {number} [o.min=2]
- * @param {number} [o.max=5]
- * @returns {Set<number>} 馬番の集合（**順序を持たない**）
+ * @returns {Map<number, string>}
  */
-export function attentionHorseNumbers(horses, { min = ATTENTION_MIN, max = ATTENTION_MAX } = {}) {
-  const list = Array.isArray(horses) ? horses.filter((h) => h && h.horseNumber != null) : [];
-  if (!list.length) return new Set();
+export function assignFreeMarks(horses) {
+  const ordered = evaluationOrder(horses);
+  const bands = computeMarkBands(ordered.length);
+  const out = new Map();
 
-  // 1) 役割が注目母集団に入る馬
-  let picked = list.filter((h) => ATTENTION_ROLES.includes(h.role));
+  ordered.forEach((horse, i) => {
+    const rank = i + 1;
+    let marks = '';
+    if (bands.doubleEnd > 0 && rank <= bands.doubleEnd) marks += '◎';
+    if (inBand(rank, bands.circle)) marks += '○';
+    if (inBand(rank, bands.filled)) marks += '▲';
+    if (bands.triangleEnd > 0 && rank <= bands.triangleEnd) marks += '△';
+    out.set(horse.horseNumber, marks);
+  });
 
-  // 2) 少なすぎる場合は pt の高い馬で補う（pt が無い馬は補充に使わない）
-  if (picked.length < min) {
-    const rest = list
-      .filter((h) => !picked.includes(h) && ptOf(h) != null)
-      .sort((a, b) => ptOf(b) - ptOf(a));
-    for (const h of rest) {
-      if (picked.length >= min) break;
-      picked.push(h);
-    }
-  }
+  return out;
+}
 
-  // 3) 多すぎる場合は pt の高い順に上限まで絞る
-  //    （集合として絞るだけで、画面には順序を出さない）
-  if (picked.length > max) {
-    picked = [...picked]
-      .sort((a, b) => (ptOf(b) ?? -Infinity) - (ptOf(a) ?? -Infinity))
-      .slice(0, max);
-  }
-
-  // 4) 出走頭数が少ないレースで全頭に印が付くのを避ける（印の意味が無くなるため）
-  if (picked.length >= list.length && list.length > 0) {
-    picked = [...picked]
-      .sort((a, b) => (ptOf(b) ?? -Infinity) - (ptOf(a) ?? -Infinity))
-      .slice(0, Math.max(0, list.length - 1));
-  }
-
-  return new Set(picked.map((h) => h.horseNumber));
+/** 印ごとの頭数（検証・テスト用）。 */
+export function markCounts(horses) {
+  const marks = [...assignFreeMarks(horses).values()];
+  const counts = {};
+  for (const s of MARK_SYMBOLS) counts[s] = marks.filter((m) => m.includes(s)).length;
+  counts.blank = marks.filter((m) => m === '').length;
+  return counts;
 }
 
 /** 出馬表の並び順。**常に馬番昇順**（評価順に並べ替えない）。 */

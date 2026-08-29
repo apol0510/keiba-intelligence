@@ -117,12 +117,15 @@ test('RaceEntryTable: 序列のある印と AI指数は有料 tier のみ', () =
   assert.match(src, /\{showRanked && <th class="c-pt">/, 'AI指数の列が showRanked で守られていない');
 });
 
-test('RaceEntryTable: 無料会員の印は序列を持たない同一種類の注目印', () => {
+test('RaceEntryTable: 無料会員の印は「印」1 列に重複付与する', () => {
   const src = read('src/components/newspaper/RaceEntryTable.astro');
-  assert.match(src, /const showAttention = !!view\?\.showMarks/, '注目印の判定が showMarks でない');
-  assert.match(src, /attentionHorseNumbers\(/, '注目印の集合を使っていない');
-  assert.match(src, /ATTENTION_MARK/, '単一の注目印を使っていない');
+  assert.match(src, /const showAttention = !!view\?\.showMarks/, '印の判定が showMarks でない');
+  assert.match(src, /assignFreeMarks\(/, '重複印の算出を使っていない');
+  assert.match(src, /freeMark/, '重複印を描画していない');
   assert.match(src, /\{showAttention && <th class="c-mark">/, '印の列が showAttention で守られていない');
+  // 評価項目別の列を増やさない（印は 1 列だけ）
+  const heads = [...src.matchAll(/<th class="c-([a-z]+)"/g)].map((m) => m[1]);
+  assert.equal(heads.filter((h) => h === 'mark').length, 1, '印の列が 1 つでない');
 });
 
 test('HorseDetailPanel: AI指数は有料 tier のみ', () => {
@@ -155,9 +158,8 @@ function template(p) {
   return body.replace(/<style[\s\S]*?<\/style>/g, ' ');
 }
 
-test('予想画面のテンプレートに役割語・序列印の文字列を書かない（HTML に残さない）', () => {
+test('予想画面のテンプレートに役割語を書かない（HTML コメント含め残さない）', () => {
   const RANK_WORDS = ['本命', '対抗', '単穴', '連下', '補欠', 'ヒモ'];
-  const RANK_MARKS = ['◎', '○', '▲', '△', '☆'];
   const files = [
     ...PREDICTION_ROUTES,
     'src/components/newspaper/RaceDayBoard.astro',
@@ -168,20 +170,20 @@ test('予想画面のテンプレートに役割語・序列印の文字列を�
   ];
   for (const f of files) {
     const body = template(f);
-    for (const w of [...RANK_WORDS, ...RANK_MARKS]) {
+    for (const w of RANK_WORDS) {
       assert.ok(!body.includes(w),
         `${f}: テンプレートに「${w}」がある（HTML コメント含め出力される）`);
     }
   }
 });
 
-test('会員導線のコピーに序列印を書かない', () => {
-  for (const f of ['src/pages/index.astro', 'src/pages/pricing.astro',
-    'src/pages/mypage.astro', 'src/pages/register.astro']) {
-    const body = template(f);
-    for (const m of ['◎', '▲']) {
-      assert.ok(!body.includes(m), `${f}: コピーに序列印「${m}」がある`);
-    }
+test('印の記号は算出モジュール由来で、行テンプレートに直書きしない', () => {
+  // 無料の印は `assignFreeMarks` の戻り値、有料の印は `getRoleMark` の戻り値を描画する。
+  // 行テンプレートに ◎ 等を直書きすると、評価と無関係な固定表示になり得るため禁止。
+  const src = template('src/components/newspaper/RaceEntryTable.astro');
+  const rowPart = src.slice(src.indexOf('<tbody'), src.indexOf('</tbody>'));
+  for (const m of ['◎', '○', '▲', '△', '☆']) {
+    assert.ok(!rowPart.includes(m), `行テンプレートに印「${m}」が直書きされている`);
   }
 });
 

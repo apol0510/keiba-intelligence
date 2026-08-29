@@ -11,13 +11,15 @@
  * 🔴 2026-08-29 仕様確定（順位を推測させない）:
  *   1. **役割バッジ（本命 / 対抗 / 単穴 / 連下 …）を全 tier で出さない。HTML にも残さない。**
  *   2. **並びは常に馬番昇順**。AI 評価による並べ替えを行わない。
- *   3. **無料会員の印は序列を持たない**。◎○▲△ をやめ、2〜5 頭に
- *      **同一種類の「注目」印**だけを付ける（`attentionMarks.js`）。
+ *   3. **無料会員の印は「印」1 列に複数を重複付与する**（`attentionMarks.js`）。
+ *      ◎3〜5 / ○3〜5 / ▲3〜5 / △約10 頭を重ねて付け、該当しない馬は空欄。
+ *      評価順 1 位と 2 位は **必ず同じ印の組み合わせ**になるため、
+ *      印から本命を一意に特定できない。ランダム・ダミーは使わない。
  *   4. **AI指数（pt）も無料会員には出さない**。数値があれば順位が完全に復元できるため。
  *   → 序列のある詳細な印と AI指数は **有料 tier（買い目が見える会員）だけ**に描画する。
  *
  * 🔴 tier による出し分けは **描画そのものを止める**（CSS で隠さない）:
- *    - 注目印  … `view.showMarks` が false なら **列ごと出さない**
+ *    - 印（無料の重複印） … `view.showMarks` が false なら **列ごと出さない**
  *    - ◎○▲△・AI指数 … `view.showBetting` が false なら **列ごと出さない**
  *    - 買い目 … このコンポーネントは扱わない
  *
@@ -27,9 +29,7 @@
 
 import HorseDetailPanel from './HorseDetailPanel.astro';
 import { getRoleMark } from '../../utils/sortHorsesByRole.js';
-import {
-  attentionHorseNumbers, ATTENTION_MARK, ATTENTION_LABEL,
-} from '../../utils/attentionMarks.js';
+import { assignFreeMarks } from '../../utils/attentionMarks.js';
 import { toComputerIndex } from '../../utils/computerIndexContract.js';
 import { resolveFrameNumber } from '../../utils/frameNumber.js';
 
@@ -51,15 +51,18 @@ const {
   defaultOpenHorseNumber = null,
 } = Astro.props;
 
-/** 注目印（序列なし）を出してよいか。無料会員以上。 */
+/** 印（無料の重複印）を出してよいか。無料会員以上。 */
 const showAttention = !!view?.showMarks;
 /** 序列のある詳細な印と AI指数を出してよいか。**有料 tier のみ**。 */
 const showRanked = !!view?.showBetting;
 
 const fieldSize = horses.length;
 
-/** 注目に含まれる馬番の集合（順序を持たない）。 */
-const attention = showAttention && !showRanked ? attentionHorseNumbers(horses) : new Set<number>();
+/**
+ * 無料会員向けの印（馬番 → '◎△' のような文字列）。
+ * KI 評価から決定論的に算出する。有料 tier では役割の印を使うため作らない。
+ */
+const freeMarks = showAttention && !showRanked ? assignFreeMarks(horses) : new Map<number, string>();
 
 function markClass(role: string | undefined) {
   switch (role) {
@@ -98,11 +101,11 @@ const rows = horses.map((h: any) => {
     frameClass: frame && frame >= 1 && frame <= 8 ? `waku-${frame}` : 'waku-none',
     number: h?.horseNumber ?? null,
     name: h?.horseName || '—',
-    // 🔴 序列のある印は有料 tier のみ。無料は注目印（同一種類）だけ。
+    // 🔴 評価を絞った単一の印は有料 tier のみ。無料は重複付与の印を使う。
     mark: showRanked && h?.role ? getRoleMark(h.role) : null,
     markClass: markClass(h?.role),
-    // 🔴 注目印は集合に含まれるかどうかだけ。強弱を持たせない。
-    attention: attention.has(h?.horseNumber),
+    // 🔴 無料の印は複数を重複付与した文字列（例: '◎△' / '○▲△' / ''）
+    freeMark: freeMarks.get(h?.horseNumber) || '',
     // 🔴 AI指数は有料 tier のみ（数値があれば順位が復元できるため）
     pt: showRanked && typeof h?.pt === 'number' && Number.isFinite(h.pt) ? h.pt : null,
     age: h?.age || null,
@@ -138,7 +141,7 @@ const colCount = 3 // 枠 / 馬番 / 馬名
         <th class="c-waku"><span class="sr">枠</span></th>
         <th class="c-num">馬番</th>
         <th class="c-name">馬名 ／ AI短評</th>
-        {showAttention && <th class="c-mark">{showRanked ? '印' : ATTENTION_LABEL}</th>}
+        {showAttention && <th class="c-mark">印</th>}
         {showRanked && <th class="c-pt">AI指数</th>}
         {hasBaseIndex && <th class="c-base">基礎指数</th>}
         {hasAge && <th class="c-age">性齢</th>}
@@ -172,7 +175,7 @@ const colCount = 3 // 枠 / 馬番 / 馬名
                 <td class="c-mark">
                   {showRanked
                     ? (r.mark ? <span class={`mark ${r.markClass}`}>{r.mark}</span> : '')
-                    : (r.attention ? <span class="mark mk-attention" title={ATTENTION_LABEL}>{ATTENTION_MARK}</span> : '')}
+                    : (r.freeMark ? <span class="mark mk-free">{r.freeMark}</span> : '')}
                 </td>
               )}
               {showRanked && <td class="c-pt">{r.pt != null ? <span class="num-pill num-pt">{r.pt}</span> : ''}</td>}
@@ -401,12 +404,17 @@ const colCount = 3 // 枠 / 馬番 / 馬名
   .num-base { background: rgba(124, 58, 237, 0.10); color: #6d28d9; }
 
   .mark { font-size: 1.25rem; font-weight: 700; line-height: 1; }
+  .c-mark { min-width: 4.6em; }
   .mk-honmei { color: var(--mark-honmei); }
   .mk-taiko  { color: var(--mark-taiko); }
   .mk-tana   { color: var(--mark-tana); }
   .mk-renka  { color: var(--mark-renka); }
-  /* 注目印は 1 種類だけ。強弱・序列を付けない */
-  .mk-attention { color: var(--secondary-start); }
+  /* 無料の重複印。1 セルに複数並ぶため字間を詰める */
+  .mk-free {
+    color: var(--text-primary);
+    letter-spacing: -0.04em;
+    white-space: nowrap;
+  }
 
   .c-age, .c-weight { font-family: var(--font-num); color: var(--text-secondary); font-size: 0.8rem; }
   .c-jockey, .c-trainer { font-size: 0.8rem; color: var(--text-secondary); }

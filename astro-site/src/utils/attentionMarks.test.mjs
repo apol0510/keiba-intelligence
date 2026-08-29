@@ -1,13 +1,14 @@
 /**
- * attentionMarks.test.mjs — 無料会員に本命順位を漏らさないことを固定する
+ * attentionMarks.test.mjs — 無料会員の印仕様（重複付与）を固定する
  *
  * 実行: node --test src/utils/attentionMarks.test.mjs （astro-site 直下から）
  *
- * 仕様（docs/RENEWAL_2026_08.md §3 / §4・2026-08-29 確定）:
- *   1. 印が付くのは **2〜5 頭**
- *   2. 印は **同一種類 1 つだけ**（◎○▲△ のような序列を作らない）
- *   3. 返すのは **集合**であり、順序を持たない
- *   4. 出馬表は **常に馬番昇順**
+ * 仕様（docs/RENEWAL_2026_08.md §2 R-3・2026-08-29 改訂）:
+ *   1. 「印」1 列に **複数の印を重複付与**する（1 頭に ◎○▲△ が複数付きうる）
+ *   2. 目安は ◎3〜5 / ○3〜5 / ▲3〜5 / △約10 頭。該当しない馬は空欄
+ *   3. **評価順 1 位と 2 位は必ず同じ印の組み合わせ** → 本命を一意に特定できない
+ *   4. **ランダム・ダミーを使わない**。KI 評価から決定論的に算出する
+ *   5. 画面の並びは常に馬番昇順（印の算出順とは別）
  */
 
 import { test } from 'node:test';
@@ -17,136 +18,185 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  attentionHorseNumbers, sortByHorseNumber,
-  ATTENTION_MARK, ATTENTION_LABEL, ATTENTION_MIN, ATTENTION_MAX, ATTENTION_ROLES,
+  assignFreeMarks, markCounts, evaluationOrder, computeMarkBands,
+  sortByHorseNumber, MARK_SYMBOLS, MARK_COUNT_MIN, MARK_COUNT_MAX,
 } from './attentionMarks.js';
 import { loadNankanRaceDay, loadJraRaceDay, racesOf } from '../lib/prediction/loadRaceDay.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
 
-const mk = (n, role, pt) => ({ horseNumber: n, role, pt });
+const ROLES = ['本命', '対抗', '単穴', '連下最上位'];
 
-/** 9 頭立ての典型（本命1・対抗1・単穴1・連下最上位1・連下3・補欠2） */
-const FIELD = [
-  mk(1, '連下', 126), mk(2, '補欠', 117), mk(3, '連下最上位', 131),
-  mk(4, '対抗', 135), mk(5, '連下', 122), mk(6, '本命', 150),
-  mk(7, '連下', 120), mk(8, '連下', 123), mk(9, '補欠', 119),
-];
+/** n 頭立ての典型的な評価（上位 4 頭に役割、以降は連下）。 */
+function field(n) {
+  return Array.from({ length: n }, (_, i) => ({
+    horseNumber: i + 1,
+    horseName: `馬${i + 1}`,
+    role: ROLES[i] || '連下',
+    pt: 200 - i,
+  }));
+}
 
-/* ---------- 1. 印は 2〜5 頭 ---------- */
+/** 評価順に並べた印の配列。 */
+function marksInEvalOrder(horses) {
+  const m = assignFreeMarks(horses);
+  return evaluationOrder(horses).map((h) => m.get(h.horseNumber));
+}
 
-test('印が付くのは 2〜5 頭', () => {
-  const s = attentionHorseNumbers(FIELD);
-  assert.ok(s.size >= ATTENTION_MIN && s.size <= ATTENTION_MAX, `size=${s.size}`);
+/* ---------- 1. 複数付与 ---------- */
+
+test('1 頭に複数の印が付く（重複付与）', () => {
+  const marks = marksInEvalOrder(field(12));
+  assert.ok(marks.some((m) => m.length > 1), '複数印が 1 つも無い');
+  assert.ok(marks.some((m) => m.includes('◎') && m.includes('△')), '◎△ の重複が無い');
+  assert.ok(marks.some((m) => m.includes('○') && m.includes('▲')), '○▲ の重複が無い');
 });
 
-test('役割該当が 1 頭しかなくても 2 頭まで補う', () => {
-  const s = attentionHorseNumbers([mk(1, '本命', 150), mk(2, '連下', 120), mk(3, '連下', 118)]);
-  assert.equal(s.size, 2);
+test('該当しない馬は空欄', () => {
+  const counts = markCounts(field(16));
+  assert.ok(counts.blank > 0, '空欄の馬がいない');
 });
 
-test('役割該当が多すぎても 5 頭を超えない', () => {
-  const many = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => mk(n, '本命', 150 - n));
-  assert.equal(attentionHorseNumbers(many).size, ATTENTION_MAX);
-});
+/* ---------- 2. 頭数の目安 ---------- */
 
-test('全頭に印を付けない（印の意味が消えるため）', () => {
-  for (const size of [2, 3]) {
-    const field = Array.from({ length: size }, (_, i) => mk(i + 1, '本命', 150 - i));
-    const s = attentionHorseNumbers(field);
-    assert.ok(s.size < size, `${size}頭立てで全頭に印が付いた`);
+test('12〜18 頭立てで ◎○▲ が 3〜5 頭、△ が 10 頭', () => {
+  for (let n = 12; n <= 18; n += 1) {
+    const c = markCounts(field(n));
+    for (const s of ['◎', '○', '▲']) {
+      assert.ok(c[s] >= MARK_COUNT_MIN && c[s] <= MARK_COUNT_MAX,
+        `${n}頭: ${s} が ${c[s]} 頭（3〜5 の範囲外）`);
+    }
+    assert.equal(c['△'], 10, `${n}頭: △ が ${c['△']} 頭`);
+    assert.ok(c.blank >= 2, `${n}頭: 空欄が ${c.blank} 頭`);
   }
 });
 
-test('出走馬がいなければ空', () => {
-  assert.equal(attentionHorseNumbers([]).size, 0);
-  assert.equal(attentionHorseNumbers(null).size, 0);
-});
-
-/* ---------- 2. 順位が漏れない ---------- */
-
-test('返り値は集合で、順序を持たない', () => {
-  const s = attentionHorseNumbers(FIELD);
-  assert.ok(s instanceof Set, 'Set でない（順序を持つ配列は順位が漏れる）');
-});
-
-test('印は 1 種類だけ（序列を作らない）', () => {
-  assert.equal(typeof ATTENTION_MARK, 'string');
-  assert.ok(ATTENTION_MARK.length > 0);
-  // ◎○▲△ を使わない
-  for (const m of ['◎', '○', '▲', '△', '☆']) {
-    assert.notEqual(ATTENTION_MARK, m, `序列のある印 ${m} を使っている`);
+test('頭数が少ないレースでは △ が出走頭数−2 まで縮む（空欄を必ず残す）', () => {
+  for (let n = 7; n <= 11; n += 1) {
+    const c = markCounts(field(n));
+    assert.equal(c['△'], n - 2, `${n}頭: △ が ${c['△']} 頭`);
+    assert.ok(c.blank >= 2, `${n}頭: 空欄が ${c.blank} 頭`);
   }
 });
 
-test('印の集合から本命が特定できない（本命だけの印を作らない）', () => {
-  const s = attentionHorseNumbers(FIELD);
-  // 本命(6) を含むが、対抗(4)・単穴(3) も同じ印なので本命は特定できない
-  assert.ok(s.size >= 2, '印が 1 頭だけだと本命が特定できてしまう');
+test('8 頭以上なら ◎○▲ は 3〜5 頭に収まる', () => {
+  for (let n = 8; n <= 18; n += 1) {
+    const c = markCounts(field(n));
+    for (const s of ['◎', '○', '▲']) {
+      assert.ok(c[s] >= MARK_COUNT_MIN && c[s] <= MARK_COUNT_MAX,
+        `${n}頭: ${s} が ${c[s]} 頭`);
+    }
+  }
 });
 
-test('ATTENTION_ROLES に順序の意味を持たせない（集合として扱う）', () => {
-  const a = attentionHorseNumbers(FIELD);
-  const shuffled = [...FIELD].reverse();
-  const b = attentionHorseNumbers(shuffled);
-  assert.deepEqual([...a].sort((x, y) => x - y), [...b].sort((x, y) => x - y),
-    '入力順で結果が変わる（順序に依存している）');
+/* ---------- 3. 本命が一意に特定できない ---------- */
+
+test('評価順 1 位と 2 位は必ず同じ印の組み合わせ', () => {
+  for (let n = 4; n <= 18; n += 1) {
+    const marks = marksInEvalOrder(field(n));
+    assert.equal(marks[0], marks[1],
+      `${n}頭: 1 位「${marks[0]}」と 2 位「${marks[1]}」が違う（本命が特定できる）`);
+  }
 });
 
-/* ---------- 3. 並び順 ---------- */
-
-test('sortByHorseNumber: 常に馬番昇順', () => {
-  const sorted = sortByHorseNumber(FIELD).map((h) => h.horseNumber);
-  assert.deepEqual(sorted, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+test('最上位の印の組み合わせを持つ馬が必ず 2 頭以上いる', () => {
+  for (let n = 4; n <= 18; n += 1) {
+    const marks = marksInEvalOrder(field(n));
+    const same = marks.filter((m) => m === marks[0]).length;
+    assert.ok(same >= 2, `${n}頭: 最上位と同じ印の馬が ${same} 頭しかいない`);
+  }
 });
 
-test('sortByHorseNumber: pt や role の影響を受けない', () => {
-  const byPt = [...FIELD].sort((a, b) => b.pt - a.pt);
+test('○ と ▲ は評価順 3 位以降から始まる（1・2 位を分けない）', () => {
+  for (let n = 5; n <= 18; n += 1) {
+    const b = computeMarkBands(Math.min(10, n <= 3 ? n - 1 : n - 2));
+    if (b.circle[0] > 0) assert.ok(b.circle[0] >= 3, `${n}頭: ○ が ${b.circle[0]} 位から`);
+    if (b.filled[0] > 0) assert.ok(b.filled[0] >= 3, `${n}頭: ▲ が ${b.filled[0]} 位から`);
+  }
+});
+
+/* ---------- 4. 決定論（ランダム・ダミーを使わない） ---------- */
+
+test('同じ入力からは常に同じ印になる', () => {
+  const a = [...assignFreeMarks(field(14)).entries()].sort();
+  const b = [...assignFreeMarks(field(14)).entries()].sort();
+  assert.deepEqual(a, b);
+});
+
+test('入力の並び順を変えても印が変わらない', () => {
+  const f = field(14);
+  const a = [...assignFreeMarks(f).entries()].sort();
+  const b = [...assignFreeMarks([...f].reverse()).entries()].sort();
+  assert.deepEqual(a, b, '入力順に依存している');
+});
+
+test('印は KI 評価に連動する（pt を入れ替えると印も入れ替わる）', () => {
+  const f = field(12).map((h) => ({ ...h, role: '連下' })); // 役割を同一にして pt だけで決める
+  const before = assignFreeMarks(f);
+  const swapped = f.map((h) => (h.horseNumber === 1 ? { ...h, pt: 0 } : h));
+  const after = assignFreeMarks(swapped);
+  assert.notEqual(before.get(1), after.get(1), '評価を落としても印が変わらない');
+});
+
+test('実装がランダムを使っていない', () => {
+  const src = read('src/utils/attentionMarks.js');
+  assert.ok(!/Math\.random/.test(src), 'ランダムを使っている');
+  assert.ok(!/Date\.now|new Date/.test(src), '時刻に依存している');
+});
+
+/* ---------- 5. 並び順 ---------- */
+
+test('sortByHorseNumber: 常に馬番昇順（評価の影響を受けない）', () => {
+  const byPt = [...field(12)].sort((a, b) => a.pt - b.pt);
   assert.deepEqual(
     sortByHorseNumber(byPt).map((h) => h.horseNumber),
-    [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
   );
-});
-
-test('sortByHorseNumber: 馬番が無い馬は末尾へ（例外を投げない）', () => {
-  const out = sortByHorseNumber([mk(3, '連下', 1), { horseName: 'x' }, mk(1, '本命', 2)]);
-  assert.deepEqual(out.map((h) => h.horseNumber), [1, 3, undefined]);
   assert.deepEqual(sortByHorseNumber(null), []);
 });
 
-/* ---------- 4. 実データ（全レースで 2〜5 頭） ---------- */
+/* ---------- 6. 実データ ---------- */
 
-test('実データ: 全レースで印が 2〜5 頭に収まる', () => {
+test('実データ: 全レースで印の頭数と非一意性を満たす', () => {
+  let checked = 0;
+  const bad = [];
   for (const load of [loadNankanRaceDay, loadJraRaceDay]) {
     const day = load(ROOT);
     if (day.error && !day.venues.length) continue;
     for (const venue of day.venues) {
       for (const race of racesOf(venue)) {
         const horses = race?.horses || [];
-        if (horses.length < 2) continue;
-        const s = attentionHorseNumbers(horses);
-        assert.ok(
-          s.size >= ATTENTION_MIN && s.size <= ATTENTION_MAX,
-          `${venue.venueName} ${race.raceInfo.raceNumber}R: 印が ${s.size} 頭（2〜5 の範囲外）`,
-        );
-        assert.ok(s.size < horses.length, `${venue.venueName} ${race.raceInfo.raceNumber}R: 全頭に印`);
+        if (horses.length < 4) continue;
+        checked += 1;
+        const c = markCounts(horses);
+        const marks = marksInEvalOrder(horses);
+        const label = `${venue.venueName}${race.raceInfo.raceNumber}R(${horses.length}頭)`;
+
+        for (const s of ['◎', '○', '▲']) {
+          if (c[s] < MARK_COUNT_MIN || c[s] > MARK_COUNT_MAX) bad.push(`${label}: ${s}=${c[s]}`);
+        }
+        // △ は 10 頭、頭数が少なければ 出走頭数-2
+        const expectedTriangle = Math.min(10, horses.length - 2);
+        if (c['△'] !== expectedTriangle) bad.push(`${label}: △=${c['△']}（期待 ${expectedTriangle}）`);
+        if (c.blank < 1) bad.push(`${label}: 空欄なし`);
+        if (marks[0] !== marks[1]) bad.push(`${label}: 上位2頭の印が異なる`);
       }
     }
   }
+  assert.ok(checked > 0, '検査対象が 0 レース');
+  assert.deepEqual(bad.slice(0, 5), [], `${bad.length} 件の逸脱`);
 });
 
-/* ---------- 5. 配線の静的検証 ---------- */
+/* ---------- 7. 配線 ---------- */
 
-test('RaceEntryTable が注目印の仕組みを使っている', () => {
+test('RaceEntryTable が重複印の仕組みを使っている', () => {
   const src = read('src/components/newspaper/RaceEntryTable.astro');
-  assert.match(src, /attentionHorseNumbers\(/);
-  assert.match(src, /ATTENTION_MARK/);
+  assert.match(src, /assignFreeMarks\(/, '重複印の算出を使っていない');
   assert.ok(!/role-tag/.test(src), '役割バッジが残っている');
+  assert.match(src, /freeMark/, '印の描画が重複印を使っていない');
 });
 
-test('ATTENTION_LABEL が役割語でない', () => {
-  for (const w of ['本命', '対抗', '単穴', '連下', '補欠']) {
-    assert.ok(!ATTENTION_LABEL.includes(w), `印のラベルに役割語「${w}」が入っている`);
-  }
+test('印は ◎○▲△ の 4 種類だけ', () => {
+  assert.deepEqual(MARK_SYMBOLS, ['◎', '○', '▲', '△']);
 });
