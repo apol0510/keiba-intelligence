@@ -64,10 +64,8 @@ export async function handler(event) {
       user: { email: ent.email },
       tier: ent.tier,
       tierLabel: ent.tierLabel,
-      venueAccess: ent.venueAccess,
       showMarks: ent.showMarks,
       showBetting: ent.showBetting,
-      showPremiumExtras: ent.showPremiumExtras,
       expiresAt: ent.expiresAtMs ? new Date(ent.expiresAtMs).toISOString() : null,
     }),
   };

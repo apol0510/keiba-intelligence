@@ -29,7 +29,7 @@
 
 - 本番URL: `https://keiba-intelligence.jp/`
   （`https://keiba-intelligence.netlify.app/*` は `netlify.toml` の 301 で独自ドメインへ恒久転送）
-- 提供物: 無料予想ページ / 有料予想ページ（light・premium）/ 月別アーカイブ / 的中実績・回収率
+- 提供物: 無料予想ページ / 有料予想ページ（premium）/ 月別アーカイブ / 的中実績・回収率
 - 収益モデル: 無料 / 無料会員（登録要）/ 買い切り / 年払い（金額は `CLAUDE.md`・`README.md` に記載。本書では価格を正本化しない）
 
 ## 2. Responsibilities
@@ -175,7 +175,8 @@ devDependency: `netlify-cli ^23.5.0`。Node は `netlify.toml` で `NODE_VERSION
 5. **URL 契約**
    `astro-site/netlify.toml` の 301 リダイレクト群（`/archive-jra/*`→`/archive/jra/*`、`/prediction-jra/*`→`/prediction/jra/*` 等）は既存被リンクの互換性維持。削除しない。
 6. **UI 横断契約**
-   予想画面の UI 修正は JRA/南関 × free/light/premium の **6経路すべて** を対象とする（`docs/ui-cross-plan-regression-policy.md`）。1経路だけ直して完了としない。
+   予想画面の UI 修正は JRA/南関 × guest/free/premium の **6経路すべて** を対象とする（`docs/ui-cross-plan-regression-policy.md`）。1経路だけ直して完了としない。
+   🔴 **会場（JRA/南関）で権限を分けてはいけない**（2026-08-30 に廃止。`RENEWAL_2026_08.md` §3）。
 8. **`computerIndex` 契約（fail-closed / 2026-07-20）**
    `computerIndex` の有効値は **10–99 の整数**のみ。`null` / 空 / `1`–`9` / 100 以上 / 非整数 / 非数値は
    **値なし**として扱い、正本値として使用しない。契約外の値を `0` / `10` / `50` 等へ置換しない（推測補完禁止）。
@@ -260,6 +261,9 @@ devDependency: `netlify-cli ^23.5.0`。Node は `netlify.toml` で `NODE_VERSION
 
 2026-08-28 着手。無料開放の再設計・競馬新聞レイアウト・文章化エンジン・Stripe 月額課金・
 サーバー側認可の是正・KMA 連携・ライト基調デザインを扱う。
+
+2026-08-30 改定: **ライトプランを保留**し、**会場別アクセス（`venueAccess`）を廃止**。
+課金は **月額プレミアム 1 本**（正規 ¥5,000 → 割引 ¥3,980）＋ **銀行振込の年払い ¥39,800**。
 
 **スコープ・tier 定義・完成条件の正本は [`docs/RENEWAL_2026_08.md`](./RENEWAL_2026_08.md)。**
 本書ではその内容を重複させない。§6 Contracts / §10 Prohibited Changes は改修中も有効であり、

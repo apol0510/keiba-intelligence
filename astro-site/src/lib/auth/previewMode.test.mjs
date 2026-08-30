@@ -74,7 +74,6 @@ test('?view=free は合言葉なしで印まで（買い目は開かない）', 
   assert.equal(e.tier, TIER.FREE);
   assert.equal(e.showMarks, true);
   assert.equal(e.showBetting, false, 'free で買い目が開いた');
-  assert.equal(e.showPremiumExtras, false);
   assert.equal(e.preview, true);
   assert.equal(e.authenticated, false, '本物のログイン扱いにしてはいけない');
 });
@@ -115,13 +114,11 @@ test('合言葉が一致すれば light / premium が開く', () => {
   assert.equal(light.tier, TIER.LIGHT);
   assert.equal(light.showMarks, true);
   assert.equal(light.showBetting, true);
-  assert.equal(light.showPremiumExtras, false);
   assert.equal(light.preview, true);
 
   const prem = applyPreview(guest, { host: HOST, searchParams: qs(`view=premium&key=${KEY}`), env: ENV });
   assert.equal(prem.tier, TIER.PREMIUM);
   assert.equal(prem.showBetting, true);
-  assert.equal(prem.showPremiumExtras, true);
   assert.equal(prem.authenticated, false, '本物のログイン扱いにしてはいけない');
 });
 

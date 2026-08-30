@@ -7,8 +7,8 @@
  * 仕様所有者が各 tier の見え方を **ログインせずに** 確認するための仕組み。
  *
  *   `?view=free`                     … 合言葉なし。印まで開く
- *   `?view=light&key=…`              … 合言葉必須。買い目まで開く（対象会場のみ）
- *   `?view=premium&key=…`            … 合言葉必須。全会場の買い目まで開く
+ *   `?view=light&key=…`              … 合言葉必須。買い目まで開く
+ *   `?view=premium&key=…`            … 合言葉必須。買い目まで開く
  *
  * ── 🔴 安全契約（ここを緩めない）─────────────────────────────────
  *  1. **本番ホストでは常に無効。** `keiba-intelligence.jp` / `www.` /
@@ -30,7 +30,7 @@
  */
 
 import { timingSafeEqual } from 'node:crypto';
-import { TIER, tierAtLeast, tierRank, canSeeMarks, canSeeBetting, canSeePremiumExtras, tierLabel } from './tiers.js';
+import { TIER, tierAtLeast, tierRank, canSeeMarks, canSeeBetting, tierLabel } from './tiers.js';
 
 /** クエリパラメータ名。 */
 export const PREVIEW_PARAM = 'view';
@@ -138,14 +138,12 @@ export function applyPreview(entitlement, o = {}) {
   // 🔴 既に本物のセッションが同等以上なら何もしない（下げも上げもしない）
   if (tierAtLeast(base.tier, previewTier)) return base;
 
-  const venueAccess = base.venueAccess || 'all';
   return Object.freeze({
     ...base,
     tier: previewTier,
     tierLabel: `${tierLabel(previewTier)}（プレビュー）`,
     showMarks: canSeeMarks(previewTier),
-    showBetting: canSeeBetting(previewTier, { venue: o.venue, venueAccess }),
-    showPremiumExtras: canSeePremiumExtras(previewTier),
+    showBetting: canSeeBetting(previewTier),
     // 本物のログインではない
     authenticated: false,
     preview: true,

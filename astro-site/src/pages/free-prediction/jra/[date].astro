@@ -16,7 +16,7 @@ export const prerender = false;
 
 const { date } = Astro.params;
 
-const entitlement = entitlementFromAstro(Astro, { venue: 'jra' });
+const entitlement = entitlementFromAstro(Astro);
 const view = viewFlags(entitlement);
 const day = loadJraRaceDayByDate(date, process.cwd());
 

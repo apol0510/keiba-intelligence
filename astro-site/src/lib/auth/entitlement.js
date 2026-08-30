@@ -13,8 +13,8 @@
  */
 
 import {
-  TIER, canSeeMarks, canSeeBetting, canSeePremiumExtras,
-  tierLabel, tierAtLeast, applyExpiry, normalizeVenueAccess,
+  TIER, canSeeMarks, canSeeBetting,
+  tierLabel, tierAtLeast, applyExpiry,
 } from './tiers.js';
 import { verifySession, readSessionToken } from './session.js';
 import { applyPreview } from './previewMode.js';
@@ -30,12 +30,10 @@ function guestEntitlement(reason) {
     tier: TIER.GUEST,
     tierLabel: tierLabel(TIER.GUEST),
     email: null,
-    venueAccess: 'all',
     authenticated: false,
     reason,
     showMarks: false,
     showBetting: false,
-    showPremiumExtras: false,
     expiresAtMs: null,
   });
 }
@@ -57,10 +55,11 @@ export function resolveSessionSecret(env) {
  * @param {string|null} o.cookieHeader  リクエストの Cookie ヘッダー
  * @param {object} o.env                署名鍵を含む env
  * @param {number} [o.nowMs]
- * @param {string} [o.venue]            'nankan' | 'jra'。買い目の会場判定に使う
  * @returns {Readonly<object>}
+ *
+ * 🔴 会場（venue）は受け取らない。買い目は会場で分けない（2026-08-30）。
  */
-export function resolveEntitlement({ cookieHeader, env, nowMs = Date.now(), venue } = {}) {
+export function resolveEntitlement({ cookieHeader, env, nowMs = Date.now() } = {}) {
   try {
     const secret = resolveSessionSecret(env);
     if (!secret) return guestEntitlement('secret_missing');
@@ -74,18 +73,15 @@ export function resolveEntitlement({ cookieHeader, env, nowMs = Date.now(), venu
     const s = verified.session;
     // セッション内の tier は署名済みだが、有効期限切れの有料は free へ落とす
     const tier = applyExpiry(s.tier, null, nowMs);
-    const venueAccess = normalizeVenueAccess(s.venueAccess);
 
     return Object.freeze({
       tier,
       tierLabel: tierLabel(tier),
       email: s.email,
-      venueAccess,
       authenticated: tierAtLeast(tier, TIER.FREE),
       reason: 'ok',
       showMarks: canSeeMarks(tier),
-      showBetting: canSeeBetting(tier, { venue, venueAccess }),
-      showPremiumExtras: canSeePremiumExtras(tier),
+      showBetting: canSeeBetting(tier),
       expiresAtMs: s.expiresAtMs,
     });
   } catch {
@@ -98,17 +94,19 @@ export function resolveEntitlement({ cookieHeader, env, nowMs = Date.now(), venu
  * Astro ページ用のショートカット。
  *
  * 使い方（.astro の frontmatter）:
- *   const ent = entitlementFromAstro(Astro, { venue: 'nankan' });
+ *   const ent = entitlementFromAstro(Astro);
  *   if (ent.showBetting) { ... }
+ *
+ * 🔴 `venue` は受け取らない（会場で分けない）。
  */
-export function entitlementFromAstro(Astro, { venue, nowMs } = {}) {
+export function entitlementFromAstro(Astro, { nowMs } = {}) {
   const cookieHeader = Astro?.request?.headers?.get?.('cookie') || null;
   // import.meta.env は Astro のビルド/実行時 env。Netlify では process.env も併用する。
   const env = {
     ...(typeof process !== 'undefined' && process.env ? process.env : {}),
     ...(import.meta && import.meta.env ? import.meta.env : {}),
   };
-  const base = resolveEntitlement({ cookieHeader, env, venue, nowMs });
+  const base = resolveEntitlement({ cookieHeader, env, nowMs });
 
   // Deploy Preview 限定のプレビュー表示（本番ホストでは常に無効）
   //   ?view=free              … 合言葉なし。印まで
@@ -117,7 +115,6 @@ export function entitlementFromAstro(Astro, { venue, nowMs } = {}) {
     host: Astro?.request?.headers?.get?.('host') || '',
     searchParams: Astro?.url?.searchParams || null,
     env,
-    venue,
   });
 }
 
@@ -132,7 +129,6 @@ export function viewFlags(entitlement) {
     tierLabel: e.tierLabel,
     showMarks: !!e.showMarks,
     showBetting: !!e.showBetting,
-    showPremiumExtras: !!e.showPremiumExtras,
     authenticated: !!e.authenticated,
     // Deploy Preview の見え方プレビュー中か（画面に明示するために渡す）
     preview: !!e.preview,

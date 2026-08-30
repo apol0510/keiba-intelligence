@@ -4,8 +4,11 @@
  * 実行: node --test src/lib/billing/billing.test.mjs （astro-site 直下から）
  *
  * 固定する不変条件（docs/RENEWAL_2026_08.md §6 / §8）:
- *   1. **価格をコードに書かない**（金額の正本は Stripe の Price）
+ *   1. **請求額の正本は Stripe の Price**。コードの金額は **表示用**に限る
+ *      （2026-08-30 改定。正規 ¥5,000 の取り消し線 ＋ 割引 ¥3,980 を出すため）
  *   2. Price ID 未設定のプランは購入導線を出さない
+ *   2-b. 🔴 **月額はプレミアム 1 本のみ**。ライトは保留（導線を出さない）
+ *   2-c. 🔴 **会場で分けるプラン（venueAccess）を持たない**
  *   3. Stripe 秘密鍵が無ければ課金経路は動かない（fail-closed）
  *   4. KMA 連携は既定 disabled で、フラグが立つまで一切通信しない
  *   5. KMA の write は二重フラグの両方が true のときだけ要求する
@@ -20,6 +23,7 @@ import { fileURLToPath } from 'node:url';
 import {
   PLANS, planById, priceIdFor, isPurchasable, publicPlanView, publicPlans,
   planFromMetadata, hasStripeSecret, STRIPE_ENV,
+  MONTHLY_LIST_PRICE_YEN, MONTHLY_PRICE_YEN, BANK_YEARLY_PRICE_YEN,
 } from './plans.js';
 import { TIER } from '../auth/tiers.js';
 import {
@@ -34,15 +38,22 @@ const codeOf = (p) => read(p)
 
 /* ---------- 1. 価格をコードに書かない ---------- */
 
-test('plans.js に金額が書かれていない（金額の正本は Stripe）', () => {
+test('コードの金額は表示用のみ。請求額は Stripe から取る', () => {
   const src = codeOf('src/lib/billing/plans.js');
-  assert.ok(!/\bunit_amount\b/.test(src), 'plans.js が金額を扱っている');
-  assert.ok(!/[¥￥]\s*\d/.test(src), 'plans.js に円建ての金額が書かれている');
-  assert.ok(!/\b\d{3,6}\s*円/.test(src), 'plans.js に金額が書かれている');
-  for (const plan of PLANS) {
-    assert.equal(plan.price, undefined, `${plan.id} に price が定義されている`);
-    assert.equal(plan.amount, undefined, `${plan.id} に amount が定義されている`);
-  }
+  // 🔴 請求に使う値をコードで組み立てない
+  assert.ok(!/\bunit_amount\b/.test(src), 'plans.js が Stripe の請求額を組み立てている');
+  assert.ok(!/price_data/.test(src), 'plans.js が Price をコードで作っている');
+
+  // 表示用の金額は仕様所有者の確定値と一致すること
+  assert.equal(MONTHLY_LIST_PRICE_YEN, 5000);
+  assert.equal(MONTHLY_PRICE_YEN, 3980);
+  assert.equal(BANK_YEARLY_PRICE_YEN, 39800);
+  assert.ok(MONTHLY_PRICE_YEN < MONTHLY_LIST_PRICE_YEN, '割引価格が正規価格以上になっている');
+
+  // Checkout は Price ID だけを使う（金額を送らない）
+  const checkout = codeOf('netlify/functions/stripe-create-checkout.js');
+  assert.ok(!/unit_amount/.test(checkout), 'Checkout が金額をコードから送っている');
+  assert.ok(/price/.test(checkout), 'Checkout が Price ID を使っていない');
 });
 
 test('pricing ページが金額をハードコードしていない', () => {
@@ -59,15 +70,39 @@ test('pricing ページが金額をハードコードしていない', () => {
 
 test('planById / priceIdFor: 未知のプラン・未設定の Price ID を通さない', () => {
   assert.equal(planById('premium').tier, TIER.PREMIUM);
-  assert.equal(planById('light').tier, TIER.LIGHT);
   assert.equal(planById('unknown'), null);
   assert.equal(planById(''), null);
 
-  const plan = planById('light');
+  const plan = planById('premium');
   assert.equal(priceIdFor(plan, {}), null);
-  assert.equal(priceIdFor(plan, { STRIPE_PRICE_LIGHT: '  ' }), null);
-  assert.equal(priceIdFor(plan, { STRIPE_PRICE_LIGHT: ' price_abc ' }), 'price_abc');
-  assert.equal(priceIdFor(null, { STRIPE_PRICE_LIGHT: 'price_abc' }), null);
+  assert.equal(priceIdFor(plan, { STRIPE_PRICE_PREMIUM: '  ' }), null);
+  assert.equal(priceIdFor(plan, { STRIPE_PRICE_PREMIUM: ' price_abc ' }), 'price_abc');
+  assert.equal(priceIdFor(null, { STRIPE_PRICE_PREMIUM: 'price_abc' }), null);
+});
+
+test('🔴 月額はプレミアム 1 本のみ（ライトは保留＝導線を出さない）', () => {
+  assert.equal(PLANS.length, 1, 'プランが 1 本ではない');
+  assert.equal(PLANS[0].id, 'premium');
+  assert.equal(planById('light'), null, 'ライトの購入導線が復活している');
+});
+
+test('🔴 プランが会場で分ける属性を持たない', () => {
+  for (const plan of PLANS) {
+    assert.equal(plan.venueAccess, undefined, `${plan.id} に venueAccess がある`);
+  }
+  const src = codeOf('src/lib/billing/plans.js');
+  assert.ok(!/venueAccess/.test(src), 'plans.js に venueAccess が残っている');
+});
+
+test('🔴 廃止した訴求（詳細レポート・穴馬・優先配信）を書かない', () => {
+  const banned = ['穴馬', '詳細レポート', '優先メルマガ', '優先配信'];
+  for (const plan of PLANS) {
+    for (const f of plan.features) {
+      for (const b of banned) {
+        assert.ok(!f.includes(b), `${plan.id} が実装の無い訴求を書いている: ${f}`);
+      }
+    }
+  }
 });
 
 test('isPurchasable / publicPlanView: Price ID が無ければ購入導線を出さない', () => {
@@ -87,12 +122,16 @@ test('publicPlanView: Price ID そのものを画面へ渡さない', () => {
 test('publicPlans: 定義したプランをすべて返す', () => {
   const list = publicPlans({});
   assert.equal(list.length, PLANS.length);
-  assert.deepEqual(list.map((p) => p.id).sort(), ['light', 'premium']);
+  assert.deepEqual(list.map((p) => p.id), ['premium']);
+  // 表示用の金額は画面へ渡す（請求額は Stripe が上書きする）
+  assert.equal(list[0].listPriceYen, MONTHLY_LIST_PRICE_YEN);
+  assert.equal(list[0].priceYen, MONTHLY_PRICE_YEN);
 });
 
 test('planFromMetadata: webhook が metadata から tier を復元できる', () => {
   assert.equal(planFromMetadata({ ki_plan: 'premium' }).tier, TIER.PREMIUM);
-  assert.equal(planFromMetadata({ ki_plan: 'light' }).tier, TIER.LIGHT);
+  // ライトは保留したので metadata から復元できない（＝新規付与されない）
+  assert.equal(planFromMetadata({ ki_plan: 'light' }), null);
   assert.equal(planFromMetadata({}), null);
   assert.equal(planFromMetadata(null), null);
   assert.equal(planFromMetadata({ ki_plan: 'admin' }), null);

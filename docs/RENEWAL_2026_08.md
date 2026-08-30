@@ -210,8 +210,26 @@ KI の買い目は「軸 → 相手 5〜6 頭」であり（実データ 48 レ�
 |---|---|---|---|
 | 未登録 | `guest` | 誰でも | 馬柱・過去走・特徴量・**AI 短評**・**AI レース展望**・展開予想（**馬番昇順**）／印なし・AI指数なし・買い目なし |
 | 無料会員 | `free` | メール登録＋マジックリンク認証 | 上記 ＋ **印（◎○▲△ を 1 頭に複数付与・該当しない馬は空欄）** ＋ **AI指数の列（モザイク・値なし）** ／ 結論なし・買い目なし |
-| 有料（ライト） | `light` | Stripe サブスク（下位） | **印は非表示**（R-8）。上記 ＋ **AI指数の実数値**・**AI結論**・**買い目**（対象会場・レース範囲は §6） |
-| 有料（プレミアム） | `premium` | Stripe サブスク（上位） | 上記 ＋ **全会場・全レースの買い目** ＋ 穴馬レポート ＋ 優先メルマガ |
+| 有料（プレミアム） | `premium` | Stripe 月額サブスク | **印は非表示**（R-8）。上記 ＋ **AI指数の実数値**・**AI結論**・**馬単の買い目（南関東4場＋中央競馬）** |
+| 有料（ライト） | `light` | 🟡 **プラン保留（2026-08-30）** | 新規導線なし。既存レコードのみ。権限は `premium` と同じ |
+
+### 🔴 会場で分ける概念の廃止（2026-08-30・仕様所有者の指示）
+
+**「ライト＝南関のみ」という会場別アクセスは廃止した。有料 tier なら南関東も中央競馬も見える。**
+
+- `venueAccess` / `venueAllowed` / `VENUE` / `canSeePremiumExtras` は **削除済み**。復活させないこと。
+- `canSeeBetting(tier)` は **tier だけ**を受け取る。`venue` を引数に足してはいけない。
+- `resolveEntitlement` / `entitlementFromAstro` も `venue` を受け取らない。
+- Airtable の `VenueAccess` 列は残っているが **読まない・書かない**。
+- 🟡 ただし **セッション Cookie の `venueAccess` フィールドは残す**。
+  この値は **署名材料に含まれている**ため、payload から外すと
+  **発行済みの Cookie がすべて無効になる（全員ログアウト）**。形式だけ維持し、認可には使わない。
+- `light` tier 自体は残す。既存の Airtable `PlanType='light'` を
+  `free` へ落として **有料会員のアクセスを奪わない**ため。
+
+テストで固定: `auth.test.mjs`
+「会場で分ける仕組みが tiers.js に存在しない」「canSeeBetting は会場を受け取らない」
+「会場限定の古い Cookie でも買い目が開く」
 
 **全 tier に共通する規則**（§2 R-1〜R-6）: 役割バッジを出さない / 並びは馬番昇順 / 短評に役割語を入れない
 
@@ -223,9 +241,9 @@ Airtable `Customers.PlanType` の既存値は次のとおり写像する（U-4 �
 | 既存 PlanType | 新 tier |
 |---|---|
 | （未設定 / `free` / `free-registered`） | `free` |
-| `light` | `light` |
+| `light` | `light`（🟡 保留プラン。権限は premium と同じ） |
 | `pro` / `pro-plus` | `premium` |
-| Stripe 由来 | webhook が `light` / `premium` を直接書く |
+| Stripe 由来 | webhook が `premium` を書く（`light` は新規付与しない） |
 
 **fail-closed**:
 
@@ -387,42 +405,69 @@ KI の印は `adjustPrediction.js` の独自ロジックで生成したものだ
 
 ## 6. 課金（Stripe 月額）
 
-### 6.1 設計原則
+### 6.1 プラン構成（2026-08-30 確定・仕様所有者の指示）
 
-**価格は U-3 により未確定である。したがってコードに価格を書かない。**
+| 導線 | 内容 | 金額 |
+|---|---|---|
+| **月額プレミアム**（主導線・Stripe） | 南関東4場＋中央競馬の全レース馬単買い目 ＋ AI指数の数値 ＋ AI結論 | **正規 ¥5,000 → 割引 ¥3,980 / 月** |
+| 年払い（銀行振込・控えめ） | 月額プレミアムと同じ内容 | **¥39,800 / 年** |
 
-- プラン定義は `src/lib/billing/plans.js` に集約し、**金額は Stripe 側の Price を正とする**。
-- 環境変数で Price ID を注入する（`STRIPE_PRICE_LIGHT` / `STRIPE_PRICE_PREMIUM`）。
-- 表示価格は Stripe API から取得した値を使い、取得失敗時は「準備中」と表示する（**推測価格を出さない**）。
-- これにより、価格変更は **Stripe 管理画面の操作のみ**で完了し、コード変更・デプロイを要さない。
+**廃止したもの（画面から消す）**:
 
-暫定案（未確定・参考値）: ライト ¥1,980/月・プレミアム ¥3,980/月。いずれも 5,000 円以下。
+- ❌ **ライトプラン**（保留）。`/pricing` に導線を出さない。
+- ❌ **「ライト＝南関のみ」という会場別アクセス**（§3 参照）。
+- ❌ **プレミアム限定コンテンツの訴求**
+  （「メインレースの詳細レポート」「穴馬レポート」「優先メルマガ」）。
+  **実装が無いものを訴求しない。** `canSeePremiumExtras` ごと削除した。
+- ❌ **買い切り ¥88,000**・**月払い ¥12,000 系**・**ライト ¥6,600**（`/apply` から削除）。
 
-### 6.2 実装範囲
+### 6.2 金額の正本
+
+**実際に請求される金額の正本は Stripe の Price。** コードに書く数値は **表示用**である。
+
+| 値 | 置き場所 | 用途 |
+|---|---|---|
+| 正規価格 ¥5,000 | `MONTHLY_LIST_PRICE_YEN` | 取り消し線。**請求されない**ので表示専用でよい |
+| 割引価格 ¥3,980 | `MONTHLY_PRICE_YEN` | 初期表示。Stripe から取得できたら **上書きする** |
+| 年払い ¥39,800 | `BANK_YEARLY_PRICE_YEN` | 銀行振込の案内額 |
+
+- Checkout は **Price ID だけ**を Stripe へ送る（`unit_amount` をコードから送らない）。
+- `/pricing` は描画時にコード側の金額を出し、`stripe-prices` の取得後に **Stripe の金額で上書き**する。
+  食い違ったら **Stripe が正**。
+- Price ID が未設定のプランは **購入ボタンを出さない**（金額だけが独り歩きしない）。
+
+🔴 **価格を変えるときは Stripe の Price と `plans.js` の両方を直すこと。**
+テスト `billing.test.mjs`「コードの金額は表示用のみ。請求額は Stripe から取る」が
+上記 3 つの定数を固定しているので、片方だけ変えると失敗する。
+
+### 6.3 実装範囲
 
 | 機能 | 実装 |
 |---|---|
 | チェックアウト開始 | `netlify/functions/stripe-create-checkout.js`（Checkout Session を作成） |
 | Webhook | `netlify/functions/stripe-webhook.js`（署名検証 → Airtable の PlanType 更新） |
 | 顧客ポータル | `netlify/functions/stripe-portal.js`（解約・カード変更） |
-| 価格表示 | `netlify/functions/stripe-prices.js`（公開 Price を返す。金額のハードコード禁止） |
+| 価格表示 | `netlify/functions/stripe-prices.js`（公開 Price を返す。請求額の正本） |
 
 Webhook が扱うイベント:
 
-- `checkout.session.completed` → PlanType を `light` / `premium` に設定、`Status=active`
+- `checkout.session.completed` → PlanType を `premium` に設定、`Status=active`
 - `customer.subscription.updated` → プラン変更・再開を反映
 - `customer.subscription.deleted` → PlanType を `free`、`AccessEnabled=false`
 - `invoice.payment_failed` → `Status=payment_failed`（アクセスは即時停止しない。猶予は Stripe 側設定に従う）
 
+🔴 webhook は **`VenueAccess` を書かない**（会場で分ける概念を廃止したため）。
+
 **冪等性**: `event.id` を Airtable（または Blobs）へ記録し、重複配信を無視する。
 
-### 6.3 銀行振込の扱い
+### 6.4 銀行振込の扱い
 
-- 既存の `bank-transfer-application.js` と `/apply` は**残す**（削除しない）。
-- `/pricing` の主導線は Stripe 月額とし、銀行振込は「年払い・買い切りをご希望の方」として
-  ページ下部の控えめな導線に移す。
+- `bank-transfer-application.js` と `/apply` は**残す**（削除しない）。
+- **年払い ¥39,800 の 1 本のみ**を出す。買い切り・月払い・ライトは画面から消した。
+- `/pricing` では `<details>` に畳んだ控えめな導線に置く（主導線は Stripe 月額）。
+- `/apply` から `/pricing` の月額へ戻る導線を 1 行置く。
 
-### 6.4 前提（必須）
+### 6.5 前提（必須）
 
 Stripe 課金の開始には **サーバー側認可が前提**である（§7）。
 未認証で買い目が読める状態のまま課金を始めると、有料価値が成立しない。

@@ -24,7 +24,7 @@ import { sortByHorseNumber } from '../../utils/attentionMarks.js';
 
 interface Props {
   race: any;
-  view: { tier?: string; showMarks?: boolean; showBetting?: boolean; showPremiumExtras?: boolean; authenticated?: boolean };
+  view: { tier?: string; showMarks?: boolean; showBetting?: boolean; authenticated?: boolean };
   venue?: 'nankan' | 'jra';
   /** horse → 生の過去走配列。南関 entries 等の差異を吸収する */
   resolveRaces?: (horse: any) => any[];

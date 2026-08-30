@@ -6,9 +6,16 @@
  * tier は 4 つだけ。これ以外を新設しない。
  *
  *   guest   … 未登録。印と買い目以外はすべて見える
- *   free    … 無料会員（メール認証済み）。印（役割・PT・PT順の並び）が見える
- *   light   … 有料（下位）。買い目が見える
- *   premium … 有料（上位）。全会場・全レースの買い目が見える
+ *   free    … 無料会員（メール認証済み）。印が見える
+ *   light   … 🟡 **プラン自体は保留（2026-08-30）**。`/pricing` に導線を出さない。
+ *             既存の Airtable `PlanType='light'` を free へ落とさないために tier は残す。
+ *             権限は premium と同じ（南関＋中央の買い目）。
+ *   premium … 有料。南関東＋中央競馬の買い目が見える
+ *
+ * 🔴 **会場による出し分けは廃止した（2026-08-30・仕様所有者の指示）。**
+ *    「ライト＝南関のみ」という概念を無くし、**有料なら全会場**が見える。
+ *    `venueAccess` / `venueAllowed` / `VENUE` は削除済み。復活させないこと。
+ *    （Airtable の `VenueAccess` 列は残っているが **読まない**。）
  *
  * 🔴 fail-closed の定義:
  *   - セッションが無い / 署名が不正 / 期限切れ / 例外   → **guest**
@@ -83,62 +90,30 @@ export function applyExpiry(tier, expiresAt, nowMs) {
 }
 
 /* ------------------------------------------------------------------
-   会場アクセス
-   ------------------------------------------------------------------ */
-
-export const VENUE = Object.freeze({ NANKAN: 'nankan', JRA: 'jra' });
-
-/** VenueAccess（'all' / 'jra' / 'nankan'）の正規化。未知は 'all' にしない。 */
-export function normalizeVenueAccess(v) {
-  const s = typeof v === 'string' ? v.trim().toLowerCase() : '';
-  if (s === VENUE.JRA || s === VENUE.NANKAN) return s;
-  if (s === 'all' || s === '') return 'all';
-  return 'all';
-}
-
-/** 当該会場の有料コンテンツを見てよいか。 */
-export function venueAllowed(venueAccess, venue) {
-  const a = normalizeVenueAccess(venueAccess);
-  if (a === 'all') return true;
-  return a === venue;
-}
-
-/* ------------------------------------------------------------------
    表示可否（単一判定）
    ------------------------------------------------------------------ */
 
-/**
- * 印（役割マーク・PT・PT順の並び）を出してよいか。
- * 会場によらず free 以上で開く。
- */
+/** 印（◎○▲△）を出してよいか。free 以上で開く。 */
 export function canSeeMarks(tier) {
   return tierAtLeast(tier, TIER.FREE);
 }
 
 /**
- * 買い目を出してよいか。有料 tier かつ会場アクセスが一致する場合のみ。
+ * 買い目を出してよいか。
  *
- * @param {string} tier
- * @param {object} [o]
- * @param {string} [o.venue]        'nankan' | 'jra'
- * @param {string} [o.venueAccess]  'all' | 'nankan' | 'jra'
+ * 🔴 **会場では分けない（2026-08-30）。** 有料 tier なら南関も中央も見える。
+ *    引数は tier だけ。`venue` / `venueAccess` を受け取ってはいけない。
  */
-export function canSeeBetting(tier, { venue, venueAccess } = {}) {
-  if (!tierAtLeast(tier, TIER.LIGHT)) return false;
-  if (!venue) return true;
-  return venueAllowed(venueAccess, venue);
-}
-
-/** 穴馬レポート等の premium 限定コンテンツ。 */
-export function canSeePremiumExtras(tier) {
-  return tierAtLeast(tier, TIER.PREMIUM);
+export function canSeeBetting(tier) {
+  return tierAtLeast(tier, TIER.LIGHT);
 }
 
 /** tier の日本語表示名（UI 用）。 */
 export function tierLabel(tier) {
   switch (tier) {
     case TIER.PREMIUM: return 'プレミアム';
-    case TIER.LIGHT: return 'ライト';
+    // 🟡 プランは保留中。既存会員のセッションにのみ現れる
+    case TIER.LIGHT: return '有料会員';
     case TIER.FREE: return '無料会員';
     default: return 'ゲスト';
   }

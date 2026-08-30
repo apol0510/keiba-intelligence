@@ -24,7 +24,7 @@ export const prerender = false;
 
 const { slug } = Astro.params;
 
-const entitlement = entitlementFromAstro(Astro, { venue: 'nankan' });
+const entitlement = entitlementFromAstro(Astro);
 const view = viewFlags(entitlement);
 const day = loadNankanRaceDayBySlug(slug, process.cwd());
 

@@ -16,7 +16,7 @@
  */
 
 import Airtable from 'airtable';
-import { planTypeToTier, applyExpiry, normalizeVenueAccess, TIER } from '../../src/lib/auth/tiers.js';
+import { planTypeToTier, applyExpiry, TIER } from '../../src/lib/auth/tiers.js';
 import { signSession, serializeSessionCookie, SESSION_TTL_SECONDS } from '../../src/lib/auth/session.js';
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
@@ -104,7 +104,6 @@ export async function handler(event) {
     }
 
     const customer = customers[0].fields;
-    const venueAccess = normalizeVenueAccess(customer.VenueAccess);
     const planExpiresAt = customer.ExpirationDate || customer['有効期限'] || null;
 
     // 3.5. 顧客ステータス更新（PlanType は上書きしない＝有料プランが消えるバグ防止）
@@ -121,7 +120,6 @@ export async function handler(event) {
     const signed = signSession({
       email: customer.Email,
       tier,
-      venueAccess,
       secret: process.env.SESSION_SIGNING_SECRET,
       nowMs,
       ttlSeconds: SESSION_TTL_SECONDS,
@@ -140,12 +138,9 @@ export async function handler(event) {
     }
 
     // 5. リダイレクト先
+    // 🔴 会場では分けない（2026-08-30 に「ライト＝南関」を廃止）
     let redirectTo = '/free-prediction';
-    if (tier === TIER.LIGHT || tier === TIER.PREMIUM) {
-      if (venueAccess === 'jra') redirectTo = '/prediction/jra';
-      else if (venueAccess === 'nankan') redirectTo = '/prediction/nankan';
-      else redirectTo = '/mypage';
-    }
+    if (tier === TIER.LIGHT || tier === TIER.PREMIUM) redirectTo = '/mypage';
 
     return {
       statusCode: 200,
@@ -158,7 +153,6 @@ export async function handler(event) {
           user: { email: customer.Email, name: customer.Name || '' },
           plan: currentPlanType,
           tier,
-          venueAccess,
           planExpiresAt,
           expiresAt: new Date(nowMs + SESSION_TTL_SECONDS * 1000).toISOString(),
         },

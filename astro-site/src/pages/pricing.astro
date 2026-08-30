@@ -4,16 +4,17 @@
  *
  * 正本: docs/RENEWAL_2026_08.md §6
  *
- * 🔴 2026-08-28 全面改修:
- *   - 主導線を **Stripe の月額サブスク**にした（低価格帯・5,000円以下）。
- *   - **価格をコードに書かない**。金額の正本は Stripe の Price であり、
- *     `/.netlify/functions/stripe-prices` から取得して表示する。
- *     取得できないプランは「準備中」と出す（推測価格・仮の金額を出さない）。
- *   - 既存の買い切り・年払い（銀行振込）は削除せず、ページ下部の控えめな導線へ移した。
+ * 🔴 2026-08-30 改定（仕様所有者の指示）:
+ *   - 月額は **プレミアム 1 本のみ**。ライトは保留（導線を出さない）。
+ *     「ライト＝南関のみ」という **会場で分ける概念は廃止**。有料なら南関＋中央。
+ *   - 正規 ¥5,000 の取り消し線 ＋ 割引 ¥3,980 を出す。
+ *     **請求額の正本は Stripe の Price**。取得できたら表示金額を上書きする。
+ *   - 銀行振込は **年払い ¥39,800 のみ**（買い切り・月払いは出さない）。控えめな導線のまま。
+ *   - プレミアム限定コンテンツ（詳細レポート・穴馬・優先配信）の訴求は **廃止**。
  */
 
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { publicPlans } from '../lib/billing/plans.js';
+import { publicPlans, BANK_YEARLY_PRICE_YEN } from '../lib/billing/plans.js';
 import { entitlementFromAstro, viewFlags } from '../lib/auth/entitlement.js';
 
 export const prerender = false;
@@ -36,9 +37,11 @@ const TIER_MATRIX = [
   { label: '印（◎○▲△・複数付与）', guest: false, free: true, paid: true },
   { label: 'AI指数の数値（無料はモザイク）', guest: false, free: false, paid: true },
   { label: 'AI結論（推奨理由の解説）', guest: false, free: false, paid: true },
-  { label: '馬単の買い目', guest: false, free: false, paid: true },
-  { label: '開催日の注目馬・穴馬メール', guest: false, free: false, paid: true },
+  { label: '南関東4場の馬単買い目', guest: false, free: false, paid: true },
+  { label: '中央競馬（JRA）の馬単買い目', guest: false, free: false, paid: true },
 ];
+
+const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
 ---
 
 <BaseLayout
@@ -51,7 +54,7 @@ const TIER_MATRIX = [
       <h1>まず無料で、中身を確かめてください</h1>
       <p class="pr-hero-lead">
         全レースの馬柱・過去走・<b>AI短評</b>・展開予想は<b>登録なしで全部</b>ご覧いただけます。<br>
-        印は無料会員登録で、AI指数の数値・AI結論・馬単の買い目は月額プランで公開します。
+        印は無料会員登録で、AI指数の数値・AI結論・馬単の買い目は月額プレミアムで公開します。
       </p>
       <div class="pr-hero-actions">
         <a class="pr-btn pr-btn-ghost" href="/prediction/nankan">今日の予想を見る（無料）</a>
@@ -69,7 +72,7 @@ const TIER_MATRIX = [
               <th class="pr-m-label">できること</th>
               <th>未登録<br><small>¥0</small></th>
               <th>無料会員<br><small>¥0</small></th>
-              <th class="pr-m-paid">有料プラン<br><small>月額</small></th>
+              <th class="pr-m-paid">プレミアム<br><small>月額</small></th>
             </tr>
           </thead>
           <tbody>
@@ -91,17 +94,25 @@ const TIER_MATRIX = [
       <h2 class="pr-h2">月額プラン</h2>
       <p class="pr-plans-note">いつでも解約できます。解約後も無料会員として印までご覧いただけます。</p>
 
-      <div class="pr-plan-grid">
+      <div class="pr-plan-grid pr-plan-single">
         {plans.map((plan) => (
-          <article class={`pr-plan ${plan.recommended ? 'is-recommended' : ''}`} data-plan={plan.id}>
-            {plan.recommended && <span class="pr-plan-ribbon">おすすめ</span>}
+          <article class="pr-plan is-recommended" data-plan={plan.id}>
+            <span class="pr-plan-ribbon">いまだけ割引</span>
             <h3 class="pr-plan-name">{plan.name}</h3>
             <p class="pr-plan-tagline">{plan.tagline}</p>
 
             <p class="pr-plan-price" data-price-for={plan.id}>
-              {plan.purchasable
-                ? <span class="pr-price-loading">価格を取得中…</span>
-                : <span class="pr-price-pending">準備中</span>}
+              {plan.purchasable ? (
+                <>
+                  {plan.listPriceYen && (
+                    <span class="pr-price-list">¥{yen(plan.listPriceYen)}</span>
+                  )}
+                  <span class="pr-price-amount">¥{yen(plan.priceYen)}</span>
+                  <span class="pr-price-unit">/月</span>
+                </>
+              ) : (
+                <span class="pr-price-pending">準備中</span>
+              )}
             </p>
 
             <ul class="pr-plan-features">
@@ -131,15 +142,14 @@ const TIER_MATRIX = [
     <!-- 銀行振込（控えめ） -->
     <section class="pr-bank">
       <details>
-        <summary>年払い・買い切りをご希望の方（銀行振込）</summary>
+        <summary>年払い（銀行振込）をご希望の方</summary>
         <div class="pr-bank-body">
           <p>
-            月額ではなく、まとめてお支払いいただくプランもご用意しています。
+            クレジットカードをお使いにならない場合は、銀行振込の年払いもご用意しています。
             お申し込み後、振込先をメールでご案内します。
           </p>
           <ul>
-            <li><b>年払い</b> — 南関東＋中央、全レースの馬単買い目</li>
-            <li><b>買い切り</b> — 同内容を永久にご利用いただけます</li>
+            <li><b>年払い ¥{yen(BANK_YEARLY_PRICE_YEN)}</b> — 内容は月額プレミアムと同じ（南関東＋中央、全レースの馬単買い目）</li>
           </ul>
           <a class="pr-btn pr-btn-ghost" href="/apply">銀行振込で申し込む</a>
         </div>
@@ -150,7 +160,7 @@ const TIER_MATRIX = [
     <section class="pr-faq">
       <h2 class="pr-h2">よくあるご質問</h2>
       <details><summary>無料でどこまで見られますか？</summary>
-        <p>登録なしで、全レースの馬柱・過去走・AI短評・レース展望・展開予想・特徴量をご覧いただけます。無料会員登録をすると、これに印（◎○▲△）が加わります。1頭に複数の印が付き、該当しない馬は空欄です。AI指数の数値・AI結論・買い目は有料プランです。</p>
+        <p>登録なしで、全レースの馬柱・過去走・AI短評・レース展望・展開予想・特徴量をご覧いただけます。無料会員登録をすると、これに印（◎○▲△）が加わります。1頭に複数の印が付き、該当しない馬は空欄です。AI指数の数値・AI結論・買い目は月額プレミアムです。</p>
       </details>
       <details><summary>買い目は何点ですか？</summary>
         <p>馬単で、1レースあたりの投資は5点固定です。点数を後から増やしたり、高配当だけを選んで実績に載せたりはしていません。</p>
@@ -174,6 +184,7 @@ const TIER_MATRIX = [
       if (!res.ok) throw new Error('unavailable');
       const data = await res.json();
 
+      // 🔴 請求額の正本は Stripe。取得できたら表示金額を上書きする
       for (const p of (data.plans || [])) {
         const el = document.querySelector(`[data-price-for="${p.id}"]`);
         if (!el) continue;
@@ -181,17 +192,19 @@ const TIER_MATRIX = [
           el.innerHTML = '<span class="pr-price-pending">準備中</span>';
           continue;
         }
+        const amount = el.querySelector('.pr-price-amount');
+        if (!amount) continue;
         const yen = new Intl.NumberFormat('ja-JP').format(Math.round(p.amount));
-        const unit = p.interval ? `/${p.interval}` : '';
-        el.innerHTML = `<span class="pr-price-amount">¥${yen}</span><span class="pr-price-unit">${unit}</span>`;
+        amount.textContent = `¥${yen}`;
+        const unit = el.querySelector('.pr-price-unit');
+        if (unit && p.interval) unit.textContent = `/${p.interval === 'month' ? '月' : p.interval}`;
       }
     } catch {
-      document.querySelectorAll('[data-price-for]').forEach((el) => {
-        el.innerHTML = '<span class="pr-price-pending">準備中</span>';
-      });
+      // 取得できなくても、コード側で描画済みの金額はそのまま残す
+      // （Price ID 未設定のプランは購入ボタン自体が出ていない）
       if (msg) {
         msg.hidden = false;
-        msg.textContent = '現在お申し込みを受け付けられません。しばらくしてからお試しください。';
+        msg.textContent = '価格の確認ができませんでした。お申し込み画面で最終金額をご確認ください。';
       }
     }
   }
@@ -407,6 +420,11 @@ const TIER_MATRIX = [
     margin: 0 auto;
   }
 
+  /* プランが 1 本のときは横に伸ばしすぎない */
+  .pr-plan-single {
+    max-width: 420px;
+  }
+
   .pr-plan {
     position: relative;
     background: var(--bg-secondary);
@@ -454,11 +472,21 @@ const TIER_MATRIX = [
     margin-bottom: 16px;
   }
 
+  /* 正規価格（取り消し線）。請求されない金額であることが分かるよう控えめに置く */
+  .pr-price-list {
+    font-family: var(--font-num);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-decoration: line-through;
+    margin-right: 8px;
+  }
+
   .pr-price-amount {
     font-family: var(--font-num);
     font-size: 2.2rem;
     font-weight: 800;
-    color: var(--text-primary);
+    color: var(--primary-start, #d8433a);
   }
 
   .pr-price-unit {

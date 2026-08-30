@@ -6,8 +6,9 @@
  * 固定する不変条件（docs/RENEWAL_2026_08.md §3 / §7）:
  *   1. 署名鍵が無い / Cookie が無い / 改竄 / 期限切れ / 壊れた形式 → すべて guest
  *   2. guest は印も買い目も見られない
- *   3. free は印だけ、light/premium は買い目まで
- *   4. 会場アクセスが一致しない有料会員には買い目を出さない
+ *   3. free は印だけ、有料 tier は買い目まで
+ *   4. 🔴 **会場では分けない（2026-08-30 に「ライト＝南関」を廃止）**
+ *      有料 tier は南関も中央も見える。venue を渡す経路が復活していないことも固定する。
  *   5. 未知の PlanType に有料権限を与えない
  */
 
@@ -16,7 +17,7 @@ import assert from 'node:assert/strict';
 
 import {
   TIER, tierRank, tierAtLeast, planTypeToTier, applyExpiry,
-  normalizeVenueAccess, venueAllowed, canSeeMarks, canSeeBetting, canSeePremiumExtras,
+  canSeeMarks, canSeeBetting,
 } from './tiers.js';
 
 import {
@@ -78,15 +79,14 @@ test('applyExpiry: 期限切れの有料は free へ落ちる。読めない日�
   assert.equal(applyExpiry(TIER.FREE, '2026-08-01', NOW), TIER.FREE);
 });
 
-test('venueAllowed: 会場限定の有料会員は他会場を見られない', () => {
-  assert.ok(venueAllowed('all', 'jra'));
-  assert.ok(venueAllowed('jra', 'jra'));
-  assert.ok(!venueAllowed('jra', 'nankan'));
-  assert.equal(normalizeVenueAccess('  JRA '), 'jra');
-  assert.equal(normalizeVenueAccess('unknown'), 'all');
+test('🔴 会場で分ける仕組みが tiers.js に存在しない', async () => {
+  const mod = await import('./tiers.js');
+  for (const gone of ['venueAllowed', 'normalizeVenueAccess', 'VENUE', 'canSeePremiumExtras']) {
+    assert.equal(mod[gone], undefined, `${gone} が復活している（会場で分ける概念は廃止）`);
+  }
 });
 
-test('canSeeMarks / canSeeBetting / canSeePremiumExtras: tier 境界', () => {
+test('canSeeMarks / canSeeBetting: tier 境界', () => {
   assert.ok(!canSeeMarks(TIER.GUEST));
   assert.ok(canSeeMarks(TIER.FREE));
 
@@ -94,22 +94,30 @@ test('canSeeMarks / canSeeBetting / canSeePremiumExtras: tier 境界', () => {
   assert.ok(!canSeeBetting(TIER.FREE));
   assert.ok(canSeeBetting(TIER.LIGHT));
   assert.ok(canSeeBetting(TIER.PREMIUM));
+});
 
-  assert.ok(!canSeeBetting(TIER.LIGHT, { venue: 'jra', venueAccess: 'nankan' }));
-  assert.ok(canSeeBetting(TIER.LIGHT, { venue: 'jra', venueAccess: 'all' }));
-
-  assert.ok(!canSeePremiumExtras(TIER.LIGHT));
-  assert.ok(canSeePremiumExtras(TIER.PREMIUM));
+test('🔴 canSeeBetting は会場を受け取らない（渡しても結果が変わらない）', () => {
+  // 第 2 引数を付けても無視される＝会場での出し分けが復活していない
+  assert.equal(canSeeBetting(TIER.LIGHT, { venue: 'jra', venueAccess: 'nankan' }), true);
+  assert.equal(canSeeBetting(TIER.PREMIUM, { venue: 'nankan', venueAccess: 'jra' }), true);
+  assert.equal(canSeeBetting.length, 1, 'canSeeBetting が会場の引数を持っている');
 });
 
 /* ---------- session ---------- */
 
 test('signSession → verifySession: 往復できる', () => {
-  const token = issue({ tier: TIER.LIGHT, venueAccess: 'nankan' });
+  const token = issue({ tier: TIER.LIGHT });
   const v = verifySession({ token, secret: SECRET, nowMs: NOW });
   assert.ok(v.ok);
   assert.equal(v.session.email, 'user@example.com');
   assert.equal(v.session.tier, TIER.LIGHT);
+});
+
+test('🟡 venueAccess は署名材料に残す（外すと発行済み Cookie が全部無効になる）', () => {
+  // 会場での出し分けは廃止したが、payload から外すと全員ログアウトになるため形式は維持する
+  const token = issue({ tier: TIER.PREMIUM, venueAccess: 'nankan' });
+  const v = verifySession({ token, secret: SECRET, nowMs: NOW });
+  assert.ok(v.ok, '既存形式の Cookie が検証できない');
   assert.equal(v.session.venueAccess, 'nankan');
 });
 
@@ -217,23 +225,25 @@ test('resolveEntitlement: free は印だけ、買い目は出さない', () => {
   assert.equal(e.authenticated, true);
 });
 
-test('resolveEntitlement: light は買い目まで、premium 限定は出さない', () => {
+test('resolveEntitlement: 有料 tier は買い目まで開く', () => {
   const e = resolveEntitlement({
     cookieHeader: cookieOf(issue({ tier: TIER.LIGHT })),
-    env: { SESSION_SIGNING_SECRET: SECRET }, nowMs: NOW, venue: 'nankan',
+    env: { SESSION_SIGNING_SECRET: SECRET }, nowMs: NOW,
   });
   assert.equal(e.showBetting, true);
-  assert.equal(e.showPremiumExtras, false);
+  assert.equal(e.showPremiumExtras, undefined, 'premium 限定フラグは廃止した');
 });
 
-test('resolveEntitlement: 会場が違う有料会員に買い目を出さない', () => {
+test('🔴 会場限定の古い Cookie でも買い目が開く（会場で分けないため）', () => {
+  // VenueAccess='nankan' の既存会員が中央の買い目も見られることを固定する
   const e = resolveEntitlement({
     cookieHeader: cookieOf(issue({ tier: TIER.PREMIUM, venueAccess: 'nankan' })),
-    env: { SESSION_SIGNING_SECRET: SECRET }, nowMs: NOW, venue: 'jra',
+    env: { SESSION_SIGNING_SECRET: SECRET }, nowMs: NOW,
   });
   assert.equal(e.tier, TIER.PREMIUM);
   assert.equal(e.showMarks, true);
-  assert.equal(e.showBetting, false);
+  assert.equal(e.showBetting, true);
+  assert.equal(e.venueAccess, undefined, 'entitlement が venueAccess を持ち出している');
 });
 
 test('viewFlags: email を含めない（UI へ PII を渡さない）', () => {
@@ -250,5 +260,4 @@ test('GUEST_VIEW: 既定は何も開けない', () => {
   assert.equal(GUEST_VIEW.tier, TIER.GUEST);
   assert.equal(GUEST_VIEW.showMarks, false);
   assert.equal(GUEST_VIEW.showBetting, false);
-  assert.equal(GUEST_VIEW.showPremiumExtras, false);
 });

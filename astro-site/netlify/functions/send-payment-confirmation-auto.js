@@ -3,7 +3,7 @@
  *
  * トリガー: Airtable Status が "pending" → "active" に変更
  * 動作:
- *   1. Airtableからレコード情報取得（email, Name, Plan, plan_type, VenueAccess）
+ *   1. Airtableからレコード情報取得（email, Name, Plan, plan_type）
  *   2. 二重送信防止チェック（PaymentEmailSentフィールド）
  *   3. メール送信（SendGrid）
  *   4. PaymentEmailSent を true に更新 + 有効期限設定
@@ -79,11 +79,10 @@ exports.handler = async (event, context) => {
     const fullName = fields.Name || fields['氏名'] || '';
     const planDisplayName = fields.Plan || '';
     const planType = fields.plan_type || '';
-    const venueAccess = fields.VenueAccess || 'all';
     const paymentAmount = fields['入金金額'] || fields.transferAmount || null;
     const paymentEmailSent = fields.PaymentEmailSent || false;
 
-    console.log('📋 Record info:', { email, fullName, planDisplayName, planType, venueAccess, paymentEmailSent });
+    console.log('📋 Record info:', { email, fullName, planDisplayName, planType, paymentEmailSent });
 
     if (!email || !fullName) {
       console.error('⚠️ Missing required fields:', { email, fullName });
@@ -126,7 +125,7 @@ exports.handler = async (event, context) => {
     }
 
     // プラン別情報
-    const planInfo = getPlanInfo(planType, venueAccess);
+    const planInfo = getPlanInfo();
 
     // プラン表示名（メール用）
     const emailPlanName = getEmailPlanName(planType);
@@ -146,7 +145,7 @@ exports.handler = async (event, context) => {
     const expirationDate = calculateExpirationDate(planType);
 
     // 会場アクセス表示テキスト
-    const venueAccessDisplay = getVenueAccessDisplay(venueAccess);
+    const venueAccessDisplay = getVenueAccessDisplay();
 
     // メール送信
     const userEmailData = {
@@ -228,7 +227,6 @@ exports.handler = async (event, context) => {
         message: 'Payment confirmation email sent successfully',
         email: email,
         planType: planType,
-        venueAccess: venueAccess,
         expirationDate: expirationDate,
         airtableRecordId: airtableRecordId
       })
@@ -286,37 +284,19 @@ function getEmailPlanName(planType) {
 }
 
 /**
- * 会場アクセス表示テキスト
+ * 対象会場の表示テキスト。
+ * 🔴 2026-08-30: 会場で分ける概念を廃止したため、有料は常に全会場。
  */
-function getVenueAccessDisplay(venueAccess) {
-  const displays = {
-    'all': '南関4場（大井・川崎・船橋・浦和）＋ JRA全10場',
-    'nankan': '南関4場（大井・川崎・船橋・浦和）',
-    'jra': 'JRA全10場（中央競馬）'
-  };
-  return displays[venueAccess] || displays['all'];
+function getVenueAccessDisplay() {
+  return '南関4場（大井・川崎・船橋・浦和）＋ JRA全10場';
 }
 
 /**
  * プラン別のログインURL・ボタンテキスト
  */
-function getPlanInfo(planType, venueAccess) {
+function getPlanInfo() {
   const baseUrl = 'https://keiba-intelligence.jp';
-
-  if (venueAccess === 'jra' || planType === 'monthly-jra') {
-    return {
-      loginUrl: `${baseUrl}/login`,
-      buttonText: 'ログインして中央（JRA）予想を見る'
-    };
-  }
-
-  if (venueAccess === 'nankan' || planType === 'monthly-nankan') {
-    return {
-      loginUrl: `${baseUrl}/login`,
-      buttonText: 'ログインして南関予想を見る'
-    };
-  }
-
+  // 🔴 2026-08-30: 会場で分けないため、導線は 1 本
   return {
     loginUrl: `${baseUrl}/login`,
     buttonText: 'ログインして予想を見る'

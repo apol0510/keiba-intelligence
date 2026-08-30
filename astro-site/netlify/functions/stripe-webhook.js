@@ -7,7 +7,8 @@
  *   - **署名検証必須**。`STRIPE_WEBHOOK_SECRET` 未設定なら 503 で止める（無検証で書き込まない）。
  *   - **冪等**。同じ `event.id` を二度処理しない（Netlify Blobs に処理済みを記録）。
  *     Blobs が使えない環境では記録をあきらめて処理を続ける（at-least-once）。
- *   - 書き込むのは **既存フィールドだけ**（PlanType / VenueAccess / Status / AccessEnabled）。
+ *   - 書き込むのは **既存フィールドだけ**（PlanType / Status / AccessEnabled）。
+ *     🔴 `VenueAccess` は書かない（2026-08-30 に会場で分ける概念を廃止）。
  *     Airtable のスキーマ変更は本改修のスコープ外（未知フィールドへ書くと Airtable が失敗する）。
  *   - 顧客レコードが無い場合は**作らない**。ログに区分だけ残す。
  *   - Stripe / Airtable のエラー内容を応答へ返さない。
@@ -66,7 +67,7 @@ async function findCustomer(email) {
   return rows.length ? rows[0] : null;
 }
 
-async function applyPlan(email, { planType, venueAccess, status, accessEnabled }) {
+async function applyPlan(email, { planType, status, accessEnabled }) {
   const record = await findCustomer(email);
   if (!record) {
     console.warn('⚠️ stripe-webhook: customer record not found (skipped)');
@@ -74,7 +75,6 @@ async function applyPlan(email, { planType, venueAccess, status, accessEnabled }
   }
   const fields = {};
   if (planType != null) fields.PlanType = planType;
-  if (venueAccess != null) fields.VenueAccess = venueAccess;
   if (status != null) fields.Status = status;
   if (accessEnabled != null) fields.AccessEnabled = accessEnabled;
 
@@ -137,7 +137,6 @@ export async function handler(event) {
         }
         await applyPlan(email, {
           planType: plan.id,
-          venueAccess: plan.venueAccess,
           status: 'active',
           accessEnabled: true,
         });
@@ -166,7 +165,6 @@ export async function handler(event) {
         if (ACTIVE_STATUSES.has(sub.status) && plan) {
           await applyPlan(email, {
             planType: plan.id,
-            venueAccess: plan.venueAccess,
             status: 'active',
             accessEnabled: true,
           });
@@ -174,7 +172,6 @@ export async function handler(event) {
         } else if (sub.status === 'canceled' || sub.status === 'unpaid' || sub.status === 'incomplete_expired') {
           await applyPlan(email, {
             planType: TIER.FREE,
-            venueAccess: 'all',
             status: 'inactive',
             accessEnabled: false,
           });
@@ -194,7 +191,6 @@ export async function handler(event) {
         }
         await applyPlan(email, {
           planType: TIER.FREE,
-          venueAccess: 'all',
           status: 'inactive',
           accessEnabled: false,
         });
