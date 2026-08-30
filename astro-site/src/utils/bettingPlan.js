@@ -25,18 +25,20 @@
  *    結果との突き合わせは一切しない。
  *
  * ── 推奨購入点数（2026-08-30 仕様所有者の指示）──
- * 画面に出す点数は **展開した組の総数ではなく「推奨購入点数」**とする。
+ * 見出しに出す **点数と購入額だけ**を「推奨購入点数」にする。
  * 出走頭数に応じて決め、**12 点を超えない**（CLAUDE.md「ユーザーは10点超の買い目を嫌う」）。
- * 組み合わせの表示も推奨点数ぶんに絞る（見出しの点数とチップ数を一致させるため）。
+ *
+ * 🔴 **買い目そのものは減らさない。** 組み合わせは展開した全点を表示する。
+ *    推奨点数は「このうち何点ぶん買うことを勧めるか」という目安であり、
+ *    買い目を絞り込むためのものではない（2026-08-30 の指示で明確化）。
  *
  * 🔴 **点数の意味に注意（3 つある）。**
  *    1. **推奨購入点数** … 本モジュールが画面に出す数（頭数依存・最大 12）
  *    2. **展開した組の総数** … F3 で成立する組（通常レースは 16 点になることもある）
  *    3. **回収率の投資基準** … `archiveResults` が使う **全レース 5 点固定**
  *    3 は BET_POINT_LOGIC.md の仕様であり、1 とは別概念である。
- *    🔴 1 は 2 の**部分集合**なので、推奨から外れた組で決着した場合、
- *       公開実績（2 と 3 に基づく）が的中でも、推奨どおり買った人は外れる。
- *       この差は仕様所有者の判断で受け入れている。
+ *    🔴 画面には **2 の組み合わせをすべて出し、見出しの点数だけ 1 を出す**。
+ *       したがって「表示されている組の数」と「見出しの点数」は一致しないことがある。
  */
 
 /** 1 点あたりの購入額（円）。BET_POINT_LOGIC.md「1 点 100 円」。 */
@@ -131,9 +133,8 @@ export function buildBettingPlan(lines, { isMain = false, fieldSize = 0, betType
   // 抑えは買わない。全行をまとめて参考表示するだけ
   const hold = [...new Set(parsed.flatMap((l) => l.hold))].sort((a, b) => a - b);
 
-  // 🔴 画面に出すのは推奨購入点数ぶんだけ（見出しの点数とチップ数を一致させる）
+  // 🔴 見出しに出す推奨購入点数。**combos は絞らない**（買い目を減らさない）
   const points = recommendedPoints(fieldSize, combos.length);
-  const recommended = combos.slice(0, points);
 
   return Object.freeze({
     betType,
@@ -145,12 +146,12 @@ export function buildBettingPlan(lines, { isMain = false, fieldSize = 0, betType
       partners: [...l.partners].sort((a, b) => a - b),
       hold: [...l.hold].sort((a, b) => a - b),
     })),
-    combos: recommended,
+    // 🔴 展開した組の全体。**絞らずにすべて画面へ出す**
+    combos,
+    // 見出しに出す推奨購入点数（買い目の点数ではない）
     points,
     amountYen: points * UNIT_PRICE_YEN,
-    // 🔴 F3 で成立する組の全体。**画面には出さない**（推奨との差を検証するために持つ）。
-    //    .astro の props は HTML に出力されないため、ここに持っても漏れない。
-    allCombos: combos,
+    // 展開した組の総数（＝ combos.length）
     expandedPoints: combos.length,
     hold,
     unitPriceYen: UNIT_PRICE_YEN,

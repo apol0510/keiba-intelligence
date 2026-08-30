@@ -7,8 +7,8 @@
  *   1. 展開方向は F3 と同じ（メイン reverseTopK=0 / 通常 reverseTopK=3）
  *   2. 🔴 抑えは買わない（点数・購入額に算入しない）
  *   3. 同じ組み合わせを二重に数えない
- *   4. 🔴 画面に出す点数は **推奨購入点数**（頭数依存・**12 点を超えない**）
- *      見出しの点数と表示するチップ数が一致する
+ *   4. 🔴 見出しの **点数と購入額だけ**が推奨購入点数（頭数依存・**12 点を超えない**）
+ *      🔴 **買い目そのものは減らさない**（組み合わせは展開した全点を表示する）
  *   5. 🔴 的中判定に流用していない（単一源は umatanHit.js）
  *   6. 🔴 パネル・ボタンは showBetting のときだけ描画する
  *   7. 🔴 出馬表をフィルタしない（2026-08-30 に「買い目の馬だけ」を廃止）
@@ -64,7 +64,7 @@ test('メインレース: 軸 → 相手の一方向のみ（5点）', () => {
   const p = buildBettingPlan(MAIN, { isMain: true, fieldSize: 9 });
   assert.equal(p.reverseTopK, REVERSE_TOP_K_MAIN);
   assert.equal(p.expandedPoints, 5);
-  assert.deepEqual(p.allCombos.map(key), ['3-5', '3-7', '3-8', '3-10', '3-12']);
+  assert.deepEqual(p.combos.map(key), ['3-5', '3-7', '3-8', '3-10', '3-12']);
   // 展開が 5 点しか無いので推奨も 5 点
   assert.equal(p.points, 5);
   assert.equal(p.amountYen, 5 * UNIT_PRICE_YEN);
@@ -79,11 +79,11 @@ test('通常レース: 前進全頭 ＋ 評価上位3頭の逆方向', () => {
   // 4→6 と 6→4 は前進側と重複するので、増えるのは 8→4,12→4,8→6,12→6 の4点
   assert.equal(p.expandedPoints, 16);
   for (const k of ['4-6', '6-4', '8-4', '12-4', '8-6', '12-6']) {
-    assert.ok(p.allCombos.map(key2).includes(k), `${k} が無い`);
+    assert.ok(p.combos.map(key2).includes(k), `${k} が無い`);
   }
   // 評価4位以下は逆方向を持たない
   for (const k of ['3-4', '11-4', '9-4', '3-6', '11-6', '9-6']) {
-    assert.ok(!p.allCombos.map(key2).includes(k), `${k} は逆方向に含めてはいけない`);
+    assert.ok(!p.combos.map(key2).includes(k), `${k} は逆方向に含めてはいけない`);
   }
 });
 
@@ -113,20 +113,34 @@ test('展開数が推奨より少なければ展開数に合わせる', () => {
   assert.equal(recommendedPoints(NaN, 4), 4);
 });
 
-test('🔴 見出しの点数と表示する組み合わせの数が一致する', () => {
-  for (const [lines, opt] of [[NORMAL, { fieldSize: 12 }], [MAIN, { isMain: true, fieldSize: 9 }]]) {
+test('🔴 買い目そのものは減らさない（展開した全点を表示する）', () => {
+  const p = buildBettingPlan(NORMAL, { fieldSize: 12 });
+  // 推奨は 10 点でも、表示する組み合わせは展開した 16 点すべて
+  assert.equal(p.points, 10, '12頭立ての推奨は10点');
+  assert.equal(p.combos.length, 16, '買い目が絞り込まれている');
+  assert.equal(p.combos.length, p.expandedPoints);
+});
+
+test('🔴 推奨されるのは点数と購入額だけ', () => {
+  for (const [lines, opt, expected] of [
+    [NORMAL, { fieldSize: 12 }, 10],
+    [NORMAL, { fieldSize: 8 }, 6],
+    [NORMAL, { fieldSize: 16 }, 12],
+    [MAIN, { isMain: true, fieldSize: 9 }, 5], // 展開が5点しかないので5点
+  ]) {
     const p = buildBettingPlan(lines, opt);
-    assert.equal(p.combos.length, p.points, '見出しとチップ数がずれている');
-    assert.equal(p.amountYen, p.points * UNIT_PRICE_YEN, '購入額が点数と合っていない');
+    assert.equal(p.points, expected, `${opt.fieldSize}頭の推奨点数`);
+    assert.equal(p.amountYen, expected * UNIT_PRICE_YEN, '購入額が推奨点数と合っていない');
+    // 組み合わせは推奨点数に左右されない
+    assert.equal(p.combos.length, p.expandedPoints, '買い目が推奨点数で絞られている');
   }
 });
 
-test('🔴 推奨は展開した組の部分集合', () => {
-  const p = buildBettingPlan(NORMAL, { fieldSize: 12 });
-  assert.equal(p.points, 10, '12頭立ての推奨は10点');
-  assert.equal(p.amountYen, 1000);
-  const all = new Set(p.allCombos.map(key));
-  for (const c of p.combos) assert.ok(all.has(key(c)), `${key(c)} が展開に無い`);
+test('推奨点数が展開数を超えない', () => {
+  for (const n of [7, 8, 9, 12, 16, 18]) {
+    const p = buildBettingPlan(MAIN, { isMain: true, fieldSize: n });
+    assert.ok(p.points <= p.expandedPoints, `${n}頭で推奨が展開数を超えた`);
+  }
 });
 
 /* ---------- 2-c. 軸ごとの内訳は馬番昇順 ---------- */
@@ -148,13 +162,13 @@ test('抑えも馬番昇順', () => {
 
 test('同じ組み合わせを二重に数えない', () => {
   const p = buildBettingPlan(NORMAL, { fieldSize: 12 });
-  const seen = p.allCombos.map(key);
+  const seen = p.combos.map(key);
   assert.equal(new Set(seen).size, seen.length, '重複した組がある');
 });
 
 test('自分自身への組み合わせを作らない', () => {
   const p = buildBettingPlan(['4-4.6.8'], { fieldSize: 12 });
-  assert.ok(!p.allCombos.some((c) => c.first === c.second), '4→4 が生成された');
+  assert.ok(!p.combos.some((c) => c.first === c.second), '4→4 が生成された');
 });
 
 /* ---------- 3. 🔴 抑えは買わない ---------- */
@@ -162,7 +176,7 @@ test('自分自身への組み合わせを作らない', () => {
 test('🔴 抑えは点数にも購入額にも入らない', () => {
   const p = buildBettingPlan(NORMAL, { fieldSize: 12 });
   assert.deepEqual(p.hold, [5, 7, 10]);
-  for (const c of p.allCombos) {
+  for (const c of p.combos) {
     assert.ok(!(p.hold.includes(c.first) && p.hold.includes(c.second)), '抑え同士の組が生成された');
   }
   // 抑えを消しても点数が変わらない
@@ -176,17 +190,17 @@ test('🔴 抑えは点数にも購入額にも入らない', () => {
 
 test('🔴 展開した組み合わせは checkUmatanHit と一致する', () => {
   for (const [lines, isMain] of [[NORMAL, false], [MAIN, true]]) {
-    // 🔴 突き合わせるのは **展開した組の全体**（推奨は部分集合なので別で検証する）
+    // 🔴 突き合わせるのは表示する組み合わせ（＝展開した全点。絞っていない）
     const plan = buildBettingPlan(lines, { isMain, fieldSize: 12 });
     const k = isMain ? 0 : 3;
     // 展開した組がすべて的中扱いになること
-    for (const c of plan.allCombos) {
+    for (const c of plan.combos) {
       const result = { results: [{ number: c.first }, { number: c.second }] };
       const hit = lines.some((l) => checkUmatanHit(l, result, k));
       assert.ok(hit, `${c.first}→${c.second} が的中判定で外れる（展開が多い）`);
     }
     // 展開していない組が的中扱いにならないこと
-    const inPlan = new Set(plan.allCombos.map(key));
+    const inPlan = new Set(plan.combos.map(key));
     for (let a = 1; a <= 13; a++) {
       for (let b = 1; b <= 13; b++) {
         if (a === b || inPlan.has(`${a}-${b}`)) continue;
