@@ -181,6 +181,9 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
   // 価格は Stripe から取得する（金額をコードに持たない）
   async function loadPrices() {
     const msg = document.getElementById('pr-plan-msg');
+    // 購入導線が出ていない（Price ID 未設定）なら Stripe に問い合わせない。
+    // CTA が「まもなく受付開始」と出ているので、価格取得の失敗を重ねて出さない。
+    if (!document.querySelector('[data-checkout]')) return;
     try {
       const res = await fetch('/.netlify/functions/stripe-prices');
       if (!res.ok) throw new Error('unavailable');
