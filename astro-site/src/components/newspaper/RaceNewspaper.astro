@@ -126,6 +126,22 @@ const bettingPlan = showBetting && validBetting.length
   <!-- ── 展開予想 ── -->
   <PaceMap paceMap={bundle.paceMap} />
 
+  <!--
+    ── 結論（有料 tier のみ）──
+    🔴 2026-08-30: 下部から **出馬表の直前** へ移した。
+       下部の買い目セクションを削除した結果、結論だけが長い出馬表の後ろに
+       取り残されていたため。読む順は
+         レース展望（レース全体） → 展開予想（隊列） → 結論（どの馬か・なぜか）
+         → 出馬表（1 頭ずつ確かめる） ＋ 🎫 買い目を抽出（何を買うか）
+       結論と買い目を近づけ、根拠（出馬表）はその後ろに置く。
+  -->
+  {showBetting && bundle.conclusion?.text && (
+    <div class="rp-conclusion">
+      <span class="rp-conclusion-tag">結論</span>
+      <p>{bundle.conclusion.text}</p>
+    </div>
+  )}
+
   <!-- ── 出馬表（行タップで詳細が開く） ── -->
   <RaceEntryTable
     horses={orderedHorses}
@@ -139,13 +155,6 @@ const bettingPlan = showBetting && validBetting.length
     statsOf={resolveStats}
   />
 
-  <!-- ── 結論ブロック（有料 tier のみ） ── -->
-  {showBetting && bundle.conclusion?.text && (
-    <div class="rp-conclusion">
-      <span class="rp-conclusion-tag">結論</span>
-      <p>{bundle.conclusion.text}</p>
-    </div>
-  )}
   <!-- ── 上位導線（権限が無いときだけ出す） ── -->
   {!showMarks && (
     <aside class="rp-upsell rp-upsell-free">
@@ -272,9 +281,9 @@ const bettingPlan = showBetting && validBetting.length
     color: var(--text-primary);
   }
 
-  /* 結論 */
+  /* 結論。🔴 出馬表の直前に置く（2026-08-30） */
   .rp-conclusion {
-    margin-top: 16px;
+    margin: 16px 0;
     padding: 12px 14px;
     background: #fff7ed;
     border: 1px solid #fcd9b6;
@@ -284,14 +293,6 @@ const bettingPlan = showBetting && validBetting.length
   .rp-conclusion-tag {
     background: var(--secondary-start);
   }
-
-  /* 買い目 */
-
-
-
-
-
-
 
   /* 上位導線 */
   .rp-upsell {

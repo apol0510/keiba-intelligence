@@ -100,6 +100,17 @@ test('🔴 下部の買い目セクションが復活していない（抽出パ
   refute(/validBetting\.map/, src, '買い目の生文字列を直接並べている');
 });
 
+test('🔴 結論は出馬表より前に置く（2026-08-30）', () => {
+  const src = read('src/components/newspaper/RaceNewspaper.astro');
+  const body = src.slice(src.indexOf('<section class="racepaper"'), src.indexOf('<style>'));
+  const conclusion = body.indexOf('rp-conclusion');
+  const table = body.indexOf('<RaceEntryTable');
+  const pace = body.indexOf('<PaceMap');
+  assert.ok(conclusion > 0 && table > 0 && pace > 0, '要素が見つからない');
+  assert.ok(pace < conclusion, '結論が展開予想より前にある');
+  assert.ok(conclusion < table, '結論が出馬表の後ろに取り残されている');
+});
+
 /* ---------- 順位を推測させない（2026-08-29 仕様確定） ---------- */
 
 test('RaceNewspaper: 並び順は常に馬番昇順（評価順に並べ替えない）', () => {
