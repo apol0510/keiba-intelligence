@@ -671,11 +671,12 @@ const colCount = 3 // 枠 / 馬番 / 馬名
    * 「抽出している」感じを出すための控えめな演出。
    * `hidden` を外すと display:none → block になるため、開くたびに再生される
    * （JS でクラスを付け外ししない）。
-   * 🔴 大げさにしない: パネル 180ms・チップは 1 個 20ms ずつずらすだけ。
-   *    16 点でも全部出そろうまで 0.5 秒未満に収める。
+   * 🔴 「抽出している」と分かる程度には時間をかける（2026-08-30 調整）。
+   *    パネル 240ms・チップは 1 個 45ms ずつずらす。
+   *    16 点で全部出そろうまで約 1.05 秒。**2 秒は超えない**（大げさにしない）。
    */
   .ret-plan {
-    animation: rpl-panel-in 180ms ease-out both;
+    animation: rpl-panel-in 240ms ease-out both;
   }
 
   @keyframes rpl-panel-in {
@@ -684,19 +685,28 @@ const colCount = 3 // 枠 / 馬番 / 馬名
   }
 
   .rpl-combo {
-    animation: rpl-chip-in 200ms ease-out both;
-    animation-delay: calc(var(--i, 0) * 20ms + 60ms);
+    animation: rpl-chip-in 260ms ease-out both;
+    animation-delay: calc(var(--i, 0) * 45ms + 120ms);
   }
 
   @keyframes rpl-chip-in {
-    from { opacity: 0; transform: translateY(3px) scale(0.97); }
+    from { opacity: 0; transform: translateY(4px) scale(0.96); }
     to   { opacity: 1; transform: none; }
+  }
+
+  /* 軸の内訳と抑えは、組み合わせが出そろってから続けて出す */
+  .rpl-lines,
+  .rpl-hold {
+    animation: rpl-panel-in 260ms ease-out both;
+    animation-delay: 820ms;
   }
 
   /* 動きを減らす設定なら演出しない */
   @media (prefers-reduced-motion: reduce) {
     .ret-plan,
-    .rpl-combo {
+    .rpl-combo,
+    .rpl-lines,
+    .rpl-hold {
       animation: none;
     }
   }

@@ -281,13 +281,23 @@ test('抽出の演出は控えめで、動きを減らす設定を尊重する',
   assert.match(src, /@keyframes rpl-chip-in/, 'チップの表示演出が無い');
   assert.match(src, /--i:\$\{Math\.min\(i, 15\)\}/, 'チップのずらし幅に上限が無い');
   assert.match(src, /prefers-reduced-motion: reduce/, '動きを減らす設定を尊重していない');
-  // 🔴 大げさにしない: 1 個あたりのずらしは 20ms、全体で 0.5 秒未満
+  // 🔴 「抽出している」と分かる程度に時間をかけるが、大げさにはしない
   const delay = src.match(/calc\(var\(--i, 0\) \* (\d+)ms \+ (\d+)ms\)/);
   assert.ok(delay, 'ずらしの指定が読めない');
   const per = Number(delay[1]);
   const base = Number(delay[2]);
-  assert.ok(per <= 25, `1個あたり ${per}ms は長すぎる`);
-  assert.ok(base + per * 15 + 200 < 700, '全部出そろうまでが長すぎる');
+  const dur = Number((src.match(/animation: rpl-chip-in (\d+)ms/) || [])[1]);
+  assert.ok(per >= 30, `1個あたり ${per}ms では速すぎて抽出感が出ない`);
+  assert.ok(per <= 60, `1個あたり ${per}ms は長すぎる`);
+  // 16 点（ずらしは 15 個ぶんで頭打ち）が出そろうまで
+  const total = base + per * 15 + dur;
+  assert.ok(total >= 700, `全部出そろうまで ${total}ms では速すぎる`);
+  assert.ok(total <= 2000, `全部出そろうまで ${total}ms は長すぎる（大げさ）`);
+
+  // 軸の内訳・抑えは組み合わせの後に出す
+  const after = Number((src.match(/animation-delay: (\d+)ms;/) || [])[1]);
+  assert.ok(after >= base + per * 10, '内訳が組み合わせより先に出てしまう');
+  assert.ok(after <= total, '内訳が出そろうより後になりすぎる');
 });
 
 test('パネルの開閉が出馬表の行に触れない', () => {
