@@ -81,13 +81,23 @@ for (const route of PREDICTION_ROUTES) {
 
 /* ---------- 描画コンポーネント側の不変条件 ---------- */
 
-test('RaceNewspaper: 買い目は showBetting のときだけ描画する（CSS で隠さない）', () => {
+test('RaceNewspaper: 買い目は showBetting のときだけ組み立てる（CSS で隠さない）', () => {
   const src = read('src/components/newspaper/RaceNewspaper.astro');
   assert.match(src, /const showBetting = !!view\?\.showBetting/);
-  // 買い目ブロックは showBetting の条件式の中にある
-  assert.match(src, /\{showBetting && validBetting\.length > 0 && \(/, '買い目が showBetting で守られていない');
+  // 買い目は showBetting のときだけ展開して RaceEntryTable へ渡す
+  assert.match(
+    src,
+    /const bettingPlan = showBetting && validBetting\.length/,
+    '買い目が showBetting で守られていない',
+  );
   // 「隠すだけ」の実装が復活していないこと
   refute(/pro-user-only/, src, 'CSS で隠す旧方式のクラスが復活している');
+});
+
+test('🔴 下部の買い目セクションが復活していない（抽出パネルに一本化・2026-08-30）', () => {
+  const src = read('src/components/newspaper/RaceNewspaper.astro');
+  refute(/rp-betting/, src, '削除した下部の買い目セクションが残っている');
+  refute(/validBetting\.map/, src, '買い目の生文字列を直接並べている');
 });
 
 /* ---------- 順位を推測させない（2026-08-29 仕様確定） ---------- */

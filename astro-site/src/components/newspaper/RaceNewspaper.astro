@@ -11,7 +11,10 @@
  *
  * 🔴 並び順は **全 tier で馬番昇順**。評価順に並べ替えない（順位が漏れるため）。
  *
- * 🔴 買い目は `view.showBetting` が true のときだけ `bettingLines` を描画する。
+ * 🔴 2026-08-30: **下部の買い目セクションは削除した。**
+ *    買い目は出馬表の「🎫 買い目を抽出」パネル（`RaceEntryTable`）だけで出す。
+ *    二重に出さないため。買い目の描画が `showBetting` で守られている点は変わらない
+ *    （`bettingPlan` を組み立てるのが showBetting のときだけ）。
  *    false のときは **買い目の文字列を一切 HTML に出さない**。
  *
  * 🔴 文章生成に bettingLines を渡さない（CLAUDE.md 絶対厳守）。
@@ -143,20 +146,6 @@ const bettingPlan = showBetting && validBetting.length
       <p>{bundle.conclusion.text}</p>
     </div>
   )}
-
-  <!-- ── 買い目（有料のみ。非権限者には HTML ごと出さない） ── -->
-  {showBetting && validBetting.length > 0 && (
-    <div class="rp-betting">
-      <header class="rp-betting-head">
-        <span class="rp-betting-tag">{betType}</span>
-        <span class="rp-betting-note">1点100円</span>
-      </header>
-      <ul class="rp-betting-lines">
-        {validBetting.map((line) => <li>{line}</li>)}
-      </ul>
-    </div>
-  )}
-
   <!-- ── 上位導線（権限が無いときだけ出す） ── -->
   {!showMarks && (
     <aside class="rp-upsell rp-upsell-free">
@@ -297,54 +286,12 @@ const bettingPlan = showBetting && validBetting.length
   }
 
   /* 買い目 */
-  .rp-betting {
-    margin-top: 14px;
-    padding: 13px 15px;
-    background: var(--bg-secondary);
-    border: 2px solid var(--primary-start);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-  }
 
-  .rp-betting-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
 
-  .rp-betting-tag {
-    font-size: 0.72rem;
-    font-weight: 800;
-    padding: 3px 10px;
-    border-radius: var(--radius-pill);
-    background: var(--primary-gradient);
-    color: var(--text-inverse);
-  }
 
-  .rp-betting-note {
-    font-size: 0.68rem;
-    color: var(--text-tertiary);
-  }
 
-  .rp-betting-lines {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 6px;
-  }
 
-  .rp-betting-lines li {
-    font-family: var(--font-num);
-    font-size: 1.05rem;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    color: var(--text-primary);
-    background: var(--bg-muted);
-    border-radius: var(--radius-md);
-    padding: 8px 12px;
-  }
+
 
   /* 上位導線 */
   .rp-upsell {
