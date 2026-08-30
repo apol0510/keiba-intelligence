@@ -275,6 +275,21 @@ test('🔴 削除した注記が復活していない', () => {
   assert.match(src, /rpl-reco/, '「推奨」であることを画面に出していない');
 });
 
+test('抽出の演出は控えめで、動きを減らす設定を尊重する', () => {
+  const src = read('src/components/newspaper/RaceEntryTable.astro');
+  assert.match(src, /@keyframes rpl-panel-in/, 'パネルの表示演出が無い');
+  assert.match(src, /@keyframes rpl-chip-in/, 'チップの表示演出が無い');
+  assert.match(src, /--i:\$\{Math\.min\(i, 15\)\}/, 'チップのずらし幅に上限が無い');
+  assert.match(src, /prefers-reduced-motion: reduce/, '動きを減らす設定を尊重していない');
+  // 🔴 大げさにしない: 1 個あたりのずらしは 20ms、全体で 0.5 秒未満
+  const delay = src.match(/calc\(var\(--i, 0\) \* (\d+)ms \+ (\d+)ms\)/);
+  assert.ok(delay, 'ずらしの指定が読めない');
+  const per = Number(delay[1]);
+  const base = Number(delay[2]);
+  assert.ok(per <= 25, `1個あたり ${per}ms は長すぎる`);
+  assert.ok(base + per * 15 + 200 < 700, '全部出そろうまでが長すぎる');
+});
+
 test('パネルの開閉が出馬表の行に触れない', () => {
   const src = read('src/components/newspaper/RaceEntryTable.astro');
   const fn = src.slice(src.indexOf('function applyPlan'), src.indexOf('function syncButtons'));

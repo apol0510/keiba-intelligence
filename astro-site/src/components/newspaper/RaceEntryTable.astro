@@ -206,8 +206,8 @@ const colCount = 3 // 枠 / 馬番 / 馬名
       </header>
 
       <ol class="rpl-combos">
-        {plan.combos.map((c: any) => (
-          <li class="rpl-combo">
+        {plan.combos.map((c: any, i: number) => (
+          <li class="rpl-combo" style={`--i:${Math.min(i, 15)}`}>
             <span class="rpl-n rpl-1st">{c.first}</span>
             <span class="rpl-arrow" aria-hidden="true">→</span>
             <span class="rpl-n rpl-2nd">{c.second}</span>
@@ -665,6 +665,40 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     padding: 14px 16px 12px;
     border-bottom: 1px solid var(--border-color);
     background: linear-gradient(180deg, #fff8f7 0%, var(--bg-primary) 100%);
+  }
+
+  /*
+   * 「抽出している」感じを出すための控えめな演出。
+   * `hidden` を外すと display:none → block になるため、開くたびに再生される
+   * （JS でクラスを付け外ししない）。
+   * 🔴 大げさにしない: パネル 180ms・チップは 1 個 20ms ずつずらすだけ。
+   *    16 点でも全部出そろうまで 0.5 秒未満に収める。
+   */
+  .ret-plan {
+    animation: rpl-panel-in 180ms ease-out both;
+  }
+
+  @keyframes rpl-panel-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .rpl-combo {
+    animation: rpl-chip-in 200ms ease-out both;
+    animation-delay: calc(var(--i, 0) * 20ms + 60ms);
+  }
+
+  @keyframes rpl-chip-in {
+    from { opacity: 0; transform: translateY(3px) scale(0.97); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* 動きを減らす設定なら演出しない */
+  @media (prefers-reduced-motion: reduce) {
+    .ret-plan,
+    .rpl-combo {
+      animation: none;
+    }
   }
 
   .rpl-head {
