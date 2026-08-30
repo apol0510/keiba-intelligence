@@ -17,14 +17,30 @@ interface Props {
 
 const { view } = Astro.props;
 
-const items = [
-  { label: '全頭の馬柱・過去走', open: true },
-  { label: 'AI短評・レース展望', open: true },
-  { label: '展開予想・特徴量', open: true },
-  { label: '印（◎○▲△・複数付与）', open: !!view?.showMarks },
-  { label: 'AI指数（無料はモザイク）', open: !!view?.showBetting },
-  { label: '馬単の買い目', open: !!view?.showBetting },
-];
+const paid = !!view?.showBetting;
+
+/**
+ * 🔴 有料 tier では印を出さない（R-8）。
+ *    有料の帯に「印」を並べると、出ていないものを開いていると言うことになる。
+ *    代わりに有料だけの機能（並べ替え・抽出）を出す。
+ */
+const items = paid
+  ? [
+      { label: '全頭の馬柱・過去走', open: true },
+      { label: 'AI短評・レース展望', open: true },
+      { label: '展開予想・特徴量', open: true },
+      { label: 'AI指数の数値・AI結論', open: true },
+      { label: '馬単の買い目（南関東＋中央）', open: true },
+      { label: 'AI指数順の並べ替え・買い目抽出', open: true },
+    ]
+  : [
+      { label: '全頭の馬柱・過去走', open: true },
+      { label: 'AI短評・レース展望', open: true },
+      { label: '展開予想・特徴量', open: true },
+      { label: '印（◎○▲△・複数付与）', open: !!view?.showMarks },
+      { label: 'AI指数の数値', open: false },
+      { label: '馬単の買い目', open: false },
+    ];
 
 const nextStep = !view?.showMarks
   ? { href: '/register', label: '無料会員に登録して印を見る', tone: 'free' }
@@ -33,8 +49,17 @@ const nextStep = !view?.showMarks
 
 {view?.preview && (
   <p class="tier-preview-note">
-    🔎 <b>プレビュー表示中</b>：無料会員に登録したときの見え方です（実際にはログインしていません）。
-    AI指数・AI結論・買い目は有料プランのため、このプレビューでは開きません。
+    {paid ? (
+      <>
+        🔎 <b>プレビュー表示中</b>：<b>{view?.tierLabel?.replace('（プレビュー）', '') || '有料'}</b>会員の見え方です（実際にはログインしていません）。
+        AI指数の数値・AI結論・買い目・並べ替え・抽出まで開いています。印は有料では出しません。
+      </>
+    ) : (
+      <>
+        🔎 <b>プレビュー表示中</b>：無料会員に登録したときの見え方です（実際にはログインしていません）。
+        AI指数の数値・AI結論・買い目は有料プランのため、このプレビューでは開きません。
+      </>
+    )}
   </p>
 )}
 

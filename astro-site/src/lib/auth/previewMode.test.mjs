@@ -209,3 +209,20 @@ test('TierRibbon がプレビュー中であることを画面に出す', () => 
   assert.match(src, /view\?\.preview/, 'preview フラグを見ていない');
   assert.match(src, /プレビュー表示中/, 'プレビューであることを画面に出していない');
 });
+
+test('🔴 有料の帯に「印」を並べない（R-8: 有料は印を出さない）', () => {
+  const src = read('src/components/newspaper/TierRibbon.astro');
+  assert.match(src, /const paid = !!view\?\.showBetting;/, '有料判定が無い');
+  // 有料側の項目リストに印が含まれていないこと
+  const paidBlock = src.slice(src.indexOf('paid\n  ? ['), src.indexOf(': ['));
+  assert.ok(!/印（/.test(paidBlock), '有料の帯に印が並んでいる');
+  assert.match(paidBlock, /並べ替え/, '有料だけの機能（並べ替え・抽出）を出していない');
+});
+
+test('🔴 有料プレビューで「開きません」と言わない', () => {
+  const src = read('src/components/newspaper/TierRibbon.astro');
+  const noteStart = src.indexOf('tier-preview-note');
+  const note = src.slice(noteStart, noteStart + 900);
+  assert.match(note, /paid \? \(/, 'プレビューの文言が tier で分かれていない');
+  assert.match(note, /まで開いています/, '有料プレビューで開いていることを伝えていない');
+});
