@@ -101,18 +101,17 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
             <h3 class="pr-plan-name">{plan.name}</h3>
             <p class="pr-plan-tagline">{plan.tagline}</p>
 
+            {/*
+              🔴 金額は **確定した仕様**なので常に出す（Price ID の有無で消さない）。
+                 買えるかどうかは CTA 側で止める（Price ID 未設定なら「準備中」ボタン）。
+                 Stripe から取得できたら金額はクライアント側で上書きする（請求額が正本）。
+            */}
             <p class="pr-plan-price" data-price-for={plan.id}>
-              {plan.purchasable ? (
-                <>
-                  {plan.listPriceYen && (
-                    <span class="pr-price-list">¥{yen(plan.listPriceYen)}</span>
-                  )}
-                  <span class="pr-price-amount">¥{yen(plan.priceYen)}</span>
-                  <span class="pr-price-unit">/月</span>
-                </>
-              ) : (
-                <span class="pr-price-pending">準備中</span>
+              {plan.listPriceYen && (
+                <span class="pr-price-list">¥{yen(plan.listPriceYen)}</span>
               )}
+              <span class="pr-price-amount">¥{yen(plan.priceYen)}</span>
+              <span class="pr-price-unit">/月</span>
             </p>
 
             <ul class="pr-plan-features">
@@ -124,7 +123,10 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
                 このプランを申し込む
               </button>
             ) : (
-              <button class="pr-btn pr-btn-disabled" type="button" disabled>準備中</button>
+              <>
+                <button class="pr-btn pr-btn-disabled" type="button" disabled>まもなく受付開始</button>
+                <p class="pr-plan-soon">お申し込みの受付を準備しています。</p>
+              </>
             )}
           </article>
         ))}
@@ -188,10 +190,8 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       for (const p of (data.plans || [])) {
         const el = document.querySelector(`[data-price-for="${p.id}"]`);
         if (!el) continue;
-        if (!p.available || typeof p.amount !== 'number') {
-          el.innerHTML = '<span class="pr-price-pending">準備中</span>';
-          continue;
-        }
+        // 取得できないときはコード側の表示金額を残す（消さない）
+        if (!p.available || typeof p.amount !== 'number') continue;
         const amount = el.querySelector('.pr-price-amount');
         if (!amount) continue;
         const yen = new Intl.NumberFormat('ja-JP').format(Math.round(p.amount));
@@ -493,6 +493,13 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     font-size: 0.9rem;
     color: var(--text-tertiary);
     font-weight: 700;
+  }
+
+  .pr-plan-soon {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+    text-align: center;
   }
 
   .pr-price-loading,
