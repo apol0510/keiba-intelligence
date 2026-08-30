@@ -186,6 +186,7 @@ const venueViews = venues.map((venue: any, venueIndex: number) => {
               resolveStats={resolveStats}
               bettingLines={bettingLinesOf(e.race)}
               betType="馬単"
+              isMain={!!e.isMain}
               badge={e.isMain ? 'メインレース' : null}
             />
           </div>

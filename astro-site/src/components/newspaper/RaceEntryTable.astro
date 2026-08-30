@@ -38,8 +38,8 @@ import { resolveFrameNumber } from '../../utils/frameNumber.js';
 interface Props {
   horses: any[];
   raceInfo?: any;
-  /** 🔴 買い目に出てくる馬番。**有料 tier のときだけ**渡すこと（free には渡さない）。 */
-  betHorses?: number[];
+  /** 🔴 展開済みの買い目。**有料 tier のときだけ**渡すこと（free には渡さない）。 */
+  bettingPlan?: any;
   view: { showMarks?: boolean; showBetting?: boolean; tier?: string };
   raceKey: string;
   narrativeOf: (horse: any) => any;
@@ -49,7 +49,7 @@ interface Props {
 }
 
 const {
-  horses = [], view, raceKey, raceInfo = null, betHorses = [],
+  horses = [], view, raceKey, raceInfo = null, bettingPlan = null,
   narrativeOf, featuresOf, pastRacesOf, statsOf,
 } = Astro.props;
 
@@ -74,17 +74,18 @@ const maskScore = showAttention && !showRanked;
 const fieldSize = horses.length;
 
 /**
- * 🔴 並べ替え・抽出ボタンは **有料 tier だけ**に描画する（R-9）。
+ * 🔴 ツールバーは **有料 tier だけ**に描画する（R-9）。
  *    free/guest には HTML ごと出さない。理由:
  *      - 「AI指数順」は並びから評価順位が完全に読める（R-2 で禁止している情報）
- *      - 「買い目の馬だけ」は買い目そのもの（有料の中核）
+ *      - 「買い目を抽出」は買い目そのもの（有料の中核）
  *    CSS で隠すのではなく、描画しない。
  */
 const showTools = showRanked;
 
-/** 買い目に出てくる馬番。有料 tier 以外では空にする（HTML に痕跡を残さない）。 */
-const betSet = new Set<number>(showRanked && Array.isArray(betHorses) ? betHorses : []);
-const hasBetHorses = betSet.size > 0;
+/** 展開済みの買い目。有料 tier 以外では null（HTML に痕跡を残さない）。 */
+const plan = showRanked ? bettingPlan : null;
+const hasPlan = !!(plan && Array.isArray(plan.combos) && plan.combos.length);
+const yen = (n: number) => new Intl.NumberFormat('ja-JP').format(n);
 
 /**
  * 無料会員向けの印（馬番 → '◎◎○▲' のような文字列）。
@@ -134,8 +135,6 @@ const rows = horses.map((h: any) => {
     trainer: h?.trainer || null,
     // 裏側の呼称は computerIndex。表示名は「基礎指数」。契約（10–99）外は表示しない
     baseIndex: toComputerIndex(h?.computerIndex),
-    // 🔴 買い目に出てくる馬か。有料 tier のときだけ true になりうる
-    inBet: betSet.has(Number(h?.horseNumber)),
   };
 });
 
@@ -171,22 +170,71 @@ const colCount = 3 // 枠 / 馬番 / 馬名
         <span class="ret-tool-off">馬番順に戻す</span>
       </button>
 
-      {hasBetHorses && (
+      {hasPlan && (
         <button
           class="ret-tool"
           type="button"
-          data-tool="bet"
+          data-tool="plan"
           aria-pressed="false"
-          title="買い目に入っている馬だけを残します"
+          aria-controls={`plan-${raceKey}`}
+          title="このレースの買い目を表にして開きます"
         >
-          <span class="ret-tool-icon" aria-hidden="true">◎</span>
-          <span class="ret-tool-on">買い目の馬だけ</span>
-          <span class="ret-tool-off">全頭に戻す</span>
+          <span class="ret-tool-icon" aria-hidden="true">🎫</span>
+          <span class="ret-tool-on">買い目を抽出</span>
+          <span class="ret-tool-off">買い目を閉じる</span>
         </button>
       )}
 
       <span class="ret-tool-note" data-tools-note hidden></span>
     </div>
+  )}
+
+  {hasPlan && (
+    <section class="ret-plan" id={`plan-${raceKey}`} hidden>
+      <header class="rpl-head">
+        <h4 class="rpl-title">
+          <span class="rpl-type">{plan.betType}</span>
+          買い目
+          {plan.isMain && <span class="rpl-main">メインレース</span>}
+        </h4>
+        <p class="rpl-figures">
+          <span class="rpl-fig"><b>{plan.points}</b><i>点</i></span>
+          <span class="rpl-sep" aria-hidden="true">/</span>
+          <span class="rpl-fig"><b>¥{yen(plan.amountYen)}</b></span>
+        </p>
+      </header>
+
+      <ol class="rpl-combos">
+        {plan.combos.map((c: any) => (
+          <li class="rpl-combo">
+            <span class="rpl-n rpl-1st">{c.first}</span>
+            <span class="rpl-arrow" aria-hidden="true">→</span>
+            <span class="rpl-n rpl-2nd">{c.second}</span>
+          </li>
+        ))}
+      </ol>
+
+      <dl class="rpl-lines">
+        {plan.lines.map((l: any) => (
+          <>
+            <dt>軸 {l.axis}</dt>
+            <dd>{l.partners.join('・')}</dd>
+          </>
+        ))}
+      </dl>
+
+      {plan.hold.length > 0 && (
+        <p class="rpl-hold">
+          <span class="rpl-hold-tag">抑え</span>
+          <span class="rpl-hold-nums">{plan.hold.join('・')}</span>
+          <span class="rpl-hold-note">買い目には含みません（点数・購入額に算入しない）</span>
+        </p>
+      )}
+
+      <p class="rpl-foot">
+        1点100円で計算しています。回収率の投資基準（全レース5点固定）とは別の数値です。
+      </p>
+    </section>
   )}
 
   <table class="ret-table">
@@ -215,7 +263,6 @@ const colCount = 3 // 枠 / 馬番 / 馬名
               data-row={rowId}
               data-order={i}
               data-pt={showRanked && r.pt != null ? r.pt : ''}
-              data-bet={r.inBet ? '1' : ''}
               tabindex="0"
               role="button"
               aria-expanded="false"
@@ -302,37 +349,33 @@ const colCount = 3 // 枠 / 馬番 / 馬名
   });
 
   /* ==========================================================
-     並べ替え・抽出（🔴 有料 tier のときだけ DOM に存在する）
+     並べ替え / 買い目の抽出（🔴 有料 tier のときだけ DOM に存在する）
 
-     - ボタンは `.ret-tools` の中にあり、`.ret-row` の外なので
+     - ボタンは `.ret-tools` の中にあり `.ret-row` の外なので、
        行クリックの開閉ハンドラとは衝突しない。
-     - 認可には一切関与しない。無料会員の HTML にはこのボタンも
-       `data-pt` / `data-bet` も **存在しない**（サーバー側で描画しない）。
+     - 認可には一切関与しない。無料会員の HTML にはボタンも `data-pt` も
+       買い目パネルも **存在しない**（サーバー側で描画していない）。
      ========================================================== */
 
   /** 本体行と、その直下の詳細行を 1 組として扱う。 */
-  function pairsOf(table: HTMLElement) {
-    const body = table.querySelector('tbody');
+  function pairsOf(ret: HTMLElement) {
+    const body = ret.querySelector('tbody');
     if (!body) return [];
     return Array.from(body.querySelectorAll('tr.ret-row')).map((row) => ({
       row: row as HTMLElement,
       detail: body.querySelector(`tr[data-detail="${row.getAttribute('data-row')}"]`) as HTMLElement | null,
       order: Number((row as HTMLElement).dataset.order || 0),
       pt: (row as HTMLElement).dataset.pt ? Number((row as HTMLElement).dataset.pt) : null,
-      inBet: (row as HTMLElement).dataset.bet === '1',
     }));
   }
 
-  function applyTools(ret: HTMLElement) {
+  /** AI指数順 / 馬番順の並べ替え。詳細行は必ず本体行に追従させる。 */
+  function applySort(ret: HTMLElement) {
     const body = ret.querySelector('tbody');
     if (!body) return;
-
     const sortOn = ret.dataset.sort === 'pt';
-    const betOn = ret.dataset.filter === 'bet';
-    const pairs = pairsOf(ret);
 
-    // 並べ替え。AI指数が無い馬は末尾へ（馬番順の相対位置は保つ）
-    const ordered = [...pairs].sort((a, b) => {
+    const ordered = [...pairsOf(ret)].sort((a, b) => {
       if (sortOn) {
         if (a.pt == null && b.pt != null) return 1;
         if (a.pt != null && b.pt == null) return -1;
@@ -346,38 +389,30 @@ const colCount = 3 // 枠 / 馬番 / 馬名
       if (p.detail) body.appendChild(p.detail);
     }
 
-    // 抽出。買い目に居ない馬は本体行ごと隠し、開いていた詳細も閉じる
-    let shown = 0;
-    for (const p of pairs) {
-      const hide = betOn && !p.inBet;
-      p.row.classList.toggle('is-filtered', hide);
-      if (hide) {
-        p.row.setAttribute('hidden', '');
-        if (p.detail) p.detail.setAttribute('hidden', '');
-        p.row.setAttribute('aria-expanded', 'false');
-        p.row.classList.remove('is-open');
-      } else {
-        p.row.removeAttribute('hidden');
-        shown += 1;
-      }
-    }
-
     const note = ret.querySelector('[data-tools-note]') as HTMLElement | null;
     if (note) {
-      const parts: string[] = [];
-      if (sortOn) parts.push('AI指数の高い順');
-      if (betOn) parts.push(`買い目の${shown}頭のみ`);
-      if (parts.length) {
-        note.textContent = parts.join(' ／ ');
-        note.hidden = false;
-      } else {
-        note.hidden = true;
-      }
+      note.textContent = sortOn ? 'AI指数の高い順' : '';
+      note.hidden = !sortOn;
     }
+    syncButtons(ret);
+  }
 
+  /** 買い目パネルの開閉。出馬表には手を触れない。 */
+  function applyPlan(ret: HTMLElement) {
+    const panel = ret.querySelector('.ret-plan') as HTMLElement | null;
+    if (!panel) return;
+    const open = ret.dataset.plan === 'open';
+    if (open) panel.removeAttribute('hidden');
+    else panel.setAttribute('hidden', '');
+    syncButtons(ret);
+  }
+
+  function syncButtons(ret: HTMLElement) {
     for (const btn of Array.from(ret.querySelectorAll('.ret-tool'))) {
       const b = btn as HTMLElement;
-      const on = b.dataset.tool === 'sort' ? sortOn : betOn;
+      const on = b.dataset.tool === 'sort'
+        ? ret.dataset.sort === 'pt'
+        : ret.dataset.plan === 'open';
       b.setAttribute('aria-pressed', String(on));
       b.classList.toggle('is-on', on);
     }
@@ -391,10 +426,11 @@ const colCount = 3 // 枠 / 馬番 / 馬名
 
     if (btn.dataset.tool === 'sort') {
       ret.dataset.sort = ret.dataset.sort === 'pt' ? 'num' : 'pt';
-    } else if (btn.dataset.tool === 'bet') {
-      ret.dataset.filter = ret.dataset.filter === 'bet' ? 'all' : 'bet';
+      applySort(ret);
+    } else if (btn.dataset.tool === 'plan') {
+      ret.dataset.plan = ret.dataset.plan === 'open' ? 'closed' : 'open';
+      applyPlan(ret);
     }
-    applyTools(ret);
   });
 
   document.addEventListener('keydown', (e) => {
@@ -626,6 +662,140 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     font-size: 0.76rem;
     font-weight: 700;
     color: var(--primary-start, #d8433a);
+  }
+
+  /* ── 買い目パネル（有料 tier のみ・ツールバー直下＝出馬表の上） ── */
+  .ret-plan {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(180deg, #fff8f7 0%, var(--bg-primary) 100%);
+  }
+
+  .rpl-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .rpl-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 1.02rem;
+    color: var(--text-primary);
+  }
+
+  .rpl-type {
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--primary-start, #d8433a);
+    color: #fff;
+    font-size: 0.74rem;
+    font-weight: 800;
+    font-family: var(--font-sans);
+  }
+
+  .rpl-main {
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--secondary-start, #f59e0b);
+    color: #b45309;
+    font-size: 0.7rem;
+    font-weight: 800;
+    font-family: var(--font-sans);
+  }
+
+  .rpl-figures {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .rpl-fig b {
+    font-family: var(--font-num);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary-start, #d8433a);
+  }
+
+  .rpl-fig i { font-style: normal; font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-left: 2px; }
+  .rpl-sep { color: var(--border-color); }
+
+  /* 組み合わせ。1 点 = 1 チップ */
+  .rpl-combos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .rpl-combo {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 5px 9px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    font-family: var(--font-num);
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .rpl-n { min-width: 1.3em; text-align: center; }
+  .rpl-1st { color: var(--primary-start, #d8433a); }
+  .rpl-2nd { color: var(--text-primary); }
+  .rpl-arrow { color: var(--text-tertiary); font-size: 0.8rem; }
+
+  /* 軸ごとの内訳 */
+  .rpl-lines {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+    margin: 0 0 10px;
+    font-size: 0.84rem;
+  }
+
+  .rpl-lines dt { font-weight: 800; color: var(--text-secondary); font-family: var(--font-num); }
+  .rpl-lines dd { margin: 0; font-family: var(--font-num); color: var(--text-primary); }
+
+  .rpl-hold {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 8px;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    background: var(--bg-muted, #f1f5f9);
+    font-size: 0.82rem;
+  }
+
+  .rpl-hold-tag {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--text-tertiary);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 800;
+  }
+
+  .rpl-hold-nums { font-family: var(--font-num); font-weight: 700; }
+  .rpl-hold-note { color: var(--text-tertiary); font-size: 0.74rem; }
+
+  .rpl-foot {
+    margin: 0;
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    line-height: 1.6;
   }
 
   .mark { font-size: 1.25rem; font-weight: 700; line-height: 1; }

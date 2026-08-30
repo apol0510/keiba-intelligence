@@ -21,7 +21,7 @@ import RaceEntryTable from './RaceEntryTable.astro';
 import PaceMap from './PaceMap.astro';
 import { buildRaceNarrativeBundle, normalizePastRaces } from '../../utils/raceNarrative.js';
 import { sortByHorseNumber } from '../../utils/attentionMarks.js';
-import { parseBettingHorses } from '../../utils/bettingLineHorses.js';
+import { buildBettingPlan } from '../../utils/bettingPlan.js';
 
 interface Props {
   race: any;
@@ -36,6 +36,8 @@ interface Props {
   /** 買い目（light 以上のみ描画される） */
   bettingLines?: string[];
   betType?: string;
+  /** メインレースか。買い目の展開方向（F3 reverseTopK）が変わる。 */
+  isMain?: boolean;
   /** レース見出しの上に出す小さなラベル（例: メインレース） */
   badge?: string | null;
 }
@@ -49,6 +51,7 @@ const {
   resolveStats,
   bettingLines = [],
   betType = '馬単',
+  isMain = false,
   badge = null,
 } = Astro.props;
 
@@ -83,10 +86,13 @@ const headCount = allHorses.length || raceInfo?.horseCount || null;
 const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => typeof l === 'string' && l.trim()) : [];
 
 /**
- * 買い目に出てくる馬番。**有料 tier のときだけ**算出する。
- * 🔴 free/guest では空配列を渡す＝出馬表の HTML に買い目の痕跡を残さない。
+ * 「買い目を抽出」パネル用に、買い目を組み合わせへ展開する。
+ * 🔴 **有料 tier のときだけ**算出する。free/guest では null を渡す
+ *    ＝出馬表の HTML に買い目の痕跡を残さない。
  */
-const betHorses = showBetting ? parseBettingHorses(validBetting) : [];
+const bettingPlan = showBetting && validBetting.length
+  ? buildBettingPlan(validBetting, { isMain: !!isMain, betType })
+  : null;
 ---
 
 <section class="racepaper" data-race-number={raceInfo?.raceNumber} data-tier={view?.tier}>
@@ -123,7 +129,7 @@ const betHorses = showBetting ? parseBettingHorses(validBetting) : [];
     view={view}
     raceKey={`r${raceInfo?.venue ?? ''}${raceInfo?.raceNumber ?? ''}`}
     raceInfo={raceInfo}
-    betHorses={betHorses}
+    bettingPlan={bettingPlan}
     narrativeOf={(h: any) => bundle.horses.get(h?.horseNumber) || null}
     featuresOf={resolveFeatures}
     pastRacesOf={pastOf}
