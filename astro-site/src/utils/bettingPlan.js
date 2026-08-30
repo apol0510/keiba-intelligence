@@ -24,10 +24,19 @@
  *    本モジュールは同じ方向ルールで「買う組み合わせを画面に並べる」だけで、
  *    結果との突き合わせは一切しない。
  *
- * 🔴 **点数の意味に注意。** ここで数える点数は **表示した買い目の実点数**であり、
- *    `archiveResults` の回収率が使う投資基準（**全レース 5 点固定**）とは
- *    **別概念**である（BET_POINT_LOGIC.md の「出力フィールド」注記を参照）。
- *    画面でもその旨を添えること。
+ * ── 推奨購入点数（2026-08-30 仕様所有者の指示）──
+ * 画面に出す点数は **展開した組の総数ではなく「推奨購入点数」**とする。
+ * 出走頭数に応じて決め、**12 点を超えない**（CLAUDE.md「ユーザーは10点超の買い目を嫌う」）。
+ * 組み合わせの表示も推奨点数ぶんに絞る（見出しの点数とチップ数を一致させるため）。
+ *
+ * 🔴 **点数の意味に注意（3 つある）。**
+ *    1. **推奨購入点数** … 本モジュールが画面に出す数（頭数依存・最大 12）
+ *    2. **展開した組の総数** … F3 で成立する組（通常レースは 16 点になることもある）
+ *    3. **回収率の投資基準** … `archiveResults` が使う **全レース 5 点固定**
+ *    3 は BET_POINT_LOGIC.md の仕様であり、1 とは別概念である。
+ *    🔴 1 は 2 の**部分集合**なので、推奨から外れた組で決着した場合、
+ *       公開実績（2 と 3 に基づく）が的中でも、推奨どおり買った人は外れる。
+ *       この差は仕様所有者の判断で受け入れている。
  */
 
 /** 1 点あたりの購入額（円）。BET_POINT_LOGIC.md「1 点 100 円」。 */
@@ -36,6 +45,33 @@ export const UNIT_PRICE_YEN = 100;
 /** 逆方向を追加する相手の上限。メインは 0（一方向のみ）。 */
 export const REVERSE_TOP_K_MAIN = 0;
 export const REVERSE_TOP_K_NORMAL = 3;
+
+/** 推奨購入点数の上限。**ここを 12 より大きくしない**。 */
+export const MAX_RECOMMENDED_POINTS = 12;
+
+/**
+ * 出走頭数 → 推奨購入点数。
+ * 頭数が増えるほど手広く、少頭数では絞る。上限は 12 点。
+ */
+export const RECOMMENDED_POINTS_BY_FIELD = Object.freeze([
+  { maxField: 8, points: 6 },
+  { maxField: 11, points: 8 },
+  { maxField: 14, points: 10 },
+  { maxField: Infinity, points: MAX_RECOMMENDED_POINTS },
+]);
+
+/**
+ * 推奨購入点数を決める。
+ * @param {number} fieldSize 出走頭数
+ * @param {number} available 展開できた組の数（これを超えない）
+ */
+export function recommendedPoints(fieldSize, available) {
+  const n = Number(fieldSize);
+  const cap = Number.isFinite(Number(available)) ? Math.max(0, Number(available)) : 0;
+  if (!Number.isFinite(n) || n <= 0) return Math.min(cap, MAX_RECOMMENDED_POINTS);
+  const row = RECOMMENDED_POINTS_BY_FIELD.find((r) => n <= r.maxField);
+  return Math.min(cap, row ? row.points : MAX_RECOMMENDED_POINTS, MAX_RECOMMENDED_POINTS);
+}
 
 /**
  * 1 行を軸・相手・抑えへ分解する。
@@ -65,9 +101,10 @@ export function parseBettingLine(line) {
  * @param {string[]|string} lines
  * @param {object} [o]
  * @param {boolean} [o.isMain] メインレースか（`mainRaceBetting.isMainRace` の結果を渡す）
+ * @param {number} [o.fieldSize] 出走頭数（推奨購入点数の算出に使う）
  * @param {string} [o.betType]
  */
-export function buildBettingPlan(lines, { isMain = false, betType = '馬単' } = {}) {
+export function buildBettingPlan(lines, { isMain = false, fieldSize = 0, betType = '馬単' } = {}) {
   const parsed = toLines(lines).map(parseBettingLine).filter(Boolean);
   const reverseTopK = isMain ? REVERSE_TOP_K_MAIN : REVERSE_TOP_K_NORMAL;
 
@@ -94,14 +131,27 @@ export function buildBettingPlan(lines, { isMain = false, betType = '馬単' } =
   // 抑えは買わない。全行をまとめて参考表示するだけ
   const hold = [...new Set(parsed.flatMap((l) => l.hold))].sort((a, b) => a - b);
 
+  // 🔴 画面に出すのは推奨購入点数ぶんだけ（見出しの点数とチップ数を一致させる）
+  const points = recommendedPoints(fieldSize, combos.length);
+  const recommended = combos.slice(0, points);
+
   return Object.freeze({
     betType,
     isMain,
     reverseTopK,
-    lines: parsed,
-    combos,
-    points: combos.length,
-    amountYen: combos.length * UNIT_PRICE_YEN,
+    // 軸ごとの内訳。🔴 相手は **馬番昇順**で見せる（評価順は画面に出さない）
+    lines: parsed.map((l) => Object.freeze({
+      axis: l.axis,
+      partners: [...l.partners].sort((a, b) => a - b),
+      hold: [...l.hold].sort((a, b) => a - b),
+    })),
+    combos: recommended,
+    points,
+    amountYen: points * UNIT_PRICE_YEN,
+    // 🔴 F3 で成立する組の全体。**画面には出さない**（推奨との差を検証するために持つ）。
+    //    .astro の props は HTML に出力されないため、ここに持っても漏れない。
+    allCombos: combos,
+    expandedPoints: combos.length,
     hold,
     unitPriceYen: UNIT_PRICE_YEN,
   });

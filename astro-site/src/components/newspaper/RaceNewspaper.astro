@@ -91,7 +91,7 @@ const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => ty
  *    ＝出馬表の HTML に買い目の痕跡を残さない。
  */
 const bettingPlan = showBetting && validBetting.length
-  ? buildBettingPlan(validBetting, { isMain: !!isMain, betType })
+  ? buildBettingPlan(validBetting, { isMain: !!isMain, betType, fieldSize: allHorses.length })
   : null;
 ---
 

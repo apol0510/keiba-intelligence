@@ -198,6 +198,7 @@ const colCount = 3 // 枠 / 馬番 / 馬名
           {plan.isMain && <span class="rpl-main">メインレース</span>}
         </h4>
         <p class="rpl-figures">
+          <span class="rpl-reco">推奨</span>
           <span class="rpl-fig"><b>{plan.points}</b><i>点</i></span>
           <span class="rpl-sep" aria-hidden="true">/</span>
           <span class="rpl-fig"><b>¥{yen(plan.amountYen)}</b></span>
@@ -227,13 +228,8 @@ const colCount = 3 // 枠 / 馬番 / 馬名
         <p class="rpl-hold">
           <span class="rpl-hold-tag">抑え</span>
           <span class="rpl-hold-nums">{plan.hold.join('・')}</span>
-          <span class="rpl-hold-note">買い目には含みません（点数・購入額に算入しない）</span>
         </p>
       )}
-
-      <p class="rpl-foot">
-        1点100円で計算しています。回収率の投資基準（全レース5点固定）とは別の数値です。
-      </p>
     </section>
   )}
 
@@ -717,6 +713,16 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     margin: 0;
   }
 
+  .rpl-reco {
+    align-self: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--bg-muted, #f1f5f9);
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+
   .rpl-fig b {
     font-family: var(--font-num);
     font-size: 1.5rem;
@@ -772,7 +778,7 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    margin: 0 0 8px;
+    margin: 0;
     padding: 8px 10px;
     border-radius: var(--radius-md);
     background: var(--bg-muted, #f1f5f9);
