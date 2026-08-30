@@ -21,6 +21,7 @@ import RaceEntryTable from './RaceEntryTable.astro';
 import PaceMap from './PaceMap.astro';
 import { buildRaceNarrativeBundle, normalizePastRaces } from '../../utils/raceNarrative.js';
 import { sortByHorseNumber } from '../../utils/attentionMarks.js';
+import { parseBettingHorses } from '../../utils/bettingLineHorses.js';
 
 interface Props {
   race: any;
@@ -80,6 +81,12 @@ const pastOf = (h: any) => normalizePastRaces(resolveRaces ? resolveRaces(h) : h
 const distanceLabel = raceInfo?.distance ? `${raceInfo.distance}m` : null;
 const headCount = allHorses.length || raceInfo?.horseCount || null;
 const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => typeof l === 'string' && l.trim()) : [];
+
+/**
+ * 買い目に出てくる馬番。**有料 tier のときだけ**算出する。
+ * 🔴 free/guest では空配列を渡す＝出馬表の HTML に買い目の痕跡を残さない。
+ */
+const betHorses = showBetting ? parseBettingHorses(validBetting) : [];
 ---
 
 <section class="racepaper" data-race-number={raceInfo?.raceNumber} data-tier={view?.tier}>
@@ -116,6 +123,7 @@ const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => ty
     view={view}
     raceKey={`r${raceInfo?.venue ?? ''}${raceInfo?.raceNumber ?? ''}`}
     raceInfo={raceInfo}
+    betHorses={betHorses}
     narrativeOf={(h: any) => bundle.horses.get(h?.horseNumber) || null}
     featuresOf={resolveFeatures}
     pastRacesOf={pastOf}

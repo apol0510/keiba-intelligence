@@ -38,6 +38,8 @@ import { resolveFrameNumber } from '../../utils/frameNumber.js';
 interface Props {
   horses: any[];
   raceInfo?: any;
+  /** 🔴 買い目に出てくる馬番。**有料 tier のときだけ**渡すこと（free には渡さない）。 */
+  betHorses?: number[];
   view: { showMarks?: boolean; showBetting?: boolean; tier?: string };
   raceKey: string;
   narrativeOf: (horse: any) => any;
@@ -47,7 +49,7 @@ interface Props {
 }
 
 const {
-  horses = [], view, raceKey, raceInfo = null,
+  horses = [], view, raceKey, raceInfo = null, betHorses = [],
   narrativeOf, featuresOf, pastRacesOf, statsOf,
 } = Astro.props;
 
@@ -70,6 +72,19 @@ const showScoreColumn = showAttention;
 const maskScore = showAttention && !showRanked;
 
 const fieldSize = horses.length;
+
+/**
+ * 🔴 並べ替え・抽出ボタンは **有料 tier だけ**に描画する（R-9）。
+ *    free/guest には HTML ごと出さない。理由:
+ *      - 「AI指数順」は並びから評価順位が完全に読める（R-2 で禁止している情報）
+ *      - 「買い目の馬だけ」は買い目そのもの（有料の中核）
+ *    CSS で隠すのではなく、描画しない。
+ */
+const showTools = showRanked;
+
+/** 買い目に出てくる馬番。有料 tier 以外では空にする（HTML に痕跡を残さない）。 */
+const betSet = new Set<number>(showRanked && Array.isArray(betHorses) ? betHorses : []);
+const hasBetHorses = betSet.size > 0;
 
 /**
  * 無料会員向けの印（馬番 → '◎◎○▲' のような文字列）。
@@ -119,6 +134,8 @@ const rows = horses.map((h: any) => {
     trainer: h?.trainer || null,
     // 裏側の呼称は computerIndex。表示名は「基礎指数」。契約（10–99）外は表示しない
     baseIndex: toComputerIndex(h?.computerIndex),
+    // 🔴 買い目に出てくる馬か。有料 tier のときだけ true になりうる
+    inBet: betSet.has(Number(h?.horseNumber)),
   };
 });
 
@@ -140,6 +157,38 @@ const colCount = 3 // 枠 / 馬番 / 馬名
 ---
 
 <div class="ret" data-race-key={raceKey}>
+  {showTools && (
+    <div class="ret-tools" role="group" aria-label="出馬表の並べ替え・抽出">
+      <button
+        class="ret-tool"
+        type="button"
+        data-tool="sort"
+        aria-pressed="false"
+        title="AI指数の高い順に並べ替えます"
+      >
+        <span class="ret-tool-icon" aria-hidden="true">⇅</span>
+        <span class="ret-tool-on">AI指数順</span>
+        <span class="ret-tool-off">馬番順に戻す</span>
+      </button>
+
+      {hasBetHorses && (
+        <button
+          class="ret-tool"
+          type="button"
+          data-tool="bet"
+          aria-pressed="false"
+          title="買い目に入っている馬だけを残します"
+        >
+          <span class="ret-tool-icon" aria-hidden="true">◎</span>
+          <span class="ret-tool-on">買い目の馬だけ</span>
+          <span class="ret-tool-off">全頭に戻す</span>
+        </button>
+      )}
+
+      <span class="ret-tool-note" data-tools-note hidden></span>
+    </div>
+  )}
+
   <table class="ret-table">
     <thead>
       <tr>
@@ -164,6 +213,9 @@ const colCount = 3 // 枠 / 馬番 / 馬名
             <tr
               class={`ret-row ${r.frameClass}`}
               data-row={rowId}
+              data-order={i}
+              data-pt={showRanked && r.pt != null ? r.pt : ''}
+              data-bet={r.inBet ? '1' : ''}
               tabindex="0"
               role="button"
               aria-expanded="false"
@@ -247,6 +299,102 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     const row = (e.target as HTMLElement)?.closest?.('.ret-row') as HTMLElement | null;
     if (!row) return;
     toggleRow(row);
+  });
+
+  /* ==========================================================
+     並べ替え・抽出（🔴 有料 tier のときだけ DOM に存在する）
+
+     - ボタンは `.ret-tools` の中にあり、`.ret-row` の外なので
+       行クリックの開閉ハンドラとは衝突しない。
+     - 認可には一切関与しない。無料会員の HTML にはこのボタンも
+       `data-pt` / `data-bet` も **存在しない**（サーバー側で描画しない）。
+     ========================================================== */
+
+  /** 本体行と、その直下の詳細行を 1 組として扱う。 */
+  function pairsOf(table: HTMLElement) {
+    const body = table.querySelector('tbody');
+    if (!body) return [];
+    return Array.from(body.querySelectorAll('tr.ret-row')).map((row) => ({
+      row: row as HTMLElement,
+      detail: body.querySelector(`tr[data-detail="${row.getAttribute('data-row')}"]`) as HTMLElement | null,
+      order: Number((row as HTMLElement).dataset.order || 0),
+      pt: (row as HTMLElement).dataset.pt ? Number((row as HTMLElement).dataset.pt) : null,
+      inBet: (row as HTMLElement).dataset.bet === '1',
+    }));
+  }
+
+  function applyTools(ret: HTMLElement) {
+    const body = ret.querySelector('tbody');
+    if (!body) return;
+
+    const sortOn = ret.dataset.sort === 'pt';
+    const betOn = ret.dataset.filter === 'bet';
+    const pairs = pairsOf(ret);
+
+    // 並べ替え。AI指数が無い馬は末尾へ（馬番順の相対位置は保つ）
+    const ordered = [...pairs].sort((a, b) => {
+      if (sortOn) {
+        if (a.pt == null && b.pt != null) return 1;
+        if (a.pt != null && b.pt == null) return -1;
+        if (a.pt != null && b.pt != null && a.pt !== b.pt) return b.pt - a.pt;
+      }
+      return a.order - b.order;
+    });
+
+    for (const p of ordered) {
+      body.appendChild(p.row);
+      if (p.detail) body.appendChild(p.detail);
+    }
+
+    // 抽出。買い目に居ない馬は本体行ごと隠し、開いていた詳細も閉じる
+    let shown = 0;
+    for (const p of pairs) {
+      const hide = betOn && !p.inBet;
+      p.row.classList.toggle('is-filtered', hide);
+      if (hide) {
+        p.row.setAttribute('hidden', '');
+        if (p.detail) p.detail.setAttribute('hidden', '');
+        p.row.setAttribute('aria-expanded', 'false');
+        p.row.classList.remove('is-open');
+      } else {
+        p.row.removeAttribute('hidden');
+        shown += 1;
+      }
+    }
+
+    const note = ret.querySelector('[data-tools-note]') as HTMLElement | null;
+    if (note) {
+      const parts: string[] = [];
+      if (sortOn) parts.push('AI指数の高い順');
+      if (betOn) parts.push(`買い目の${shown}頭のみ`);
+      if (parts.length) {
+        note.textContent = parts.join(' ／ ');
+        note.hidden = false;
+      } else {
+        note.hidden = true;
+      }
+    }
+
+    for (const btn of Array.from(ret.querySelectorAll('.ret-tool'))) {
+      const b = btn as HTMLElement;
+      const on = b.dataset.tool === 'sort' ? sortOn : betOn;
+      b.setAttribute('aria-pressed', String(on));
+      b.classList.toggle('is-on', on);
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement)?.closest?.('.ret-tool') as HTMLElement | null;
+    if (!btn) return;
+    const ret = btn.closest('.ret') as HTMLElement | null;
+    if (!ret) return;
+
+    if (btn.dataset.tool === 'sort') {
+      ret.dataset.sort = ret.dataset.sort === 'pt' ? 'num' : 'pt';
+    } else if (btn.dataset.tool === 'bet') {
+      ret.dataset.filter = ret.dataset.filter === 'bet' ? 'all' : 'bet';
+    }
+    applyTools(ret);
   });
 
   document.addEventListener('keydown', (e) => {
@@ -431,6 +579,54 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     cursor: help;
   }
   .num-base { background: rgba(124, 58, 237, 0.10); color: #6d28d9; }
+
+  /* ── 並べ替え・抽出ツール（有料 tier のみ描画される） ── */
+  .ret-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+  }
+
+  .ret-tool {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-family: inherit;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+
+  .ret-tool:hover { border-color: var(--primary-start); color: var(--text-primary); }
+
+  .ret-tool.is-on {
+    background: var(--primary-start, #d8433a);
+    border-color: var(--primary-start, #d8433a);
+    color: #fff;
+  }
+
+  .ret-tool-icon { font-size: 0.9rem; line-height: 1; }
+
+  /* 押した後はボタンの文言を「戻す」に切り替える */
+  .ret-tool .ret-tool-off { display: none; }
+  .ret-tool.is-on .ret-tool-on { display: none; }
+  .ret-tool.is-on .ret-tool-off { display: inline; }
+
+  .ret-tool-note {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--primary-start, #d8433a);
+  }
 
   .mark { font-size: 1.25rem; font-weight: 700; line-height: 1; }
   /* 🔴 指数ごとの印を合算するため、1 セルに最大 5 文字並ぶ */
