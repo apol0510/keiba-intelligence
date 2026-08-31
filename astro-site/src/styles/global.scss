@@ -37,7 +37,8 @@
    *      桃→橙  だから、どう買うか（行動）
    *      スレート→藍  道具・分類（主張しないが単色にはしない）
    */
-  --grad-outlook: linear-gradient(135deg, #0891b2 0%, #2563eb 100%);
+  /* 🔴 2026-08-31: 暗くて単色に見えたため、シアン → インディゴの明るい 2 色へ */
+  --grad-outlook: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
   /*
    * 🔴 ナビは AIチャットボタン（`AIChat.astro`）と同じ配色にそろえた（2026-08-31）。
    *    以前の #2563eb → #7c3aed は暗くて青紫の差が読み取りにくかった。
@@ -61,7 +62,7 @@
   --action-bg: linear-gradient(135deg, #fff5f9 0%, #fff8f0 100%);
   --action-border: #fbd9c4;
   --outlook-bg: linear-gradient(135deg, #ecfeff 0%, #eaf2ff 100%);
-  --outlook-border: #bfdcf5;
+  --outlook-border: #b9dcf0;
 
   /* 背景: オフホワイト＋白カード */
   --bg-primary: #f5f7fb;
