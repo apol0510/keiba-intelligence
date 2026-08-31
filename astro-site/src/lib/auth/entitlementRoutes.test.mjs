@@ -126,10 +126,15 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
 
   // 🔴 同系色の濃淡ではなく、2 色を混ぜたグラデーションであること
   const two = {
+    '--grad-outlook': ['#0891b2', '#2563eb'],
     '--grad-nav': ['#2563eb', '#7c3aed'],
     '--grad-conclusion': ['#7c3aed', '#ec4899'],
     '--grad-action': ['#ec4899', '#f97316'],
   };
+  // 道具（スレート）も単色に見せない
+  const tool = tokens.match(/--tool-start: (#\w+);[\s\S]*?--tool-end: (#\w+);/);
+  assert.ok(tool, 'スレートの 2 色が読めない');
+  assert.notEqual(tool[1], tool[2], 'スレートが単色になっている');
   for (const [name, [from, to]] of Object.entries(two)) {
     const m = tokens.match(new RegExp(`${name}: linear-gradient\\(([^;]+)\\);`));
     assert.ok(m, `${name} が無い`);
@@ -138,10 +143,22 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
   }
 
   const table = read('src/components/newspaper/RaceEntryTable.astro');
-  const lastRule = (src, sel) => {
-    const i = src.lastIndexOf(`${sel} {`);
+  /**
+   * セレクタのルールを取り出す。
+   * 🔴 同じセレクタは複数回書かれる（共有ルール・メディアクエリ）ため、
+   *    `prop` を含むもののうち **最後に出るもの**（CSS で勝つもの）を返す。
+   */
+  const lastRule = (src, sel, prop = 'background') => {
+    let found = null;
+    let i = src.indexOf(`${sel} {`);
     assert.ok(i > 0, `${sel} のルールが無い`);
-    return src.slice(i, src.indexOf('}', i));
+    while (i > 0) {
+      const rule = src.slice(i, src.indexOf('}', i));
+      if (rule.includes(prop)) found = rule;
+      i = src.indexOf(`${sel} {`, i + 1);
+    }
+    assert.ok(found, `${sel} に ${prop} を持つルールが無い`);
+    return found;
   };
   // 買い目（行動）はオレンジ
   assert.match(
@@ -154,9 +171,21 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
   // 道具（並べ替え）はスレート
   assert.match(lastRule(table, '.ret-tool.is-on'), /background: var\(--tool-gradient\)/, '並べ替えがスレートでない');
   // 🔴 買い目まわりにブルーが戻っていない
-  for (const sel of ['.rpl-type', '.rpl-fig b', '.rpl-1st', '.ret-tool.is-on']) {
+  for (const sel of ['.rpl-type', '.rpl-fig b', '.ret-tool.is-on']) {
     refute(/--primary-start/, lastRule(table, sel), `${sel} にブルーが戻っている`);
   }
+  refute(/--primary-start/, lastRule(table, '.rpl-1st', 'color'), '1着の馬番にブルーが戻っている');
+
+  // レース展望は 藍→青、レース番号は黒をやめて 青→紫
+  const paper = read('src/components/newspaper/RaceNewspaper.astro');
+  assert.match(lastRule(paper, '.rp-outlook-tag'), /background: var\(--grad-outlook\)/, 'レース展望のタグがグラデーションでない');
+  assert.match(lastRule(paper, '.rp-outlook'), /background: var\(--outlook-bg\)/, 'レース展望の下地がグラデーションでない');
+  assert.match(lastRule(paper, '.rp-rno'), /background: var\(--grad-nav\)/, 'レース番号がグラデーションでない');
+  refute(/background: var\(--text-primary\)/, lastRule(paper, '.rp-rno'), 'レース番号が黒に戻っている');
+
+  // 🔴 枠色（competition rule）は触らない。2 枠は黒のまま
+  const tokens2 = read('src/styles/global.scss');
+  assert.match(tokens2, /--waku-2-bg: #1a1a1a/, '枠色（2枠の黒）を変えてはいけない');
 
   // 会場の分類ラベルはスレート（ブルーはレースタブの選択中に譲る）
   const board = read('src/components/newspaper/RaceDayBoard.astro');

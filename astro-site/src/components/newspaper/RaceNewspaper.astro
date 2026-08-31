@@ -195,6 +195,7 @@ const bettingPlan = showBetting && validBetting.length
     gap: 12px;
   }
 
+  /* 🔴 2026-08-31: レース番号は黒をやめて 青→紫（ナビと同じ家族） */
   .rp-rno {
     display: inline-flex;
     align-items: baseline;
@@ -202,7 +203,7 @@ const bettingPlan = showBetting && validBetting.length
     min-width: 54px;
     padding: 6px 8px;
     border-radius: var(--radius-md);
-    background: var(--text-primary);
+    background: var(--grad-nav);
     color: var(--text-inverse);
     font-family: var(--font-num);
     font-size: 1.5rem;
@@ -252,11 +253,12 @@ const bettingPlan = showBetting && validBetting.length
   .rp-time { color: var(--secondary-start); }
 
   /* レース展望 */
+  /* 🔴 2026-08-31: レース展望は 藍→青（スペクトラムの入口） */
   .rp-outlook {
     margin-top: 12px;
     padding: 11px 13px;
-    background: linear-gradient(180deg, #eff6ff 0%, #e9f2ff 100%);
-    border: 1px solid #c7dcfa;
+    background: var(--outlook-bg);
+    border: 1px solid var(--outlook-border);
     border-radius: var(--radius-md);
   }
 
@@ -268,10 +270,11 @@ const bettingPlan = showBetting && validBetting.length
     letter-spacing: 0.1em;
     padding: 2px 7px;
     border-radius: 4px;
-    background: var(--primary-start);
     color: var(--text-inverse);
     margin-bottom: 5px;
   }
+
+  .rp-outlook-tag { background: var(--grad-outlook); }
 
   .rp-outlook p,
   .rp-conclusion p {

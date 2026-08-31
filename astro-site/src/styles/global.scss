@@ -31,18 +31,20 @@
    * 🔴 同系色の濃淡ではなく、**2 色を混ぜたグラデーション**にする。
    *    青 → 紫 → 桃 → 橙 の 1 本のスペクトラムを、画面を読む順に割り当てる:
    *
-   *      青→紫  いまどこを見ているか（ナビゲーション）
+   *      藍→青  レースの読み（レース展望）
+   *      青→紫  いまどこを見ているか（ナビゲーション・レース番号）
    *      紫→桃  AI がどう判断したか（結論）
    *      桃→橙  だから、どう買うか（行動）
-   *      スレート  道具・分類（主張しない）
+   *      スレート→藍  道具・分類（主張しないが単色にはしない）
    */
+  --grad-outlook: linear-gradient(135deg, #0891b2 0%, #2563eb 100%);
   --grad-nav: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
   --grad-conclusion: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
   --grad-action: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
 
-  /* 道具・分類カラー: スレート（中立の操作と分類ラベル） */
+  /* 道具・分類カラー: スレート → 藍（単色に見せない・主張はしない） */
   --tool-start: #334155;
-  --tool-end: #475569;
+  --tool-end: #3f4d8a;
   --tool-gradient: linear-gradient(135deg, var(--tool-start) 0%, var(--tool-end) 100%);
 
   /* 各セクションの淡い下地と枠線 */
@@ -53,6 +55,8 @@
   --conclusion-border: #e6d5f7;
   --action-bg: linear-gradient(135deg, #fff5f9 0%, #fff8f0 100%);
   --action-border: #fbd9c4;
+  --outlook-bg: linear-gradient(135deg, #ecfeff 0%, #eaf2ff 100%);
+  --outlook-border: #bfdcf5;
 
   /* 背景: オフホワイト＋白カード */
   --bg-primary: #f5f7fb;
