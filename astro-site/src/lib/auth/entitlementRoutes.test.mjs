@@ -177,14 +177,20 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
    *    `prop` を含むもののうち **最後に出るもの**（CSS で勝つもの）を返す。
    */
   const lastRule = (src, sel, prop = 'background') => {
+    // 🔴 行頭から一致させる。`.up-btn` が `.rp-upsell-paid .up-btn` に
+    //    引っかかると別のルールを検証してしまうため。
+    const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(^|\n)[ \t]*${esc} \{`, 'g');
     let found = null;
-    let i = src.indexOf(`${sel} {`);
-    assert.ok(i > 0, `${sel} のルールが無い`);
-    while (i > 0) {
+    let m;
+    let any = false;
+    while ((m = re.exec(src)) !== null) {
+      any = true;
+      const i = m.index + m[0].length;
       const rule = src.slice(i, src.indexOf('}', i));
       if (rule.includes(prop)) found = rule;
-      i = src.indexOf(`${sel} {`, i + 1);
     }
+    assert.ok(any, `${sel} のルールが無い`);
     assert.ok(found, `${sel} に ${prop} を持つルールが無い`);
     return found;
   };
