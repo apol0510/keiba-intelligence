@@ -238,6 +238,11 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
   );
   refute(/background: var\(--primary-gradient\)/, lastRule(paper, '.up-btn'), '導線に旧グラデーションが戻っている');
 
+  const ribbon = read('src/components/newspaper/TierRibbon.astro');
+  assert.match(lastRule(ribbon, '.tr-cta'), /background: var\(--grad-nav\)/, '帯の導線が単色になっている');
+  assert.match(lastRule(ribbon, '.tone-paid .tr-cta'), /background: var\(--grad-action\)/, '買い目の導線が 桃→橙 でない');
+  refute(/background: var\(--text-primary\)/, lastRule(ribbon, '.tr-badge'), '帯のバッジが黒に戻っている');
+
   const layout = read('src/layouts/BaseLayout.astro');
   assert.match(lastRule(layout, '.footer-cta'), /background: var\(--grad-nav\)/, 'フッターの無料会員登録が単色になっている');
   refute(/#fbbf24|#f59e0b/, lastRule(layout, '.footer-cta'), 'フッターの黄色単色が戻っている');

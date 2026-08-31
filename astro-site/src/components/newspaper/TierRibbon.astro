@@ -106,8 +106,8 @@ const nextStep = !view?.showMarks
     box-shadow: var(--shadow-sm);
   }
 
-  .tone-free { border-color: #bfdbfe; background: linear-gradient(180deg, #f5faff 0%, #eef5ff 100%); }
-  .tone-paid { border-color: #fed7aa; background: linear-gradient(180deg, #fffaf5 0%, #fff3e8 100%); }
+  .tone-free { border-color: #c7d2fe; background: linear-gradient(135deg, #f2f8ff 0%, #f5efff 100%); }
+  .tone-paid { border-color: #f7c2c8; background: var(--action-bg); }
 
   .tr-status {
     display: flex;
@@ -117,13 +117,14 @@ const nextStep = !view?.showMarks
     min-width: 0;
   }
 
+  /* 🔴 黒のベタ塗りをやめる（2026-08-31） */
   .tr-badge {
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     padding: 4px 12px;
     border-radius: var(--radius-pill);
-    background: var(--text-primary);
+    background: var(--tool-gradient);
     color: var(--text-inverse);
     white-space: nowrap;
   }
@@ -157,14 +158,15 @@ const nextStep = !view?.showMarks
     font-size: 0.85rem;
     font-weight: 800;
     color: var(--text-inverse);
-    background: var(--primary-gradient);
+    background: var(--grad-nav);
     box-shadow: 0 3px 12px rgba(37, 99, 235, 0.28);
     white-space: nowrap;
   }
 
+  /* 買い目を受け取る導線は 桃→橙（買い目パネル・有料導線と同じ） */
   .tone-paid .tr-cta {
-    background: var(--secondary-gradient);
-    box-shadow: 0 3px 12px rgba(249, 115, 22, 0.28);
+    background: var(--grad-action);
+    box-shadow: 0 3px 12px rgba(240, 94, 86, 0.3);
   }
 
   .tr-cta:hover { color: var(--text-inverse); }
