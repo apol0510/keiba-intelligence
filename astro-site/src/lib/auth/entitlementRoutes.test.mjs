@@ -120,6 +120,30 @@ test('結論はパープル系（オレンジ系に戻っていない）', () =>
   assert.match(tokens, /--grad-conclusion: linear-gradient/, 'グラデーションのトークンが無い');
 });
 
+test('🔴 予想ページの説明文に内部処理の言い回しを出さない（2026-08-31）', () => {
+  // 実装の説明・自己弁護の言い回しは顧客向けの文面ではない
+  const banned = [
+    '数値の言い換えではありません',
+    '加工していません',
+    '1 角通過順',
+    '一般論で埋めません',
+    '正直に書きます',
+    '算出しています',
+  ];
+  for (const route of ['src/pages/prediction/nankan/index.astro', 'src/pages/prediction/jra/index.astro']) {
+    const src = read(route);
+    const foot = src.slice(src.indexOf('pp-foot-grid'), src.indexOf('</section>', src.indexOf('pp-foot-grid')));
+    for (const w of banned) {
+      assert.ok(!foot.includes(w), `${route}: 内部処理向けの言い回しが残っている「${w}」`);
+    }
+    // 会場に合った実績リンクが張られていること
+    assert.match(foot, /pp-foot-link/, `${route}: 的中実績への導線が無い`);
+  }
+  // 会場ごとに正しいアーカイブへ飛ぶ
+  assert.match(read('src/pages/prediction/nankan/index.astro'), /href="\/archive\/nankan"/, '南関の実績リンクが違う');
+  assert.match(read('src/pages/prediction/jra/index.astro'), /href="\/archive\/jra"/, '中央の実績リンクが違う');
+});
+
 test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論 / 桃→橙=買い目 / スレート=道具', () => {
   const tokens = read('src/styles/global.scss');
   assert.match(tokens, /--tool-gradient: linear-gradient/, 'スレートのトークンが無い');
