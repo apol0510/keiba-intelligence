@@ -308,14 +308,16 @@ const bettingPlan = showBetting && validBetting.length
     background: var(--bg-secondary);
   }
 
+  /* 無料登録の導線。下地も 2 色（青→紫の淡い版） */
   .rp-upsell-free {
-    border-color: var(--primary-start);
-    background: linear-gradient(180deg, #f0f7ff 0%, #e8f1ff 100%);
+    border-color: #a5b4fc;
+    background: linear-gradient(135deg, #eff6ff 0%, #f3ebff 100%);
   }
 
+  /* 有料プランの導線。下地も 2 色（桃→橙の淡い版）＝買い目パネルと同じ家族 */
   .rp-upsell-paid {
-    border-color: var(--secondary-start);
-    background: linear-gradient(180deg, #fff8f0 0%, #ffefe0 100%);
+    border-color: #f7c2c8;
+    background: var(--action-bg);
   }
 
   .up-lead {
@@ -333,6 +335,11 @@ const bettingPlan = showBetting && validBetting.length
     line-height: 1.6;
   }
 
+  /*
+   * 🔴 2026-08-31: 単色をやめて 2 色グラデーションに。
+   *    無料登録 → 青→紫（ブランドの入口・チャットボタンと同じ家族）
+   *    有料プラン → 桃→橙（買う行動。買い目パネルと同じ）
+   */
   .up-btn {
     display: inline-block;
     padding: 11px 26px;
@@ -340,8 +347,8 @@ const bettingPlan = showBetting && validBetting.length
     font-weight: 800;
     font-size: 0.95rem;
     color: var(--text-inverse);
-    background: var(--primary-gradient);
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+    background: var(--grad-nav);
+    box-shadow: 0 4px 14px rgba(124, 106, 246, 0.32);
     transition: transform var(--transition-fast);
   }
 
@@ -357,7 +364,13 @@ const bettingPlan = showBetting && validBetting.length
     margin-left: 12px;
     font-size: 0.82rem;
     font-weight: 700;
-    color: var(--primary-start);
+    color: #6366f1;
+  }
+
+  /* 有料プランの導線だけボタンを 桃→橙 にする */
+  .rp-upsell-paid .up-btn {
+    background: var(--grad-action);
+    box-shadow: 0 4px 14px rgba(240, 94, 86, 0.32);
   }
 
   @media (max-width: 600px) {

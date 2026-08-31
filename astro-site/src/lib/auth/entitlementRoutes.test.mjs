@@ -223,6 +223,19 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
     'チャットボタンの配色が変わっている（--grad-nav と揃わなくなる）',
   );
 
+  // 🔴 導線ボタンは単色にしない（2026-08-31）
+  assert.match(lastRule(paper, '.up-btn'), /background: var\(--grad-nav\)/, '無料登録の導線が単色になっている');
+  assert.match(
+    lastRule(paper, '.rp-upsell-paid .up-btn'),
+    /background: var\(--grad-action\)/,
+    '有料プランの導線が 桃→橙 でない',
+  );
+  refute(/background: var\(--primary-gradient\)/, lastRule(paper, '.up-btn'), '導線に旧グラデーションが戻っている');
+
+  const layout = read('src/layouts/BaseLayout.astro');
+  assert.match(lastRule(layout, '.footer-cta'), /background: var\(--grad-nav\)/, 'フッターの無料会員登録が単色になっている');
+  refute(/#fbbf24|#f59e0b/, lastRule(layout, '.footer-cta'), 'フッターの黄色単色が戻っている');
+
   // 会場の分類ラベルはスレート（ブルーはレースタブの選択中に譲る）
   const board = read('src/components/newspaper/RaceDayBoard.astro');
   assert.match(lastRule(board, '.rdb-cat'), /background: var\(--tool-gradient\)/, '会場バッジがスレートでない');
