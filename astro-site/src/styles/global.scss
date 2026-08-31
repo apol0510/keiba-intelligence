@@ -45,6 +45,8 @@
    *    ここを変えるときは `AIChat.astro` の `#3b82f6, #8b5cf6` も合わせること。
    */
   --grad-nav: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  /* 暗い面（フッター等）に置く導線用の明るい版。文字は濃色にする */
+  --grad-nav-bright: linear-gradient(135deg, #38bdf8 0%, #a78bfa 100%);
   --grad-conclusion: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
   --grad-action: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
 

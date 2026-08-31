@@ -526,15 +526,18 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
       border-radius: var(--radius-md);
       font-weight: 700;
       font-size: 0.875rem;
-      /* 🔴 2026-08-31: 黄色の単色をやめてブランドの 2 色グラデーションへ */
-      color: #ffffff;
-      background: var(--grad-nav);
-      box-shadow: 0 2px 10px rgba(124, 106, 246, 0.4);
+      /*
+       * 🔴 2026-08-31: 黄色の単色をやめてブランドの 2 色グラデーションへ。
+       *    フッターは暗いので **明るい版**を使い、文字は濃色にして読みやすくする。
+       */
+      color: #0b1020;
+      background: var(--grad-nav-bright);
+      box-shadow: 0 3px 14px rgba(96, 165, 250, 0.45);
       transition: all var(--transition-base);
     }
     .footer-cta:hover {
       transform: translateY(-1px);
-      box-shadow: 0 6px 18px rgba(124, 106, 246, 0.55);
+      box-shadow: 0 6px 22px rgba(129, 190, 255, 0.65);
     }
 
     /* 対象競馬場（コンパクト2列・会場名は1行=nowrap） */

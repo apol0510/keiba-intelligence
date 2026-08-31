@@ -244,8 +244,14 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
   refute(/background: var\(--text-primary\)/, lastRule(ribbon, '.tr-badge'), '帯のバッジが黒に戻っている');
 
   const layout = read('src/layouts/BaseLayout.astro');
-  assert.match(lastRule(layout, '.footer-cta'), /background: var\(--grad-nav\)/, 'フッターの無料会員登録が単色になっている');
+  // フッターは暗いので明るい版を使う
+  assert.match(
+    lastRule(layout, '.footer-cta'),
+    /background: var\(--grad-nav-bright\)/,
+    'フッターの無料会員登録が明るいグラデーションでない',
+  );
   refute(/#fbbf24|#f59e0b/, lastRule(layout, '.footer-cta'), 'フッターの黄色単色が戻っている');
+  assert.match(tokens, /--grad-nav-bright: linear-gradient\(135deg, #38bdf8 0%, #a78bfa 100%\)/, '明るい版のトークンが無い');
 
   // 会場の分類ラベルはスレート（ブルーはレースタブの選択中に譲る）
   const board = read('src/components/newspaper/RaceDayBoard.astro');
