@@ -127,7 +127,7 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
   // 🔴 同系色の濃淡ではなく、2 色を混ぜたグラデーションであること
   const two = {
     '--grad-outlook': ['#0891b2', '#2563eb'],
-    '--grad-nav': ['#2563eb', '#7c3aed'],
+    '--grad-nav': ['#3b82f6', '#8b5cf6'],
     '--grad-conclusion': ['#7c3aed', '#ec4899'],
     '--grad-action': ['#ec4899', '#f97316'],
   };
@@ -186,6 +186,14 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
   // 🔴 枠色（competition rule）は触らない。2 枠は黒のまま
   const tokens2 = read('src/styles/global.scss');
   assert.match(tokens2, /--waku-2-bg: #1a1a1a/, '枠色（2枠の黒）を変えてはいけない');
+
+  // 🔴 ナビは AIチャットボタンと同じ配色にそろえる（見た目の一貫性）
+  const chat = read('src/components/AIChat.astro');
+  assert.match(
+    chat,
+    /linear-gradient\(135deg, #3b82f6, #8b5cf6\)/,
+    'チャットボタンの配色が変わっている（--grad-nav と揃わなくなる）',
+  );
 
   // 会場の分類ラベルはスレート（ブルーはレースタブの選択中に譲る）
   const board = read('src/components/newspaper/RaceDayBoard.astro');

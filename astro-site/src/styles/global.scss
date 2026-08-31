@@ -38,7 +38,12 @@
    *      スレート→藍  道具・分類（主張しないが単色にはしない）
    */
   --grad-outlook: linear-gradient(135deg, #0891b2 0%, #2563eb 100%);
-  --grad-nav: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  /*
+   * 🔴 ナビは AIチャットボタン（`AIChat.astro`）と同じ配色にそろえた（2026-08-31）。
+   *    以前の #2563eb → #7c3aed は暗くて青紫の差が読み取りにくかった。
+   *    ここを変えるときは `AIChat.astro` の `#3b82f6, #8b5cf6` も合わせること。
+   */
+  --grad-nav: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
   --grad-conclusion: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
   --grad-action: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
 
