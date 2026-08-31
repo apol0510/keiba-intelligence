@@ -119,6 +119,41 @@ test('結論はパープル系（オレンジ系に戻っていない）', () =>
   assert.match(tokens, /--conclusion-gradient: linear-gradient/, 'グラデーションのトークンが無い');
 });
 
+test('配色の役割分担（2026-08-31）: 青=ナビ / 紫=結論 / 橙=買い目 / スレート=道具', () => {
+  const tokens = read('src/styles/global.scss');
+  assert.match(tokens, /--tool-gradient: linear-gradient/, 'スレートのトークンが無い');
+
+  const table = read('src/components/newspaper/RaceEntryTable.astro');
+  const lastRule = (src, sel) => {
+    const i = src.lastIndexOf(`${sel} {`);
+    assert.ok(i > 0, `${sel} のルールが無い`);
+    return src.slice(i, src.indexOf('}', i));
+  };
+  // 買い目（行動）はオレンジ
+  assert.match(
+    lastRule(table, '.ret-tool[data-tool="plan"].is-on'),
+    /background: var\(--secondary-gradient\)/,
+    '買い目ボタンがオレンジでない',
+  );
+  assert.match(lastRule(table, '.rpl-type'), /background: var\(--secondary-gradient\)/, '馬単バッジがオレンジでない');
+  assert.match(lastRule(table, '.rpl-fig b'), /color: var\(--secondary-start\)/, '点数・金額がオレンジでない');
+  // 道具（並べ替え）はスレート
+  assert.match(lastRule(table, '.ret-tool.is-on'), /background: var\(--tool-gradient\)/, '並べ替えがスレートでない');
+  // 🔴 買い目まわりにブルーが戻っていない
+  for (const sel of ['.rpl-type', '.rpl-fig b', '.rpl-1st', '.ret-tool.is-on']) {
+    refute(/--primary-start/, lastRule(table, sel), `${sel} にブルーが戻っている`);
+  }
+
+  // 会場の分類ラベルはスレート（ブルーはレースタブの選択中に譲る）
+  const board = read('src/components/newspaper/RaceDayBoard.astro');
+  assert.match(lastRule(board, '.rdb-cat'), /background: var\(--tool-gradient\)/, '会場バッジがスレートでない');
+  assert.match(
+    lastRule(board, '.rdb-race-tab.is-active'),
+    /background: var\(--primary-gradient\)/,
+    '選択中のレースタブはブルーのままにする',
+  );
+});
+
 test('🔴 結論は出馬表より前に置く（2026-08-30）', () => {
   const src = read('src/components/newspaper/RaceNewspaper.astro');
   const body = src.slice(src.indexOf('<section class="racepaper"'), src.indexOf('<style>'));

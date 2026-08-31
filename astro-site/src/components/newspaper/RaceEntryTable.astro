@@ -641,10 +641,30 @@ const colCount = 3 // 枠 / 馬番 / 馬名
 
   .ret-tool:hover { border-color: var(--primary-start); color: var(--text-primary); }
 
+  /*
+   * 🔴 2026-08-31 配色の役割分担:
+   *    ブルー = ナビゲーション（どこを見ているか）
+   *    パープル = AI の判断（結論）
+   *    オレンジ = 行動（お金が動く＝買い目）
+   *    スレート = 道具（中立の操作）
+   *    以前は全部ブルーで、どれが「買う」ボタンか読めなかった。
+   */
+
+  /* 表示の切り替え（AI指数順）は道具なのでスレート */
   .ret-tool.is-on {
-    background: var(--primary-start, #d8433a);
-    border-color: var(--primary-start, #d8433a);
+    background: var(--tool-gradient);
+    border-color: var(--tool-start);
     color: #fff;
+  }
+
+  /* 買い目の抽出は「買う」につながる操作なのでオレンジ */
+  .ret-tool[data-tool="plan"].is-on {
+    background: var(--secondary-gradient);
+    border-color: var(--secondary-start);
+  }
+
+  .ret-tool[data-tool="plan"]:hover {
+    border-color: var(--secondary-start);
   }
 
   .ret-tool-icon { font-size: 0.9rem; line-height: 1; }
@@ -664,7 +684,7 @@ const colCount = 3 // 枠 / 馬番 / 馬名
   .ret-plan {
     padding: 14px 16px 12px;
     border-bottom: 1px solid var(--border-color);
-    background: linear-gradient(180deg, #fff8f7 0%, var(--bg-primary) 100%);
+    background: linear-gradient(180deg, #fffaf2 0%, var(--bg-primary) 100%);
   }
 
   /*
@@ -733,7 +753,7 @@ const colCount = 3 // 枠 / 馬番 / 馬名
   .rpl-type {
     padding: 3px 9px;
     border-radius: 999px;
-    background: var(--primary-start, #d8433a);
+    background: var(--secondary-gradient);
     color: #fff;
     font-size: 0.74rem;
     font-weight: 800;
@@ -771,7 +791,7 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     font-family: var(--font-num);
     font-size: 1.5rem;
     font-weight: 800;
-    color: var(--primary-start, #d8433a);
+    color: var(--secondary-start);
   }
 
   .rpl-fig i { font-style: normal; font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-left: 2px; }
@@ -793,7 +813,7 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     gap: 3px;
     padding: 5px 9px;
     border-radius: 8px;
-    border: 1px solid var(--border-color);
+    border: 1px solid #fcd9b6;
     background: var(--bg-primary);
     font-family: var(--font-num);
     font-size: 0.9rem;
@@ -801,7 +821,7 @@ const colCount = 3 // 枠 / 馬番 / 馬名
   }
 
   .rpl-n { min-width: 1.3em; text-align: center; }
-  .rpl-1st { color: var(--primary-start, #d8433a); }
+  .rpl-1st { color: var(--secondary-start); }
   .rpl-2nd { color: var(--text-primary); }
   .rpl-arrow { color: var(--text-tertiary); font-size: 0.8rem; }
 

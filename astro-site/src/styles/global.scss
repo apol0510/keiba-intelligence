@@ -25,6 +25,11 @@
   --accent-yellow: #facc15;
   --accent-pink: #ec4899;
 
+  /* 道具・分類カラー: スレート（中立の操作と分類ラベル・2026-08-31） */
+  --tool-start: #334155;
+  --tool-end: #475569;
+  --tool-gradient: linear-gradient(135deg, var(--tool-start) 0%, var(--tool-end) 100%);
+
   /* 結論カラー: パープル（AI の判断を示す色・2026-08-31） */
   --conclusion-start: #7c3aed;
   --conclusion-end: #a855f7;
