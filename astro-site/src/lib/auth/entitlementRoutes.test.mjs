@@ -116,12 +116,26 @@ test('結論はパープル系（オレンジ系に戻っていない）', () =>
 
   const tokens = read('src/styles/global.scss');
   assert.match(tokens, /--conclusion-start: #7c3aed/, 'パープルのトークンが無い');
-  assert.match(tokens, /--conclusion-gradient: linear-gradient/, 'グラデーションのトークンが無い');
+  assert.match(tokens, /--conclusion-gradient: var\(--grad-conclusion\)/, '結論が 紫→桃 のグラデーションを使っていない');
+  assert.match(tokens, /--grad-conclusion: linear-gradient/, 'グラデーションのトークンが無い');
 });
 
-test('配色の役割分担（2026-08-31）: 青=ナビ / 紫=結論 / 橙=買い目 / スレート=道具', () => {
+test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論 / 桃→橙=買い目 / スレート=道具', () => {
   const tokens = read('src/styles/global.scss');
   assert.match(tokens, /--tool-gradient: linear-gradient/, 'スレートのトークンが無い');
+
+  // 🔴 同系色の濃淡ではなく、2 色を混ぜたグラデーションであること
+  const two = {
+    '--grad-nav': ['#2563eb', '#7c3aed'],
+    '--grad-conclusion': ['#7c3aed', '#ec4899'],
+    '--grad-action': ['#ec4899', '#f97316'],
+  };
+  for (const [name, [from, to]] of Object.entries(two)) {
+    const m = tokens.match(new RegExp(`${name}: linear-gradient\\(([^;]+)\\);`));
+    assert.ok(m, `${name} が無い`);
+    assert.ok(m[1].includes(from) && m[1].includes(to), `${name} が ${from} → ${to} の2色でない`);
+    assert.notEqual(from, to, `${name} が同系色の濃淡になっている`);
+  }
 
   const table = read('src/components/newspaper/RaceEntryTable.astro');
   const lastRule = (src, sel) => {
@@ -132,11 +146,11 @@ test('配色の役割分担（2026-08-31）: 青=ナビ / 紫=結論 / 橙=買�
   // 買い目（行動）はオレンジ
   assert.match(
     lastRule(table, '.ret-tool[data-tool="plan"].is-on'),
-    /background: var\(--secondary-gradient\)/,
-    '買い目ボタンがオレンジでない',
+    /background: var\(--grad-action\)/,
+    '買い目ボタンが 桃→橙 のグラデーションでない',
   );
-  assert.match(lastRule(table, '.rpl-type'), /background: var\(--secondary-gradient\)/, '馬単バッジがオレンジでない');
-  assert.match(lastRule(table, '.rpl-fig b'), /color: var\(--secondary-start\)/, '点数・金額がオレンジでない');
+  assert.match(lastRule(table, '.rpl-type'), /background: var\(--grad-action\)/, '馬単バッジが 桃→橙 でない');
+  assert.match(lastRule(table, '.rpl-fig b'), /background: var\(--grad-action\)/, '点数・金額が 桃→橙 でない');
   // 道具（並べ替え）はスレート
   assert.match(lastRule(table, '.ret-tool.is-on'), /background: var\(--tool-gradient\)/, '並べ替えがスレートでない');
   // 🔴 買い目まわりにブルーが戻っていない
@@ -149,8 +163,8 @@ test('配色の役割分担（2026-08-31）: 青=ナビ / 紫=結論 / 橙=買�
   assert.match(lastRule(board, '.rdb-cat'), /background: var\(--tool-gradient\)/, '会場バッジがスレートでない');
   assert.match(
     lastRule(board, '.rdb-race-tab.is-active'),
-    /background: var\(--primary-gradient\)/,
-    '選択中のレースタブはブルーのままにする',
+    /background: var\(--grad-nav\)/,
+    '選択中のレースタブが 青→紫 のグラデーションでない',
   );
 });
 

@@ -315,8 +315,15 @@ const venueViews = venues.map((venue: any, venueIndex: number) => {
 
   .rdb-tab.is-active {
     background: var(--bg-secondary);
-    color: var(--primary-start);
     box-shadow: var(--shadow-sm);
+  }
+
+  /* 会場タブの選択中も 青→紫（文字だけをグラデーションで塗る） */
+  .rdb-tab.is-active .rdb-tab-name {
+    background: var(--grad-nav);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   .rdb-tab-name { font-family: var(--font-serif); }
@@ -328,7 +335,7 @@ const venueViews = venues.map((venue: any, venueIndex: number) => {
     font-weight: 700;
   }
 
-  .rdb-tab.is-active .rdb-tab-sub { color: var(--primary-end); }
+  .rdb-tab.is-active .rdb-tab-sub { color: #7c3aed; }
 
   /* レースタブ */
   .rdb-races {
@@ -378,11 +385,12 @@ const venueViews = venues.map((venue: any, venueIndex: number) => {
     box-shadow: inset 0 0 0 1px #f0d68a;
   }
 
+  /* 🔴 現在位置は 青→紫 のグラデーション（2026-08-31） */
   .rdb-race-tab.is-active {
-    background: var(--primary-gradient);
+    background: var(--grad-nav);
     color: var(--text-inverse);
     border-color: transparent;
-    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.28);
+    box-shadow: 0 3px 12px rgba(91, 79, 224, 0.32);
   }
 
   .rdb-race-tab.is-active i { color: rgba(255, 255, 255, 0.85); }

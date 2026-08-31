@@ -25,17 +25,34 @@
   --accent-yellow: #facc15;
   --accent-pink: #ec4899;
 
-  /* 道具・分類カラー: スレート（中立の操作と分類ラベル・2026-08-31） */
+  /*
+   * 2 色グラデーション（2026-08-31 確定）
+   *
+   * 🔴 同系色の濃淡ではなく、**2 色を混ぜたグラデーション**にする。
+   *    青 → 紫 → 桃 → 橙 の 1 本のスペクトラムを、画面を読む順に割り当てる:
+   *
+   *      青→紫  いまどこを見ているか（ナビゲーション）
+   *      紫→桃  AI がどう判断したか（結論）
+   *      桃→橙  だから、どう買うか（行動）
+   *      スレート  道具・分類（主張しない）
+   */
+  --grad-nav: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  --grad-conclusion: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+  --grad-action: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
+
+  /* 道具・分類カラー: スレート（中立の操作と分類ラベル） */
   --tool-start: #334155;
   --tool-end: #475569;
   --tool-gradient: linear-gradient(135deg, var(--tool-start) 0%, var(--tool-end) 100%);
 
-  /* 結論カラー: パープル（AI の判断を示す色・2026-08-31） */
+  /* 各セクションの淡い下地と枠線 */
   --conclusion-start: #7c3aed;
-  --conclusion-end: #a855f7;
-  --conclusion-gradient: linear-gradient(135deg, var(--conclusion-start) 0%, var(--conclusion-end) 100%);
-  --conclusion-bg: linear-gradient(135deg, #faf5ff 0%, #f2e9ff 100%);
-  --conclusion-border: #ddd0fb;
+  --conclusion-end: #ec4899;
+  --conclusion-gradient: var(--grad-conclusion);
+  --conclusion-bg: linear-gradient(135deg, #faf5ff 0%, #fdf0f7 100%);
+  --conclusion-border: #e6d5f7;
+  --action-bg: linear-gradient(135deg, #fff5f9 0%, #fff8f0 100%);
+  --action-border: #fbd9c4;
 
   /* 背景: オフホワイト＋白カード */
   --bg-primary: #f5f7fb;
