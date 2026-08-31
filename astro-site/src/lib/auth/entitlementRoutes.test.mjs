@@ -100,6 +100,18 @@ test('🔴 下部の買い目セクションが復活していない（抽出パ
   refute(/validBetting\.map/, src, '買い目の生文字列を直接並べている');
 });
 
+test('結論はパープル系（オレンジ系に戻っていない）', () => {
+  const src = read('src/components/newspaper/RaceNewspaper.astro');
+  const block = src.slice(src.indexOf('.rp-conclusion {'), src.indexOf('.rp-conclusion-tag') + 200);
+  assert.match(block, /background: var\(--conclusion-bg\)/, '結論の背景がトークンを使っていない');
+  assert.match(block, /background: var\(--conclusion-gradient\)/, 'タグがグラデーションでない');
+  refute(/#fff7ed|#fcd9b6|--secondary-start/, block, '結論にオレンジ系が残っている');
+
+  const tokens = read('src/styles/global.scss');
+  assert.match(tokens, /--conclusion-start: #7c3aed/, 'パープルのトークンが無い');
+  assert.match(tokens, /--conclusion-gradient: linear-gradient/, 'グラデーションのトークンが無い');
+});
+
 test('🔴 結論は出馬表より前に置く（2026-08-30）', () => {
   const src = read('src/components/newspaper/RaceNewspaper.astro');
   const body = src.slice(src.indexOf('<section class="racepaper"'), src.indexOf('<style>'));

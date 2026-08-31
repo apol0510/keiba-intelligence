@@ -285,13 +285,14 @@ const bettingPlan = showBetting && validBetting.length
   .rp-conclusion {
     margin: 16px 0;
     padding: 12px 14px;
-    background: #fff7ed;
-    border: 1px solid #fcd9b6;
+    /* 🔴 2026-08-31: オレンジ系から **パープル系のグラデーション**へ変更 */
+    background: var(--conclusion-bg);
+    border: 1px solid var(--conclusion-border);
     border-radius: var(--radius-md);
   }
 
   .rp-conclusion-tag {
-    background: var(--secondary-start);
+    background: var(--conclusion-gradient);
   }
 
   /* 上位導線 */

@@ -25,6 +25,13 @@
   --accent-yellow: #facc15;
   --accent-pink: #ec4899;
 
+  /* 結論カラー: パープル（AI の判断を示す色・2026-08-31） */
+  --conclusion-start: #7c3aed;
+  --conclusion-end: #a855f7;
+  --conclusion-gradient: linear-gradient(135deg, var(--conclusion-start) 0%, var(--conclusion-end) 100%);
+  --conclusion-bg: linear-gradient(135deg, #faf5ff 0%, #f2e9ff 100%);
+  --conclusion-border: #ddd0fb;
+
   /* 背景: オフホワイト＋白カード */
   --bg-primary: #f5f7fb;
   --bg-secondary: #ffffff;
