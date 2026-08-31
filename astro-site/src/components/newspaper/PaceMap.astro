@@ -1,0 +1,167 @@
+---
+/**
+ * PaceMap.astro — 展開予想（想定隊列）
+ *
+ * 正本: docs/RENEWAL_2026_08.md §4
+ *
+ * 🔴 未登録（guest）にも表示する。脚質は過去走の通過順から算出した**事実**であり印ではない。
+ * 🔴 脚質を判定できなかった馬は「判定不能」に置く（推測で前や後ろへ入れない）。
+ */
+
+interface Props {
+  paceMap: {
+    groups: Record<string, Array<{ horseNumber: number; horseName?: string }>>;
+    pace: 'H' | 'M' | 'S' | null;
+    frontCount?: number;
+    knownCount?: number;
+  };
+}
+
+const { paceMap } = Astro.props;
+
+const LANES = [
+  { key: '逃げ', label: '逃げ', tone: 'lane-nige' },
+  { key: '先行', label: '先行', tone: 'lane-senko' },
+  { key: '差し', label: '差し', tone: 'lane-sashi' },
+  { key: '追込', label: '追込', tone: 'lane-oikomi' },
+];
+
+const PACE_TEXT: Record<string, string> = {
+  H: 'ハイペース想定',
+  M: '平均ペース想定',
+  S: 'スローペース想定',
+};
+
+const unknown = paceMap?.groups?.unknown || [];
+const hasAny = LANES.some((l) => (paceMap?.groups?.[l.key]?.length || 0) > 0);
+---
+
+{hasAny && (
+  <section class="pacemap">
+    <header class="pm-head">
+      <h4>展開予想</h4>
+      {paceMap.pace && <span class={`pm-pace pm-${paceMap.pace}`}>{PACE_TEXT[paceMap.pace]}</span>}
+    </header>
+
+    <div class="pm-lanes">
+      {LANES.map((lane) => {
+        const list = paceMap.groups[lane.key] || [];
+        return (
+          <div class={`pm-lane ${lane.tone}`}>
+            <span class="pm-lane-label">{lane.label}</span>
+            <div class="pm-horses">
+              {list.length === 0
+                ? <span class="pm-empty">—</span>
+                : list.map((h) => <span class="pm-chip" title={h.horseName}>{h.horseNumber}</span>)}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    {unknown.length > 0 && (
+      <p class="pm-unknown">
+        判定不能（過去の通過順データなし）: {unknown.map((h) => h.horseNumber).join('・')}
+      </p>
+    )}
+  </section>
+)}
+
+<style>
+  .pacemap {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 12px 14px;
+    margin: 14px 0;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .pm-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .pm-head h4 {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .pm-pace {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+  }
+
+  .pm-H { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
+  .pm-M { background: rgba(37, 99, 235, 0.12); color: #1d4ed8; }
+  .pm-S { background: rgba(5, 150, 105, 0.12); color: #047857; }
+
+  .pm-lanes {
+    display: grid;
+    gap: 6px;
+  }
+
+  .pm-lane {
+    display: grid;
+    grid-template-columns: 3.4em 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: var(--radius-md);
+    background: var(--bg-muted);
+    border-left: 4px solid var(--lane-color, var(--border-strong));
+  }
+
+  .lane-nige   { --lane-color: #dc2626; }
+  .lane-senko  { --lane-color: #f97316; }
+  .lane-sashi  { --lane-color: #2563eb; }
+  .lane-oikomi { --lane-color: #7c3aed; }
+
+  .pm-lane-label {
+    font-size: 0.76rem;
+    font-weight: 800;
+    color: var(--lane-color);
+    letter-spacing: 0.05em;
+  }
+
+  .pm-horses {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .pm-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 5px;
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    font-family: var(--font-num);
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+  }
+
+  .pm-empty {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+  }
+
+  .pm-unknown {
+    margin: 8px 0 0;
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+  }
+</style>

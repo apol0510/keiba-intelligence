@@ -17,6 +17,106 @@
 
 ## Current Phase
 
+**Phase: KI 大改修 2026-08（無料開放 / 新聞レイアウト / 文章化 / Stripe / 認可是正 / KMA / ライトデザイン）**
+
+着手: 2026-08-28 / ブランチ `feat/ki-renewal-2026-08` / 分岐元 `cfe5fea2`
+スコープ・tier 定義・完成条件の正本: **[`docs/RENEWAL_2026_08.md`](./RENEWAL_2026_08.md)**
+方針決定の記録: `docs/decisions.md`「2026-08-28 — 大改修の方針を確定する」
+
+仕様所有者の確定事項（U-1〜U-4）は `docs/RENEWAL_2026_08.md` §2。要点:
+
+- 未登録は **印と買い目以外すべて公開**／無料会員で**印**／有料で**買い目**
+- デザインは**ライト基調＋競馬新聞の枠色**
+- 価格は**内容を見て後決め**（→ Price ID を env 注入し、金額をコードに書かない）
+- **Stripe がメイン。既存客の互換維持は最優先要件ではない**
+
+### 工程
+
+| # | 工程 | 状態 |
+|---|---|---|
+| P0 | 構想の正本固定（`RENEWAL_2026_08.md` / spec / decisions / progress） | **完了** |
+| P1 | 文章化エンジン `src/utils/raceNarrative.js` ＋テスト26件 | **完了** |
+| P2 | 新聞レイアウトコンポーネント（7経路が共有） | **完了** |
+| P3 | ライト基調デザイントークン ＋ 全ユーザー導線の統一 | **完了** |
+| P4 | サーバー側認可（署名 Cookie ＋ 非権限者に描画しない） | **完了** |
+| P5 | Stripe（checkout / webhook / portal / prices） | **完了**（本番キー・Price 作成は未実施） |
+| P6 | KMA 連携（既定 disabled） | **完了**（KI 側のみ。KMA 側は依存として記録） |
+| P7 | 日次ダイジェスト素材生成 ＋ workflow | **完了** |
+| P8 | 検証・Draft PR | **完了**（[PR #80](https://github.com/apol0510/keiba-intelligence/pull/80) Draft） |
+
+### 実装した内容（2026-08-28）
+
+| 層 | 追加・変更 |
+|---|---|
+| 文章化 | `src/utils/raceNarrative.js`（脚質・上がり順位・コース/距離実績・馬体重・休養・人気を覆した実績・特徴量突出 → 1〜3文の短評／レース展望／想定隊列） |
+| 紙面 | `src/components/newspaper/{RaceNewspaper,RaceEntryTable,HorseDetailPanel,PaceMap,FeatureBars,RaceDayBoard,TierRibbon}.astro`（2026-08-29: 基本UIをシンプル版出馬表＋行アコーディオンへ変更。枠番は `src/utils/frameNumber.js` で算出し実データ5,039件と照合） |
+| データ | `src/lib/prediction/loadRaceDay.js`（4ページの重複読込を単一化。featureScores は取込済み優先＋算出フォールバック） |
+| 認可 | `src/lib/auth/{tiers,session,entitlement}.js` ＋ `verify-magic-link` / `get-session` / `logout` の署名Cookie化 |
+| 課金 | `src/lib/billing/plans.js` ＋ `stripe-{prices,create-checkout,webhook,portal}.js` ＋ `/pricing` 全面改修 |
+| DRM | `src/lib/kma/client.js`（既定disabled）＋ `src/lib/digest/buildDailyDigest.js` ＋ `scripts/generateDailyDigest.mjs` ＋ `generate-daily-digest.yml` |
+| デザイン | `global.scss` のライト転換＋枠色8色、`BaseLayout` ナビ、`/`・`/pricing`・`/mypage`・`/archive`・`/login` 等の統一 |
+
+### 2026-08-29 — 無料会員に本命順位を漏らさない仕様へ改訂
+
+当初実装は無料会員に ◎○▲△・AI指数・評価順の並び・役割バッジを出しており、
+**本命順位がそのまま読める**状態だった（有料の結論を無料で渡していたに等しい）。
+仕様所有者の指示により R-1〜R-8（`docs/RENEWAL_2026_08.md` §2）へ改訂した。
+
+| # | 規則 | 実装 |
+|---|---|---|
+| R-1 | 役割バッジを全 tier で出さない（HTML にも残さない） | `RaceEntryTable` から `role-tag` を削除 |
+| R-2 | 出馬表は常に馬番昇順 | `attentionMarks.sortByHorseNumber` |
+| R-3 | 無料の印は 1 列に **指数ごとの印を合算**（新聞の総合印）。指数1本＝記者1人で 1位◎/2位○/3位▲/4〜7位△（△/軸=4で固定）。同じ記号が重なる。**本命は分かってよい**（指数が一致すれば自然に印が集まる）。守るのは相手（△の集合が買い目の相手の集合と一致しないことを実データで検証） | `attentionMarks.availableAxes` → `assignFreeMarks`（実在の指数のみ。1頭を特別扱いする処理なし。ランダム不使用） |
+| R-4 | 短評に役割語を入れない | `raceNarrative` の `lead` を廃止 |
+| R-5 | AI指数の実数値は有料のみ。無料はモザイク（値を HTML に含めない） | `maskScore` で `•••` を描画 |
+| R-6 | AI結論は有料 tier のみ（生成もしない） | `allowMarks: showBetting` |
+| R-7 | 詳細アコーディオンは既定ですべて閉じる（自動で開かない） | `RaceEntryTable` の `defaultOpenHorseNumber` を廃止 |
+| R-8 | 有料 tier では印を出さない（列ごと非表示） | `showMarkColumn = showMarks && !showBetting` |
+
+### 実測で確認した tier 別の描画（2026-08-28・dev server）
+
+`/prediction/nankan` に署名 Cookie を付けずに GET / 各 tier の Cookie を付けて GET した実測。
+
+| tier | 買い目ブロック | 印 | 短評 | レース展望 |
+|---|---|---|---|---|
+| guest | **0** | **0** | 126 | 12 |
+| free | **0** | 126 | 126 | 12 |
+| light / premium | 12 | 126 | 126 | 12 |
+
+同じ結果を `/prediction/jra`（3会場・36R・490頭）、`/free-prediction/{nankan,jra}`、
+`/prediction/[slug]`、`/free-prediction/nankan/[slug]`、`/free-prediction/jra/[date]` の
+**7経路すべて**で確認した。guest のレスポンスに買い目の文字列は 1 件も含まれない
+（正規表現 `\d+-\d+(\.\d+)+` でのマッチ 0 件）。
+
+### 監査 A-1〜A-5 / A-8 の状態
+
+| # | 内容 | 状態 |
+|---|---|---|
+| A-1 / A-2 | 有料買い目が未認証のレスポンスに含まれる | **是正済み**（CSS で隠すのをやめ、HTML に出さない） |
+| A-3 | entitlement の判定源がクライアント保存値のみ | **是正済み**（予想7経路・マイページがサーバー判定へ移行。`AccessControl.astro` は未使用になった） |
+| A-4 | サーバー検証できるセッションが存在しない | **是正済み**（`ki_session` 署名 Cookie を新設） |
+| A-5 | 予想ページの認証チェックがハードコード無効化 | **是正済み**（該当ページを全面改修。静的テストで再発を禁止） |
+| A-6 / A-7 | 管理配信 API の認可 | **未着手**（本改修のスコープ外。Open Questions Q9 のまま） |
+| A-8 | CORS 許可 origin に本番ドメインが無い | **是正済み**（`verify-magic-link` / `get-session` / `logout`） |
+
+### 本改修で新たに判明した事項
+
+1. **`/prediction/[slug]` は認可が一切無いまま買い目を全公開していた**（監査 A-1 と同種だが、
+   監査時は index ページのみを対象にしていたため未検出）。本改修で是正した。
+2. **同ページが `Math.random()` で「期待値 +X%」を生成して表示していた**。
+   実データでない数値を成績のように見せていたため削除し、静的テストで再発を禁止した。
+3. **JRA の過去走データに上がり3F・通過順が無い**（`horseHistories` の全レコードで空）。
+   そのため JRA では脚質判定・上がり比較・展開予想が出せない（推測で埋めない方針）。
+   → **上流（`keiba-data-shared-admin` / jv-link-cli）での補完が必要**。Open Questions Q11。
+4. `free-prediction/jra/detail/[slug]`（旧 JRA 遅延フラグメント）は新レイアウトが過去走を
+   インラインで描画するため **参照元が無くなった**。削除はしていない（外部リンク保護）。Q12。
+
+
+
+---
+
+## 前 Phase（完了）
+
 **Phase: 自律完遂運用のためのドキュメント基盤整備（2026-07-20）**
 
 コード変更は一切行っていない。本タスクの成果物は `docs/spec.md` / `docs/progress.md` / `docs/decisions.md` / `CLAUDE.md` の 4 ファイルのみ。
@@ -116,6 +216,38 @@
 
 - なし（本ドキュメント基盤の作成・検証・push・Draft PR 作成までは阻害要因なく完了）。
 
+## 2026-08-30 プラン構成の単純化（完了）
+
+仕様所有者の指示により、ライト/プレミアムの二本立てを廃止した。
+
+| 項目 | 変更前 | 変更後 |
+|---|---|---|
+| 月額プラン | ライト（南関のみ）/ プレミアム | **プレミアム 1 本**（ライトは保留） |
+| 会場アクセス | `venueAccess` で南関/中央を分ける | **廃止**。有料なら南関＋中央 |
+| プレミアム限定 | 詳細レポート・穴馬・優先メルマガ（**未実装**） | **訴求ごと廃止**。`canSeePremiumExtras` 削除 |
+| 月額価格 | 未確定（Stripe のみ） | 正規 ¥5,000 → **割引 ¥3,980**（表示用定数。請求額は Stripe が正本） |
+| 銀行振込 | 買い切り ¥88,000 / 年払い ¥66,000 / 月払い ¥12,000 系 / ライト ¥6,600 | **年払い ¥39,800 のみ** |
+
+削除・変更したもの:
+
+- `tiers.js`: `venueAccess` / `venueAllowed` / `VENUE` / `canSeePremiumExtras` を削除。
+  `canSeeBetting(tier)` は tier だけを取る。
+- `entitlement.js` / `previewMode.js`: `venue` 引数と `showPremiumExtras` を削除。
+- 予想ページ 7 経路: `entitlementFromAstro(Astro, { venue })` → `entitlementFromAstro(Astro)`。
+- `stripe-webhook.js` / `bank-transfer-application.js`: `VenueAccess` を書かない。
+- `send-payment-confirmation-auto.js`: 会場別の文面分岐を削除。
+- `AccessControl.astro`: **削除**（どこからも import されていない死んだコード。会場別の文言を含んでいた）。
+
+🟡 **セッション Cookie の `venueAccess` フィールドは残した。**
+署名材料に含まれるため、外すと発行済み Cookie が全部無効になる（全員ログアウト）。認可では読まない。
+
+🔴 **既存の会場限定会員は権限が広がる**（`VenueAccess='nankan'` でも中央の買い目が見える）。
+本決定の意図どおり。テストで固定済み。
+
+詳細: `docs/decisions.md`「2026-08-30 — ライトプランを保留し、会場別アクセスを廃止する」
+
+---
+
 ## Open Questions
 
 1. **`CLAUDE.md` の「メインレース10点ロジック」は F3・5点固定に完全に置き換わったのか、一部が併存しているのか。**
@@ -128,6 +260,39 @@
    **両者とも archive の蓄積件数に依存する時点測定値であり、恒久的な仕様値ではない。**
    archive に開催が追加されれば数値は変動するため、いずれの数値も「満たすべき基準」として扱わないこと。
    テストは pass するため恒等式・冪等性の破綻ではなく、文書側がスナップショットである可能性が高いが明記がない。
+3. 🔴 **買い目の相手数が出走頭数を見ていない（2026-08-30 発見・仕様所有者へ報告済み）。**
+
+   「8頭立てなのに展開16点・推奨6点で違和感がある」という指摘から実測した結果、
+   **相手数が頭数に関係なく常に 6 頭固定**であることが判明した。
+
+   南関 2026-08-18 川崎（12R開催）:
+
+   | レース | 頭数 | 相手数 | 展開 | 推奨 |
+   |---|---|---|---|---|
+   | R1 / R2 / R3 / R8 / R10 | 12頭 | 6/6 | 16点 | 10点 |
+   | R4 | 10頭 | 6/6 | 16点 | 8点 |
+   | R5 / R7 | 11頭 | 6/6 | 16点 | 8点 |
+   | R9 | 9頭 | 6/6 | 16点 | 8点 |
+   | **R6 / R12** | **8頭** | **6/6** | 16点 | **6点（差10）** |
+   | R11（メイン） | 9頭 | 5 | 5点 | 5点（差0） |
+
+   JRA 2026-08-16（36レース）も `6/6` が 32 レース、`5` が 3、`5/5` が 1。
+
+   **8 頭立てでは軸を除く 7 頭のうち 6 頭を相手に取っている＝ほぼ全頭買い。**
+   そのため展開が常に 16 点になり、少頭数ほど推奨点数との差が開く。
+
+   原因は推奨点数のロジックではなく、**買い目生成側（`scripts/importPrediction.js` /
+   `importPredictionJra.js`）が出走頭数を見ていない**こと。
+
+   取り得る道:
+   - (a) **買い目生成を頭数連動にする** — 根本解決。ただし `importPrediction` の変更は
+     archive・的中判定・過去実績へ影響するため、影響範囲の確認が必要。
+   - (b) **推奨点数を展開点数にも連動させる** — 表示だけの変更で低リスク。
+
+   🔴 **依頼範囲外のため未着手。** 仕様所有者の指示待ち。
+   メインレースは `getTop5Challengers` で 5 頭に絞られているため、この問題は
+   **通常レースのみ**に出る。
+
 3. **`feat/fixed6-nearest150-recovery` は何のためのブランチで、生かすのか破棄するのか。**
    対応 PR が存在せず、コミット意図を示す文書も見つからない。
 4. Workflow Phase 2（統合）は依然として実施する方針か、それとも 14 workflow の現状維持で確定したのか。
@@ -145,6 +310,22 @@
 
    🔴 **残る注意**: `netlify.app` 側へ POST してはいけない。301 でメソッドが GET へ
    変換され、**フォーム送信が壊れる**（配信停止ページ等）。
+11. **JRA の過去走に上がり3F・通過順が無い。**（2026-08-28）
+    `src/data/horseHistories/jra/**` の全レコードで `last3f` / `passingOrder` が空のため、
+    JRA では脚質判定・上がり順位・展開予想が算出できない（南関は算出できている）。
+    KI は共有データの読み取り専用消費者であり、KI 側では補完できない。
+    → 上流（`keiba-data-shared-admin` / jv-link-cli）での取得可否の確認が必要。
+12. **`src/pages/free-prediction/jra/detail/[slug].astro` の去就。**（2026-08-28）
+    新レイアウトが過去走をインライン描画するため参照元が無くなった。
+    静的生成のコストはあるが害は無いため削除していない。→ 削除可否は要判断。
+13. **KMA 側に必要な未完の依存。**（2026-08-28。**別リポジトリのため本改修では実施しない**）
+    - `brands/index.js` の KI `contentUrls`（`loginUrl` / `unsubscribeUrlBase`）が `null`
+    - KI の `plans` が analytics-keiba 由来（`premium-combo` / `premium-tan`）のままで、
+      本改修の tier（`free` / `light` / `premium`）と一致しない
+    - `keiba-intelligence:signup-onboarding` の本文コンテンツが未作成
+    - `race` 設定（レース配信）が `null`
+    - 各自動化フラグが false（**有効化は高リスク境界。承認必須**）
+
 7. **配信停止で `recipientRef` を Customers レコードへ対応付ける方法が未確定。**（2026-08-05）
    KMA 側 onboarding の `audience.adapterId` / `audience.mode` が未確定のため、
    `astro-site/src/lib/unsubscribe/store.js` の本番 store は **既定で無効（fail-closed）**にしてある。

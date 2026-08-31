@@ -1,741 +1,395 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+/**
+ * /mypage — マイページ（プラン確認・お支払い管理・ログアウト）
+ *
+ * 正本: docs/RENEWAL_2026_08.md §3 / §6
+ *
+ * 🔴 2026-08-28 全面改修:
+ *   旧実装は `prerender = true` の静的ページで、`sessionStorage` の自己申告値から
+ *   プランを表示していた（2026-08-17 監査 A-3 と同じ判定源）。
+ *   本実装は **サーバー側 entitlement**（署名付き Cookie）で tier を決めて描画する。
+ *   未ログインはサーバーで判定して案内を出す（クライアント JS に依存しない）。
+ */
 
-export const prerender = true;
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { entitlementFromAstro } from '../lib/auth/entitlement.js';
+import { TIER, tierAtLeast } from '../lib/auth/tiers.js';
+
+export const prerender = false;
+
+const ent = entitlementFromAstro(Astro);
+
+const isPaid = tierAtLeast(ent.tier, TIER.LIGHT);
+const isPremium = ent.tier === TIER.PREMIUM;
+
+/** 現在の tier で開いている機能。閉じているものは次の一歩を添える。 */
+const FEATURES = [
+  { label: '全頭の馬柱・過去走', open: true },
+  { label: 'AI短評・レース展望・展開予想', open: true },
+  { label: '的中実績・回収率', open: true },
+  { label: '印（◎○▲△・複数付与）', open: ent.showMarks },
+  { label: 'AI指数の数値（無料はモザイク）', open: ent.showBetting },
+  { label: 'AI結論（推奨理由の解説）', open: ent.showBetting },
+  { label: '馬単の買い目', open: ent.showBetting },
+  { label: '穴馬レポート・優先メルマガ', open: isPremium },
+];
+
+// 🔴 2026-08-30: 会場で分ける概念を廃止。有料は常に南関東＋中央
+const venueLabel = '南関東＋中央競馬';
+
+const expiresLabel = ent.expiresAtMs
+  ? new Date(ent.expiresAtMs).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
+  : null;
 ---
 
-<BaseLayout
-  title="マイページ - KEIBA Intelligence"
-  description="KEIBA Intelligence マイページ。プラン確認・アカウント管理。"
->
-  <section class="mypage-section">
+<BaseLayout title="マイページ" description="KEIBA Intelligence マイページ。プラン確認・お支払い管理。">
+  <section class="mypage">
     <div class="container">
-      <div id="mypage-content" style="display: none;">
-
-        <!-- ヘッダー -->
-        <div class="mypage-header">
-          <div class="header-icon" id="header-icon">🏇</div>
-          <h1>マイページ</h1>
-          <p class="header-email" id="user-email">-</p>
+      {!ent.authenticated ? (
+        <div class="mp-guest">
+          <div class="mp-guest-icon">🔒</div>
+          <h1>ログインが必要です</h1>
+          <p>マイページを表示するにはログインしてください。<br>予想ページは登録なしでもご覧いただけます。</p>
+          <div class="mp-guest-actions">
+            <a class="mp-btn mp-btn-primary" href="/login">ログイン</a>
+            <a class="mp-btn mp-btn-ghost" href="/register">無料会員に登録</a>
+          </div>
+          <p class="mp-guest-sub"><a href="/prediction/nankan">今日の予想を見る（無料）→</a></p>
         </div>
+      ) : (
+        <div class="mp-content">
+          <header class="mp-head">
+            <h1>マイページ</h1>
+            <p class="mp-email">{ent.email}</p>
+          </header>
 
-        <!-- プランステータスカード -->
-        <div class="status-card" id="status-card">
-          <div class="status-top">
-            <div>
-              <div class="status-label">現在のプラン</div>
-              <div class="status-plan" id="user-plan-display">-</div>
+          <!-- プラン -->
+          <div class={`mp-status ${isPaid ? 'is-paid' : ''}`}>
+            <div class="mp-status-top">
+              <div>
+                <p class="mp-status-label">現在のプラン</p>
+                <p class="mp-status-plan">{ent.tierLabel}</p>
+              </div>
+              <span class={`mp-badge tier-${ent.tier}`}>{ent.tierLabel}</span>
             </div>
-            <div class="plan-badge-lg" id="plan-badge-lg">-</div>
+            <ul class="mp-status-meta">
+              <li>閲覧範囲: <b>{venueLabel}</b></li>
+              {expiresLabel && <li>ログインの有効期限: <b>{expiresLabel}</b></li>}
+            </ul>
           </div>
-          <div class="status-details" id="status-details">
-            <!-- JSで動的に表示 -->
+
+          <!-- 予想ページ -->
+          <section class="mp-block">
+            <h2 class="mp-h2">予想ページ</h2>
+            <div class="mp-links">
+              <a class="mp-link" href="/prediction/nankan">
+                <span class="mp-link-title">南関東</span>
+                <span class="mp-link-sub">大井・川崎・船橋・浦和</span>
+              </a>
+              <a class="mp-link" href="/prediction/jra">
+                <span class="mp-link-title">中央競馬</span>
+                <span class="mp-link-sub">JRA 全10場</span>
+              </a>
+            </div>
+          </section>
+
+          <!-- 利用可能な機能 -->
+          <section class="mp-block">
+            <h2 class="mp-h2">利用できる機能</h2>
+            <ul class="mp-features">
+              {FEATURES.map((f) => (
+                <li class={f.open ? 'is-open' : 'is-locked'}>
+                  <span class="mp-f-icon">{f.open ? '✓' : '🔒'}</span>{f.label}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <!-- お支払い -->
+          <section class="mp-block">
+            <h2 class="mp-h2">お支払い</h2>
+            {isPaid ? (
+              <div class="mp-billing">
+                <p>お支払い方法の変更・プラン変更・解約は、お支払い管理ページから行えます。</p>
+                <button class="mp-btn mp-btn-ghost" type="button" id="mp-portal">お支払い管理ページを開く</button>
+                <p class="mp-billing-msg" id="mp-portal-msg" hidden></p>
+              </div>
+            ) : (
+              <div class="mp-billing">
+                <p>買い目をご覧いただくには有料プランへのお申し込みが必要です。</p>
+                <a class="mp-btn mp-btn-primary" href="/pricing">プランを見る</a>
+              </div>
+            )}
+          </section>
+
+          <div class="mp-logout">
+            <form method="POST" action="/.netlify/functions/logout">
+              <button class="mp-btn mp-btn-quiet" type="submit">ログアウト</button>
+            </form>
           </div>
         </div>
-
-        <!-- 予想ページカード -->
-        <div class="section-block" id="quick-links" style="display: none;">
-          <h2 class="section-title">予想ページ</h2>
-          <div class="prediction-cards" id="quick-links-content"></div>
-        </div>
-
-        <!-- 利用可能な機能 -->
-        <div class="section-block" id="plan-detail">
-          <h2 class="section-title">利用可能な機能</h2>
-          <div class="features-grid" id="features-grid"></div>
-        </div>
-
-        <!-- アップグレード -->
-        <div class="section-block" id="upgrade-cta" style="display: none;">
-          <h2 class="section-title">プランアップグレード</h2>
-          <div id="upgrade-content"></div>
-        </div>
-
-        <!-- ログアウト -->
-        <div class="logout-block">
-          <button class="btn-logout" id="logout-btn">ログアウト</button>
-        </div>
-      </div>
-
-      <!-- 未ログイン時 -->
-      <div class="not-logged-card" id="not-logged-in" style="display: none;">
-        <div class="not-logged-icon">🔒</div>
-        <h1>ログインが必要です</h1>
-        <p>マイページを表示するにはログインしてください。</p>
-        <div class="not-logged-actions">
-          <a href="/login" class="btn-action primary">ログイン</a>
-          <a href="/register" class="btn-action secondary">無料会員登録</a>
-        </div>
-      </div>
-
-      <!-- ローディング -->
-      <div class="mypage-loading" id="mypage-loading">
-        <div class="spinner"></div>
-        <p>読み込み中...</p>
-      </div>
+      )}
     </div>
   </section>
 </BaseLayout>
 
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('mp-portal');
+    if (!btn) return;
+    const msg = document.getElementById('mp-portal-msg');
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      if (msg) msg.hidden = true;
+      try {
+        const res = await fetch('/.netlify/functions/stripe-portal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.url) {
+          window.location.href = data.url;
+          return;
+        }
+        throw new Error('unavailable');
+      } catch {
+        if (msg) {
+          msg.hidden = false;
+          msg.textContent = 'お支払い管理ページを開けませんでした。銀行振込でお申し込みの場合はこちらからは操作できません。お問い合わせください。';
+        }
+        btn.disabled = false;
+      }
+    });
+  });
+</script>
+
 <style>
-  .mypage-section {
-    padding: 60px 0 80px;
-    min-height: calc(100vh - 200px);
-  }
+  .mypage { padding: 24px 0 56px; }
 
-  .container {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 0 var(--spacing-md);
-  }
-
-  /* ===== ヘッダー ===== */
-  .mypage-header {
+  /* 未ログイン */
+  .mp-guest {
+    max-width: 520px;
+    margin: 40px auto;
     text-align: center;
-    margin-bottom: 32px;
-  }
-
-  .header-icon {
-    font-size: 48px;
-    margin-bottom: 12px;
-  }
-
-  .mypage-header h1 {
-    font-size: 2rem;
-    font-weight: 800;
-    margin-bottom: 8px;
-    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .header-email {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-  }
-
-  /* ===== ステータスカード（glassmorphism） ===== */
-  .status-card {
-    background: linear-gradient(135deg, rgba(147, 197, 253, 0.18) 0%, rgba(196, 181, 253, 0.14) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    border-radius: 20px;
-    padding: 28px;
-    margin-bottom: 24px;
-    position: relative;
-    overflow: hidden;
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  }
-
-  .status-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
-  }
-
-  .status-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-  }
-
-  .status-label {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 4px;
-  }
-
-  .status-plan {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: var(--text-primary);
-  }
-
-  .plan-badge-lg {
-    padding: 6px 16px;
-    border-radius: 24px;
-    font-size: 0.85rem;
-    font-weight: 700;
-  }
-
-  .plan-badge-lg.free-registered {
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: white;
-  }
-  .plan-badge-lg.light {
-    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-    color: white;
-  }
-  .plan-badge-lg.pro {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    color: #1e293b;
-  }
-  .plan-badge-lg.pro-plus {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
-  }
-
-  .status-details {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-
-  .detail-item {
-    background: rgba(255, 255, 255, 0.10);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 12px;
-    padding: 14px 16px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-
-  .detail-item .detail-label {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-  }
-
-  .detail-item .detail-value {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-
-  /* ===== セクション（外側カード・status-cardと統一感） ===== */
-  .section-block {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 18px;
-    backdrop-filter: blur(16px) saturate(160%);
-    -webkit-backdrop-filter: blur(16px) saturate(160%);
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
-  }
-
-  .section-title {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #e2e8f0;
-    margin-bottom: 14px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.10);
-    letter-spacing: 0.03em;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .section-title::before {
-    content: '';
-    width: 3px;
-    height: 14px;
-    background: rgba(147, 197, 253, 0.7);
-    border-radius: 2px;
-  }
-
-  /* ===== 予想ページカード ===== */
-  .prediction-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 16px;
-  }
-
-  /* JS innerHTMLで挿入される要素はscoping属性を持たないため :global() で属性要件を外す */
-  .prediction-cards :global(.pred-card) {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 16px 18px;
-    border-radius: 14px;
-    text-decoration: none;
-    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-    position: relative;
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    backdrop-filter: blur(12px) saturate(160%);
-    -webkit-backdrop-filter: blur(12px) saturate(160%);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  }
-
-  .prediction-cards :global(.pred-card::after) {
-    content: '→';
-    position: absolute;
-    right: 18px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.5);
-    transition: right 0.2s ease, color 0.2s ease;
-  }
-
-  .prediction-cards :global(.pred-card:hover) {
-    transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.28);
-    background: rgba(255, 255, 255, 0.10);
-  }
-  .prediction-cards :global(.pred-card:hover::after) {
-    right: 14px;
-    color: rgba(255, 255, 255, 0.9);
-  }
-
-  /* 会場別アクセント（左側のみ・控えめ） */
-  .prediction-cards :global(.pred-card.nankan) {
-    border-left: 3px solid rgba(110, 231, 183, 0.65);
-  }
-  .prediction-cards :global(.pred-card.jra) {
-    border-left: 3px solid rgba(147, 197, 253, 0.65);
-  }
-
-  .prediction-cards :global(.pred-card-icon) {
-    font-size: 1.6rem;
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-    flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.10);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-  }
-
-  /* テキスト部分のプレート（さらに内側カード） */
-  .prediction-cards :global(.pred-card-body) {
-    flex: 1;
-    min-width: 0;
-    background: rgba(15, 23, 42, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 10px;
-    padding: 10px 14px;
-    padding-right: 28px;
-  }
-
-  .prediction-cards :global(.pred-card-title) {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #f8fafc;
-    margin-bottom: 2px;
-  }
-
-  .prediction-cards :global(.pred-card-sub) {
-    font-size: 0.8rem;
-    color: rgba(241, 245, 249, 0.78);
-  }
-
-  .prediction-cards :global(.pred-card-desc) {
-    font-size: 0.76rem;
-    color: rgba(241, 245, 249, 0.6);
-    margin-top: 4px;
-  }
-
-  /* ===== 機能グリッド（各項目を小カード化） ===== */
-  .features-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
-  /* JS innerHTMLで挿入される要素はscoping属性を持たないため :global() で属性要件を外す */
-  .features-grid :global(.feature-item) {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 12px;
-    backdrop-filter: blur(12px) saturate(160%);
-    -webkit-backdrop-filter: blur(12px) saturate(160%);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-  }
-
-  .features-grid :global(.feature-item:hover) {
-    transform: translateY(-1px);
-    border-color: rgba(255, 255, 255, 0.25);
-    background: rgba(255, 255, 255, 0.09);
-  }
-
-  .features-grid :global(.feature-item .feature-check) {
-    width: 22px;
-    height: 22px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(110, 231, 183, 0.22);
-    border: 1px solid rgba(110, 231, 183, 0.45);
-    border-radius: 50%;
-    color: #a7f3d0;
-    font-size: 0.75rem;
-    font-weight: 800;
-    flex-shrink: 0;
-  }
-
-  /* テキスト部分のプレート（さらに内側カード） */
-  .features-grid :global(.feature-item .feature-text) {
-    flex: 1;
-    min-width: 0;
-    background: rgba(15, 23, 42, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    border-radius: 8px;
-    padding: 6px 10px;
-    font-size: 0.85rem;
-    color: #f1f5f9;
-  }
-
-  /* ===== アップグレード ===== */
-  .upgrade-card {
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(245, 158, 11, 0.04) 100%);
-    border: 1px solid rgba(251, 191, 36, 0.25);
-    border-radius: 14px;
-    padding: 24px;
-    margin-bottom: 12px;
-  }
-
-  .upgrade-card h3 {
-    font-size: 1.05rem;
-    color: var(--text-primary);
-    margin-bottom: 6px;
-  }
-
-  .upgrade-card p {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    margin-bottom: 14px;
-  }
-
-  .upgrade-card .price {
-    font-size: 1.4rem;
-    font-weight: 900;
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .btn-upgrade {
-    display: inline-block;
-    margin-top: 14px;
-    padding: 10px 28px;
-    border-radius: 10px;
-    text-decoration: none;
-    font-weight: 700;
-    font-size: 0.9rem;
-    transition: all 0.3s;
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    color: #1e293b;
-  }
-
-  .btn-upgrade:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(251, 191, 36, 0.3);
-  }
-
-  /* ===== ログアウト ===== */
-  .logout-block {
-    margin-top: 12px;
-    padding-top: 24px;
-    border-top: 1px solid var(--border-color);
-  }
-
-  .btn-logout {
-    width: 100%;
-    padding: 14px;
-    background: transparent;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: 10px;
-    color: rgba(239, 68, 68, 0.7);
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.3s;
-  }
-
-  .btn-logout:hover {
-    background: rgba(239, 68, 68, 0.08);
-    border-color: rgba(239, 68, 68, 0.5);
-    color: #ef4444;
-  }
-
-  /* ===== 未ログイン ===== */
-  .not-logged-card {
+    padding: 40px 24px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 60px 32px;
-    text-align: center;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
   }
 
-  .not-logged-icon {
-    font-size: 56px;
-    margin-bottom: 16px;
-  }
+  .mp-guest-icon { font-size: 48px; margin-bottom: 12px; }
 
-  .not-logged-card h1 {
-    font-size: 1.5rem;
-    color: var(--text-primary);
-    margin-bottom: 8px;
-  }
+  .mp-guest h1 { font-size: 1.5rem; margin-bottom: 10px; }
 
-  .not-logged-card p {
-    color: var(--text-secondary);
-    margin-bottom: 28px;
-  }
+  .mp-guest p { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.8; }
 
-  .not-logged-actions {
+  .mp-guest-actions {
     display: flex;
     gap: 12px;
     justify-content: center;
+    flex-wrap: wrap;
+    margin: 20px 0 12px;
   }
 
-  .btn-action {
-    padding: 12px 32px;
-    border-radius: 10px;
-    text-decoration: none;
+  .mp-guest-sub a { font-size: 0.85rem; font-weight: 700; }
+
+  /* 本体 */
+  .mp-content { max-width: 760px; margin: 0 auto; }
+
+  .mp-head { text-align: center; margin-bottom: 24px; }
+
+  .mp-head h1 { font-size: 1.8rem; margin-bottom: 4px; }
+
+  .mp-email {
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+    font-family: var(--font-num);
+  }
+
+  .mp-status {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .mp-status.is-paid { border-color: var(--secondary-start); }
+
+  .mp-status-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .mp-status-label {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
     font-weight: 700;
-    transition: all 0.3s;
+    margin: 0;
   }
 
-  .btn-action.primary {
-    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-    color: white;
-  }
-  .btn-action.primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
-  }
-
-  .btn-action.secondary {
-    background: transparent;
-    border: 1px solid rgba(59, 130, 246, 0.4);
-    color: #3b82f6;
-  }
-  .btn-action.secondary:hover {
-    background: rgba(59, 130, 246, 0.08);
+  .mp-status-plan {
+    font-family: var(--font-serif);
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 2px 0 0;
+    color: var(--text-primary);
   }
 
-  /* ===== ローディング ===== */
-  .mypage-loading {
-    text-align: center;
-    padding: 80px 0;
+  .mp-badge {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    padding: 5px 14px;
+    border-radius: var(--radius-pill);
+    color: var(--text-inverse);
+    background: var(--text-tertiary);
+    white-space: nowrap;
+  }
+
+  .mp-badge.tier-free { background: var(--success); }
+  .mp-badge.tier-light { background: var(--primary-gradient); }
+  .mp-badge.tier-premium { background: var(--secondary-gradient); }
+
+  .mp-status-meta {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+  }
+
+  .mp-status-meta li {
+    font-size: 0.82rem;
     color: var(--text-secondary);
   }
 
-  .spinner {
-    width: 40px;
-    height: 40px;
-    margin: 0 auto 16px;
-    border: 3px solid rgba(59, 130, 246, 0.2);
-    border-top: 3px solid #3b82f6;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+  .mp-block { margin-bottom: 26px; }
+
+  .mp-h2 {
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+    padding-left: 10px;
+    border-left: 4px solid var(--primary-start);
   }
 
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+  .mp-links {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
 
-  /* ===== レスポンシブ ===== */
-  @media (max-width: 640px) {
-    .status-details {
-      grid-template-columns: 1fr;
-    }
-
-    .prediction-cards {
-      grid-template-columns: 1fr;
-    }
-
-    .features-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .not-logged-actions {
-      flex-direction: column;
-    }
+  .mp-link {
+    display: block;
+    padding: 16px 18px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   }
+
+  .mp-link:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+  .mp-link-title {
+    display: block;
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .mp-link-sub {
+    display: block;
+    font-size: 0.76rem;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+  }
+
+  .mp-features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .mp-features li {
+    padding: 11px 16px;
+    font-size: 0.88rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+  }
+
+  .mp-features li:last-child { border-bottom: none; }
+  .mp-features li.is-locked { color: var(--text-tertiary); background: var(--bg-muted); }
+  .mp-f-icon { margin-right: 8px; }
+  .mp-features li.is-open .mp-f-icon { color: var(--success); font-weight: 800; }
+
+  .mp-billing {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+  }
+
+  .mp-billing p {
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+    line-height: 1.7;
+  }
+
+  .mp-billing-msg {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: rgba(220, 38, 38, 0.08);
+    color: #991b1b;
+    font-size: 0.82rem;
+  }
+
+  .mp-btn {
+    display: inline-block;
+    padding: 11px 24px;
+    border-radius: var(--radius-pill);
+    font-weight: 800;
+    font-size: 0.9rem;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform var(--transition-fast);
+  }
+
+  .mp-btn-primary {
+    background: var(--primary-gradient);
+    color: var(--text-inverse);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.26);
+  }
+
+  .mp-btn-primary:hover { transform: translateY(-1px); color: var(--text-inverse); }
+
+  .mp-btn-ghost {
+    background: var(--bg-secondary);
+    border-color: var(--primary-start);
+    color: var(--primary-start);
+  }
+
+  .mp-btn-quiet {
+    background: var(--bg-muted);
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+  }
+
+  .mp-logout { text-align: center; margin-top: 32px; }
 </style>
-
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const loading = document.getElementById('mypage-loading');
-    const content = document.getElementById('mypage-content');
-    const notLoggedIn = document.getElementById('not-logged-in');
-
-    // セッション確認
-    const sessionAuth = sessionStorage.getItem('keiba_session');
-    if (!sessionAuth) {
-      loading.style.display = 'none';
-      notLoggedIn.style.display = 'block';
-      return;
-    }
-
-    let session;
-    try {
-      session = JSON.parse(sessionAuth);
-      if (!session.user || (session.expiresAt && new Date() > new Date(session.expiresAt))) {
-        sessionStorage.removeItem('keiba_session');
-        loading.style.display = 'none';
-        notLoggedIn.style.display = 'block';
-        return;
-      }
-    } catch {
-      loading.style.display = 'none';
-      notLoggedIn.style.display = 'block';
-      return;
-    }
-
-    // ログイン済み表示
-    const plan = (session.plan || 'free-registered').toLowerCase();
-    const email = session.user.email || '-';
-    const venueAccess = session.venueAccess || 'all';
-    const planExpiresAt = session.planExpiresAt || null;
-
-    document.getElementById('user-email').textContent = email;
-
-    // プラン設定
-    const planConfig = {
-      'free-registered': { label: '無料会員', badge: 'free-registered', icon: '🆓', features: ['全レース予想閲覧', '上位馬の馬番号', 'AI分析データ', 'メールマガジン'] },
-      'light': { label: 'ライトプラン', badge: 'light', icon: '⚡', features: ['全レース予想閲覧', 'メインレースの馬単買い目', '的中実績閲覧', 'データ可視化'] },
-      'pro': { label: 'プロプラン', badge: 'pro', icon: '👑', features: ['全レース予想閲覧', '全レースの馬単買い目', '的中実績閲覧', 'データ可視化', 'Feature Importance'] },
-      'pro-plus': { label: 'プロプラスプラン', badge: 'pro-plus', icon: '💎', features: ['プロプランの全機能', '優先サポート'] },
-    };
-
-    const cfg = planConfig[plan] || planConfig['free-registered'];
-
-    // ヘッダーアイコン
-    document.getElementById('header-icon').textContent = cfg.icon;
-
-    // ステータスカード
-    document.getElementById('user-plan-display').textContent = cfg.label;
-    const badgeLg = document.getElementById('plan-badge-lg');
-    badgeLg.textContent = cfg.label;
-    badgeLg.className = `plan-badge-lg ${cfg.badge}`;
-
-    // ステータス詳細
-    const statusDetails = document.getElementById('status-details');
-    const details = [];
-
-    if (plan !== 'free-registered') {
-      const venueLabels = {
-        'all': '南関4場 + JRA全10場',
-        'nankan': '南関4場',
-        'jra': 'JRA全10場'
-      };
-      details.push({ label: 'アクセス対象', value: venueLabels[venueAccess] || venueLabels['all'] });
-
-      if (planExpiresAt) {
-        if (planExpiresAt === '2099-12-31') {
-          details.push({ label: '有効期限', value: '永久アクセス' });
-        } else {
-          const d = new Date(planExpiresAt);
-          details.push({ label: '有効期限', value: `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}` });
-        }
-      }
-    }
-
-    details.push({ label: 'メールアドレス', value: email });
-    details.push({ label: 'ステータス', value: 'アクティブ' });
-
-    statusDetails.innerHTML = details.map(d => `
-      <div class="detail-item">
-        <div class="detail-label">${d.label}</div>
-        <div class="detail-value">${d.value}</div>
-      </div>
-    `).join('');
-
-    // 予想ページカード
-    const quickLinks = document.getElementById('quick-links');
-    const quickLinksContent = document.getElementById('quick-links-content');
-    const links = [];
-
-    if (plan === 'free-registered') {
-      links.push({ href: '/free-prediction/jra', cls: 'jra', icon: '🐎', title: '中央予想（無料）', sub: 'JRA全10場', desc: '中央競馬AI分析（高配当狙い）' });
-      links.push({ href: '/free-prediction', cls: 'nankan', icon: '🏇', title: '南関予想（無料）', sub: '大井・川崎・船橋・浦和', desc: '地方競馬AI分析（安定型）' });
-    } else if (venueAccess === 'nankan') {
-      links.push({ href: '/prediction/nankan', cls: 'nankan', icon: '🏇', title: '南関予想', sub: '大井・川崎・船橋・浦和', desc: '地方競馬AI分析（安定型）' });
-    } else if (venueAccess === 'jra') {
-      links.push({ href: '/prediction/jra', cls: 'jra', icon: '🐎', title: '中央予想', sub: 'JRA全10場', desc: '中央競馬AI分析（高配当狙い）' });
-    } else {
-      links.push({ href: '/prediction/jra', cls: 'jra', icon: '🐎', title: '中央予想', sub: 'JRA全10場', desc: '中央競馬AI分析（高配当狙い）' });
-      links.push({ href: '/prediction/nankan', cls: 'nankan', icon: '🏇', title: '南関予想', sub: '大井・川崎・船橋・浦和', desc: '地方競馬AI分析（安定型）' });
-    }
-
-    quickLinksContent.innerHTML = links.map(l => `
-      <a href="${l.href}" class="pred-card ${l.cls}">
-        <div class="pred-card-icon">${l.icon}</div>
-        <div class="pred-card-body">
-          <div class="pred-card-title">${l.title}</div>
-          <div class="pred-card-sub">${l.sub}</div>
-          ${l.desc ? `<div class="pred-card-desc">${l.desc}</div>` : ''}
-        </div>
-      </a>
-    `).join('');
-    quickLinks.style.display = 'block';
-
-    // 利用可能な機能
-    const featuresGrid = document.getElementById('features-grid');
-    featuresGrid.innerHTML = cfg.features.map(f => `
-      <div class="feature-item">
-        <span class="feature-check">✓</span>
-        <span class="feature-text">${f}</span>
-      </div>
-    `).join('');
-
-    // アップグレードCTA
-    const upgradeCta = document.getElementById('upgrade-cta');
-    const upgradeContent = document.getElementById('upgrade-content');
-
-    if (plan === 'free-registered') {
-      upgradeCta.style.display = 'block';
-      upgradeContent.innerHTML = `
-        <div class="upgrade-card">
-          <h3>ライトプラン</h3>
-          <p>メインレースの馬単買い目が見られます</p>
-          <div><span class="price">¥6,600</span><span style="color:var(--text-secondary)">/月</span></div>
-          <a href="/pricing" class="btn-upgrade">詳細を見る</a>
-        </div>
-        <div class="upgrade-card">
-          <h3>プロプラン（買い切り）</h3>
-          <p>全レースの馬単買い目＋永久アクセス</p>
-          <div><span class="price">¥88,000</span></div>
-          <a href="/pricing" class="btn-upgrade">詳細を見る</a>
-        </div>
-      `;
-    } else if (plan === 'light') {
-      upgradeCta.style.display = 'block';
-      upgradeContent.innerHTML = `
-        <div class="upgrade-card">
-          <h3>プロプランにアップグレード</h3>
-          <p>全レースの馬単買い目が見られるようになります</p>
-          <div><span class="price">¥88,000</span><span style="color:var(--text-secondary)">（買い切り・永久アクセス）</span></div>
-          <a href="/pricing" class="btn-upgrade">詳細を見る</a>
-        </div>
-      `;
-    }
-
-    // ログアウト
-    document.getElementById('logout-btn').addEventListener('click', () => {
-      sessionStorage.removeItem('keiba_session');
-      sessionStorage.removeItem('isFreeUser');
-      sessionStorage.removeItem('isLightUser');
-      window.location.href = '/';
-    });
-
-    // 表示切り替え
-    loading.style.display = 'none';
-    content.style.display = 'block';
-  });
-</script>

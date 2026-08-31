@@ -1,12 +1,30 @@
 ---
+/**
+ * / — トップページ
+ *
+ * 正本: docs/RENEWAL_2026_08.md §1
+ *
+ * 🔴 2026-08-28 改修:
+ *   - 訴求を「無料でどこまで見えるか」に変えた（改修の最重要目的）。
+ *   - 的中率・回収率は **archive の実測値をビルド時に集計**して表示する。
+ *     旧実装の「的中率71%・回収率186%・会員数1,000+」は出典が確認できない固定値だったため撤去した。
+ *   - 価格をトップに書かない（金額の正本は Stripe。docs/RENEWAL_2026_08.md §6.1）。
+ */
+
 import BaseLayout from '../layouts/BaseLayout.astro';
+import archiveNankan from '../data/archiveResults.json';
+import archiveJra from '../data/archiveResultsJra.json';
+import { combinedTotals, formatPercent, formatCount } from '../lib/stats/archiveTotals.js';
 
 export const prerender = true;
+
+// ⚠️ archive の蓄積に依存する時点値。恒久的な保証値ではない。
+const totals = combinedTotals(archiveNankan, archiveJra);
 ---
 
 <BaseLayout
   title="ホーム"
-  description="AI-Powered Intelligence Dashboard for 南関・中央競馬。的中率71%、回収率186%を誇る競馬予想プラットフォーム。南関4場とJRA全10場に対応。低価格で始められる競馬予想サービス。"
+  description="南関東4場と中央競馬（JRA全10場）の全レース馬柱・過去走・AI短評・展開予想を登録不要で無料公開。印は無料会員、馬単の買い目は月額プランで提供します。"
 >
   <!-- ヒーローキービジュアル（ヒーローセクションの上） -->
   <section class="hero-keyvisual">
@@ -28,41 +46,45 @@ export const prerender = true;
     <div class="container">
       <div class="hero-content">
         <h1 class="hero-title fade-in">
-          AI-Powered Intelligence Dashboard<br>
-          for 南関・中央競馬
+          全レースの馬柱と短評を、<br>
+          まず無料で。
         </h1>
         <p class="hero-subtitle slide-in">
-          的中率71%、回収率186%を誇る次世代競馬予想プラットフォーム
+          南関東4場と中央競馬（JRA全10場）。出走全頭の過去走・AI短評・展開予想を<b>登録なし</b>で公開しています。
         </p>
         <div class="hero-cta">
-          <a href="/pricing" class="btn btn-gold btn-lg">今すぐ始める</a>
-          <a href="/free-prediction/nankan" class="btn btn-red btn-lg">無料予想（南関）</a>
-          <a href="/free-prediction/jra" class="btn btn-green btn-lg">無料予想（中央）</a>
+          <a href="/prediction/nankan" class="btn btn-red btn-lg">南関の予想を見る</a>
+          <a href="/prediction/jra" class="btn btn-green btn-lg">中央の予想を見る</a>
+          <a href="/register" class="btn btn-gold btn-lg">無料会員に登録</a>
         </div>
 
-        <!-- 統計カード -->
+        <!-- 統計カード（公開アーカイブの実測集計。加工なし） -->
         <div class="stats-grid">
           <div class="stat-card card">
-            <div class="stat-icon">🎯</div>
-            <div class="stat-value">71.1%</div>
-            <div class="stat-label">的中率</div>
+            <div class="stat-icon">💰</div>
+            <div class="stat-value">{formatPercent(totals.all.returnRate)}</div>
+            <div class="stat-label">回収率（通算）</div>
           </div>
           <div class="stat-card card">
-            <div class="stat-icon">💰</div>
-            <div class="stat-value">186.4%</div>
-            <div class="stat-label">回収率</div>
+            <div class="stat-icon">🎯</div>
+            <div class="stat-value">{formatPercent(totals.all.hitRate)}</div>
+            <div class="stat-label">的中率（通算）</div>
           </div>
           <div class="stat-card card">
             <div class="stat-icon">📊</div>
-            <div class="stat-value">5,000+</div>
-            <div class="stat-label">的中数</div>
+            <div class="stat-value">{formatCount(totals.all.races)}</div>
+            <div class="stat-label">公開レース数</div>
           </div>
           <div class="stat-card card">
-            <div class="stat-icon">👥</div>
-            <div class="stat-value">1,000+</div>
-            <div class="stat-label">会員数</div>
+            <div class="stat-icon">🗓️</div>
+            <div class="stat-value">{formatCount(totals.all.days)}</div>
+            <div class="stat-label">公開開催日数</div>
           </div>
         </div>
+        <p class="stats-note">
+          公開しているアーカイブ全件から算出した実測値です（払戻÷投資×100）。高配当を除外していません。
+          <a href="/archive">内訳を見る →</a>
+        </p>
       </div>
     </div>
   </section>
@@ -82,10 +104,11 @@ export const prerender = true;
         </div>
 
         <div class="feature-card card">
-          <div class="feature-icon">💎</div>
-          <h3>買い切りプラン推奨</h3>
+          <div class="feature-icon">📰</div>
+          <h3>無料で全頭ぶんの紙面</h3>
           <p>
-            買い切り¥88,000で永久アクセス。50年利用で月額換算¥147。AIは毎日進化し続けるため、買い切りが圧倒的にお得です。
+            登録なしで、出走全頭の馬柱・過去走・AI短評・展開予想をご覧いただけます。
+            印は無料会員登録で、AI指数の数値と馬単の買い目は月額プランで公開します。
           </p>
         </div>
 
@@ -167,8 +190,8 @@ export const prerender = true;
             <li>🏟️ 浦和競馬場（埼玉）</li>
           </ul>
           <div class="venue-cta">
-            <a href="/free-prediction/nankan" class="btn btn-secondary w-full">無料予想を見る</a>
-            <a href="/prediction/nankan" class="btn btn-primary w-full">プロ予想（PRO限定）</a>
+            <a href="/prediction/nankan" class="btn btn-primary w-full">南関の予想を見る（無料）</a>
+            <a href="/archive/nankan" class="btn btn-secondary w-full">南関の的中実績</a>
           </div>
         </div>
 
@@ -188,73 +211,61 @@ export const prerender = true;
             <li>🏟️ 中京・小倉・新潟・福島・札幌・函館</li>
           </ul>
           <div class="venue-cta">
-            <a href="/free-prediction/jra" class="btn btn-secondary w-full">無料予想を見る</a>
-            <a href="/prediction/jra" class="btn btn-primary w-full">プロ予想（PRO限定）</a>
+            <a href="/prediction/jra" class="btn btn-primary w-full">中央の予想を見る（無料）</a>
+            <a href="/archive/jra" class="btn btn-secondary w-full">中央の的中実績</a>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- 料金プラン -->
+  <!-- 料金プラン（金額はここに書かない。正本は Stripe / /pricing） -->
   <section class="pricing">
     <div class="container">
-      <h2 class="section-title text-center">料金プラン</h2>
+      <h2 class="section-title text-center">どこまで無料で、どこから有料か</h2>
       <p class="section-subtitle text-center">
-        買い切り¥88,000（永久アクセス）または年払い¥66,000
+        馬柱も文章も無料で全部。閉じているのは「印」と「買い目」だけです。
       </p>
 
-      <div class="pricing-grid">
-        <!-- 買い切りプラン -->
-        <div class="pricing-card card featured">
-          <div class="badge badge-warning">一番お得</div>
-          <div class="plan-name">買い切りプラン</div>
-          <div class="plan-price">
-            <span class="price">¥88,000</span>
-          </div>
-          <div class="plan-description">南関4場＋中央競馬（JRA全10場）永久アクセス</div>
-          <div class="lifetime-badge">
-            <span class="lifetime-text">永久アクセス</span>
-            <span class="lifetime-note">追加料金なし</span>
-          </div>
-          <ul class="plan-features">
-            <li>✅ 南関4場全レース予想</li>
-            <li>✅ JRA全10場全レース予想</li>
-            <li>✅ 馬単買い目提供</li>
-            <li>✅ 的中実績閲覧</li>
-            <li>✅ データ可視化</li>
-            <li>✅ Feature Importance Analysis</li>
+      <div class="tier-cards">
+        <div class="tier-card card">
+          <div class="tier-name">未登録</div>
+          <div class="tier-cost">¥0</div>
+          <ul class="tier-list">
+            <li>✅ 出走全頭の馬柱・過去走</li>
+            <li>✅ AI短評（1頭ごとの文章）</li>
+            <li>✅ AIレース展望・展開予想</li>
+            <li>✅ 特徴量6指標</li>
+            <li>✅ 的中実績・回収率</li>
           </ul>
-          <a href="/pricing" class="btn btn-primary w-full">プラン詳細</a>
+          <a href="/prediction/nankan" class="btn btn-secondary w-full">そのまま見る</a>
         </div>
 
-        <!-- 年払いプラン -->
-        <div class="pricing-card card">
-          <div class="badge badge-success">おすすめ</div>
-          <div class="plan-name">年払いプラン</div>
-          <div class="plan-price">
-            <span class="price">¥66,000</span>
-            <span class="period">/年</span>
-          </div>
-          <div class="plan-description">南関4場＋中央競馬（JRA全10場）</div>
-          <div class="monthly-equivalent">
-            月額換算 ¥5,500
-          </div>
-          <ul class="plan-features">
-            <li>✅ 南関4場全レース予想</li>
-            <li>✅ JRA全10場全レース予想</li>
-            <li>✅ 馬単買い目提供</li>
-            <li>✅ 的中実績閲覧</li>
-            <li>✅ データ可視化</li>
-            <li>✅ Feature Importance Analysis</li>
+        <div class="tier-card card">
+          <div class="tier-name">無料会員</div>
+          <div class="tier-cost">¥0<span class="tier-cost-sub">（登録のみ）</span></div>
+          <ul class="tier-list">
+            <li>✅ 未登録でできること全部</li>
+            <li>✅ 印（◎○▲△・1頭に複数付与）</li>
+            <li>✅ AI結論（推奨理由の解説）</li>
           </ul>
-          <a href="/pricing" class="btn btn-primary w-full">プラン詳細</a>
+          <a href="/register" class="btn btn-primary w-full">無料で登録する</a>
+        </div>
+
+        <div class="tier-card card featured">
+          <div class="badge badge-warning">買い目つき</div>
+          <div class="tier-name">有料プラン</div>
+          <div class="tier-cost">月額</div>
+          <ul class="tier-list">
+            <li>✅ 無料会員でできること全部</li>
+            <li>✅ AI指数の数値（無料はモザイク）</li>
+            <li>✅ 全レースの馬単買い目</li>
+            <li>✅ 開催日の注目馬・穴馬メール</li>
+            <li>✅ メインレースの詳細レポート</li>
+          </ul>
+          <a href="/pricing" class="btn btn-primary w-full">プランと料金を見る</a>
         </div>
       </div>
-
-      <p class="text-center mt-4">
-        <a href="/pricing" class="btn btn-secondary">全プランを見る →</a>
-      </p>
     </div>
   </section>
 
@@ -626,6 +637,72 @@ export const prerender = true;
       .stats-grid {
         grid-template-columns: 1fr;
       }
+    }
+    /* ── 2026-08-28 追加: tier 比較カード / 実測値の注記 ── */
+    .stats-note {
+      margin-top: 12px;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    .tier-cards {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      margin-top: 24px;
+    }
+
+    .tier-card {
+      display: flex;
+      flex-direction: column;
+      text-align: center;
+      position: relative;
+    }
+
+    .tier-card.featured {
+      border-color: var(--secondary-start);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .tier-name {
+      font-family: var(--font-serif);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .tier-cost {
+      font-family: var(--font-num);
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: var(--primary-start);
+      margin-bottom: 14px;
+    }
+
+    .tier-cost-sub {
+      display: block;
+      font-family: var(--font-sans);
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-tertiary);
+    }
+
+    .tier-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 18px;
+      text-align: left;
+      flex: 1;
+    }
+
+    .tier-list li {
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+      padding: 5px 0;
+      line-height: 1.55;
     }
   </style>
 </BaseLayout>

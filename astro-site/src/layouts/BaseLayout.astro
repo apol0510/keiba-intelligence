@@ -5,16 +5,19 @@ interface Props {
   title: string;
   description?: string;
   ogImage?: string;
+  /** 同一内容を複数 URL で出す場合に正規 URL を指定する（例: /free-prediction/* → /prediction/*） */
+  canonicalPath?: string;
 }
 
 const {
   title,
   description = 'AI-Powered Intelligence Dashboard for 南関・中央競馬。的中率71%、回収率186%を誇る競馬予想プラットフォーム。南関4場とJRA全10場に対応。',
-  ogImage = '/og-image.png'
+  ogImage = '/og-image.png',
+  canonicalPath
 } = Astro.props;
 
 const siteTitle = `${title} | KEIBA Intelligence`;
-const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
 ---
 
 <!DOCTYPE html>
@@ -47,7 +50,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
 
   <!-- Global Styles -->
   <style is:global>
@@ -226,9 +229,10 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
   <style>
     /* ナビゲーション */
     .main-nav {
-      /* よりクリアな透明感（薄い白系フロストガラス） */
-      background: linear-gradient(180deg, rgba(190, 205, 232, 0.07) 0%, rgba(160, 178, 215, 0.05) 100%);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      /* 2026-08-28 ライト基調（RENEWAL_2026_08 §9） */
+      background: rgba(255, 255, 255, 0.92);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 1px 8px rgba(15, 23, 42, 0.05);
       padding: var(--spacing-md) 0;
       position: sticky;
       top: 0;
@@ -265,7 +269,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
     .logo-text {
       /* 明るいヘッダーでも読めるよう、やや濃いめのcyan系グラデーション */
-      background: linear-gradient(135deg, #0891b2 0%, #06b6d4 50%, #0e7490 100%);
+      background: linear-gradient(135deg, var(--primary-start) 0%, var(--secondary-start) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -277,9 +281,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     .logo-subtext {
       font-size: 0.7rem;
       font-weight: 600;
-      color: rgba(148, 163, 184, 0.95);
+      color: var(--text-tertiary);
       letter-spacing: 0.08em;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
 
     .nav-links {
@@ -296,25 +299,23 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       white-space: nowrap;
       flex-shrink: 0;
       padding: var(--spacing-xs) var(--spacing-md);
-      color: var(--text-secondary);
+      color: var(--text-primary);
       font-weight: 600;
       font-size: 0.95rem;
       letter-spacing: 0.02em;
-      border: 1px solid rgba(59, 130, 246, 0.25);
-      border-radius: var(--radius-md);
-      background: rgba(30, 41, 59, 0.6);
-      backdrop-filter: blur(8px);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-pill);
+      background: #ffffff;
+      box-shadow: var(--shadow-sm);
       transition: all var(--transition-base);
     }
 
     .nav-links a:hover,
     .nav-dropdown-trigger:hover {
-      color: #06212b;
-      border-color: rgba(34, 211, 238, 0.7);
-      background: linear-gradient(135deg, #67e8f9 0%, #22d3ee 100%);
-      box-shadow: 0 4px 16px rgba(34, 211, 238, 0.4),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.25);
+      color: var(--text-inverse);
+      border-color: var(--primary-start);
+      background: var(--primary-gradient);
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
       transform: translateY(-1px);
     }
 
@@ -339,12 +340,12 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       top: 100%;
       left: 0;
       margin-top: var(--spacing-sm);
-      background: var(--bg-tertiary);
+      background: var(--bg-secondary);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
       padding: var(--spacing-sm) 0;
       min-width: 160px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--shadow-lg);
       opacity: 0;
       visibility: hidden;
       transform: translateY(-10px);
@@ -525,14 +526,18 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       border-radius: var(--radius-md);
       font-weight: 700;
       font-size: 0.875rem;
-      color: #0f172a;
-      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-      box-shadow: 0 2px 8px rgba(251, 191, 36, 0.25);
+      /*
+       * 🔴 2026-08-31: 黄色の単色をやめてブランドの 2 色グラデーションへ。
+       *    フッターは暗いので **明るい版**を使い、文字は濃色にして読みやすくする。
+       */
+      color: #0b1020;
+      background: var(--grad-nav-bright);
+      box-shadow: 0 3px 14px rgba(96, 165, 250, 0.45);
       transition: all var(--transition-base);
     }
     .footer-cta:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+      box-shadow: 0 6px 22px rgba(129, 190, 255, 0.65);
     }
 
     /* 対象競馬場（コンパクト2列・会場名は1行=nowrap） */
@@ -776,6 +781,20 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
   </script>
 
   <!-- AI Chat Widget -->
+  <!-- sticky な表見出しをヘッダーの真下に固定するため、ナビの実寸を CSS 変数へ反映する -->
+  <script is:inline>
+    (function () {
+      function syncNavHeight() {
+        var nav = document.querySelector('.main-nav');
+        if (!nav) return;
+        document.documentElement.style.setProperty('--nav-height', nav.offsetHeight + 'px');
+      }
+      syncNavHeight();
+      window.addEventListener('resize', syncNavHeight);
+      window.addEventListener('orientationchange', syncNavHeight);
+    })();
+  </script>
+
   <AIChat />
 </body>
 </html>

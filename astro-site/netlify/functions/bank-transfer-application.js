@@ -331,22 +331,11 @@ exports.handler = async (event, context) => {
       if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
         console.warn('⚠️ Airtable credentials not configured, skipping registration');
       } else {
-        // プラン名から料金部分を削除（Airtable Single select用）
-        let planName = 'pro';
-        if (productName.includes('ライト')) {
-          planName = 'light';
-        } else if (productName.includes('年')) {
-          planName = 'pro';
-        }
-
-        // planType → PlanType マッピング（セッション用）
-        let planTypeMapped = 'pro';
-        if (planType === 'light') planTypeMapped = 'light';
-
-        // planType → VenueAccess マッピング（会場別アクセス制御）
-        let venueAccess = 'all';
-        if (planType === 'monthly-nankan') venueAccess = 'nankan';
-        if (planType === 'monthly-jra') venueAccess = 'jra';
+        // 🔴 2026-08-30: 銀行振込は年払い 1 本のみ。
+        //    ライト（南関のみ）・月払い・買い切りは廃止したため分岐を持たない。
+        //    会場で分ける概念も廃止したので VenueAccess は書かない。
+        const planName = 'pro';
+        const planTypeMapped = 'pro';
 
         // 既存顧客チェック
         const searchFormula = `{Email} = "${email}"`;
@@ -378,7 +367,6 @@ exports.handler = async (event, context) => {
               'Plan': planName,
               'PlanType': planTypeMapped,
               'plan_type': planType,
-              'VenueAccess': venueAccess,
               'Status': 'pending',
               'PaymentMethod': 'Bank Transfer',
               'PaymentEmailSent': false,
@@ -413,7 +401,6 @@ exports.handler = async (event, context) => {
               'Plan': planName,
               'PlanType': planTypeMapped,
               'plan_type': planType,
-              'VenueAccess': venueAccess,
               'Status': 'pending',
               'PaymentMethod': 'Bank Transfer',
               'PaymentEmailSent': false,

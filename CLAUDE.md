@@ -483,14 +483,31 @@ concurrency:
 
 ### 価格設定
 
-| プラン | 価格 | 内容 |
-|--------|------|------|
-| フリー | ¥0 | 予想閲覧のみ（上位5頭、買い目なし） |
-| **無料会員** | **¥0（登録必要）** | **全頭予想・買い目一部・AI分析・メルマガ** |
-| 買い切り | ¥88,000（永久） | 南関＋中央、全レース馬単買い目、永久アクセス |
-| 年払い | ¥66,000/年 | 南関＋中央、全レース馬単買い目 |
+> ⚠️ **2026-08-30 更新**: 課金は **Stripe の月額プレミアム 1 本が主導線**。
+> **「ライト＝南関のみ」という会場で分ける概念は廃止**した（有料なら南関＋中央）。
+> 正本は [`docs/RENEWAL_2026_08.md`](./docs/RENEWAL_2026_08.md) §3・§6。
 
----
+| tier | 到達条件 | 見えるもの |
+|------|---------|-----------|
+| 未登録（guest） | 誰でも | 全頭の馬柱・過去走・特徴量・**AI短評**・**AIレース展望**・展開予想（馬番順） |
+| 無料会員（free） | メール登録＋認証 | 上記 ＋ **印（◎○▲△・指数ごとの印を合算）**・AI指数の列（モザイク） |
+| プレミアム（premium） | Stripe 月額 | 上記 ＋ **AI指数の実数値・AI結論・馬単の買い目（南関東4場＋中央競馬）**。印は非表示 |
+| ライト（light） | 🟡 **プラン保留** | 新規導線なし。既存レコードのみ。権限は premium と同じ |
+
+### 価格
+
+| 導線 | 内容 | 金額 |
+|------|------|------|
+| **月額プレミアム**（主導線・Stripe） | 南関東＋中央の全レース馬単買い目 | **正規 ¥5,000 → 割引 ¥3,980/月** |
+| 年払い（銀行振込・控えめ） | 同内容 | **¥39,800/年** |
+
+🔴 **請求額の正本は Stripe の Price。** コードの金額（`plans.js` の
+`MONTHLY_LIST_PRICE_YEN` / `MONTHLY_PRICE_YEN` / `BANK_YEARLY_PRICE_YEN`）は **表示用**。
+価格変更時は **Stripe と `plans.js` の両方**を直すこと。
+
+🔴 **廃止済み（復活させない）**: ライトの購入導線 / 会場別アクセス（`venueAccess`）/
+買い切り ¥88,000 / 月払い ¥12,000 系 / ライト ¥6,600 /
+プレミアム限定の訴求（詳細レポート・穴馬・優先メルマガ ＝ **実装が無い**）。
 
 ## 🔐 環境変数（Netlify環境変数） 🔐
 
@@ -519,6 +536,27 @@ GITHUB_BRANCH=main
 
 # SendGrid Marketing Campaigns（必須）
 SENDGRID_CUSTOM_FIELD_INTELLIGENCE=e2_T
+
+# ── 2026-08-28 追加（docs/RENEWAL_2026_08.md）。🔴 いずれも未設定＝fail-closed ──
+# セッション署名鍵（未設定なら全閲覧者が guest 扱いになり、印・買い目が出ない）
+SESSION_SIGNING_SECRET=（ランダムな長い文字列）
+
+# Stripe（未設定なら課金導線は「準備中」表示。金額はコードに書かない）
+STRIPE_SECRET_KEY=sk_live_xxxxx
+STRIPE_WEBHOOK_SECRET=whsec_xxxxx
+STRIPE_PRICE_LIGHT=price_xxxxx
+STRIPE_PRICE_PREMIUM=price_xxxxx
+STRIPE_PORTAL_RETURN_URL=https://keiba-intelligence.jp/mypage
+
+# Deploy Preview の有料プレビュー用の合言葉（未設定なら有料プレビューは成立しない）
+# 🔴 本番ホストでは常に無効。Deploy Preview / ブランチデプロイ / localhost のみで効く
+PREVIEW_PAID_KEY=（ランダムな長い文字列）
+
+# KMA連携（未設定・false なら一切通信しない）
+KMA_ENROLL_ENABLED=false
+KMA_ENROLL_WRITE_ENABLED=false
+KMA_BASE_URL=https://keiba-marketing-automation.netlify.app
+KMA_ADMIN_TOKEN=（KMA の ADMIN_API_TOKEN と同一値）
 ```
 
 ---

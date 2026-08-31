@@ -1,0 +1,123 @@
+---
+/**
+ * FeatureBars.astro — 特徴量6指標のミニバー
+ *
+ * 正本: docs/RENEWAL_2026_08.md §4
+ *
+ * 🔴 未登録（guest）にも表示する。印ではないため tier で閉じない。
+ * 🔴 値が無い指標は**描画しない**（0 として棒を出さない＝誤情報になる）。
+ */
+
+interface Props {
+  features?: Record<string, { value?: number | null; rank?: number | null }> | null;
+  compact?: boolean;
+}
+
+const { features, compact = false } = Astro.props;
+
+const METRICS = [
+  { key: 'speedIndex', label: 'スピード', color: 'var(--chart-blue)' },
+  { key: 'staminaRating', label: 'スタミナ', color: 'var(--chart-green)' },
+  { key: 'formTrend', label: '調子', color: 'var(--chart-yellow)' },
+  { key: 'trackCompatibility', label: 'コース', color: 'var(--chart-cyan)' },
+  { key: 'distanceFitness', label: '距離', color: 'var(--chart-purple)' },
+  { key: 'jockeyFactor', label: '騎手', color: 'var(--secondary-start)' },
+];
+
+const rows = METRICS
+  .map((m) => {
+    const item = features?.[m.key];
+    const value = item && typeof item.value === 'number' && Number.isFinite(item.value) ? item.value : null;
+    if (value === null) return null;
+    const clamped = Math.max(0, Math.min(100, value));
+    return { ...m, value, clamped, rank: item?.rank ?? null };
+  })
+  .filter(Boolean) as Array<{ key: string; label: string; color: string; value: number; clamped: number; rank: number | null }>;
+---
+
+{rows.length > 0 && (
+  <div class={`feature-bars ${compact ? 'is-compact' : ''}`}>
+    {rows.map((r) => (
+      <div class="fb-row">
+        <span class="fb-label">{r.label}</span>
+        <span class="fb-track">
+          <span class="fb-fill" style={`width:${r.clamped}%; background:${r.color};`}></span>
+        </span>
+        <span class="fb-value">
+          {r.value.toFixed(0)}
+          {r.rank != null && r.rank <= 3 && <b class={`fb-rank r${r.rank}`}>{r.rank}位</b>}
+        </span>
+      </div>
+    ))}
+  </div>
+)}
+
+<style>
+  .feature-bars {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 14px;
+    margin: 10px 0 2px;
+  }
+
+  .feature-bars.is-compact {
+    grid-template-columns: 1fr;
+  }
+
+  .fb-row {
+    display: grid;
+    grid-template-columns: 3.6em 1fr 3.4em;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .fb-label {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .fb-track {
+    display: block;
+    height: 6px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-muted);
+    overflow: hidden;
+  }
+
+  .fb-fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--radius-pill);
+  }
+
+  .fb-value {
+    font-family: var(--font-num);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .fb-rank {
+    display: inline-block;
+    margin-left: 3px;
+    font-size: 0.6rem;
+    padding: 0 3px;
+    border-radius: 3px;
+    background: var(--bg-muted);
+    color: var(--text-tertiary);
+    vertical-align: 1px;
+  }
+
+  .fb-rank.r1 {
+    background: var(--accent-yellow);
+    color: #4a3800;
+  }
+
+  @media (max-width: 600px) {
+    .feature-bars { grid-template-columns: 1fr; }
+  }
+</style>

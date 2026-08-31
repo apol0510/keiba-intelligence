@@ -412,6 +412,26 @@ exports.handler = async (event) => {
       // トークン保存失敗は警告のみ（メールは既に送信済み）
     }
 
+    // 5. KMA（keiba-marketing-automation）へ無料登録イベントを送る
+    //    🔴 既定 disabled。KMA_ENROLL_ENABLED が 'true' でなければ何もしない。
+    //    🔴 失敗しても登録処理は成功として返す（メールは既に送信済みのため）。
+    //    正本: docs/RENEWAL_2026_08.md §8
+    try {
+      const kma = await import('../../src/lib/kma/client.js');
+      await kma.notifyKma({
+        kind: 'signup',
+        identity: email,
+        eventId: kma.buildEventId({
+          kind: 'signup',
+          identityKey: token,
+          occurredAt: new Date().toISOString(),
+        }),
+        env: process.env,
+      });
+    } catch (error) {
+      console.error('⚠️ KMA連携スキップ（登録は継続）');
+    }
+
     return {
       statusCode: 200,
       headers,

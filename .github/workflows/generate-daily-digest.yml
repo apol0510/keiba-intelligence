@@ -1,0 +1,134 @@
+name: Generate Daily Digest
+
+# 取込済みの予想データから **メルマガ素材**（注目馬・穴馬・メインレース詳細）を生成し、
+# astro-site/src/data/digest/{category}/YYYY/MM/YYYY-MM-DD.json へ保存する。
+#
+# 正本: docs/RENEWAL_2026_08.md §8.3 K-3
+#
+# 設計方針:
+#   - **外部 API・ネットワークを使わない**（取込済み JSON だけを読む純粋な生成）。
+#   - 生成物に買い目（馬番組み合わせ）を含めない。スクリプト側で検証し、
+#     含まれていたら書き込まずに異常終了する（fail-closed）。
+#   - git add は src/data/digest/ のみに限定する（他の src/data をステージしない）。
+#   - **メールを送らない**。送信は KMA（keiba-marketing-automation）の責務であり、
+#     本 workflow は素材を作るだけ。
+#   - 新規 repository_dispatch は送らない。
+#
+# 実行タイミング: 予想取込（23:00 JST）の後。schedule は 23:30 JST。
+
+on:
+  workflow_dispatch:
+    inputs:
+      category:
+        description: 'nankan | jra | both'
+        required: false
+        default: 'both'
+  schedule:
+    # 14:30 UTC = 23:30 JST（予想取込 23:00 の 30 分後）
+    - cron: '30 14 * * *'
+
+# 並行実行制御：digest 生成専用 group（archive / prediction 系に相乗りしない）
+concurrency:
+  group: generate-daily-digest
+  cancel-in-progress: false
+
+jobs:
+  generate-digest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: astro-site
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'astro-site/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate daily digest
+        env:
+          CATEGORY: ${{ github.event.inputs.category }}
+        run: |
+          TARGET="${CATEGORY:-both}"
+          echo "📝 digest 生成: ${TARGET}"
+          node scripts/generateDailyDigest.mjs "$TARGET"
+
+      - name: Verify no betting lines in digest
+        run: |
+          # 二重チェック（スクリプト側でも検証しているが、保存後の実ファイルでも確認する）
+          if [ -d src/data/digest ]; then
+            if grep -rEl '[0-9]+-[0-9]+(\.[0-9]+)+' src/data/digest/ ; then
+              echo "❌ digest に買い目らしき文字列が含まれています"
+              exit 1
+            fi
+            if grep -rl '"bettingLines"\|"hitLines"\|"umatan"' src/data/digest/ ; then
+              echo "❌ digest に禁止キーが含まれています"
+              exit 1
+            fi
+          fi
+          echo "✅ 買い目の混入なし"
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git add src/data/digest/
+          git diff --staged --exit-code || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changes
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          COMMIT_MSG="Auto-generate: daily digest $(date -u '+%Y-%m-%d')"
+
+          # digest ファイル群を退避（digest のみ）
+          mkdir -p /tmp/digest-backup
+          cp -r src/data/digest /tmp/digest-backup/
+
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+          SUCCESS=false
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" = false ]; do
+            echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES"
+
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+
+            mkdir -p src/data
+            cp -r /tmp/digest-backup/digest src/data/
+
+            git add src/data/digest/
+            if git diff --staged --quiet; then
+              echo "⏭️  No changes after sync"
+              SUCCESS=true
+              break
+            fi
+            git commit -m "$COMMIT_MSG"
+
+            if git push origin main; then
+              echo "✅ Successfully pushed digest"
+              SUCCESS=true
+            else
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              sleep 5
+            fi
+          done
+
+          if [ "$SUCCESS" = false ]; then
+            echo "❌ push に失敗しました"
+            exit 1
+          fi

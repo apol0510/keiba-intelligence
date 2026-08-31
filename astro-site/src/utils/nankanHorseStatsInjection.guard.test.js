@@ -7,6 +7,12 @@
  * horseStats 分岐は無音で死ぬ（racebook 4走へ退行）ため、注入サイトの存在を固定する。
  * 特に free/light の [slug].astro は当初 horseStats 未注入だったため重点的にガードする。
  *
+ * 2026-08-28 更新（docs/RENEWAL_2026_08.md）:
+ *   注入は各ページ直書きから **共通ローダー `src/lib/prediction/loadRaceDay.js`** へ集約された。
+ *   ガードの意図（3 経路すべてで注入が生きていること）は変えず、
+ *   「直接呼ぶ」か「注入を行う共通ローダーを使う」かのいずれかを満たすことを検証する。
+ *   併せて共通ローダー側が注入を落としていないことも固定する（単一点の退行防止）。
+ *
  * 重い Astro レンダーは行わず、ソースの静的 import/呼び出し確認 + resolver 分岐の存在確認のみ。
  *
  * 実行: node src/utils/nankanHorseStatsInjection.guard.test.js （astro-site 直下から）
@@ -25,12 +31,42 @@ const PAGES = [
   ['free index',    'src/pages/free-prediction/nankan/index.astro'],
   ['premium',       'src/pages/prediction/nankan/index.astro'],
 ];
+/** 注入を行う共通ローダー。ここが注入をやめると全経路が無音で退行する。 */
+const SHARED_LOADER = 'src/lib/prediction/loadRaceDay.js';
+const LOADER_FNS = ['loadNankanRaceDay', 'loadNankanRaceDayBySlug'];
+
 for (const [label, rel] of PAGES) {
-  t(`${label} が injectHorseStatsNankanIntoData を注入`, () => {
+  t(`${label} が horseStats 注入経路を持つ（直接呼び出し or 共通ローダー経由）`, () => {
     const src = read(rel);
-    assert.ok(/injectHorseStatsNankanIntoData/.test(src), `${rel} から injectHorseStatsNankanIntoData 注入が消えている`);
+    const direct = /injectHorseStatsNankanIntoData/.test(src);
+    const viaLoader = /loadRaceDay(\.js)?['"]/.test(src) && LOADER_FNS.some((fn) => src.includes(fn));
+    assert.ok(
+      direct || viaLoader,
+      `${rel} が horseStats 注入に到達していない（直接呼び出しも共通ローダー利用も無い）`,
+    );
   });
 }
+
+// 共通ローダー: 注入呼び出しが残っていること（集約先が落ちると全経路が死ぬ）。
+t('共通ローダーが injectHorseStatsNankanIntoData を注入', () => {
+  const src = read(SHARED_LOADER);
+  assert.ok(
+    /injectHorseStatsNankanIntoData\(/.test(src),
+    `${SHARED_LOADER} から injectHorseStatsNankanIntoData 呼び出しが消えている`,
+  );
+  for (const fn of LOADER_FNS) {
+    assert.ok(src.includes(`export function ${fn}`), `${SHARED_LOADER} に ${fn} が無い`);
+  }
+});
+
+// 共通ローダー: 南関の過去走 resolver が getDisplayRecentRacesForNankan を通ること。
+t('共通ローダーの南関 resolver が getDisplayRecentRacesForNankan を使う', () => {
+  const src = read(SHARED_LOADER);
+  assert.ok(
+    /getDisplayRecentRacesForNankan\(/.test(src),
+    `${SHARED_LOADER} が resolver を経由していない（horseStats 分岐が使われない）`,
+  );
+});
 
 // resolver: horseStats 分岐（horseStatsNankan.recentRacesDetailed）が存在し、legacy より前にある。
 t('resolver に horseStats 分岐が存在し legacy(recentRaces素通し)より前にある', () => {

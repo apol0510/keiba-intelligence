@@ -1,8 +1,21 @@
 ---
+/**
+ * /apply — 銀行振込の申し込み
+ *
+ * 正本: docs/RENEWAL_2026_08.md §6
+ *
+ * 🔴 2026-08-30 改定（仕様所有者の指示）:
+ *   - 銀行振込は **年払い ¥39,800 の 1 本のみ**。
+ *     買い切り（¥88,000）・月払い（¥12,000 系）・ライト（南関のみ）は **廃止**し、画面から消す。
+ *   - 「南関のみ／中央のみ」という **会場で分ける概念は廃止**。内容は月額プレミアムと同じ。
+ *   - 主導線は `/pricing` の Stripe 月額。このページは控えめな受け皿。
+ */
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { BANK_YEARLY_PRICE_YEN } from '../lib/billing/plans.js';
 
 const title = '銀行振込申し込み - KEIBA Intelligence';
-const description = 'KEIBA Intelligence プロプラン（買い切り・年払い・月払い）の銀行振込申し込みフォーム';
+const description = 'KEIBA Intelligence プレミアム年払い（銀行振込）の申し込みフォーム';
+const yearlyYen = new Intl.NumberFormat('ja-JP').format(BANK_YEARLY_PRICE_YEN);
 ---
 
 <BaseLayout title={title} description={description}>
@@ -11,100 +24,32 @@ const description = 'KEIBA Intelligence プロプラン（買い切り・年払�
       <!-- ページヘッダー -->
       <div class="page-header">
         <h1>💳 銀行振込申し込み</h1>
-        <p class="subtitle">KEIBA Intelligence プロプラン - 銀行振込でのお支払い</p>
+        <p class="subtitle">KEIBA Intelligence プレミアム年払い - 銀行振込でのお支払い</p>
       </div>
 
-      <!-- プラン選択カード -->
+      <!-- プラン（年払いのみ） -->
       <div class="plan-selector-section">
-        <h2>プランを選択</h2>
-        <div class="plan-grid">
-          <!-- 買い切りプラン -->
-          <div class="plan-card recommended" data-plan="lifetime" data-price="88000">
-            <div class="badge badge-warning">一番お得</div>
-            <div class="plan-name">買い切りプラン</div>
+        <h2>お申し込みプラン</h2>
+        <div class="plan-grid plan-grid-single">
+          <div class="plan-card recommended" data-plan="yearly" data-price={BANK_YEARLY_PRICE_YEN}>
+            <div class="plan-badge">年払い</div>
+            <div class="plan-name">プレミアム年払い</div>
             <div class="plan-price">
-              <span class="price">¥88,000</span>
-            </div>
-            <div class="lifetime-badge">
-              <span class="lifetime-text">永久アクセス</span>
-              <span class="lifetime-note">追加料金なし</span>
-            </div>
-            <ul class="plan-features">
-              <li>✅ 南関4場＋JRA全10場 全レース予想</li>
-              <li>✅ 馬単買い目（本線+抑え）</li>
-              <li>✅ 全期間の的中実績</li>
-              <li>✅ 永久アクセス（一度の支払いのみ）</li>
-            </ul>
-            <button class="btn btn-select" onclick="selectPlan('買い切りプラン', 88000, 'lifetime')">このプランを選択</button>
-          </div>
-
-          <!-- 年払いプラン -->
-          <div class="plan-card" data-plan="yearly" data-price="66000">
-            <div class="badge badge-success">おすすめ</div>
-            <div class="plan-name">年払いプラン</div>
-            <div class="plan-price">
-              <span class="price">¥66,000</span>
+              <span class="price">¥{yearlyYen}</span>
               <span class="period">/年</span>
             </div>
-            <div class="monthly-equivalent">月額換算 ¥5,500</div>
             <ul class="plan-features">
-              <li>✅ 南関4場＋JRA全10場 全レース予想</li>
-              <li>✅ 馬単買い目（本線+抑え）</li>
-              <li>✅ 全期間の的中実績</li>
-              <li>✅ 1年間アクセス（自動更新なし）</li>
+              <li>南関東4場・全レースの馬単買い目</li>
+              <li>中央競馬（JRA）全レースの馬単買い目</li>
+              <li>AI指数の数値とAI結論</li>
+              <li>全頭の馬柱・AI短評・展開予想</li>
             </ul>
-            <button class="btn btn-select" onclick="selectPlan('年払いプラン', 66000, 'yearly')">このプランを選択</button>
-          </div>
-
-          <!-- ライトプラン -->
-          <div class="plan-card" data-plan="light" data-price="6600">
-            <div class="badge badge-light">お試し</div>
-            <div class="plan-name">ライトプラン</div>
-            <div class="plan-price">
-              <span class="price">¥6,600</span>
-              <span class="period">/月</span>
-            </div>
-            <ul class="plan-features">
-              <li>✅ 南関4場＋JRA全10場 全レース予想</li>
-              <li>✅ メインレースの馬単買い目</li>
-              <li>✅ 全期間の的中実績</li>
-              <li>⚠️ メインレース以外の買い目は非表示</li>
-            </ul>
-            <button class="btn btn-select" onclick="selectPlan('ライトプラン', 6600, 'light')">このプランを選択</button>
-          </div>
-
-          <!-- 月払い南関プラン -->
-          <div class="plan-card" data-plan="monthly-nankan" data-price="12000">
-            <div class="plan-name">月払い南関プラン</div>
-            <div class="plan-price">
-              <span class="price">¥12,000</span>
-              <span class="period">/月</span>
-            </div>
-            <ul class="plan-features">
-              <li>✅ 南関4場のみ全レース予想</li>
-              <li>✅ 馬単買い目（本線+抑え）</li>
-              <li>✅ 全期間の的中実績</li>
-              <li>⚠️ 年払いより割高（月額2.2倍）</li>
-            </ul>
-            <button class="btn btn-select" onclick="selectPlan('月払い南関プラン', 12000, 'monthly-nankan')">このプランを選択</button>
-          </div>
-
-          <!-- 月払い中央プラン -->
-          <div class="plan-card" data-plan="monthly-jra" data-price="12000">
-            <div class="plan-name">月払い中央プラン</div>
-            <div class="plan-price">
-              <span class="price">¥12,000</span>
-              <span class="period">/月</span>
-            </div>
-            <ul class="plan-features">
-              <li>✅ JRA全10場のみ全レース予想</li>
-              <li>✅ 馬単買い目（本線+抑え）</li>
-              <li>✅ 全期間の的中実績</li>
-              <li>⚠️ 年払いより割高（月額2.2倍）</li>
-            </ul>
-            <button class="btn btn-select" onclick="selectPlan('月払い中央プラン', 12000, 'monthly-jra')">このプランを選択</button>
+            <button class="btn btn-select" onclick={`selectPlan('プレミアム年払い', ${BANK_YEARLY_PRICE_YEN}, 'yearly')`}>このプランを選択</button>
           </div>
         </div>
+        <p class="plan-alt">
+          毎月のお支払いをご希望の方は <a href="/pricing">月額プレミアム</a> をご利用ください。
+        </p>
       </div>
 
       <!-- 振込先情報（プラン選択後に表示） -->
@@ -257,6 +202,20 @@ const description = 'KEIBA Intelligence プロプラン（買い切り・年払�
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: var(--spacing-lg);
+    }
+
+    /* 🔴 2026-08-30: 年払い 1 本のみ。横に伸ばしすぎない */
+    .plan-grid-single {
+      grid-template-columns: 1fr;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    .plan-alt {
+      margin-top: var(--spacing-md);
+      text-align: center;
+      font-size: 0.86rem;
+      color: var(--text-secondary);
     }
 
     .plan-card {

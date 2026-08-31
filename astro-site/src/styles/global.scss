@@ -4,51 +4,134 @@
    ============================================ */
 
 /* ---------- CSS Variables ---------- */
+/*
+ * 2026-08-28 ライト基調へ転換（docs/RENEWAL_2026_08.md §9・仕様所有者確定 U-2）
+ *
+ * 🔴 トークン名は変えていない。各ページの scoped style がトークン参照のまま追随するため。
+ *    値だけをライト側へ置き換え、競馬新聞の枠色（--waku-1〜8）を新設した。
+ */
 :root {
-  /* メインカラー: インテリジェントブルー */
-  --primary-start: #1e40af;
+  /* メインカラー: ビビッドブルー */
+  --primary-start: #2563eb;
   --primary-end: #3b82f6;
   --primary-gradient: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
 
-  /* セカンダリカラー: パープル */
-  --secondary-start: #7c3aed;
-  --secondary-end: #a855f7;
+  /* セカンダリカラー: オレンジ（ポップの差し色） */
+  --secondary-start: #f97316;
+  --secondary-end: #fb923c;
   --secondary-gradient: linear-gradient(135deg, var(--secondary-start) 0%, var(--secondary-end) 100%);
 
-  /* 背景: ダークネイビー */
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --bg-card: rgba(30, 41, 59, 0.8);
-  --bg-card-hover: rgba(30, 41, 59, 0.95);
+  /* アクセント: イエロー（見出しの下線・強調） */
+  --accent-yellow: #facc15;
+  --accent-pink: #ec4899;
+
+  /*
+   * 2 色グラデーション（2026-08-31 確定）
+   *
+   * 🔴 同系色の濃淡ではなく、**2 色を混ぜたグラデーション**にする。
+   *    青 → 紫 → 桃 → 橙 の 1 本のスペクトラムを、画面を読む順に割り当てる:
+   *
+   *      藍→青  レースの読み（レース展望）
+   *      青→紫  いまどこを見ているか（ナビゲーション・レース番号）
+   *      紫→桃  AI がどう判断したか（結論）
+   *      桃→橙  だから、どう買うか（行動）
+   *      スレート→藍  道具・分類（主張しないが単色にはしない）
+   */
+  /* 🔴 2026-08-31: 暗くて単色に見えたため、シアン → インディゴの明るい 2 色へ */
+  --grad-outlook: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
+  /*
+   * 🔴 ナビは AIチャットボタン（`AIChat.astro`）と同じ配色にそろえた（2026-08-31）。
+   *    以前の #2563eb → #7c3aed は暗くて青紫の差が読み取りにくかった。
+   *    ここを変えるときは `AIChat.astro` の `#3b82f6, #8b5cf6` も合わせること。
+   */
+  --grad-nav: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  /* 暗い面（フッター等）に置く導線用の明るい版。文字は濃色にする */
+  --grad-nav-bright: linear-gradient(135deg, #38bdf8 0%, #a78bfa 100%);
+  --grad-conclusion: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+  --grad-action: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
+
+  /* 道具・分類カラー: スレート → 藍（単色に見せない・主張はしない） */
+  --tool-start: #334155;
+  --tool-end: #3f4d8a;
+  --tool-gradient: linear-gradient(135deg, var(--tool-start) 0%, var(--tool-end) 100%);
+
+  /* 各セクションの淡い下地と枠線 */
+  --conclusion-start: #7c3aed;
+  --conclusion-end: #ec4899;
+  --conclusion-gradient: var(--grad-conclusion);
+  --conclusion-bg: linear-gradient(135deg, #faf5ff 0%, #fdf0f7 100%);
+  --conclusion-border: #e6d5f7;
+  --action-bg: linear-gradient(135deg, #fff5f9 0%, #fff8f0 100%);
+  --action-border: #fbd9c4;
+  --outlook-bg: linear-gradient(135deg, #ecfeff 0%, #eaf2ff 100%);
+  --outlook-border: #b9dcf0;
+
+  /* 背景: オフホワイト＋白カード */
+  --bg-primary: #f5f7fb;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #eef2f8;
+  --bg-card: #ffffff;
+  --bg-card-hover: #ffffff;
+  --bg-muted: #f1f5f9;
 
   /* テキストカラー */
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #64748b;
+  --text-primary: #1a202c;
+  --text-secondary: #4a5568;
+  --text-tertiary: #718096;
+  --text-inverse: #ffffff;
 
-  /* アクセントカラー */
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --info: #06b6d4;
+  /* 旧 `--color-*` エイリアス（定義漏れで未解決だったものを解消） */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-accent: var(--primary-start);
+  --color-accent-alt: var(--secondary-start);
+
+  /* 状態カラー */
+  --success: #059669;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #0891b2;
 
   /* データ可視化カラー */
-  --chart-blue: #3b82f6;
-  --chart-purple: #a855f7;
-  --chart-green: #10b981;
-  --chart-yellow: #fbbf24;
-  --chart-red: #ef4444;
-  --chart-cyan: #06b6d4;
+  --chart-blue: #2563eb;
+  --chart-purple: #7c3aed;
+  --chart-green: #059669;
+  --chart-yellow: #eab308;
+  --chart-red: #dc2626;
+  --chart-cyan: #0891b2;
 
-  /* シャドウ */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  /* ── 競馬新聞の枠色（8枠）──
+     紙面と同じ配色。カードの識別色に使う。
+     --waku-N-bg は枠番の地色、--waku-N-fg はその上に載せる文字色。 */
+  --waku-1-bg: #ffffff; --waku-1-fg: #1a202c; --waku-1-line: #cbd5e1;
+  --waku-2-bg: #1a1a1a; --waku-2-fg: #ffffff; --waku-2-line: #1a1a1a;
+  --waku-3-bg: #e53935; --waku-3-fg: #ffffff; --waku-3-line: #e53935;
+  --waku-4-bg: #1e88e5; --waku-4-fg: #ffffff; --waku-4-line: #1e88e5;
+  --waku-5-bg: #fdd835; --waku-5-fg: #1a202c; --waku-5-line: #fdd835;
+  --waku-6-bg: #43a047; --waku-6-fg: #ffffff; --waku-6-line: #43a047;
+  --waku-7-bg: #fb8c00; --waku-7-fg: #ffffff; --waku-7-line: #fb8c00;
+  --waku-8-bg: #f48fb1; --waku-8-fg: #1a202c; --waku-8-line: #f48fb1;
+
+  /* 印の色 */
+  --mark-honmei: #dc2626;
+  --mark-taiko: #2563eb;
+  --mark-tana: #f97316;
+  --mark-renka: #64748b;
+
+  /* シャドウ（ライト背景向けに薄く） */
+  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 2px 8px -1px rgba(15, 23, 42, 0.10), 0 1px 3px -1px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 10px 20px -6px rgba(15, 23, 42, 0.12), 0 4px 8px -4px rgba(15, 23, 42, 0.06);
+  --shadow-xl: 0 20px 32px -10px rgba(15, 23, 42, 0.16), 0 8px 12px -8px rgba(15, 23, 42, 0.08);
 
   /* ボーダー */
-  --border-color: rgba(148, 163, 184, 0.2);
+  --border-color: #dbe2ea;
+  --border-strong: #94a3b8;
+
+  /* 紙面らしさ（見出しの明朝） */
+  --font-serif: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', 'Noto Serif JP', serif;
+  --font-sans: 'Segoe UI', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-num: 'Roboto Condensed', 'DIN Alternate', 'Helvetica Neue', Arial, sans-serif;
 
   /* スペーシング */
   --spacing-xs: 0.25rem;
@@ -58,11 +141,16 @@
   --spacing-xl: 2rem;
   --spacing-2xl: 3rem;
 
-  /* ボーダーラジアス */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  /* ボーダーラジアス（ポップに丸く） */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-pill: 999px;
+
+  /* サイトヘッダーの高さ（sticky な表見出しをこの下に固定するために使う）。
+     実測値は BaseLayout の inline script が上書きする。 */
+  --nav-height: 84px;
 
   /* トランジション */
   --transition-fast: 150ms ease-in-out;
@@ -83,7 +171,7 @@ html {
 }
 
 body {
-  font-family: 'Segoe UI', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.6;
@@ -99,14 +187,15 @@ h1, h2, h3, h4, h5, h6 {
 
 h1 {
   font-size: 2.5rem;
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-family: var(--font-serif);
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
 }
 
 h2 {
   font-size: 2rem;
+  font-family: var(--font-serif);
+  color: var(--text-primary);
 }
 
 h3 {
@@ -177,7 +266,6 @@ a {
 /* ---------- カードデザイン ---------- */
 .card {
   background: var(--bg-card);
-  backdrop-filter: blur(10px);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);

@@ -1,0 +1,381 @@
+---
+/**
+ * RaceNewspaper.astro — 1 レース＝1 紙面
+ *
+ * 正本: docs/RENEWAL_2026_08.md §4
+ *
+ * 🔴 tier による出し分けは **描画そのものを止める**（CSS で隠さない。監査 A-1 の是正）:
+ *      guest   … 馬柱・過去走・特徴量・AI短評・レース展望・展開予想
+ *      free    … ＋ **印（◎○▲△・1 頭に複数付与・該当しない馬は空欄）**
+ *      light+  … ＋ **評価を絞った単一の印**・AI指数・AI結論・買い目
+ *
+ * 🔴 並び順は **全 tier で馬番昇順**。評価順に並べ替えない（順位が漏れるため）。
+ *
+ * 🔴 2026-08-30: **下部の買い目セクションは削除した。**
+ *    買い目は出馬表の「🎫 買い目を抽出」パネル（`RaceEntryTable`）だけで出す。
+ *    二重に出さないため。買い目の描画が `showBetting` で守られている点は変わらない
+ *    （`bettingPlan` を組み立てるのが showBetting のときだけ）。
+ *    false のときは **買い目の文字列を一切 HTML に出さない**。
+ *
+ * 🔴 文章生成に bettingLines を渡さない（CLAUDE.md 絶対厳守）。
+ */
+
+import RaceEntryTable from './RaceEntryTable.astro';
+import PaceMap from './PaceMap.astro';
+import { buildRaceNarrativeBundle, normalizePastRaces } from '../../utils/raceNarrative.js';
+import { sortByHorseNumber } from '../../utils/attentionMarks.js';
+import { buildBettingPlan } from '../../utils/bettingPlan.js';
+
+interface Props {
+  race: any;
+  view: { tier?: string; showMarks?: boolean; showBetting?: boolean; authenticated?: boolean };
+  venue?: 'nankan' | 'jra';
+  /** horse → 生の過去走配列。南関 entries 等の差異を吸収する */
+  resolveRaces?: (horse: any) => any[];
+  /** horse → featureScores の当該馬ぶん */
+  resolveFeatures?: (horse: any) => any;
+  /** horse → 南関 horseStats（無い会場では null） */
+  resolveStats?: (horse: any) => any;
+  /** 買い目（light 以上のみ描画される） */
+  bettingLines?: string[];
+  betType?: string;
+  /** メインレースか。買い目の展開方向（F3 reverseTopK）が変わる。 */
+  isMain?: boolean;
+  /** レース見出しの上に出す小さなラベル（例: メインレース） */
+  badge?: string | null;
+}
+
+const {
+  race,
+  view,
+  venue,
+  resolveRaces,
+  resolveFeatures,
+  resolveStats,
+  bettingLines = [],
+  betType = '馬単',
+  isMain = false,
+  badge = null,
+} = Astro.props;
+
+const showMarks = !!view?.showMarks;
+const showBetting = !!view?.showBetting;
+
+const raceInfo = race?.raceInfo || {};
+const allHorses: any[] = Array.isArray(race?.horses) ? race.horses : [];
+
+/**
+ * 並び順は **常に馬番昇順**（2026-08-29 仕様確定）。
+ * 🔴 AI 評価による並べ替えを行わない。並び順から本命順位が読めてはいけない。
+ */
+const orderedHorses = sortByHorseNumber(allHorses);
+
+/** 文章一式。買い目は渡さない。 */
+const bundle = buildRaceNarrativeBundle(
+  { raceInfo, horses: allHorses },
+  {
+    // 🔴 結論（本命の名指し）は有料 tier のみ生成する。無料には HTML ごと出さない。
+    allowMarks: showBetting,
+    resolveRaces: resolveRaces || ((h: any) => h?.recentRaces),
+    resolveFeatures,
+  },
+);
+
+const pastOf = (h: any) => normalizePastRaces(resolveRaces ? resolveRaces(h) : h?.recentRaces);
+
+
+const distanceLabel = raceInfo?.distance ? `${raceInfo.distance}m` : null;
+const headCount = allHorses.length || raceInfo?.horseCount || null;
+const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => typeof l === 'string' && l.trim()) : [];
+
+/**
+ * 「買い目を抽出」パネル用に、買い目を組み合わせへ展開する。
+ * 🔴 **有料 tier のときだけ**算出する。free/guest では null を渡す
+ *    ＝出馬表の HTML に買い目の痕跡を残さない。
+ */
+const bettingPlan = showBetting && validBetting.length
+  ? buildBettingPlan(validBetting, { isMain: !!isMain, betType, fieldSize: allHorses.length })
+  : null;
+---
+
+<section class="racepaper" data-race-number={raceInfo?.raceNumber} data-tier={view?.tier}>
+  <!-- ── レースヘッダー ── -->
+  <header class="rp-head">
+    <div class="rp-title-row">
+      <span class="rp-rno">{raceInfo?.raceNumber ?? '—'}<i>R</i></span>
+      <div class="rp-title-main">
+        {badge && <span class="rp-badge">{badge}</span>}
+        <h3 class="rp-name">{raceInfo?.raceName || `${raceInfo?.raceNumber ?? ''}R`}</h3>
+        <p class="rp-cond">
+          {raceInfo?.venue && <span>{raceInfo.venue}</span>}
+          {distanceLabel && <span>{distanceLabel}</span>}
+          {headCount && <span>{headCount}頭</span>}
+          {raceInfo?.startTime && <span class="rp-time">{raceInfo.startTime}発走</span>}
+        </p>
+      </div>
+    </div>
+
+    {bundle.race?.text && (
+      <div class="rp-outlook">
+        <span class="rp-outlook-tag">レース展望</span>
+        <p>{bundle.race.text}</p>
+      </div>
+    )}
+  </header>
+
+  <!-- ── 展開予想 ── -->
+  <PaceMap paceMap={bundle.paceMap} />
+
+  <!--
+    ── 結論（有料 tier のみ）──
+    🔴 2026-08-30: 下部から **出馬表の直前** へ移した。
+       下部の買い目セクションを削除した結果、結論だけが長い出馬表の後ろに
+       取り残されていたため。読む順は
+         レース展望（レース全体） → 展開予想（隊列） → 結論（どの馬か・なぜか）
+         → 出馬表（1 頭ずつ確かめる） ＋ 🎫 買い目を抽出（何を買うか）
+       結論と買い目を近づけ、根拠（出馬表）はその後ろに置く。
+  -->
+  {showBetting && bundle.conclusion?.text && (
+    <div class="rp-conclusion">
+      <span class="rp-conclusion-tag">結論</span>
+      <p>{bundle.conclusion.text}</p>
+    </div>
+  )}
+
+  <!-- ── 出馬表（行タップで詳細が開く） ── -->
+  <RaceEntryTable
+    horses={orderedHorses}
+    view={view}
+    raceKey={`r${raceInfo?.venue ?? ''}${raceInfo?.raceNumber ?? ''}`}
+    raceInfo={raceInfo}
+    bettingPlan={bettingPlan}
+    narrativeOf={(h: any) => bundle.horses.get(h?.horseNumber) || null}
+    featuresOf={resolveFeatures}
+    pastRacesOf={pastOf}
+    statsOf={resolveStats}
+  />
+
+  <!-- ── 上位導線（権限が無いときだけ出す） ── -->
+  {!showMarks && (
+    <aside class="rp-upsell rp-upsell-free">
+      <p class="up-lead">印は<b>無料会員</b>で見られます</p>
+      <p class="up-desc">印（◎○▲△）を公開します。1頭に複数の印が付きます。登録は<b>メールアドレスだけ・無料</b>です。</p>
+      <a class="up-btn" href="/register">無料会員に登録する</a>
+      <a class="up-sub" href="/login">ログイン</a>
+    </aside>
+  )}
+
+  {showMarks && !showBetting && (
+    <aside class="rp-upsell rp-upsell-paid">
+      <p class="up-lead">買い目は<b>有料プラン</b>で公開しています</p>
+      <p class="up-desc">全レースの{betType}買い目と的中実績をそのまま受け取れます。</p>
+      <a class="up-btn" href="/pricing">プランを見る</a>
+    </aside>
+  )}
+</section>
+
+<style>
+  .racepaper {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+
+  /* ヘッダー */
+  .rp-head {
+    border-bottom: 3px double var(--text-primary);
+    padding-bottom: 12px;
+  }
+
+  .rp-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  /* 🔴 2026-08-31: レース番号は黒をやめて 青→紫（ナビと同じ家族） */
+  .rp-rno {
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: center;
+    min-width: 54px;
+    padding: 6px 8px;
+    border-radius: var(--radius-md);
+    background: var(--grad-nav);
+    color: var(--text-inverse);
+    font-family: var(--font-num);
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .rp-rno i {
+    font-style: normal;
+    font-size: 0.7rem;
+    margin-left: 2px;
+  }
+
+  .rp-title-main { flex: 1; min-width: 0; }
+
+  .rp-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    background: var(--secondary-gradient);
+    color: var(--text-inverse);
+    margin-bottom: 3px;
+  }
+
+  .rp-name {
+    font-family: var(--font-serif);
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text-primary);
+    line-height: 1.25;
+  }
+
+  .rp-cond {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin: 4px 0 0;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .rp-time { color: var(--secondary-start); }
+
+  /* レース展望 */
+  /* 🔴 2026-08-31: レース展望は 藍→青（スペクトラムの入口） */
+  .rp-outlook {
+    margin-top: 12px;
+    padding: 11px 13px;
+    background: var(--outlook-bg);
+    border: 1px solid var(--outlook-border);
+    border-radius: var(--radius-md);
+  }
+
+  .rp-outlook-tag,
+  .rp-conclusion-tag {
+    display: inline-block;
+    font-size: 0.63rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: var(--text-inverse);
+    margin-bottom: 5px;
+  }
+
+  .rp-outlook-tag { background: var(--grad-outlook); }
+
+  .rp-outlook p,
+  .rp-conclusion p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.75;
+    color: var(--text-primary);
+  }
+
+  /* 結論。🔴 出馬表の直前に置く（2026-08-30） */
+  .rp-conclusion {
+    margin: 16px 0;
+    padding: 12px 14px;
+    /* 🔴 2026-08-31: オレンジ系から **パープル系のグラデーション**へ変更 */
+    background: var(--conclusion-bg);
+    border: 1px solid var(--conclusion-border);
+    border-radius: var(--radius-md);
+  }
+
+  .rp-conclusion-tag {
+    background: var(--conclusion-gradient);
+  }
+
+  /* 上位導線 */
+  .rp-upsell {
+    margin-top: 14px;
+    padding: 16px;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    border: 2px dashed var(--border-strong);
+    background: var(--bg-secondary);
+  }
+
+  /* 無料登録の導線。下地も 2 色（青→紫の淡い版） */
+  .rp-upsell-free {
+    border-color: #a5b4fc;
+    background: linear-gradient(135deg, #eff6ff 0%, #f3ebff 100%);
+  }
+
+  /* 有料プランの導線。下地も 2 色（桃→橙の淡い版）＝買い目パネルと同じ家族 */
+  .rp-upsell-paid {
+    border-color: #f7c2c8;
+    background: var(--action-bg);
+  }
+
+  .up-lead {
+    margin: 0 0 4px;
+    font-family: var(--font-serif);
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .up-desc {
+    margin: 0 0 12px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /*
+   * 🔴 2026-08-31: 単色をやめて 2 色グラデーションに。
+   *    無料登録 → 青→紫（ブランドの入口・チャットボタンと同じ家族）
+   *    有料プラン → 桃→橙（買う行動。買い目パネルと同じ）
+   */
+  .up-btn {
+    display: inline-block;
+    padding: 11px 26px;
+    border-radius: var(--radius-pill);
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--text-inverse);
+    background: var(--grad-nav);
+    box-shadow: 0 4px 14px rgba(124, 106, 246, 0.32);
+    transition: transform var(--transition-fast);
+  }
+
+  .rp-upsell-paid .up-btn {
+    background: var(--secondary-gradient);
+    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.3);
+  }
+
+  .up-btn:hover { transform: translateY(-1px); color: var(--text-inverse); }
+
+  .up-sub {
+    display: inline-block;
+    margin-left: 12px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #6366f1;
+  }
+
+  /* 有料プランの導線だけボタンを 桃→橙 にする */
+  .rp-upsell-paid .up-btn {
+    background: var(--grad-action);
+    box-shadow: 0 4px 14px rgba(240, 94, 86, 0.32);
+  }
+
+  @media (max-width: 600px) {
+    .racepaper { padding: 12px 10px; }
+    .rp-name { font-size: 1.15rem; }
+    .rp-rno { min-width: 46px; font-size: 1.25rem; }
+  }
+</style>

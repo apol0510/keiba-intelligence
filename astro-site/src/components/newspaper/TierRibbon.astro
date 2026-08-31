@@ -1,0 +1,178 @@
+---
+/**
+ * TierRibbon.astro — いま何が見えているかを示す帯
+ *
+ * 正本: docs/RENEWAL_2026_08.md §3
+ *
+ * 「無料で価値を実感 → 課金」の導線として、**今の tier で何が開いていて何が閉じているか**を
+ * 一目で分かるようにする。閉じている項目には次の一歩（登録 / プラン）を必ず添える。
+ */
+
+interface Props {
+  view: {
+    tier?: string; tierLabel?: string; showMarks?: boolean;
+    showBetting?: boolean; authenticated?: boolean; preview?: boolean;
+  };
+}
+
+const { view } = Astro.props;
+
+const paid = !!view?.showBetting;
+
+/**
+ * 🔴 有料 tier では印を出さない（R-8）。
+ *    有料の帯に「印」を並べると、出ていないものを開いていると言うことになる。
+ *    代わりに有料だけの機能（並べ替え・抽出）を出す。
+ */
+const items = paid
+  ? [
+      { label: '全頭の馬柱・過去走', open: true },
+      { label: 'AI短評・レース展望', open: true },
+      { label: '展開予想・特徴量', open: true },
+      { label: 'AI指数の数値・AI結論', open: true },
+      { label: '馬単の買い目（南関東＋中央）', open: true },
+      { label: 'AI指数順の並べ替え・買い目の抽出', open: true },
+    ]
+  : [
+      { label: '全頭の馬柱・過去走', open: true },
+      { label: 'AI短評・レース展望', open: true },
+      { label: '展開予想・特徴量', open: true },
+      { label: '印（◎○▲△・複数付与）', open: !!view?.showMarks },
+      { label: 'AI指数の数値', open: false },
+      { label: '馬単の買い目', open: false },
+    ];
+
+const nextStep = !view?.showMarks
+  ? { href: '/register', label: '無料会員に登録して印を見る', tone: 'free' }
+  : (!view?.showBetting ? { href: '/pricing', label: 'プランを見て買い目を受け取る', tone: 'paid' } : null);
+---
+
+{view?.preview && (
+  <p class="tier-preview-note">
+    {paid ? (
+      <>
+        🔎 <b>プレビュー表示中</b>：<b>{view?.tierLabel?.replace('（プレビュー）', '') || '有料'}</b>会員の見え方です（実際にはログインしていません）。
+        AI指数の数値・AI結論・買い目・並べ替え・抽出まで開いています。印は有料では出しません。
+      </>
+    ) : (
+      <>
+        🔎 <b>プレビュー表示中</b>：無料会員に登録したときの見え方です（実際にはログインしていません）。
+        AI指数の数値・AI結論・買い目は有料プランのため、このプレビューでは開きません。
+      </>
+    )}
+  </p>
+)}
+
+<div class={`tier-ribbon ${nextStep ? `tone-${nextStep.tone}` : 'tone-full'}`}>
+  <div class="tr-status">
+    <span class="tr-badge">{view?.tierLabel || 'ゲスト'}</span>
+    <ul class="tr-items">
+      {items.map((it) => (
+        <li class={it.open ? 'is-open' : 'is-locked'}>
+          <span class="tr-icon">{it.open ? '✓' : '🔒'}</span>{it.label}
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  {nextStep && (
+    <a class="tr-cta" href={nextStep.href}>{nextStep.label}</a>
+  )}
+</div>
+
+<style>
+  .tier-preview-note {
+    margin: 0 0 10px;
+    padding: 9px 14px;
+    border-radius: var(--radius-md);
+    background: #fff7ed;
+    border: 1px dashed var(--secondary-start);
+    color: #9a3412;
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+
+  .tier-ribbon {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .tone-free { border-color: #c7d2fe; background: linear-gradient(135deg, #f2f8ff 0%, #f5efff 100%); }
+  .tone-paid { border-color: #f7c2c8; background: var(--action-bg); }
+
+  .tr-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  /* 🔴 黒のベタ塗りをやめる（2026-08-31） */
+  .tr-badge {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    background: var(--tool-gradient);
+    color: var(--text-inverse);
+    white-space: nowrap;
+  }
+
+  .tr-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .tr-items li {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .tr-items li.is-locked { color: var(--text-tertiary); }
+
+  .tr-icon { margin-right: 3px; }
+
+  .tr-items li.is-open .tr-icon { color: var(--success); font-weight: 800; }
+
+  .tr-cta {
+    display: inline-block;
+    padding: 9px 20px;
+    border-radius: var(--radius-pill);
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--text-inverse);
+    background: var(--grad-nav);
+    box-shadow: 0 3px 12px rgba(37, 99, 235, 0.28);
+    white-space: nowrap;
+  }
+
+  /* 買い目を受け取る導線は 桃→橙（買い目パネル・有料導線と同じ） */
+  .tone-paid .tr-cta {
+    background: var(--grad-action);
+    box-shadow: 0 3px 12px rgba(240, 94, 86, 0.3);
+  }
+
+  .tr-cta:hover { color: var(--text-inverse); }
+
+  @media (max-width: 640px) {
+    .tier-ribbon { flex-direction: column; align-items: stretch; }
+    .tr-cta { text-align: center; }
+  }
+</style>
