@@ -102,17 +102,17 @@ test('🔴 下部の買い目セクションが復活していない（抽出パ
 
 test('結論はパープル系（オレンジ系に戻っていない）', () => {
   const src = read('src/components/newspaper/RaceNewspaper.astro');
-  // 🔴 `.rp-conclusion-tag` は共有ルール（.rp-outlook-tag と並記）が先に出るため、
-  //    ファイル内の位置に依存せず、それぞれのルールを個別に取り出して検証する。
-  const rule = (sel) => {
-    const i = src.indexOf(`${sel} {`);
+  // 🔴 `.rp-conclusion-tag {` は共有ルール（`.rp-outlook-tag` と並記）にも現れるため、
+  //    **最後に出るルールが勝つ**という CSS の規則どおり、末尾の定義を検証する。
+  const lastRule = (sel) => {
+    const i = src.lastIndexOf(`${sel} {`);
     assert.ok(i > 0, `${sel} のルールが無い`);
     return src.slice(i, src.indexOf('}', i));
   };
-  assert.match(rule('.rp-conclusion'), /background: var\(--conclusion-bg\)/, '結論の背景がトークンを使っていない');
-  assert.match(rule('.rp-conclusion-tag'), /background: var\(--conclusion-gradient\)/, 'タグがグラデーションでない');
-  refute(/#fff7ed|#fcd9b6/, rule('.rp-conclusion'), '結論にオレンジ系が残っている');
-  refute(/--secondary-start/, rule('.rp-conclusion-tag'), 'タグにオレンジ系が残っている');
+  assert.match(lastRule('.rp-conclusion'), /background: var\(--conclusion-bg\)/, '結論の背景がトークンを使っていない');
+  assert.match(lastRule('.rp-conclusion-tag'), /background: var\(--conclusion-gradient\)/, 'タグがグラデーションでない');
+  refute(/#fff7ed|#fcd9b6/, lastRule('.rp-conclusion'), '結論にオレンジ系が残っている');
+  refute(/--secondary-start/, lastRule('.rp-conclusion-tag'), 'タグにオレンジ系が残っている');
 
   const tokens = read('src/styles/global.scss');
   assert.match(tokens, /--conclusion-start: #7c3aed/, 'パープルのトークンが無い');
