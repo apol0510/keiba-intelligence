@@ -127,8 +127,12 @@ test('🔴 予想ページの説明文に内部処理の言い回しを出さな
     '加工していません',
     '1 角通過順',
     '一般論で埋めません',
-    '正直に書きます',
-    '算出しています',
+    // 🔴 自分の姿勢を語る言い回しは使わない（2026-08-31）
+    '正直',
+    '良い日も悪い日も',
+    '決めつけ',
+    '誠実',
+    '嘘',
   ];
   for (const route of ['src/pages/prediction/nankan/index.astro', 'src/pages/prediction/jra/index.astro']) {
     const src = read(route);
