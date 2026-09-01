@@ -509,6 +509,29 @@ concurrency:
 買い切り ¥88,000 / 月払い ¥12,000 系 / ライト ¥6,600 /
 プレミアム限定の訴求（詳細レポート・穴馬・優先メルマガ ＝ **実装が無い**）。
 
+### 🎁 会員継続制度（KI Membership / KIリワード・2026-09-01 確定）
+
+正本は **[`docs/MEMBERSHIP_REWARDS.md`](./docs/MEMBERSHIP_REWARDS.md)**。
+永続化の移行案は [`docs/MEMBERSHIP_DATA_MIGRATION.md`](./docs/MEMBERSHIP_DATA_MIGRATION.md)。
+
+- KI は **AI競馬予想 ＋ 長期会員クラブ**。🔴 **馬育成アプリ・KAA 型の育成ポイントは作らない。**
+  ネイティブアプリ化もスコープ外。別 repo の育成・ゲーム機能を KI へコピーしない。
+- 制度: 継続価格ロック / 継続プレゼント / 選べるプレゼント / 長期会員優遇 /
+  会員ランク（**Bronze / Silver / Gold / Platinum**）/ KIリワード / 継続記念品。
+- 🔴 **ランク差はリワード・プレゼント・長期待遇に限定する。**
+  予想の精度・買い目の内容・有料情報の質に差を付けない。
+  🔴 **ランク・継続月数・リワードを entitlement / 認可の判断材料にしない。**
+- 🔴 **KIリワードは現金・預金ではない。** 換金可能な残高として実装しない。
+  円換算・出金・譲渡を作らない。表示語は「KIリワード残高」「今月の積み上げ」
+  「次のプレゼントまであと◯◯」。
+- 🔴 **未確定の数値（付与ポイント数 / 昇格月数 / 必要ポイント / 景品価格 / 贈る時期 /
+  失効期限 / 解約時の扱い / 再加入時の価格）を勝手に決めない。**
+  既定値も例示値も置かず、`pending` として「準備中」と表示する
+  （`docs/MEMBERSHIP_REWARDS.md` §7 TBD-1〜TBD-8）。
+- 🔴 **景品表示法・会計処理の判断をコード内で断定しない**（同 §8 L-1〜L-9）。
+- 検証: `npm run test:membership`（`membership.test.mjs` ＋ `membershipCopy.guard.test.mjs`）。
+  `npm run build` にも組み込み済み。
+
 ## 🔐 環境変数（Netlify環境変数） 🔐
 
 **Netlify管理画面で設定（Site settings → Environment variables）:**

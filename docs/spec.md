@@ -16,6 +16,7 @@
 > | 結果システム全体設計 | `docs/RESULTS_SYSTEM_ARCHITECTURE.md` / `docs/MULTI_VENUE_CHECK.md` | 参照のみ |
 > | 予想画面の表示仕様 | `docs/INTELLIGENCE_DISPLAY_SPEC.md` / `docs/ui-cross-plan-regression-policy.md` | 参照のみ |
 > | 2026-08 大改修（無料開放 / 新聞レイアウト / 文章化 / Stripe / KMA / デザイン） | **`docs/RENEWAL_2026_08.md`** | 本書の下位正本。改修範囲についてのみ正本 |
+> | 会員継続制度（継続価格ロック / KIリワード / 会員ランク / プレゼント） | **`docs/MEMBERSHIP_REWARDS.md`** | 本書の下位正本。制度についてのみ正本。移行案は `docs/MEMBERSHIP_DATA_MIGRATION.md` |
 > | 初期設計（2026-01-09 時点） | `DESIGN.md` | **歴史的資料**。決済・自動化スタック等は現状と乖離あり。現行仕様の根拠に使わない |
 >
 > 本書は上記ドメイン文書を **置き換えない**。ドメインの詳細は各正本を読むこと。
@@ -30,7 +31,11 @@
 - 本番URL: `https://keiba-intelligence.jp/`
   （`https://keiba-intelligence.netlify.app/*` は `netlify.toml` の 301 で独自ドメインへ恒久転送）
 - 提供物: 無料予想ページ / 有料予想ページ（premium）/ 月別アーカイブ / 的中実績・回収率
-- 収益モデル: 無料 / 無料会員（登録要）/ 買い切り / 年払い（金額は `CLAUDE.md`・`README.md` に記載。本書では価格を正本化しない）
+- 収益モデル: 無料 / 無料会員（登録要）/ **月額プレミアム（Stripe・主導線）** / 銀行振込の年払い
+  （🔴 **買い切りは 2026-08-30 に廃止**。復活させない。金額の正本は Stripe の Price、
+  表示用の定数は `astro-site/src/lib/billing/plans.js`。本書では価格を正本化しない）
+- 会員の継続に対する **会員クラブ（継続価格ロック / KIリワード / ランク / プレゼント）** を持つ。
+  正本は `docs/MEMBERSHIP_REWARDS.md`。🔴 **予想の精度・買い目・有料情報の質にランク差を付けない。**
 
 ## 2. Responsibilities
 
@@ -66,6 +71,11 @@
   買い目・軸・相手順位・予想ロジック・UI コンポーネントを相互移植しない。過去の同期義務を理由に同期作業を再開しない。
 - **共有 JSON の構造・命名・キー名の変更**: 両消費者の共通契約であり、片側の表示都合で変更しない（`CLAUDE.md` 記載）。
 - **三連複ロジック**: KI では未実装（PR #62/#63 の記述より、KI 対象外）。KI の商品は **馬単**。
+- **馬育成アプリ・ゲーム機能**: KI では **作らない**（2026-09-01 確定）。
+  KAA 型の「馬を育成して行動ポイントを稼ぐ」仕組み・ログイン報酬・ミッション等を持ち込まない。
+  ネイティブアプリ化も現時点のスコープ外。KI は **AI競馬予想 ＋ 長期会員クラブ**である
+  （`docs/MEMBERSHIP_REWARDS.md` §1）。
+- **リワードの換金・出金・譲渡**: 実装しない。KIリワードは現金・預金ではない（同 §3.3 / §8 L-8）。
 - **決済ゲートウェイの実装**: 現行は銀行振込自動化。PayPal webhook は `.disabled`。ThriveCart/Zapier は `DESIGN.md`（初期設計）記載であり現行構成の根拠にしない。
 - **リポジトリ外の本番インフラ設定**: Netlify の環境変数・DNS・Airtable スキーマの実体は管理画面側。本リポジトリはドキュメントで名前のみ扱う。
 
@@ -256,6 +266,12 @@ devDependency: `netlify-cli ^23.5.0`。Node は `netlify.toml` で `NODE_VERSION
 9. `KEIBA_DATA_SHARED_TOKEN` 以外のトークンによる共有データ取得、匿名 fallback の再導入
 10. 検証（`validate:archive` / `verify:sync`）をスキップして archive を commit すること
 11. `astro-site/.github/workflows/` を使用中と誤認して編集すること
+12. 会員ランク・継続月数・KIリワードを **entitlement / tier / 認可**の判断材料にすること
+    （`canSeeMarks` / `canSeeBetting` はランクを受け取らない。`docs/MEMBERSHIP_REWARDS.md` §9）
+13. 未確定の付与ポイント数・昇格月数・景品内容（同 §7 TBD-1〜TBD-8）を
+    既定値・例示値として **コードや UI に置くこと**
+14. KIリワードを **金額（円）へ換算して表示**すること / 換金・出金・譲渡の経路を作ること
+15. 買い切り（¥88,000）・ライトプランの購入導線・会場別アクセス（`venueAccess`）の復活
 
 ## 10.5 2026-08 大改修（進行中）
 

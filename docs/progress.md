@@ -17,6 +17,78 @@
 
 ## Current Phase
 
+**Phase: KI Membership / Reward 制度（会員継続制度）— 2026-09-01 着手**
+
+ブランチ `feat/ki-membership-rewards-2026-09` / 分岐元 `b5a88d27`（origin/main）
+制度の正本: **[`docs/MEMBERSHIP_REWARDS.md`](./MEMBERSHIP_REWARDS.md)**
+永続化の移行案: **[`docs/MEMBERSHIP_DATA_MIGRATION.md`](./MEMBERSHIP_DATA_MIGRATION.md)**
+方針決定: `docs/decisions.md`「2026-09-01 — KI を『AI競馬予想 ＋ 長期会員クラブ』と定義し、会員継続制度を新設する」
+
+仕様所有者の確定事項:
+
+- KI は **AI競馬予想 ＋ 長期会員クラブ**。**馬育成アプリ・KAA 型の育成ポイントは作らない**。ネイティブアプリ化もスコープ外
+- 料金は現行維持（¥3,980 / 表示 ¥5,000 / 銀行振込年払い ¥39,800）。**ライトは復活させない**。会場で権限を分けない
+- 新設: 継続価格ロック / 継続プレゼント / 選べるプレゼント / 長期会員優遇 /
+  会員ランク（Bronze / Silver / Gold / Platinum）/ KIリワード / 継続記念品
+- **ランク差はリワード・プレゼント・長期待遇に限定**。予想の精度・買い目・有料情報の質に差を付けない
+- KIリワードは **Premium の継続だけで積み上がる**。現金・預金と誤認させない。換金可能にしない
+
+### 工程
+
+| # | 工程 | 状態 |
+|---|---|---|
+| M0 | 正本固定（`MEMBERSHIP_REWARDS.md` / `MEMBERSHIP_DATA_MIGRATION.md` / spec / decisions / progress） | **完了** |
+| M1 | ランク・リワード・カタログ・価格ロック・永続化抽象・表示ビューの実装 | **完了** |
+| M2 | テスト 67 件（不変条件 50 ＋ 静的ガード 17） | **完了** |
+| M3 | `/pricing` の二本柱化 | **完了** |
+| M4 | `/mypage` の会員クラブ枠（未確定は「準備中」） | **完了** |
+| M5 | 永続化の移行案・rollback 作成 | **完了**（**実行はしていない**） |
+| M6 | TBD-1〜TBD-8 の確定 | **未着手**（仕様所有者） |
+| M7 | 法務確認 L-1〜L-9 | **未着手**（仕様所有者） |
+| M8 | Airtable スキーマ移行・write 有効化 | **未実施**（高リスク境界・承認必要） |
+
+### 実装した内容（2026-09-01）
+
+| 層 | 追加・変更 |
+|---|---|
+| 制度 | `src/lib/membership/ranks.js`（4 ランク・閾値未設定なら判定しない） |
+| 制度 | `src/lib/membership/rewards.js`（台帳集計・冪等キー・残高不足の交換を作らない） |
+| 制度 | `src/lib/membership/catalog.js` ＋ `src/data/membership/rewardCatalog.json`（データ駆動・既定は draft/空） |
+| 制度 | `src/lib/membership/priceLock.js`（契約時価格の保持。再加入時は「未確定」を返す） |
+| 制度 | `src/lib/membership/store.js`（既定 disabled の fail-closed。Airtable アダプタは未実装） |
+| 表示 | `src/lib/membership/membershipView.js`（未確定は `pending`。認可フラグを作らない） |
+| UI | `src/pages/pricing.astro` に柱2「続けるほど、会員価値が積み上がる」＋ FAQ 2 件 |
+| UI | `src/pages/mypage.astro` に「KI 会員クラブ」ブロック（10 項目・未確定は「準備中」） |
+| テスト | `membership.test.mjs`（50）/ `membershipCopy.guard.test.mjs`（17）。`npm run test:membership` を build に組込み |
+| 文書 | `MEMBERSHIP_REWARDS.md` / `MEMBERSHIP_DATA_MIGRATION.md` 新規、`spec.md` / `README.md` / `RENEWAL_2026_08.md` の矛盾解消 |
+
+### 静的ガードで固定したこと（`membershipCopy.guard.test.mjs`）
+
+| # | 固定した不変条件 |
+|---|---|
+| G-1 | UI に「貯金 / 積立金 / 出金 / 送金 / 円分 / 円相当 / 円換算 / キャッシュバック」を書かない |
+| G-2 | 「換金」「預金」は打ち消し文（〜できません / 〜ではなく）でのみ使う |
+| G-3 | UI に固定のポイント数・必要月数・景品名を書かない（TBD-1〜TBD-5） |
+| G-4 | `ranks.js` / `rewards.js` に昇格月数・付与ポイントの既定値を書かない |
+| G-5 | 同梱カタログは `draft` / `items: []` のまま |
+| G-6 | auth 層が membership を参照しない／membership 層が認可関数を呼ばない |
+| G-7 | セッション Cookie の**署名材料を変更していない**（変えると全員ログアウト） |
+| G-8 | `stripe-webhook.js` が書く Airtable 列は `PlanType` / `Status` / `AccessEnabled` の 3 つのまま |
+| G-9 | 育成・ガチャ・ログインボーナス等の語彙が実装・UI に無い |
+
+### 既存仕様との矛盾を解消したもの
+
+| 箇所 | 変更前 | 変更後 |
+|---|---|---|
+| `docs/spec.md` §1 | 収益モデルに「買い切り」 | 月額プレミアム ＋ 銀行振込年払い（買い切りは 2026-08-30 廃止と明記） |
+| `docs/spec.md` §3 / §10 | 会員クラブの境界が無い | 育成アプリ非対応・換金非対応を明記。禁止事項 12〜15 を追加 |
+| `README.md` | 買い切り ¥88,000 / 年払い ¥66,000 / 月払い ¥12,000 | 現行 4 tier ＋ ¥3,980 / ¥39,800。廃止済みを明記 |
+| `docs/RENEWAL_2026_08.md` §2 | `light+` 表記がライト販売と読める | 「`light` 以上の tier の意味であり、ライトプランの販売ではない」注記を追加（契約文は不変） |
+
+---
+
+## 前 Phase（完了）— KI 大改修 2026-08
+
 **Phase: KI 大改修 2026-08（無料開放 / 新聞レイアウト / 文章化 / Stripe / 認可是正 / KMA / ライトデザイン）**
 
 着手: 2026-08-28 / ブランチ `feat/ki-renewal-2026-08` / 分岐元 `cfe5fea2`
@@ -115,7 +187,7 @@
 
 ---
 
-## 前 Phase（完了）
+## 前々 Phase（完了）— ドキュメント基盤整備
 
 **Phase: 自律完遂運用のためのドキュメント基盤整備（2026-07-20）**
 
@@ -380,6 +452,32 @@ E2E をここから先へ進めるには、**Stripe への外部 write が必要
 ---
 
 ## Open Questions
+
+0. 🔴 **会員継続制度の未確定事項（2026-09-01・仕様所有者の確定待ち）。**
+   正本の一覧は `docs/MEMBERSHIP_REWARDS.md` §7。ここでは重複させず、**状態のみ**記録する。
+
+   | # | 未確定事項 |
+   |---|---|
+   | TBD-1 | 毎月の付与ポイント数 |
+   | TBD-2 | 各ランクへの昇格月数 |
+   | TBD-3 | 商品ごとの必要ポイント |
+   | TBD-4 | 景品価格 |
+   | TBD-5 | 何か月目に何をプレゼントするか |
+   | TBD-6 | ポイント失効期限 |
+   | TBD-7 | 解約時のポイント保持・復活条件 |
+   | TBD-8 | 価格ロックの再加入時の扱い |
+   | TBD-9〜12 | 継続月数の起点 / 支払い失敗時の扱い / 銀行振込年払い会員の扱い / 発送先住所の取得 |
+
+   **コード側は既定値を持たず `pending` を返す**ので、確定するまで画面は「準備中」のままである。
+   併せて §8 の法務確認（L-1〜L-9。景表法の限度額・ポイントの会計処理・前払式支払手段の非該当）が未了。
+
+0.5 🔴 **`/mypage` の「利用できる機能」に『穴馬レポート・優先メルマガ』が残っている（2026-09-01 発見）。**
+   `docs/RENEWAL_2026_08.md` §6.1 は「実装が無いものを訴求しない」として
+   **プレミアム限定コンテンツの訴求を廃止**し、`canSeePremiumExtras` ごと削除している。
+   ところが `src/pages/mypage.astro` の `FEATURES` 配列には該当行が残り、
+   プレミアム会員に「✓」として表示されている（**実装は無い**）。
+   → **本タスクの依頼範囲外のため修正していない**（1 行削除で済むが、独断で広げない）。
+   仕様所有者の指示があれば削除する。
 
 1. **`CLAUDE.md` の「メインレース10点ロジック」は F3・5点固定に完全に置き換わったのか、一部が併存しているのか。**
    コードは F3（`umatanHit.js` の `reverseTopK`）が現行。ただし `CLAUDE.md` の 10 点節は削除されておらず、

@@ -11,11 +11,19 @@
  *     **請求額の正本は Stripe の Price**。取得できたら表示金額を上書きする。
  *   - 銀行振込は **年払い ¥39,800 のみ**（買い切り・月払いは出さない）。控えめな導線のまま。
  *   - プレミアム限定コンテンツ（詳細レポート・穴馬・優先配信）の訴求は **廃止**。
+ *
+ * 🔴 2026-09-01 追加（docs/MEMBERSHIP_REWARDS.md §4）:
+ *   本ページは **二本柱**である。
+ *     柱1: 予想サービスの価値（マトリクス ＋ 月額プラン）
+ *     柱2: **続けるほど会員価値が積み上がる**（KI 会員クラブ）
+ *   🔴 柱2 に **未確定のポイント数・景品内容・必要月数を出さない**（架空値・例示値も禁止）。
+ *      出してよいのは制度名と確定した訴求だけ（`PRICING_BENEFITS`）。
  */
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { publicPlans, BANK_YEARLY_PRICE_YEN } from '../lib/billing/plans.js';
 import { entitlementFromAstro, viewFlags } from '../lib/auth/entitlement.js';
+import { PRICING_BENEFITS, RANK_LADDER } from '../lib/membership/membershipView.js';
 
 export const prerender = false;
 
@@ -54,7 +62,8 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       <h1>まず無料で、中身を確かめてください</h1>
       <p class="pr-hero-lead">
         全レースの馬柱・過去走・<b>AI短評</b>・展開予想は<b>登録なしで全部</b>ご覧いただけます。<br>
-        印は無料会員登録で、AI指数の数値・AI結論・馬単の買い目は月額プレミアムで公開します。
+        印は無料会員登録で、AI指数の数値・AI結論・馬単の買い目は月額プレミアムで公開します。<br>
+        <b>続けていただくほど、会員としての価値も積み上がります。</b>
       </p>
       <div class="pr-hero-actions">
         <a class="pr-btn pr-btn-ghost" href="/prediction/nankan">今日の予想を見る（無料）</a>
@@ -141,6 +150,49 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       )}
     </section>
 
+
+    <!-- 柱2: 続けるほど会員価値が積み上がる（KI 会員クラブ） -->
+    <section class="pr-club">
+      <h2 class="pr-h2">続けるほど、会員価値が積み上がる</h2>
+      <p class="pr-club-lead">
+        KEIBA Intelligence は、予想を出すだけのサービスではありません。<br>
+        プレミアムを続けていただくあいだ、<b>KIリワード</b>が自動で積み上がり、
+        会員ランクが上がり、プレゼントをお選びいただけるようになります。
+      </p>
+
+      <!-- 会員ランク -->
+      <div class="pr-rank-ladder" aria-label="会員ランク">
+        {RANK_LADDER.map((r, i) => (
+          <>
+            {i > 0 && <span class="pr-rank-arrow" aria-hidden="true">→</span>}
+            <span class={`pr-rank-step is-${r.rank}`}>{r.label}</span>
+          </>
+        ))}
+      </div>
+      <p class="pr-rank-note">
+        ランクで変わるのは<b>リワードとプレゼントの待遇</b>だけです。
+        予想の精度・買い目の内容・有料情報の質にランクによる差はありません。
+      </p>
+
+      <!-- 訴求 -->
+      <ul class="pr-club-grid">
+        {PRICING_BENEFITS.map((b) => (
+          <li class="pr-club-card" data-benefit={b.id}>
+            <h3>{b.title}</h3>
+            <p>{b.body}</p>
+          </li>
+        ))}
+      </ul>
+
+      <p class="pr-club-pending">
+        <b>準備中</b>：付与ポイント数・ランクの条件・プレゼントの品目と必要ポイントは、
+        確定しだいこのページとマイページでご案内します。
+      </p>
+      <p class="pr-club-legal">
+        KIリワードは会員特典のポイントです。現金・預金ではなく、換金・払い戻し・第三者への譲渡はできません。
+      </p>
+    </section>
+
     <!-- 銀行振込（控えめ） -->
     <section class="pr-bank">
       <details>
@@ -169,6 +221,12 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       </details>
       <details><summary>解約はできますか？</summary>
         <p>いつでも解約できます。解約手続きはマイページから行えます。解約後も無料会員として印までご覧いただけます。</p>
+      </details>
+      <details><summary>KIリワードとは何ですか？</summary>
+        <p>プレミアムを続けていただくと自動で積み上がる、会員特典のポイントです。ログインや操作は必要ありません。貯まったリワードは、ご用意したプレゼントの中からお選びいただくときに使います。現金・預金ではなく、換金・払い戻し・第三者への譲渡はできません。付与されるポイント数やプレゼントの内容は準備中です。</p>
+      </details>
+      <details><summary>あとから値上げされませんか？</summary>
+        <p>ご契約中は、加入されたときの価格のまま続けていただけます（継続価格ロック）。新規のお申し込み価格を変更する場合でも、契約中の会員さまの金額は上がりません。解約後に再度お申し込みいただく場合の価格は、現在検討中です。</p>
       </details>
       <details><summary>回収率はどう計算していますか？</summary>
         <p>払戻 ÷ 投資 × 100 の実測値です。公開している的中はすべて算入しています。</p>
@@ -558,6 +616,107 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     font-size: 0.86rem;
     cursor: pointer;
     text-decoration: underline;
+  }
+
+  /* 柱2: 会員クラブ */
+  .pr-club {
+    margin: 48px 0 40px;
+    padding: 28px 22px;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .pr-club-lead {
+    font-size: 0.92rem;
+    line-height: 1.9;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+  }
+
+  .pr-rank-ladder {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 4px 0 10px;
+  }
+
+  .pr-rank-step {
+    font-family: var(--font-num);
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    padding: 7px 16px;
+    border-radius: var(--radius-pill);
+    border: 2px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .pr-rank-step.is-bronze { border-color: #b07a4a; color: #8a5a30; }
+  .pr-rank-step.is-silver { border-color: #9aa3ad; color: #6b747d; }
+  .pr-rank-step.is-gold { border-color: #d0a03a; color: #8f6c15; }
+  .pr-rank-step.is-platinum { border-color: #6b7f9e; color: #445a7c; }
+
+  .pr-rank-arrow { color: var(--text-tertiary); font-weight: 800; }
+
+  .pr-rank-note {
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+    line-height: 1.7;
+    margin-bottom: 22px;
+  }
+
+  .pr-club-grid {
+    list-style: none;
+    margin: 0 0 18px;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  }
+
+  .pr-club-card {
+    padding: 16px 18px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+  }
+
+  .pr-club-card h3 {
+    font-family: var(--font-serif);
+    font-size: 0.98rem;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+  }
+
+  .pr-club-card p {
+    font-size: 0.82rem;
+    line-height: 1.75;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  .pr-club-pending {
+    font-size: 0.82rem;
+    line-height: 1.75;
+    color: var(--text-secondary);
+    background: var(--bg-muted);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+
+  .pr-club-legal {
+    font-size: 0.74rem;
+    line-height: 1.7;
+    color: var(--text-tertiary);
+    margin: 0;
   }
 
   /* 銀行振込（控えめ） */
