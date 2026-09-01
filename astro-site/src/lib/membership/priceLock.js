@@ -12,13 +12,22 @@
  *    したがってロックの実効は Stripe 側にあり、ここで保持する値は
  *    **画面表示と監査のための写し**である（請求額の正本は Stripe）。
  *
- * 🔴 未確定（TBD-8）: **解約後の再加入価格 / 価格ロックの復活条件は決まっていない。**
- *    `resolveReentryPrice()` は必ず「未確定」を返す。ここで勝手に
- *    「再加入も同額」「再加入は新価格」のどちらかへ倒してはいけない。
+ * 🔴 再加入（**確定値・2026-09-01**）: **解約後 90 日以内の再加入なら旧価格を復活**。
+ *    90 日を過ぎたら新価格。ポイントの保持期間（`rewards.js` の `GRACE_DAYS`）と
+ *    同じ日数に揃えてある（会員へ説明する条件を 1 つにするため）。
+ *
+ *    「一度契約すれば永久に旧価格」は採らない。解約→再加入で値上げを回避する
+ *    裁定行動を招き、**実質的に値上げできなくなる**ため。
  */
 
 const isNonEmptyString = (v) => typeof v === 'string' && v.trim().length > 0;
 const isPositiveInt = (v) => Number.isInteger(v) && v > 0;
+
+/**
+ * 解約後に旧価格を復活させる猶予日数（**確定値**）。
+ * 🔴 `rewards.js` の `GRACE_DAYS` と同じ値に保つこと（テストが一致を固定している）。
+ */
+export const REENTRY_GRACE_DAYS = 90;
 
 /** 価格ロックの状態。 */
 export const LOCK_STATUS = Object.freeze({
@@ -143,15 +152,40 @@ export function resolvePriceLock({ isPaid, contract, currentListPriceYen = null 
 }
 
 /**
- * 解約後に再加入した場合の価格。
+ * 解約後に再加入した場合の価格（**確定値: 90 日以内なら旧価格を復活**）。
  *
- * 🔴 **TBD-8: 未確定。** 仕様所有者が決めるまで、常に「未確定」を返す。
- *    ここで既定を決めると、実際の請求（Stripe）と食い違う案内を出すことになる。
+ * 🔴 **運用上の注意（これを守らないと復活できない）**
+ *   - 値上げするときは **新しい Stripe Price を作る**。既存 Price の金額を書き換えると
+ *     **契約中の会員の請求額まで変わる**。
+ *   - 再加入で旧価格を使うなら、**旧 Price を archive しない**。
+ *
+ * @param {object|null} o.contract        解約前の契約価格（`createContractPrice` の戻り）
+ * @param {string|null} o.cancelledAtIso  解約日
+ * @param {number} o.nowMs
+ * @returns {Readonly<object>}
+ *   restored=true  … 旧価格を復活できる（`priceId` を Checkout に使う）
+ *   restored=false … 新価格。`priceYen` / `priceId` は null（現行の Price を使う）
  */
-export function resolveReentryPrice() {
+export function resolveReentryPrice({ contract, cancelledAtIso, nowMs = Date.now() } = {}) {
+  const deny = (reason) => Object.freeze({
+    decided: true, restored: false, reason, priceYen: null, priceId: null, daysLeft: null,
+  });
+
+  if (!contract) return deny('no_contract_on_record');
+  if (!isNonEmptyString(cancelledAtIso)) return deny('cancelled_at_unknown');
+
+  const cancelled = Date.parse(cancelledAtIso);
+  if (!Number.isFinite(cancelled) || !Number.isFinite(nowMs)) return deny('cancelled_at_unreadable');
+
+  const expiresAtMs = cancelled + REENTRY_GRACE_DAYS * 24 * 60 * 60 * 1000;
+  if (nowMs >= expiresAtMs) return deny('grace_elapsed');
+
   return Object.freeze({
-    decided: false,
-    reason: 'tbd_8_reentry_price_undecided',
-    priceYen: null,
+    decided: true,
+    restored: true,
+    reason: 'within_grace',
+    priceYen: contract.amountYen,
+    priceId: contract.priceId,
+    daysLeft: Math.ceil((expiresAtMs - nowMs) / (24 * 60 * 60 * 1000)),
   });
 }

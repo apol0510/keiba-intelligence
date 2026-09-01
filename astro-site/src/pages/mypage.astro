@@ -30,8 +30,11 @@ const isPaid = tierAtLeast(ent.tier, TIER.LIGHT);
    会員クラブ（KI Membership / KIリワード）
    正本: docs/MEMBERSHIP_REWARDS.md §5
 
-   🔴 永続化は既定で無効（列がまだ無い。docs/MEMBERSHIP_DATA_MIGRATION.md）。
-      その場合は profile / ledger が取れないので、すべて「準備中」と表示する。
+   制度の確定値は docs/MEMBERSHIP_REWARDS.md §7.1
+   （100 pt/月・0/3/12/24 か月・600/1,200 pt・記念品 12/24 か月・解約後 90 日で失効）。
+
+   🔴 ただし **会員ごとのデータ**（継続月数・残高・契約価格）は保存先がまだ無い
+      （docs/MEMBERSHIP_DATA_MIGRATION.md）。読めない項目は「準備中」と表示する。
       **仮の数字（0 pt / Bronze / ¥3,980）を推測で当てはめない。**
    ------------------------------------------------------------------ */
 const runtimeEnv = {
@@ -96,6 +99,14 @@ const CLUB_ROWS = [
     value: club.rewards.status === 'ready' ? pt(club.rewards.monthAccrualPoints) : PENDING,
   },
 ];
+
+/**
+ * 解約後の猶予中だけ出す注意書き。
+ * 🔴 契約中は出さない（契約中は失効しないため、不要な不安を与えない）。
+ */
+const graceNotice = club.rewards.status === 'ready' && club.rewards.pointsStatus === 'grace'
+  ? `解約手続き済みです。あと${club.rewards.daysLeft}日以内に再開されると、ポイントと以前の価格が戻ります。`
+  : null;
 
 /** 次ランクまで / 次のプレゼントまでの進捗。確定していなければ出さない。 */
 const rankProgress = club.rank.status === 'ready' && club.rank.nextRank
@@ -176,6 +187,8 @@ const expiresLabel = ent.expiresAtMs
                 ))}
               </ul>
 
+              {graceNotice && <p class="mp-club-grace">{graceNotice}</p>}
+
               <div class="mp-club-progress">
                 {rankProgress ? (
                   <div class="mp-prog">
@@ -198,14 +211,18 @@ const expiresLabel = ent.expiresAtMs
 
               <div class="mp-club-sub">
                 <h3>交換できるプレゼント</h3>
-                {club.gifts.status === 'ready' && club.gifts.available.length ? (
+                {club.gifts.blockedByMilestone ? (
+                  <p class="mp-club-note">
+                    今月は<b>継続記念品</b>をお贈りする月です。通常のポイント交換は翌月から再開します。
+                  </p>
+                ) : club.gifts.status === 'ready' && club.gifts.available.length ? (
                   <ul class="mp-gift-list">
                     {club.gifts.available.map((item) => (
                       <li><span class="mp-gift-name">{item.name}</span><span class="mp-gift-cost">{pt(item.costPoints)}</span></li>
                     ))}
                   </ul>
                 ) : (
-                  <p class="mp-club-note">{PENDING}（品目と必要ポイントが決まりしだいご案内します）</p>
+                  <p class="mp-club-note">{PENDING}（プレゼントの品目が決まりしだいご案内します）</p>
                 )}
               </div>
 
@@ -234,7 +251,9 @@ const expiresLabel = ent.expiresAtMs
               </div>
 
               <p class="mp-club-legal">
-                KIリワードは会員特典のポイントです。現金・預金ではなく、換金・払い戻し・第三者への譲渡はできません。
+                KIリワードは会員特典のポイントです。毎月100ptが加算され、600pt・1,200ptでお引き換えいただけます。
+                ご契約中は失効しません（解約後は90日以内の再開でポイントが戻ります）。
+                現金・預金ではなく、換金・払い戻し・第三者への譲渡はできません。
               </p>
             </div>
           </section>
@@ -570,6 +589,16 @@ const expiresLabel = ent.expiresAtMs
   }
 
   .mp-club-note { font-size: 0.8rem; color: var(--text-tertiary); margin: 0; line-height: 1.7; }
+
+  .mp-club-grace {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: var(--bg-muted);
+    font-size: 0.8rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
 
   .mp-gift-list { list-style: none; margin: 0; padding: 0; }
 

@@ -3,29 +3,36 @@
  *
  * 正本: docs/MEMBERSHIP_REWARDS.md
  *
- * ここで固定するのは「確定した構造」と「未確定を確定に見せない fail-closed」である。
- * 🔴 未確定の数値（TBD-1〜TBD-8）を期待値として書かないこと。
- *    テスト内で使う閾値・ポイント数は **テスト専用の任意値**であり、仕様値ではない。
+ * ここで固定するのは
+ *   1. **確定値（§7.1）とコードの定数が一致していること**
+ *   2. 保守ライン S-1〜S-4（§8.1）が崩れないこと
+ *   3. 会員ごとのデータが読めないときに「確定に見せない」fail-closed
+ * である。
+ *
+ * 🔴 §7.1 の値を変えるときは **正本とこのテストの両方**を直すこと。
+ *    片方だけ変えると落ちる（それが狙い）。
  */
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  RANK, RANK_ORDER, RANK_LABEL, RANK_THRESHOLDS_UNSET,
+  RANK, RANK_ORDER, RANK_LABEL, RANK_THRESHOLDS, RANK_THRESHOLDS_UNSET,
   isRankThresholdsConfigured, resolveRank, readRankThresholds,
 } from './ranks.js';
 import {
-  ENTRY_TYPE, ACCRUAL_UNSET, isAccrualConfigured, isValidEntry,
-  buildEntryId, dedupeEntries, summarizeRewards,
-  buildAccrualEntry, buildRedemptionEntry, readAccrualConfig,
+  ENTRY_TYPE, ACCRUAL, ACCRUAL_UNSET, MONTHLY_POINTS, ANNUAL_TERM_MONTHS, GRACE_DAYS,
+  POINTS_STATUS, isAccrualConfigured, isValidEntry,
+  buildEntryId, dedupeEntries, summarizeRewards, resolvePointsStatus, isWithinGrace,
+  buildAccrualEntry, buildAnnualAccrualEntry, buildRedemptionEntry, readAccrualConfig,
 } from './rewards.js';
 import {
   ITEM_KIND, EMPTY_CATALOG, createCatalog, isCatalogPublished,
   redeemableItems, milestoneItems, exchangeView,
+  REDEMPTION_TIERS, REDEMPTION_COST_POINTS, MILESTONE_MONTHS, MAX_ITEM_VALUE_YEN, isMilestoneMonth,
 } from './catalog.js';
 import {
-  LOCK_STATUS, createContractPrice, contractPriceFromCheckoutSession,
+  LOCK_STATUS, REENTRY_GRACE_DAYS, createContractPrice, contractPriceFromCheckoutSession,
   contractPriceFromSubscription, resolvePriceLock, resolveReentryPrice,
 } from './priceLock.js';
 import {
@@ -37,12 +44,207 @@ import {
 } from './membershipView.js';
 import { TIER } from '../auth/tiers.js';
 
-/** テスト専用の任意値。**仕様値ではない**（TBD-2）。 */
-const TEST_THRESHOLDS = Object.freeze({ bronze: 0, silver: 3, gold: 6, platinum: 12 });
-/** テスト専用の任意値。**仕様値ではない**（TBD-1）。 */
-const TEST_ACCRUAL = Object.freeze({ monthlyPoints: 100, rankBonusPoints: { gold: 20 } });
+/** 確定値（§7.1）。**正本と一致していなければならない。** */
+const TEST_THRESHOLDS = RANK_THRESHOLDS;
+const TEST_ACCRUAL = ACCRUAL;
+/** 上書きの検証にだけ使う任意値（仕様値ではない）。 */
+const OVERRIDE_ACCRUAL = Object.freeze({ monthlyPoints: 100, rankBonusPoints: { gold: 20 } });
 
+const DAY = 24 * 60 * 60 * 1000;
 const ent = (tier) => ({ tier, tierLabel: tier });
+const isoDaysAgo = (days, nowMs) => new Date(nowMs - days * DAY).toISOString();
+
+/* ================================================================
+   確定値（docs/MEMBERSHIP_REWARDS.md §7.1）
+   ================================================================ */
+
+describe('確定値と正本の一致', () => {
+  test('TBD-1: 毎月の付与は 100 pt', () => {
+    assert.equal(MONTHLY_POINTS, 100);
+    assert.equal(ACCRUAL.monthlyPoints, 100);
+  });
+
+  test('TBD-1b: ランク倍率は当面なし（待遇差はポイント量で付けない）', () => {
+    assert.equal(ACCRUAL.rankBonusPoints, null);
+  });
+
+  test('TBD-2: 昇格は 0 / 3 / 12 / 24 か月', () => {
+    assert.deepEqual({ ...RANK_THRESHOLDS }, { bronze: 0, silver: 3, gold: 12, platinum: 24 });
+    assert.equal(isRankThresholdsConfigured(RANK_THRESHOLDS), true);
+  });
+
+  test('TBD-3: 交換ラインは 600 / 1,200 pt の 2 段階', () => {
+    assert.deepEqual([...REDEMPTION_COST_POINTS], [600, 1200]);
+    assert.equal(REDEMPTION_TIERS.length, 2);
+  });
+
+  test('TBD-4: 景品 1 点の上限は ¥796（保守ライン S-1）', () => {
+    // 月額 ¥3,980 × 10分の2。取引価額の解釈を確定させずに済む水準
+    assert.equal(MAX_ITEM_VALUE_YEN, 796);
+    assert.equal(MAX_ITEM_VALUE_YEN, Math.floor(3980 * 0.2));
+  });
+
+  test('TBD-5: 記念品は 12 / 24 か月', () => {
+    assert.deepEqual([...MILESTONE_MONTHS], [12, 24]);
+    assert.equal(isMilestoneMonth(12), true);
+    assert.equal(isMilestoneMonth(24), true);
+    assert.equal(isMilestoneMonth(11), false);
+  });
+
+  test('TBD-6/7/8: 猶予は 90 日。ポイントと価格ロックで同じ日数', () => {
+    assert.equal(GRACE_DAYS, 90);
+    assert.equal(REENTRY_GRACE_DAYS, 90);
+    assert.equal(GRACE_DAYS, REENTRY_GRACE_DAYS, '説明する条件を 1 つに保つ');
+  });
+
+  test('年払いは 12 か月相当（1,200 pt 一括）', () => {
+    assert.equal(ANNUAL_TERM_MONTHS, 12);
+    const e = buildAnnualAccrualEntry({ email: 'a@example.com', termRef: 'bank_1', occurredAtMs: 1 });
+    assert.equal(e.points, 1200);
+  });
+
+  test('確定値の設定なしで、既定のまま動く（env 設定を要求しない）', () => {
+    assert.equal(isRankThresholdsConfigured(readRankThresholds(null)), true);
+    assert.equal(isAccrualConfigured(readAccrualConfig(null)), true);
+  });
+});
+
+/* ================================================================
+   保守ライン S-1〜S-3（docs/MEMBERSHIP_REWARDS.md §8.1）
+   ================================================================ */
+
+describe('保守ライン（景表法の総付景品の枠内に留める）', () => {
+  const published = (items) => createCatalog({ version: 1, status: 'published', items });
+
+  test('🔴 S-1: ¥796 を超える景品は除外する（無言で丸めない）', () => {
+    const c = published([
+      { id: 'ok', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 600, valueYen: 796 },
+      { id: 'ng', name: 'B', kind: ITEM_KIND.REDEEMABLE, costPoints: 600, valueYen: 797 },
+    ]);
+    assert.deepEqual(redeemableItems(c).map((i) => i.id), ['ok']);
+  });
+
+  test('🔴 S-1: 記念品にも同じ上限がかかる', () => {
+    const c = published([
+      { id: 'm-ok', name: 'M', kind: ITEM_KIND.MILESTONE, milestoneMonths: 12, valueYen: 700 },
+      { id: 'm-ng', name: 'N', kind: ITEM_KIND.MILESTONE, milestoneMonths: 24, valueYen: 1500 },
+    ]);
+    assert.deepEqual(milestoneItems(c).map((i) => i.id), ['m-ok']);
+  });
+
+  test('🔴 S-2: 記念品の月（12 / 24）は通常交換を出さない', () => {
+    const c = published([{ id: 'a', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 600 }]);
+    for (const months of MILESTONE_MONTHS) {
+      const v = exchangeView({ catalog: c, balancePoints: 9999, rank: null, months });
+      assert.equal(v.status, 'blocked');
+      assert.equal(v.blockedByMilestone, true);
+      assert.equal(v.available.length, 0, '記念品と交換品が同月に重なると ¥796 の枠を超えうる');
+    }
+    // 記念品の月でなければ通常どおり出る
+    const v = exchangeView({ catalog: c, balancePoints: 9999, rank: null, months: 13 });
+    assert.equal(v.status, 'ready');
+    assert.equal(v.available.length, 1);
+  });
+
+  test('🔴 交換ラインに一致しないポイント数の景品は除外する', () => {
+    const c = published([
+      { id: 'ok', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 1200 },
+      { id: 'ng', name: 'B', kind: ITEM_KIND.REDEEMABLE, costPoints: 750 },
+    ]);
+    assert.deepEqual(redeemableItems(c).map((i) => i.id), ['ok']);
+  });
+
+  test('🔴 節目でない月の記念品は除外する', () => {
+    const c = published([{ id: 'ng', name: 'X', kind: ITEM_KIND.MILESTONE, milestoneMonths: 18 }]);
+    assert.equal(milestoneItems(c).length, 0);
+  });
+});
+
+/* ================================================================
+   失効・猶予（TBD-6 / TBD-7）
+   ================================================================ */
+
+describe('ポイントの失効と 90 日の猶予', () => {
+  const now = Date.UTC(2026, 8, 15);
+  const ledger = [{ entryId: 'a1', type: ENTRY_TYPE.ACCRUAL, points: 100, occurredAtMs: Date.UTC(2026, 8, 3) }];
+
+  test('契約中は失効しない', () => {
+    const p = resolvePointsStatus({ cancelledAtIso: null, nowMs: now });
+    assert.equal(p.status, POINTS_STATUS.ACTIVE);
+    assert.equal(p.expiresAtMs, null);
+  });
+
+  test('解約後 90 日以内は保持（残高が見える）', () => {
+    const s = summarizeRewards({
+      entries: ledger, ledgerKnown: true, cancelledAtIso: isoDaysAgo(89, now), nowMs: now,
+    });
+    assert.equal(s.status, 'ready');
+    assert.equal(s.balancePoints, 100);
+    assert.equal(s.pointsStatus.status, POINTS_STATUS.GRACE);
+    assert.equal(s.pointsStatus.daysLeft, 1);
+  });
+
+  test('🔴 解約後 90 日を過ぎたら失効（残高を出さない）', () => {
+    const s = summarizeRewards({
+      entries: ledger, ledgerKnown: true, cancelledAtIso: isoDaysAgo(91, now), nowMs: now,
+    });
+    assert.equal(s.status, 'expired');
+    assert.equal(s.balancePoints, null);
+  });
+
+  test('境界: ちょうど 90 日で失効する', () => {
+    assert.equal(resolvePointsStatus({ cancelledAtIso: isoDaysAgo(90, now), nowMs: now }).status, POINTS_STATUS.EXPIRED);
+    assert.equal(isWithinGrace({ cancelledAtIso: isoDaysAgo(90, now), nowMs: now }), false);
+    assert.equal(isWithinGrace({ cancelledAtIso: isoDaysAgo(1, now), nowMs: now }), true);
+  });
+
+  test('🔴 解約日が読めないときは失効させない（誤って残高を消さない）', () => {
+    assert.equal(resolvePointsStatus({ cancelledAtIso: 'not-a-date', nowMs: now }).status, POINTS_STATUS.ACTIVE);
+  });
+});
+
+/* ================================================================
+   再加入（TBD-8）
+   ================================================================ */
+
+describe('再加入時の価格ロック', () => {
+  const now = Date.UTC(2026, 8, 15);
+  const contract = createContractPrice({
+    amountYen: 3980, currency: 'jpy', priceId: 'price_old', startedAtIso: '2026-02-01T00:00:00.000Z',
+  });
+
+  test('90 日以内の再加入なら旧価格を復活する', () => {
+    const r = resolveReentryPrice({ contract, cancelledAtIso: isoDaysAgo(30, now), nowMs: now });
+    assert.equal(r.decided, true);
+    assert.equal(r.restored, true);
+    assert.equal(r.priceYen, 3980);
+    assert.equal(r.priceId, 'price_old', 'Checkout には旧 Price ID を使う');
+    assert.equal(r.daysLeft, 60);
+  });
+
+  test('🔴 90 日を過ぎたら新価格（旧価格を復活させない）', () => {
+    const r = resolveReentryPrice({ contract, cancelledAtIso: isoDaysAgo(91, now), nowMs: now });
+    assert.equal(r.restored, false);
+    assert.equal(r.priceYen, null);
+    assert.equal(r.priceId, null);
+  });
+
+  test('契約価格の記録が無ければ復活できない（推測しない）', () => {
+    assert.equal(resolveReentryPrice({ contract: null, cancelledAtIso: isoDaysAgo(1, now), nowMs: now }).restored, false);
+    assert.equal(resolveReentryPrice({ contract, cancelledAtIso: null, nowMs: now }).restored, false);
+  });
+
+  test('ポイントの猶予と再加入の猶予が同時に切れる（説明する条件が 1 つ）', () => {
+    for (const days of [1, 45, 89]) {
+      assert.equal(isWithinGrace({ cancelledAtIso: isoDaysAgo(days, now), nowMs: now }), true);
+      assert.equal(resolveReentryPrice({ contract, cancelledAtIso: isoDaysAgo(days, now), nowMs: now }).restored, true);
+    }
+    for (const days of [90, 120]) {
+      assert.equal(isWithinGrace({ cancelledAtIso: isoDaysAgo(days, now), nowMs: now }), false);
+      assert.equal(resolveReentryPrice({ contract, cancelledAtIso: isoDaysAgo(days, now), nowMs: now }).restored, false);
+    }
+  });
+});
 
 /* ================================================================
    ランク（M-5）
@@ -75,10 +277,17 @@ describe('会員ランク', () => {
     assert.equal(r.rank, null);
   });
 
-  test('閾値が揃っていれば継続月数からランクと次の目標を出す', () => {
-    const r = resolveRank(7, TEST_THRESHOLDS);
-    assert.equal(r.rank, RANK.GOLD);
-    assert.equal(r.nextRank, RANK.PLATINUM);
+  test('継続月数からランクと次の目標を出す（確定値 0/3/12/24）', () => {
+    assert.equal(resolveRank(0).rank, RANK.BRONZE);
+    assert.equal(resolveRank(2).rank, RANK.BRONZE);
+    assert.equal(resolveRank(3).rank, RANK.SILVER, '解約が集中する 3 か月目に最初の昇格');
+    assert.equal(resolveRank(11).rank, RANK.SILVER);
+    assert.equal(resolveRank(12).rank, RANK.GOLD);
+    assert.equal(resolveRank(23).rank, RANK.GOLD);
+    assert.equal(resolveRank(24).rank, RANK.PLATINUM);
+
+    const r = resolveRank(7);
+    assert.equal(r.nextRank, RANK.GOLD);
     assert.equal(r.monthsToNext, 5);
     assert.ok(r.progressRatio > 0 && r.progressRatio < 1);
   });
@@ -98,10 +307,13 @@ describe('会員ランク', () => {
     assert.equal(isRankThresholdsConfigured({ bronze: 0, silver: 3.5, gold: 6, platinum: 12 }), false);
   });
 
-  test('readRankThresholds: 壊れた JSON / 不正な設定は未設定へ倒す', () => {
+  test('readRankThresholds: 上書きが無ければ確定値。壊れた上書きは確定値へ戻さず未設定へ倒す', () => {
+    assert.deepEqual({ ...readRankThresholds({}) }, { ...RANK_THRESHOLDS });
+    // 🔴 壊れた上書きに気づかないまま既定値で待遇を配らない
     assert.equal(isRankThresholdsConfigured(readRankThresholds({ KI_RANK_THRESHOLDS: '{oops' })), false);
-    assert.equal(isRankThresholdsConfigured(readRankThresholds({})), false);
-    assert.equal(isRankThresholdsConfigured(readRankThresholds({ KI_RANK_THRESHOLDS: TEST_THRESHOLDS })), true);
+    assert.equal(isRankThresholdsConfigured(readRankThresholds({ KI_RANK_THRESHOLDS: { bronze: 5 } })), false);
+    const ok = readRankThresholds({ KI_RANK_THRESHOLDS: { bronze: 0, silver: 6, gold: 12, platinum: 24 } });
+    assert.equal(ok.silver, 6, '妥当な上書きは効く');
   });
 });
 
@@ -178,16 +390,29 @@ describe('KIリワード', () => {
     assert.equal(r, null);
   });
 
-  test('長期会員優遇: ランク別の上乗せは設定があるときだけ加算する', () => {
-    const base = buildAccrualEntry({
-      accrual: TEST_ACCRUAL, rank: null, email: 'a@example.com', periodRef: 'in_1', occurredAtMs: 1,
-    });
-    const gold = buildAccrualEntry({
-      accrual: TEST_ACCRUAL, rank: RANK.GOLD, email: 'a@example.com', periodRef: 'in_1', occurredAtMs: 1,
-    });
+  test('🔴 確定値ではランクで付与量が変わらない（待遇差は景品側で付ける）', () => {
+    const base = buildAccrualEntry({ rank: null, email: 'a@example.com', periodRef: 'in_1', occurredAtMs: 1 });
+    const plat = buildAccrualEntry({ rank: RANK.PLATINUM, email: 'a@example.com', periodRef: 'in_1', occurredAtMs: 1 });
     assert.equal(base.points, 100);
+    assert.equal(plat.points, 100, 'ランク倍率は当面なし（TBD-1b）');
+  });
+
+  test('倍率を入れる設定にした場合は加算される（将来の拡張余地）', () => {
+    const gold = buildAccrualEntry({
+      accrual: OVERRIDE_ACCRUAL, rank: RANK.GOLD, email: 'a@example.com', periodRef: 'in_1', occurredAtMs: 1,
+    });
+    const base = buildAccrualEntry({
+      accrual: OVERRIDE_ACCRUAL, rank: null, email: 'a@example.com', periodRef: 'in_1', occurredAtMs: 1,
+    });
     assert.equal(gold.points, 120);
     assert.equal(base.entryId, gold.entryId, '冪等キーは付与額で変わらない');
+  });
+
+  test('年払いの一括付与も冪等（同じ期を二度付けない）', () => {
+    const a = buildAnnualAccrualEntry({ email: 'a@example.com', termRef: 'bank_2026', occurredAtMs: 1 });
+    const b = buildAnnualAccrualEntry({ email: 'a@example.com', termRef: 'bank_2026', occurredAtMs: 2 });
+    assert.equal(a.entryId, b.entryId);
+    assert.equal(dedupeEntries([a, b]).length, 1);
   });
 
   test('🔴 残高不足の交換は作らない（マイナス残高を許さない）', () => {
@@ -211,10 +436,10 @@ describe('KIリワード', () => {
     }), null);
   });
 
-  test('readAccrualConfig: 壊れた設定は未設定へ倒す', () => {
+  test('readAccrualConfig: 上書きが無ければ確定値。壊れた上書きは確定値へ戻さず未設定へ倒す', () => {
+    assert.equal(readAccrualConfig({}).monthlyPoints, 100);
     assert.equal(isAccrualConfigured(readAccrualConfig({ KI_REWARD_ACCRUAL: 'nope' })), false);
-    assert.equal(isAccrualConfigured(readAccrualConfig({})), false);
-    assert.equal(isAccrualConfigured(readAccrualConfig({ KI_REWARD_ACCRUAL: TEST_ACCRUAL })), true);
+    assert.equal(readAccrualConfig({ KI_REWARD_ACCRUAL: { monthlyPoints: 150 } }).monthlyPoints, 150);
   });
 });
 
@@ -239,11 +464,11 @@ describe('景品カタログ', () => {
     assert.equal(isCatalogPublished(c), false);
   });
 
-  test('必要ポイントが無い redeemable は除外する（TBD-3 未確定の item を出さない）', () => {
+  test('必要ポイントが無い / 交換ライン外の redeemable は除外する', () => {
     const c = createCatalog({
       version: 1, status: 'published',
       items: [
-        { id: 'ok', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 10 },
+        { id: 'ok', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 600 },
         { id: 'ng', name: 'B', kind: ITEM_KIND.REDEEMABLE },
         { id: 'ng2', name: 'C', kind: ITEM_KIND.REDEEMABLE, costPoints: 0 },
       ],
@@ -256,7 +481,7 @@ describe('景品カタログ', () => {
       version: 1, status: 'published',
       items: [
         { id: 'm1', name: '記念品', kind: ITEM_KIND.MILESTONE, milestoneMonths: 12 },
-        { id: 'r1', name: '交換品', kind: ITEM_KIND.REDEEMABLE, costPoints: 10 },
+        { id: 'r1', name: '交換品', kind: ITEM_KIND.REDEEMABLE, costPoints: 600 },
       ],
     });
     assert.deepEqual(milestoneItems(c).map((i) => i.id), ['m1']);
@@ -264,14 +489,14 @@ describe('景品カタログ', () => {
   });
 
   test('カタログはデータ駆動で差し替えられる（コードに商品を固定しない）', () => {
-    const c1 = createCatalog({ version: 1, status: 'published', items: [{ id: 'a', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 5 }] });
-    const c2 = createCatalog({ version: 2, status: 'published', items: [{ id: 'b', name: 'B', kind: ITEM_KIND.REDEEMABLE, costPoints: 7 }] });
+    const c1 = createCatalog({ version: 1, status: 'published', items: [{ id: 'a', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 600 }] });
+    const c2 = createCatalog({ version: 2, status: 'published', items: [{ id: 'b', name: 'B', kind: ITEM_KIND.REDEEMABLE, costPoints: 1200 }] });
     assert.deepEqual(c1.items.map((i) => i.id), ['a']);
     assert.deepEqual(c2.items.map((i) => i.id), ['b']);
   });
 
   test('🔴 残高が未確定なら「あと◯pt」を出さない', () => {
-    const c = createCatalog({ version: 1, status: 'published', items: [{ id: 'a', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 500 }] });
+    const c = createCatalog({ version: 1, status: 'published', items: [{ id: 'a', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 600 }] });
     const v = exchangeView({ catalog: c, balancePoints: null, rank: null });
     assert.equal(v.status, 'pending');
     assert.equal(v.next, null);
@@ -282,25 +507,26 @@ describe('景品カタログ', () => {
     const c = createCatalog({
       version: 1, status: 'published',
       items: [
-        { id: 'cheap', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 100 },
-        { id: 'mid', name: 'B', kind: ITEM_KIND.REDEEMABLE, costPoints: 300 },
-        { id: 'far', name: 'C', kind: ITEM_KIND.REDEEMABLE, costPoints: 900 },
+        { id: 'small', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 600 },
+        { id: 'large', name: 'B', kind: ITEM_KIND.REDEEMABLE, costPoints: 1200 },
       ],
     });
-    const v = exchangeView({ catalog: c, balancePoints: 150, rank: null });
-    assert.deepEqual(v.available.map((i) => i.id), ['cheap']);
-    assert.equal(v.next.item.id, 'mid');
-    assert.equal(v.next.remainingPoints, 150);
+    // 100 pt/月 × 7 か月 = 700 pt → 小は交換でき、大まであと 500 pt
+    const v = exchangeView({ catalog: c, balancePoints: 700, rank: null, months: 7 });
+    assert.deepEqual(v.available.map((i) => i.id), ['small']);
+    assert.equal(v.next.item.id, 'large');
+    assert.equal(v.next.remainingPoints, 500);
   });
 
   test('🔴 ランク条件付きの景品は、ランク未確定なら出さない（fail-closed）', () => {
     const c = createCatalog({
       version: 1, status: 'published',
-      items: [{ id: 'gold-only', name: 'G', kind: ITEM_KIND.REDEEMABLE, costPoints: 10, minRank: RANK.GOLD }],
+      items: [{ id: 'gold-only', name: 'G', kind: ITEM_KIND.REDEEMABLE, costPoints: 600, minRank: RANK.GOLD }],
     });
-    assert.equal(exchangeView({ catalog: c, balancePoints: 999, rank: null }).available.length, 0);
-    assert.equal(exchangeView({ catalog: c, balancePoints: 999, rank: RANK.SILVER }).available.length, 0);
-    assert.equal(exchangeView({ catalog: c, balancePoints: 999, rank: RANK.PLATINUM }).available.length, 1);
+    // 上位ランクの優遇は「選べる候補が増える」方式（必要ポイントの割引ではない）
+    assert.equal(exchangeView({ catalog: c, balancePoints: 9999, rank: null }).available.length, 0);
+    assert.equal(exchangeView({ catalog: c, balancePoints: 9999, rank: RANK.SILVER }).available.length, 0);
+    assert.equal(exchangeView({ catalog: c, balancePoints: 9999, rank: RANK.PLATINUM }).available.length, 1);
   });
 
   test('空カタログの既定は EMPTY_CATALOG', () => {
@@ -364,9 +590,9 @@ describe('継続価格ロック', () => {
     assert.equal(r.cheaperThanCurrent, true);
   });
 
-  test('🔴 再加入時の価格は未確定（TBD-8）。勝手に決めない', () => {
+  test('引数無しで呼んでも復活しない（fail-closed）', () => {
     const r = resolveReentryPrice();
-    assert.equal(r.decided, false);
+    assert.equal(r.restored, false);
     assert.equal(r.priceYen, null);
   });
 });
@@ -462,16 +688,16 @@ describe('会員クラブの表示ビュー', () => {
         contractPrice: createContractPrice({ amountYen: 3980, currency: 'jpy', priceId: 'p', startedAtIso: '2026-02-15T00:00:00.000Z' }),
       },
       ledger: [{ entryId: 'a1', type: ENTRY_TYPE.ACCRUAL, points: 100, occurredAtMs: Date.UTC(2026, 8, 3) }],
-      config: { KI_RANK_THRESHOLDS: TEST_THRESHOLDS, KI_REWARD_ACCRUAL: TEST_ACCRUAL },
-      catalogSource: { version: 1, status: 'published', items: [{ id: 'a', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 300 }] },
+      config: {},
+      catalogSource: { version: 1, status: 'published', items: [{ id: 'a', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 600 }] },
       currentListPriceYen: 5000,
       nowMs: now,
     });
     assert.equal(v.months.value, 7);
-    assert.equal(v.rank.rank, RANK.GOLD);
+    assert.equal(v.rank.rank, RANK.SILVER, '7 か月は Silver（Gold は 12 か月）');
     assert.equal(v.rewards.balancePoints, 100);
     assert.equal(v.rewards.monthAccrualPoints, 100);
-    assert.equal(v.gifts.next.remainingPoints, 200);
+    assert.equal(v.gifts.next.remainingPoints, 500);
     assert.equal(v.priceLock.status, LOCK_STATUS.LOCKED);
     assert.equal(v.priceLock.contractPriceYen, 3980);
   });
@@ -532,13 +758,23 @@ describe('会員クラブの表示ビュー', () => {
     assert.deepEqual(RANK_LADDER.map((r) => r.label), ['Bronze', 'Silver', 'Gold', 'Platinum']);
   });
 
-  test('🔴 /pricing の訴求に未確定の数値・景品名を含めない', () => {
+  test('🔴 /pricing の訴求は確定値だけを書き、景品の品目は書かない', () => {
     const text = PRICING_BENEFITS.map((b) => `${b.title} ${b.body}`).join(' ');
     assert.match(text, /Bronze/);
     assert.match(text, /KIリワード/);
-    assert.doesNotMatch(text, /\d+\s*(pt|ポイント|P)\b/, 'ポイント数を書かない');
-    assert.doesNotMatch(text, /\d+\s*か月(目|後)/, '必要月数を書かない');
-    assert.doesNotMatch(text, /コーヒー|お米|米|お菓子|菓子/, '商品名を固定しない');
+    assert.match(text, /100pt/, '確定した付与ポイントは出してよい');
+    assert.match(text, /600pt/);
+    assert.match(text, /抽選はありません/, '総付を維持していることを明示する（保守ライン S-3）');
+    // 🔴 品目は未確定（カタログはデータ駆動）
+    assert.doesNotMatch(text, /コーヒー|お米|お菓子|ギフトカード/, '商品名を固定しない');
+    // 🔴 出してよい数値は確定値だけ
+    for (const m of text.matchAll(/([\d,]+)\s*(pt|ポイント)/g)) {
+      const n = Number(m[1].replace(/,/g, ''));
+      assert.ok([100, 600, 1200].includes(n), `確定値でないポイント数を書いている: ${m[0]}`);
+    }
+    for (const m of text.matchAll(/(\d+)\s*か月/g)) {
+      assert.ok([3, 12, 24, 90].includes(Number(m[1])), `確定値でない月数を書いている: ${m[0]}`);
+    }
   });
 
   test('未確定の表現は「準備中」に統一する', () => {

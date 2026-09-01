@@ -13,9 +13,9 @@
  *      （禁止語は `membershipCopy.guard.test.mjs` が静的に検出する）
  *
  * 🔴 fail-closed:
- *    毎月の付与ポイント数（TBD-1）・失効期限（TBD-6）・解約時の扱い（TBD-7）は **未確定**。
- *    付与設定が無い状態で残高を「0 pt」と表示すると、確定していない制度を
- *    確定したかのように見せることになるため、**`pending` を返す**。
+ *    **台帳が読めなければ残高を返さない**（`pending`）。0 pt と言い切らない。
+ *    台帳の保存先はまだ無い（`docs/MEMBERSHIP_DATA_MIGRATION.md`）ので、
+ *    本番では当面 `pending` のまま＝画面は「準備中」になる。
  */
 
 /** 台帳エントリの種別。 */
@@ -33,14 +33,40 @@ export const ENTRY_TYPE = Object.freeze({
 const ENTRY_TYPES = Object.freeze(Object.values(ENTRY_TYPE));
 
 /**
- * 付与設定。
+ * 毎月の付与ポイント（**確定値・2026-09-01**）。
  *
- * 🔴 **TBD-1（未確定）。既定値を置かない。**
- *    `monthlyPoints` にも `rankMultipliers` にも仮の数字を入れてはいけない。
+ * 🔴 正本は `docs/MEMBERSHIP_REWARDS.md` §7.1。**片方だけ変更しない。**
+ *
+ * 単位を意図的に円から切り離してある（1pt = ¥1 にしない）。
+ * 🔴 **円換算を画面に出さないため**であり、原資の増減は「pt あたりの調達単価」という
+ *    内部の話として吸収する。会員に見える 100 pt/月 は変えない。
+ */
+export const MONTHLY_POINTS = 100;
+
+/** 年払い（銀行振込 ¥39,800）1 期あたりの月数（**確定値**）。 */
+export const ANNUAL_TERM_MONTHS = 12;
+
+/** 解約後にポイントを保持する日数（**確定値**）。これを過ぎたら失効。 */
+export const GRACE_DAYS = 90;
+
+/**
+ * 付与設定（**確定値**）。
+ *
+ * 🔴 `rankBonusPoints` は **null（ランク倍率は当面なし）**。
+ *    上位ランクの優遇は **ポイント量ではなく「選べる景品・記念品等の待遇」**で行う
+ *    （`catalog.js` の `minRank`）。ここに倍率を足すと待遇差が二重になる。
+ */
+export const ACCRUAL = Object.freeze({
+  monthlyPoints: MONTHLY_POINTS,
+  rankBonusPoints: null,
+});
+
+/**
+ * 壊れた設定に倒す先。
+ * 🔴 **黙って `ACCRUAL` へ戻さない**（壊れた上書きに気づかないまま配らないため）。
  */
 export const ACCRUAL_UNSET = Object.freeze({
   monthlyPoints: null,
-  /** ランク別の上乗せ（長期会員優遇 M-4）。未確定。 */
   rankBonusPoints: null,
 });
 
@@ -90,23 +116,83 @@ export function dedupeEntries(entries) {
   return out;
 }
 
+/** ポイントの生死。 */
+export const POINTS_STATUS = Object.freeze({
+  /** 契約中。失効しない */
+  ACTIVE: 'active',
+  /** 解約したが 90 日以内。再加入で復活する */
+  GRACE: 'grace',
+  /** 解約から 90 日を過ぎた。失効 */
+  EXPIRED: 'expired',
+});
+
+/**
+ * 解約日からポイントの生死を決める（**確定値: 契約中は失効なし / 解約後 90 日で失効**）。
+ *
+ * 🔴 「継続の報酬」である以上、**契約が続いている限り失効させない**。
+ *    解約で必ず期限が来るので、未使用ポイントが無限に積み上がることもない。
+ *
+ * @param {string|null} cancelledAtIso 解約日。契約中なら null
+ * @param {number} nowMs
+ */
+export function resolvePointsStatus({ cancelledAtIso, nowMs = Date.now() } = {}) {
+  if (!isNonEmptyString(cancelledAtIso)) {
+    return Object.freeze({ status: POINTS_STATUS.ACTIVE, expiresAtMs: null, daysLeft: null });
+  }
+  const cancelled = Date.parse(cancelledAtIso);
+  // 🔴 解約日が読めないときは失効させない（誤って残高を消さない）
+  if (!Number.isFinite(cancelled) || !isFiniteNumber(nowMs)) {
+    return Object.freeze({ status: POINTS_STATUS.ACTIVE, expiresAtMs: null, daysLeft: null });
+  }
+  const expiresAtMs = cancelled + GRACE_DAYS * 24 * 60 * 60 * 1000;
+  if (nowMs >= expiresAtMs) {
+    return Object.freeze({ status: POINTS_STATUS.EXPIRED, expiresAtMs, daysLeft: 0 });
+  }
+  return Object.freeze({
+    status: POINTS_STATUS.GRACE,
+    expiresAtMs,
+    daysLeft: Math.ceil((expiresAtMs - nowMs) / (24 * 60 * 60 * 1000)),
+  });
+}
+
+/** 90 日以内の再加入か（ポイントと価格ロックの復活条件・**確定値**）。 */
+export function isWithinGrace({ cancelledAtIso, nowMs = Date.now() } = {}) {
+  return resolvePointsStatus({ cancelledAtIso, nowMs }).status !== POINTS_STATUS.EXPIRED;
+}
+
 /**
  * 台帳を集計する。
  *
  * @param {object} o
  * @param {Array} o.entries        台帳エントリ（順不同でよい）
- * @param {object} o.accrual       付与設定（未確定なら `ACCRUAL_UNSET`）
+ * @param {object} [o.accrual]     付与設定（既定は確定値 `ACCRUAL`）
  * @param {boolean} o.ledgerKnown  台帳を実際に読めたか（読めていないなら false）
+ * @param {string|null} [o.cancelledAtIso] 解約日。契約中なら null
  * @param {number} o.nowMs
  * @returns {Readonly<object>}
- *   status: 'ready' | 'pending'
- *   pending の理由は `reason`（'accrual_unset' / 'ledger_unavailable'）
+ *   status: 'ready' | 'pending' | 'expired'
  */
-export function summarizeRewards({ entries, accrual, ledgerKnown = false, nowMs = Date.now() } = {}) {
+export function summarizeRewards({
+  entries, accrual = ACCRUAL, ledgerKnown = false, cancelledAtIso = null, nowMs = Date.now(),
+} = {}) {
   const configured = isAccrualConfigured(accrual);
 
   if (!configured) return pendingSummary('accrual_unset');
   if (!ledgerKnown) return pendingSummary('ledger_unavailable');
+
+  // 🔴 解約後 90 日を過ぎたら残高を出さない（失効）
+  const points = resolvePointsStatus({ cancelledAtIso, nowMs });
+  if (points.status === POINTS_STATUS.EXPIRED) {
+    return Object.freeze({
+      status: 'expired',
+      reason: 'grace_elapsed',
+      balancePoints: null,
+      monthAccrualPoints: null,
+      entryCount: null,
+      pointsStatus: points,
+      redemptions: Object.freeze([]),
+    });
+  }
 
   const rows = dedupeEntries(entries);
   const balance = rows.reduce((sum, e) => sum + e.points, 0);
@@ -127,6 +213,7 @@ export function summarizeRewards({ entries, accrual, ledgerKnown = false, nowMs 
     balancePoints: balance,
     monthAccrualPoints: monthAccrual,
     entryCount: rows.length,
+    pointsStatus: points,
     redemptions: Object.freeze(redemptions.map((e) => Object.freeze({
       entryId: e.entryId,
       points: e.points,
@@ -143,6 +230,7 @@ function pendingSummary(reason) {
     balancePoints: null,
     monthAccrualPoints: null,
     entryCount: null,
+    pointsStatus: null,
     redemptions: Object.freeze([]),
   });
 }
@@ -165,7 +253,7 @@ function startOfMonthMs(nowMs) {
  * @param {string} o.periodRef  課金期間の識別子（Stripe invoice id 等）。冪等キーに使う
  * @param {number} o.occurredAtMs
  */
-export function buildAccrualEntry({ accrual, rank, email, periodRef, occurredAtMs } = {}) {
+export function buildAccrualEntry({ accrual = ACCRUAL, rank, email, periodRef, occurredAtMs } = {}) {
   if (!isAccrualConfigured(accrual)) return null;
   if (!isNonEmptyString(email) || !isNonEmptyString(periodRef)) return null;
   if (!isFiniteNumber(occurredAtMs)) return null;
@@ -185,6 +273,31 @@ export function buildAccrualEntry({ accrual, rank, email, periodRef, occurredAtM
     points,
     occurredAtMs,
     ref: periodRef,
+  });
+}
+
+/**
+ * 年払い（銀行振込 ¥39,800）1 期ぶんの付与エントリを作る（**確定値: 12 か月相当**）。
+ *
+ * 🔴 年払い会員を対象から外すと、**先にまとめて払った人が不利になる**ため対象に含める。
+ *    12 か月分（100 pt × 12 = 1,200 pt）を一括で付与する。
+ *
+ * @param {string} o.termRef 年払い期の識別子（申込 ID 等）。冪等キーに使う
+ */
+export function buildAnnualAccrualEntry({ accrual = ACCRUAL, email, termRef, occurredAtMs } = {}) {
+  if (!isAccrualConfigured(accrual)) return null;
+  if (!isNonEmptyString(email) || !isNonEmptyString(termRef)) return null;
+  if (!isFiniteNumber(occurredAtMs)) return null;
+
+  const entryId = buildEntryId({ type: ENTRY_TYPE.ACCRUAL, email, ref: termRef });
+  if (!entryId) return null;
+
+  return Object.freeze({
+    entryId,
+    type: ENTRY_TYPE.ACCRUAL,
+    points: accrual.monthlyPoints * ANNUAL_TERM_MONTHS,
+    occurredAtMs,
+    ref: termRef,
   });
 }
 
@@ -215,7 +328,10 @@ export function buildRedemptionEntry({ summary, costPoints, email, redemptionId,
 
 /**
  * 付与設定を読む（env / 設定オブジェクト）。
- * 🔴 読めない・0 以下・非整数は **未設定**として扱う（推測補完しない）。
+ *
+ * 既定は確定値 `ACCRUAL`。`KI_REWARD_ACCRUAL` で上書きできるが、
+ * 🔴 **上書きする場合は `docs/MEMBERSHIP_REWARDS.md` §7.1 も同時に直すこと。**
+ * 🔴 上書きが壊れているときは **確定値へ黙って戻さず** `ACCRUAL_UNSET` へ倒す。
  */
 export function readAccrualConfig(source) {
   const raw = source && typeof source === 'object' ? source.KI_REWARD_ACCRUAL : null;
@@ -229,7 +345,8 @@ export function readAccrualConfig(source) {
   } else if (raw && typeof raw === 'object') {
     parsed = raw;
   }
-  if (!parsed) return ACCRUAL_UNSET;
+  // 上書きが無ければ確定値
+  if (!parsed) return ACCRUAL;
 
   const monthlyPoints = Number.isInteger(parsed.monthlyPoints) && parsed.monthlyPoints > 0
     ? parsed.monthlyPoints

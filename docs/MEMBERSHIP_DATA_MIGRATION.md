@@ -48,6 +48,7 @@
 | `ContractStartedAt` | Date (ISO) | 契約価格を記録した時刻 | 同上 |
 | `MemberRank` | Single select | 表示用の写し（`bronze`/`silver`/`gold`/`platinum`） | ランクを `pending`。**Bronze へ倒さない** |
 | `RewardBalance` | Number | リワード残高の写し（正本は台帳） | 残高を `pending` |
+| `CancelledAt` | Date (ISO) | 解約日。**解約後 90 日の失効・価格ロック復活の起点**（§7.1） | 失効させない（誤って残高を消さない） |
 
 🔴 `MemberRank` / `RewardBalance` は **表示・監査のための写し**であり、正本ではない。
 正本は §2.2 の台帳。写しと台帳が食い違ったら **台帳が正**。
@@ -97,8 +98,17 @@ redemption : redemption:<email>:<交換ID>
 | 既存会員レコードへの backfill | 本番 write | **未実行**（承認必要） |
 | `MEMBERSHIP_WRITE_ENABLED` の有効化 | 本番 env 変更 | **未実行**（承認必要） |
 
-加えて、**TBD-1〜TBD-8（`MEMBERSHIP_REWARDS.md` §7）が未確定のまま列を作っても、
-入れる値が決まらない**。スキーマ移行は数値確定のあとに行うのが正しい順序である。
+🔴 **2026-09-01 更新**: TBD-1〜TBD-8 は **確定した**（`MEMBERSHIP_REWARDS.md` §7.1）。
+制度の数値はコードの定数として実装済みで、**環境変数の設定も不要**である。
+したがって残る前提条件は次の 2 つだけになった。
+
+1. **列・テーブルの作成**（本書。承認必要）
+2. **継続月数の起点（TBD-9）と支払い失敗時の扱い（TBD-10）の確定**
+   — どちらも「`MembershipStartedAt` に何を書くか」「いつ月数を止めるか」という
+   **保存の話**なので、本移行と同時に決めるのが自然である。
+
+景品の品目（TBD-3b / TBD-4b）と発送先住所（TBD-12）は、**交換の実運用を始めるとき**に必要になる。
+台帳の作成そのものはそれを待たずに進められる。
 
 ## 4. 移行手順（承認後に実施する順序）
 
@@ -111,6 +121,8 @@ redemption : redemption:<email>:<交換ID>
    （この時点では `pending` 表示のまま）。
 4. **backfill**（任意）。`MembershipStartedAt` を過去の初回課金日で埋める。
    🔴 起点の定義（TBD-9）が確定していること。確定前に埋めない。
+   backfill しない場合、既存会員の継続月数は「準備中」のままになる（`monthsKnown: false`）。
+   🔴 **0 か月（＝ Bronze）として埋めない。** 長く続けている会員を最低ランクで表示することになる。
 5. **`MEMBERSHIP_WRITE_ENABLED=true`** を設定し、再デプロイする
    （Netlify の env はデプロイ時に注入されるため、設定だけでは反映されない）。
 6. Stripe のテストイベントで 1 件だけ流し、台帳が 1 行だけ増えることを確認する。
@@ -140,4 +152,6 @@ redemption : redemption:<email>:<交換ID>
   （`priceLock.contractPriceFromCheckoutSession` / `contractPriceFromSubscription`）。
   この不変条件（webhook が書く列が 3 つのままであること）は
   `src/lib/membership/membershipCopy.guard.test.mjs` が静的に固定している。
+- **制度の数値は環境変数を必要としない**（`MEMBERSHIP_REWARDS.md` §7.1 の確定値がコードの定数）。
+  本番 env に追加が必要なのは、write を有効化するときの `MEMBERSHIP_WRITE_ENABLED` だけである。
 - Airtable アダプタは **実装していない**（列が無いため）。`store.js` は注入可能な抽象のみを持つ。
