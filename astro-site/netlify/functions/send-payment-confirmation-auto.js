@@ -7,7 +7,71 @@
  *   2. 二重送信防止チェック（PaymentEmailSentフィールド）
  *   3. メール送信（SendGrid）
  *   4. PaymentEmailSent を true に更新 + 有効期限設定
+ *   5. 🔵 会員継続制度への反映（**別リクエスト・フラグ付き・失敗を握りつぶす**）
+ *
+ * 🔴 **手順 5 は手順 1〜4 に一切影響させない。**
+ *    入金確認・`AccessEnabled`・メール送信は会員継続制度より優先される。
+ *    membership 側が失敗しても、この関数の応答は変わらない（200 のまま）。
+ *    正本: docs/MEMBERSHIP_REWARDS.md §7.6 / §7.7
  */
+
+/**
+ * 入金確認を会員継続制度へ反映する（best-effort）。
+ *
+ * 🔴 既定（`MEMBERSHIP_WRITE_ENABLED` 未設定）では **何もしない**。
+ * 🔴 例外を投げない。呼び出し側の try/catch を汚さない。
+ * 🔴 `AccessEnabled` / `Status` / `PlanType` には触れない（認可は変更しない）。
+ *
+ * @param {object} o
+ * @param {string} o.recordId
+ * @param {object} o.fields         更新前のレコード
+ * @param {string} o.expirationDate この入金で設定した有効期限
+ * @param {string|null} [o.confirmedAtIso] 初回のみ「いま確認した」時刻。
+ *   🔴 再実行では null を渡し、`ExpirationDate − 期間` から復元させる。
+ */
+async function recordBankMembership({ recordId, fields, expirationDate, confirmedAtIso = null }) {
+  try {
+    const [{ resolveMembershipStore, isWriteEnabled }, { planBankMembershipUpdate }] = await Promise.all([
+      import('../../src/lib/membership/store.js'),
+      import('../../src/lib/membership/bankTransfer.js'),
+    ]);
+    if (!isWriteEnabled(process.env)) return;
+
+    const plan = planBankMembershipUpdate({ fields, recordId, expirationDate, confirmedAtIso });
+
+    if (plan.skipped.length) {
+      // 🔴 理由をログに残すが、処理は続ける（起点だけ書ける場合もある）
+      console.log('ℹ️ membership: skipped ->', plan.skipped.join(','));
+    }
+
+    const store = resolveMembershipStore({ env: process.env });
+    if (!store.enabled) return;
+
+    // 起点（＝初回の入金確認日）。既に入っていれば書かない
+    if (plan.startedAtIso) {
+      const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
+      const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
+      const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Customers/${recordId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}`, 'Content-Type': 'application/json' },
+        // 🔴 membership の列だけ。既存列は 1 つも入れない
+        body: JSON.stringify({ fields: { MembershipStartedAt: plan.startedAtIso } }),
+      });
+      console.log(res.ok
+        ? `✅ membership: MembershipStartedAt=${plan.startedAtIso}`
+        : `⚠️ membership: MembershipStartedAt not written (${res.status})`);
+    }
+
+    // 支払い済み期間ぶんの付与（冪等キー＝レコード＋その期の期限）
+    if (plan.entry) {
+      const r = await store.appendEntry(fields.Email, plan.entry);
+      console.log(`ℹ️ membership: accrual ${r.status} (${plan.entry.points}pt / ${plan.entry.periodMonths}m)`);
+    }
+  } catch (e) {
+    // 🔴 入金確認・AccessEnabled・メール送信へ波及させない
+    console.warn('⚠️ membership: not recorded (ignored):', e?.name || 'Error');
+  }
+}
 
 exports.handler = async (event, context) => {
   // CORSヘッダー設定
@@ -99,18 +163,14 @@ exports.handler = async (event, context) => {
     // ========================================
     // Step 2: 二重送信防止チェック
     // ========================================
-    if (paymentEmailSent === true) {
-      console.log('ℹ️ Payment email already sent, skipping:', email);
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          success: true,
-          skipped: true,
-          message: 'Payment email already sent',
-          email: email
-        })
-      };
+    // 🔴 メールの再送は引き続き禁止する。
+    //    ただし **ここで return しない**。Step 1〜4 が成功したあとに
+    //    Step 5（会員継続制度）だけが一時的に失敗した場合、
+    //    早期 return するとリワードが**永久に欠落**するため、
+    //    再実行で Step 5 だけ回復できるように先へ進む。
+    const alreadyConfirmed = paymentEmailSent === true;
+    if (alreadyConfirmed) {
+      console.log('ℹ️ Payment email already sent — skip mail/update, try membership only:', email);
     }
 
     // ========================================
@@ -147,7 +207,7 @@ exports.handler = async (event, context) => {
     // 会場アクセス表示テキスト
     const venueAccessDisplay = getVenueAccessDisplay();
 
-    // メール送信
+    // メール送信（🔴 再実行では送らない）
     const userEmailData = {
       personalizations: [{
         to: [{ email: email }],
@@ -164,22 +224,24 @@ exports.handler = async (event, context) => {
       }
     };
 
-    const userResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SENDGRID_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(userEmailData)
-    });
+    if (!alreadyConfirmed) {
+      const userResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SENDGRID_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(userEmailData)
+      });
 
-    if (!userResponse.ok) {
-      const errorText = await userResponse.text();
-      console.error('SendGrid user email error:', errorText);
-      throw new Error(`Failed to send user email: ${userResponse.status}`);
+      if (!userResponse.ok) {
+        const errorText = await userResponse.text();
+        console.error('SendGrid user email error:', errorText);
+        throw new Error(`Failed to send user email: ${userResponse.status}`);
+      }
+
+      console.log('✅ Payment confirmation email sent:', email);
     }
-
-    console.log('✅ Payment confirmation email sent:', email);
 
     // ========================================
     // Step 4: Airtable更新
@@ -203,28 +265,49 @@ exports.handler = async (event, context) => {
       updatePayload.fields['PaymentMethod'] = 'Bank Transfer';
     }
 
-    const updateResponse = await fetch(recordUrl, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(updatePayload)
-    });
+    if (!alreadyConfirmed) {
+      const updateResponse = await fetch(recordUrl, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatePayload)
+      });
 
-    if (updateResponse.ok) {
-      console.log('✅ Airtable updated:', airtableRecordId);
-    } else {
-      const errorText = await updateResponse.text();
-      console.error('⚠️ Airtable update failed:', errorText);
+      if (updateResponse.ok) {
+        console.log('✅ Airtable updated:', airtableRecordId);
+      } else {
+        const errorText = await updateResponse.text();
+        console.error('⚠️ Airtable update failed:', errorText);
+      }
     }
+
+    // ========================================
+    // Step 5: 会員継続制度への反映（best-effort・既定では何もしない）
+    // 🔴 ここで失敗しても手順 1〜4 の結果は変えない
+    // ========================================
+    // 🔴 初回は「いま確認した」時刻を渡す。再実行では **渡さない**（有効期限から復元する）。
+    //    現在時刻で代用すると、数日後の再実行で起点と付与日時が実際の入金日とずれる。
+    await recordBankMembership({
+      recordId: airtableRecordId,
+      fields,
+      // 再実行のときは保存済みの有効期限を使う（この実行では書き換えていない）
+      expirationDate: alreadyConfirmed
+        ? (fields.ExpirationDate || fields['有効期限'] || null)
+        : expirationDate,
+      confirmedAtIso: alreadyConfirmed ? null : new Date().toISOString(),
+    });
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        message: 'Payment confirmation email sent successfully',
+        skipped: alreadyConfirmed,
+        message: alreadyConfirmed
+          ? 'Payment email already sent (membership reconciled)'
+          : 'Payment confirmation email sent successfully',
         email: email,
         planType: planType,
         expirationDate: expirationDate,

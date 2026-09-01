@@ -17,7 +17,7 @@
  * 🔴 Stripe の Checkout 画面と実際のカード決済だけは対象外（外部 write のため）。
  */
 
-import { test, mock, before, beforeEach } from 'node:test';
+import { test, mock, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
 import Stripe from 'stripe';
 
@@ -114,12 +114,33 @@ before(() => {
   });
 });
 
+/**
+ * 🔴 **このファイルは ambient な `process.env.MEMBERSHIP_WRITE_ENABLED` に依存しない。**
+ *
+ * `npm run build` は本番 env を注入した状態でも走る（Netlify）。
+ * 既定の挙動（membership を書かない）を検証するテストが ambient のフラグに引きずられると、
+ * **本番で WRITE を有効にした瞬間にビルドごと落ちる**（2026-09-01 に実際に発生）。
+ *
+ * そこで **各テストの開始時に明示的に「未設定」へ揃え**、
+ * ファイルの最後に **元の値を復元する**（後続ファイル・本番 env を壊さない）。
+ * フラグを立てて検証したいテストは `withWriteFlag('true', ...)` を使う。
+ */
+const AMBIENT_WRITE_FLAG = process.env.MEMBERSHIP_WRITE_ENABLED;
+
 beforeEach(() => {
   db.reset();
   blobs.store.clear();
   blobs.broken = false;
   process.env[  'STRIPE_SECRET_KEY'] = SECRET_KEY;
   process.env['STRIPE_WEBHOOK_SECRET'] = WEBHOOK_SECRET;
+  // 🔴 既定は「未設定」。ambient に true が入っていても結果を変えない
+  delete process.env.MEMBERSHIP_WRITE_ENABLED;
+});
+
+after(() => {
+  // 🔴 単純な delete にしない。ambient の値を必ず戻す
+  if (AMBIENT_WRITE_FLAG === undefined) delete process.env.MEMBERSHIP_WRITE_ENABLED;
+  else process.env.MEMBERSHIP_WRITE_ENABLED = AMBIENT_WRITE_FLAG;
 });
 
 /* ------------------------------------------------------------------
@@ -176,6 +197,17 @@ const paymentFailed = (email, id) =>
     subscription_details: { metadata: { ki_email: email } },
   }, id);
 
+const PAID_AT_SEC = Math.floor(Date.parse('2026-08-15T00:00:00Z') / 1000);
+
+const paymentSucceeded = (email, id, invoiceId = 'in_test_1', overrides = {}) =>
+  makeEvent('invoice.payment_succeeded', {
+    id: invoiceId,
+    subscription_details: { metadata: { ki_email: email } },
+    lines: { data: [{ price: { recurring: { interval: 'month', interval_count: 1 } } }] },
+    status_transitions: { paid_at: PAID_AT_SEC },
+    ...overrides,
+  }, id);
+
 /* ------------------------------------------------------------------
    entitlement 側（auth / session）へつなぐ
    ------------------------------------------------------------------ */
@@ -219,6 +251,115 @@ test('E2E: Checkout 完了 → プラン付与 → 有料表示が開く', async
   assert.equal(after.view.showBetting, true, '購入後に買い目が開かない');
   assert.equal(after.view.showMarks, true);
   assert.equal(after.view.authenticated, true);
+});
+
+/* ------------------------------------------------------------------
+   会員継続制度の列は、フラグが無ければ一切書かない
+   （docs/MEMBERSHIP_DATA_MIGRATION.md §6）
+
+   🔴 **ここのテストは ambient な `process.env` に依存してはいけない。**
+      `npm run build` は本番 env を注入した状態でも走る（Netlify）。
+      「フラグが未設定であること」を前提に書くと、本番で
+      `MEMBERSHIP_WRITE_ENABLED=true` を設定した瞬間に **ビルドごと落ちる**
+      （2026-09-01 に実際に発生。WRITE 有効化が 2 回失敗した）。
+      そのため **テスト内で値を決め、必ず元へ戻す**。
+   ------------------------------------------------------------------ */
+
+/**
+ * `MEMBERSHIP_WRITE_ENABLED` を指定の値にしてから fn を実行し、**必ず元へ戻す**。
+ *
+ * 🔴 `finally` で単純に `delete` しない。
+ *    ambient に値が入っていた場合（本番 env を注入したビルド）に、
+ *    **後続のテストからその値が消えてしまう**ため、保存した値を復元する。
+ *
+ * @param {string|undefined} value 'true' などの値。undefined なら「未設定」を作る
+ */
+async function withWriteFlag(value, fn) {
+  const saved = process.env.MEMBERSHIP_WRITE_ENABLED;
+  if (value === undefined) delete process.env.MEMBERSHIP_WRITE_ENABLED;
+  else process.env.MEMBERSHIP_WRITE_ENABLED = value;
+  try {
+    return await fn();
+  } finally {
+    if (saved === undefined) delete process.env.MEMBERSHIP_WRITE_ENABLED;
+    else process.env.MEMBERSHIP_WRITE_ENABLED = saved;
+  }
+}
+
+test('🔴 MEMBERSHIP_WRITE_ENABLED が無ければ membership の列を書かない', async () => {
+  await withWriteFlag(undefined, async () => {
+  assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, undefined, 'テスト内で未設定にできていない');
+
+  await post(checkoutCompleted(ALICE));
+  await post(subUpdated(ALICE, 'canceled'));
+
+  for (const u of updatesFor(ALICE)) {
+    const keys = Object.keys(u.fields).sort();
+    assert.deepEqual(
+      keys.filter((k) => !['PlanType', 'Status', 'AccessEnabled'].includes(k)),
+      [],
+      `既存 3 列以外を書いている: ${keys.join(', ')}`,
+    );
+  }
+  });
+});
+
+test('🔴 フラグを立てても列が無ければプラン付与は成功する（巻き添えで落ちない）', async () => {
+  await withWriteFlag('true', async () => {
+    assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, 'true', 'テスト内で true にできていない');
+    const res = await post(checkoutCompleted(ALICE));
+    // 🔴 membership 側の書き込みが失敗しても、プラン付与は 200 で完了すること
+    assert.equal(res.statusCode, 200, 'membership の失敗がプラン付与を巻き添えにしている');
+
+    const planUpdate = updatesFor(ALICE).find((u) => u.fields.PlanType);
+    assert.ok(planUpdate, 'プラン付与が行われていない');
+    assert.deepEqual(planUpdate.fields, { PlanType: 'premium', Status: 'active', AccessEnabled: true });
+
+    const after = viewOf(ALICE);
+    assert.equal(after.view.showBetting, true, '有料表示が開かない');
+  });
+});
+
+test('🔴 ambient env が true でも undefined でも結果が変わらない', async () => {
+  const saved = process.env.MEMBERSHIP_WRITE_ENABLED;
+  try {
+    // ambient を人工的に作って、どちらでもヘルパが同じ結果を出すことを見る
+    for (const ambient of [undefined, 'true']) {
+      // ambient を作る
+      if (ambient === undefined) delete process.env.MEMBERSHIP_WRITE_ENABLED;
+      else process.env.MEMBERSHIP_WRITE_ENABLED = ambient;
+
+      // ヘルパは ambient に関係なく指定の値を作れる
+      await withWriteFlag(undefined, async () => {
+        assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, undefined, `ambient=${ambient} で未設定にできない`);
+      });
+      await withWriteFlag('true', async () => {
+        assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, 'true', `ambient=${ambient} で true にできない`);
+      });
+
+      // 🔴 実行後に ambient が復元されている（本番 env を壊さない）
+      assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, ambient,
+        `ambient=${ambient} が復元されていない`);
+    }
+  } finally {
+    if (saved === undefined) delete process.env.MEMBERSHIP_WRITE_ENABLED;
+    else process.env.MEMBERSHIP_WRITE_ENABLED = saved;
+  }
+});
+
+test('🔴 例外が出ても ambient env を復元する', async () => {
+  const saved = process.env.MEMBERSHIP_WRITE_ENABLED;
+  try {
+    process.env.MEMBERSHIP_WRITE_ENABLED = 'true';
+    await assert.rejects(
+      () => withWriteFlag(undefined, async () => { throw new Error('boom'); }),
+      /boom/,
+    );
+    assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, 'true', '例外時に復元されていない');
+  } finally {
+    if (saved === undefined) delete process.env.MEMBERSHIP_WRITE_ENABLED;
+    else process.env.MEMBERSHIP_WRITE_ENABLED = saved;
+  }
 });
 
 test('E2E: 解約 → 失効 → entitlement 停止', async () => {
@@ -274,6 +415,157 @@ test('E2E: payment_failed は Status だけ変え、アクセスを即時停止�
 
   // 猶予期間なので買い目は開いたまま（停止は Stripe の dunning に従う）
   assert.equal(viewOf(ALICE).view.showBetting, true, '支払い失敗で即座に停止している');
+});
+
+/* ------------------------------------------------------------------
+   TBD-10: 認可とリワードを混同しない
+   （docs/MEMBERSHIP_REWARDS.md §7.7）
+   ------------------------------------------------------------------ */
+
+test('🔴 payment_failed は認可を変えず、リワードの付与も行わない（保留）', async () => {
+  await post(checkoutCompleted(ALICE));
+  const beforeCount = updatesFor(ALICE).length;
+
+  const res = await post(paymentFailed(ALICE));
+  assert.equal(res.statusCode, 200);
+
+  // 認可: Status だけ。PlanType / AccessEnabled は触らない
+  const last = updatesFor(ALICE).at(-1);
+  assert.deepEqual(last.fields, { Status: 'payment_failed' });
+  assert.equal(viewOf(ALICE).view.showBetting, true, 'アクセスを即時停止してはいけない');
+
+  // リワード: 付与の書き込みは起きない（フラグ off なので当然だが、経路としても呼ばない）
+  assert.equal(updatesFor(ALICE).length, beforeCount + 1, '付与のための追加書き込みが起きている');
+});
+
+test('🔴 payment_succeeded は認可を変えない（付与だけを行う）', async () => {
+  await post(checkoutCompleted(ALICE));
+  const beforeCount = updatesFor(ALICE).length;
+  const beforeView = viewOf(ALICE);
+
+  const res = await post(paymentSucceeded(ALICE));
+  assert.equal(res.statusCode, 200);
+
+  // 認可は一切変わらない（フラグ off なので Airtable への書き込みも増えない）
+  assert.equal(updatesFor(ALICE).length, beforeCount, '支払い成功で認可を書き換えている');
+  assert.equal(viewOf(ALICE).tier, beforeView.tier);
+  assert.equal(viewOf(ALICE).view.showBetting, beforeView.view.showBetting);
+});
+
+/* ------------------------------------------------------------------
+   請求期間・支払い時刻が読めないときは付与しない（fail-closed）
+   ------------------------------------------------------------------ */
+
+test('🔴 未知の請求間隔では付与しない（月額へ fallback しない）', async () => {
+  const { periodMonthsFromInvoice } = await import('../../../netlify/functions/stripe-webhook.js');
+
+  const rec = (recurring) => ({ lines: { data: [{ price: { recurring } }] } });
+
+  // 判定できるもの（interval と interval_count が **両方** 揃っている場合だけ）
+  assert.equal(periodMonthsFromInvoice(rec({ interval: 'month', interval_count: 1 })), 1);
+  assert.equal(periodMonthsFromInvoice(rec({ interval: 'year', interval_count: 1 })), 12);
+  assert.equal(periodMonthsFromInvoice(rec({ interval: 'month', interval_count: 3 })), 3,
+    '四半期払いは 3 か月ぶん（月額へ潰さない）');
+  assert.equal(periodMonthsFromInvoice(rec({ interval: 'year', interval_count: 2 })), 24);
+
+  // 🔴 判定できないものは null（＝付与しない）
+  for (const bad of [
+    {},
+    { lines: { data: [] } },
+    { lines: { data: [{ price: {} }] } },
+    rec({ interval: 'week', interval_count: 1 }),
+    rec({ interval: 'day', interval_count: 1 }),
+    rec({ interval: 'quarter', interval_count: 1 }),
+    rec({ interval: 'month', interval_count: 0 }),
+    rec({ interval: 'month', interval_count: -1 }),
+    rec({ interval: 'month', interval_count: 1.5 }),
+  ]) {
+    assert.equal(periodMonthsFromInvoice(bad), null, `月額へ fallback している: ${JSON.stringify(bad)}`);
+  }
+});
+
+test('🔴 interval_count が欠落していたら 1 で補わず付与しない', async () => {
+  const { periodMonthsFromInvoice } = await import('../../../netlify/functions/stripe-webhook.js');
+  const rec = (recurring) => ({ lines: { data: [{ price: { recurring } }] } });
+
+  // 🔴 「月額なのだから 1 だろう」と補完してはいけない。
+  //    実際が四半期・半年払いだった場合、付与量と継続月数が過少なまま確定してしまう。
+  for (const missing of [
+    rec({ interval: 'month' }),
+    rec({ interval: 'year' }),
+    rec({ interval: 'month', interval_count: null }),
+    rec({ interval: 'month', interval_count: undefined }),
+    rec({ interval: 'month', interval_count: '1' }),
+    rec({ interval: 'year', interval_count: '' }),
+  ]) {
+    assert.equal(periodMonthsFromInvoice(missing), null,
+      `interval_count 欠落を 1 で補っている: ${JSON.stringify(missing)}`);
+  }
+});
+
+test('🔴 interval_count 欠落の webhook を受けても 200・付与なし・認可不変', async () => {
+  await post(checkoutCompleted(ALICE));
+  const before = updatesFor(ALICE).length;
+
+  const res = await post(
+    paymentSucceeded(ALICE, 'evt_no_count', 'in_no_count', {
+      lines: { data: [{ price: { recurring: { interval: 'month' } } }] }, // interval_count なし
+    }),
+  );
+  assert.equal(res.statusCode, 200, 'Stripe に再送させ続けない');
+  assert.equal(updatesFor(ALICE).length, before, '認可を書き換えている');
+  assert.equal(viewOf(ALICE).view.showBetting, true, '認可の挙動が変わっている');
+});
+
+test('🔴 支払い時刻は Stripe の paid_at を使い、無ければ付与しない', async () => {
+  const { paidAtMsFromInvoice } = await import('../../../netlify/functions/stripe-webhook.js');
+
+  assert.equal(paidAtMsFromInvoice({ status_transitions: { paid_at: PAID_AT_SEC } }), PAID_AT_SEC * 1000);
+
+  // 🔴 受信時刻（Date.now）で代用しない
+  for (const bad of [
+    {},
+    { status_transitions: {} },
+    { status_transitions: { paid_at: null } },
+    { status_transitions: { paid_at: 0 } },
+    { status_transitions: { paid_at: 'x' } },
+  ]) {
+    assert.equal(paidAtMsFromInvoice(bad), null, `推測で時刻を作っている: ${JSON.stringify(bad)}`);
+  }
+});
+
+test('🔴 未知の間隔 / paid_at 欠落でも 200 を返し、認可は変えない', async () => {
+  await post(checkoutCompleted(ALICE));
+  const before = updatesFor(ALICE).length;
+
+  const unknownInterval = await post(
+    paymentSucceeded(ALICE, 'evt_unknown_interval', 'in_x1', {
+      lines: { data: [{ price: { recurring: { interval: 'week' } } }] },
+    }),
+  );
+  assert.equal(unknownInterval.statusCode, 200, 'Stripe に再送させ続けない');
+
+  const noPaidAt = await post(
+    paymentSucceeded(ALICE, 'evt_no_paid_at', 'in_x2', { status_transitions: {} }),
+  );
+  assert.equal(noPaidAt.statusCode, 200);
+
+  assert.equal(updatesFor(ALICE).length, before, '認可を書き換えている');
+  assert.equal(viewOf(ALICE).view.showBetting, true);
+});
+
+test('🔴 同じ invoice の payment_succeeded を再送しても二重処理しない', async () => {
+  await post(checkoutCompleted(ALICE));
+  const first = await post(paymentSucceeded(ALICE, 'evt_paid_1'));
+  assert.equal(first.statusCode, 200);
+
+  // 同じ event.id → 冪等（重複として無視）
+  const dup = await post(paymentSucceeded(ALICE, 'evt_paid_1'));
+  assert.equal(JSON.parse(dup.body).duplicate, true);
+
+  // 別の event.id でも同じ invoice なら、付与側の冪等キー（invoice id）で防がれる
+  const again = await post(paymentSucceeded(ALICE, 'evt_paid_2', 'in_test_1'));
+  assert.equal(again.statusCode, 200);
 });
 
 /* ==================================================================

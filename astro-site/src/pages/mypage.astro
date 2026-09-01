@@ -14,13 +14,110 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { entitlementFromAstro } from '../lib/auth/entitlement.js';
 import { TIER, tierAtLeast } from '../lib/auth/tiers.js';
+import { buildMembershipView, MEMBERSHIP_COPY } from '../lib/membership/membershipView.js';
+import { LOCK_STATUS } from '../lib/membership/priceLock.js';
+import { resolveMembershipStore, STORE_RESULT } from '../lib/membership/store.js';
+import { MONTHLY_LIST_PRICE_YEN } from '../lib/billing/plans.js';
+import rewardCatalogSource from '../data/membership/rewardCatalog.json';
 
 export const prerender = false;
 
 const ent = entitlementFromAstro(Astro);
 
 const isPaid = tierAtLeast(ent.tier, TIER.LIGHT);
-const isPremium = ent.tier === TIER.PREMIUM;
+
+/* ------------------------------------------------------------------
+   会員クラブ（KI Membership / KIリワード）
+   正本: docs/MEMBERSHIP_REWARDS.md §5
+
+   制度の確定値は docs/MEMBERSHIP_REWARDS.md §7.1
+   （100 pt/月・0/3/12/24 か月・600/1,200 pt・記念品 12/24 か月・解約後 90 日で失効）。
+
+   🔴 ただし **会員ごとのデータ**（継続月数・残高・契約価格）は保存先がまだ無い
+      （docs/MEMBERSHIP_DATA_MIGRATION.md）。読めない項目は「準備中」と表示する。
+      **仮の数字（0 pt / Bronze / ¥3,980）を推測で当てはめない。**
+   ------------------------------------------------------------------ */
+const runtimeEnv = {
+  ...(typeof process !== 'undefined' && process.env ? process.env : {}),
+  ...(import.meta.env || {}),
+};
+
+// 🔴 フラグ未設定なら disabled（本番の現状）。列が無いまま有効化しても
+//    アダプタが schema_missing を検出して書きに行かない。
+const membershipStore = resolveMembershipStore({ env: runtimeEnv });
+let membershipProfile = null;
+let membershipLedger = null;
+
+if (membershipStore.enabled && ent.authenticated && ent.email) {
+  const [p, l] = await Promise.all([
+    membershipStore.readProfile(ent.email),
+    membershipStore.readLedger(ent.email),
+  ]);
+  if (p.status !== STORE_RESULT.UNAVAILABLE) membershipProfile = p.profile;
+  if (l.status !== STORE_RESULT.UNAVAILABLE) membershipLedger = l.entries;
+}
+
+const club = buildMembershipView({
+  entitlement: ent,
+  profile: membershipProfile,
+  ledger: membershipLedger,
+  config: runtimeEnv,
+  catalogSource: rewardCatalogSource,
+  currentListPriceYen: MONTHLY_LIST_PRICE_YEN,
+});
+
+const PENDING = MEMBERSHIP_COPY.pending;
+const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
+const pt = (n) => `${new Intl.NumberFormat('ja-JP').format(n)} pt`;
+
+/** 会員クラブの行。値が確定していないものは必ず「準備中」を出す。 */
+const CLUB_ROWS = [
+  {
+    label: MEMBERSHIP_COPY.contractPriceLabel,
+    value: club.priceLock.status === LOCK_STATUS.LOCKED
+      ? `¥${yen(club.priceLock.contractPriceYen)} / 月`
+      : PENDING,
+  },
+  {
+    label: MEMBERSHIP_COPY.priceLockLabel,
+    value: club.priceLock.status === LOCK_STATUS.LOCKED
+      ? '適用中（ご契約中は加入時の価格を維持）'
+      : (club.priceLock.status === LOCK_STATUS.NOT_APPLICABLE ? '—' : PENDING),
+  },
+  {
+    label: MEMBERSHIP_COPY.rankLabel,
+    value: club.rank.status === 'ready' ? club.rank.label : PENDING,
+  },
+  {
+    label: MEMBERSHIP_COPY.monthsLabel,
+    value: club.months.status === 'ready' ? `${club.months.value} か月` : PENDING,
+  },
+  {
+    label: MEMBERSHIP_COPY.balanceLabel,
+    value: club.rewards.status === 'ready' ? pt(club.rewards.balancePoints) : PENDING,
+  },
+  {
+    label: MEMBERSHIP_COPY.monthLabel,
+    value: club.rewards.status === 'ready' ? pt(club.rewards.monthAccrualPoints) : PENDING,
+  },
+];
+
+/**
+ * 解約後の猶予中だけ出す注意書き。
+ * 🔴 契約中は出さない（契約中は失効しないため、不要な不安を与えない）。
+ */
+const graceNotice = club.rewards.status === 'ready' && club.rewards.pointsStatus === 'grace'
+  ? `解約手続き済みです。あと${club.rewards.daysLeft}日以内に再開されると、ポイントと以前の価格が戻ります。`
+  : null;
+
+/** 次ランクまで / 次のプレゼントまでの進捗。確定していなければ出さない。 */
+const rankProgress = club.rank.status === 'ready' && club.rank.nextRank
+  ? { label: `次のランク（${club.rank.nextLabel}）まで`, note: `あと ${club.rank.monthsToNext} か月`, ratio: club.rank.progressRatio }
+  : null;
+
+const giftProgress = club.gifts.status === 'ready' && club.gifts.next
+  ? { label: `${MEMBERSHIP_COPY.nextGiftLabel}（${club.gifts.next.item.name}）`, note: `あと ${pt(club.gifts.next.remainingPoints)}`, ratio: club.gifts.next.progressRatio }
+  : null;
 
 /** 現在の tier で開いている機能。閉じているものは次の一歩を添える。 */
 const FEATURES = [
@@ -31,7 +128,8 @@ const FEATURES = [
   { label: 'AI指数の数値（無料はモザイク）', open: ent.showBetting },
   { label: 'AI結論（推奨理由の解説）', open: ent.showBetting },
   { label: '馬単の買い目', open: ent.showBetting },
-  { label: '穴馬レポート・優先メルマガ', open: isPremium },
+  // 🔴 「穴馬レポート・優先メルマガ」は docs/RENEWAL_2026_08.md §6.1 で
+  //    「実装が無いものを訴求しない」として廃止済み。復活させない。
 ];
 
 // 🔴 2026-08-30: 会場で分ける概念を廃止。有料は常に南関東＋中央
@@ -77,6 +175,90 @@ const expiresLabel = ent.expiresAtMs
               {expiresLabel && <li>ログインの有効期限: <b>{expiresLabel}</b></li>}
             </ul>
           </div>
+
+          <!-- 会員クラブ（KIリワード / ランク / 継続価格ロック） -->
+          <section class="mp-block">
+            <h2 class="mp-h2">{MEMBERSHIP_COPY.clubName}</h2>
+            <div class="mp-club">
+              <ul class="mp-club-rows">
+                {CLUB_ROWS.map((row) => (
+                  <li class={row.value === PENDING ? 'is-pending' : ''}>
+                    <span class="mp-club-k">{row.label}</span>
+                    <span class="mp-club-v">{row.value}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {graceNotice && <p class="mp-club-grace">{graceNotice}</p>}
+
+              <div class="mp-club-progress">
+                {rankProgress ? (
+                  <div class="mp-prog">
+                    <p class="mp-prog-head"><span>{rankProgress.label}</span><b>{rankProgress.note}</b></p>
+                    <div class="mp-prog-bar"><span style={`width:${Math.round(rankProgress.ratio * 100)}%`}></span></div>
+                  </div>
+                ) : (
+                  <p class="mp-club-note"><b>次のランクまでの進捗</b>：{PENDING}</p>
+                )}
+
+                {giftProgress ? (
+                  <div class="mp-prog">
+                    <p class="mp-prog-head"><span>{giftProgress.label}</span><b>{giftProgress.note}</b></p>
+                    <div class="mp-prog-bar"><span style={`width:${Math.round(giftProgress.ratio * 100)}%`}></span></div>
+                  </div>
+                ) : (
+                  <p class="mp-club-note"><b>{MEMBERSHIP_COPY.nextGiftLabel}の進捗</b>：{PENDING}</p>
+                )}
+              </div>
+
+              <div class="mp-club-sub">
+                <h3>交換できるプレゼント</h3>
+                {club.gifts.blockedByMilestone ? (
+                  <p class="mp-club-note">
+                    今月は<b>継続記念品</b>をお贈りする月です。通常のポイント交換は翌月から再開します。
+                  </p>
+                ) : club.gifts.status === 'ready' && club.gifts.available.length ? (
+                  <ul class="mp-gift-list">
+                    {club.gifts.available.map((item) => (
+                      <li><span class="mp-gift-name">{item.name}</span><span class="mp-gift-cost">{pt(item.costPoints)}</span></li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p class="mp-club-note">{PENDING}（プレゼントの品目が決まりしだいご案内します）</p>
+                )}
+              </div>
+
+              <div class="mp-club-sub">
+                <h3>{MEMBERSHIP_COPY.historyLabel}</h3>
+                {/*
+                  🔴 pending（台帳が読めない / 付与設定が未確定）と
+                     ready かつ 0 件（本当に受け取っていない）を **同じ文言にしない**。
+                     読めていないのに「まだありません」と言い切ると、
+                     受け取り済みの特典を無いことにして伝えるおそれがある。
+                */}
+                {club.history.status !== 'ready' ? (
+                  <p class="mp-club-note">{PENDING}</p>
+                ) : club.history.items.length ? (
+                  <ul class="mp-gift-list">
+                    {club.history.items.map((h) => (
+                      <li>
+                        <span class="mp-gift-name">{h.ref}</span>
+                        <span class="mp-gift-cost">{new Date(h.occurredAtMs).toLocaleDateString('ja-JP')}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p class="mp-club-note">まだ受け取られた特典はありません。</p>
+                )}
+              </div>
+
+              <p class="mp-club-legal">
+                KIリワードは会員特典のポイントです。毎月100ptが加算され、600pt・1,200ptでお引き換えいただけます。
+                ご契約中は失効しません（解約後は90日以内の再開でポイントが戻ります）。
+                現金・預金ではなく、換金・払い戻し・第三者への譲渡はできません。
+              </p>
+            </div>
+          </section>
 
           <!-- 予想ページ -->
           <section class="mp-block">
@@ -336,6 +518,110 @@ const expiresLabel = ent.expiresAtMs
   .mp-features li.is-locked { color: var(--text-tertiary); background: var(--bg-muted); }
   .mp-f-icon { margin-right: 8px; }
   .mp-features li.is-open .mp-f-icon { color: var(--success); font-weight: 800; }
+
+  /* 会員クラブ */
+  .mp-club {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 6px 16px 16px;
+  }
+
+  .mp-club-rows { list-style: none; margin: 0; padding: 0; }
+
+  .mp-club-rows li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .mp-club-k { font-size: 0.82rem; color: var(--text-secondary); }
+
+  .mp-club-v {
+    font-family: var(--font-num);
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    text-align: right;
+  }
+
+  .mp-club-rows li.is-pending .mp-club-v {
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+  }
+
+  .mp-club-progress { padding: 14px 0 4px; display: grid; gap: 12px; }
+
+  .mp-prog-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0 0 6px;
+  }
+
+  .mp-prog-head b { font-family: var(--font-num); color: var(--text-primary); }
+
+  .mp-prog-bar {
+    height: 8px;
+    background: var(--bg-muted);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+  }
+
+  .mp-prog-bar span {
+    display: block;
+    height: 100%;
+    background: var(--secondary-gradient, var(--primary-gradient));
+  }
+
+  .mp-club-sub { padding-top: 14px; border-top: 1px solid var(--border-color); margin-top: 10px; }
+
+  .mp-club-sub h3 {
+    font-size: 0.86rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 8px;
+  }
+
+  .mp-club-note { font-size: 0.8rem; color: var(--text-tertiary); margin: 0; line-height: 1.7; }
+
+  .mp-club-grace {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: var(--bg-muted);
+    font-size: 0.8rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+
+  .mp-gift-list { list-style: none; margin: 0; padding: 0; }
+
+  .mp-gift-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 0.84rem;
+    border-bottom: 1px dashed var(--border-color);
+  }
+
+  .mp-gift-list li:last-child { border-bottom: none; }
+  .mp-gift-cost { font-family: var(--font-num); color: var(--text-secondary); }
+
+  .mp-club-legal {
+    margin: 14px 0 0;
+    font-size: 0.72rem;
+    line-height: 1.7;
+    color: var(--text-tertiary);
+  }
 
   .mp-billing {
     background: var(--bg-secondary);

@@ -5,7 +5,7 @@
   "description": "AI-Powered Intelligence Dashboard for 南関競馬",
   "scripts": {
     "dev": "astro dev",
-    "build": "npm run validate:archive && npm run test:narrative && npm run test:auth && npm run test:billing && npm run test:stripe && npm run test:digest && npm run test:raceday && npm run test:nankan && npm run test:prune-function-data && npm run test:archive-sync && npm run test:shared-checkers && npm run test:workflow-transient && astro build && npm run prune:function-data",
+    "build": "npm run validate:archive && npm run test:narrative && npm run test:auth && npm run test:billing && npm run test:stripe && npm run test:membership && npm run test:digest && npm run test:raceday && npm run test:nankan && npm run test:prune-function-data && npm run test:archive-sync && npm run test:shared-checkers && npm run test:workflow-transient && astro build && npm run prune:function-data",
     "preview": "astro preview",
     "astro": "astro",
     "test:nankan-recent-races": "node src/utils/getDisplayRecentRacesForNankan.test.js",
@@ -33,6 +33,9 @@
     "test:auth": "node --test src/lib/auth/auth.test.mjs src/lib/auth/entitlementRoutes.test.mjs src/lib/auth/previewMode.test.mjs",
     "test:stripe": "node --experimental-test-module-mocks --test src/lib/billing/stripeWebhook.test.mjs src/lib/billing/stripeCheckout.test.mjs",
     "test:billing": "node --test src/lib/billing/billing.test.mjs",
+    "test:membership": "node --test src/lib/membership/membership.test.mjs src/lib/membership/membershipCopy.guard.test.mjs src/lib/membership/airtableStore.test.mjs src/lib/membership/membershipE2E.test.mjs src/lib/membership/bankTransfer.test.mjs",
+    "membership:check": "node scripts/membershipMigration.mjs --check",
+    "membership:dry-run": "node scripts/membershipMigration.mjs --dry-run",
     "test:digest": "node --test src/lib/digest/digest.test.mjs",
     "test:raceday": "node --test src/lib/prediction/raceDayContract.test.mjs",
     "generate:digest": "node scripts/generateDailyDigest.mjs",
