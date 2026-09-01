@@ -7,7 +7,70 @@
  *   2. 二重送信防止チェック（PaymentEmailSentフィールド）
  *   3. メール送信（SendGrid）
  *   4. PaymentEmailSent を true に更新 + 有効期限設定
+ *   5. 🔵 会員継続制度への反映（**別リクエスト・フラグ付き・失敗を握りつぶす**）
+ *
+ * 🔴 **手順 5 は手順 1〜4 に一切影響させない。**
+ *    入金確認・`AccessEnabled`・メール送信は会員継続制度より優先される。
+ *    membership 側が失敗しても、この関数の応答は変わらない（200 のまま）。
+ *    正本: docs/MEMBERSHIP_REWARDS.md §7.6 / §7.7
  */
+
+/**
+ * 入金確認を会員継続制度へ反映する（best-effort）。
+ *
+ * 🔴 既定（`MEMBERSHIP_WRITE_ENABLED` 未設定）では **何もしない**。
+ * 🔴 例外を投げない。呼び出し側の try/catch を汚さない。
+ * 🔴 `AccessEnabled` / `Status` / `PlanType` には触れない（認可は変更しない）。
+ *
+ * @param {object} o
+ * @param {string} o.recordId
+ * @param {object} o.fields         更新前のレコード
+ * @param {string} o.expirationDate この入金で設定した有効期限
+ */
+async function recordBankMembership({ recordId, fields, expirationDate }) {
+  try {
+    const [{ resolveMembershipStore, isWriteEnabled }, { planBankMembershipUpdate }] = await Promise.all([
+      import('../../src/lib/membership/store.js'),
+      import('../../src/lib/membership/bankTransfer.js'),
+    ]);
+    if (!isWriteEnabled(process.env)) return;
+
+    const confirmedAtIso = new Date().toISOString();
+    const plan = planBankMembershipUpdate({ fields, recordId, expirationDate, confirmedAtIso });
+
+    if (plan.skipped.length) {
+      // 🔴 理由をログに残すが、処理は続ける（起点だけ書ける場合もある）
+      console.log('ℹ️ membership: skipped ->', plan.skipped.join(','));
+    }
+
+    const store = resolveMembershipStore({ env: process.env });
+    if (!store.enabled) return;
+
+    // 起点（＝初回の入金確認日）。既に入っていれば書かない
+    if (plan.startedAtIso) {
+      const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
+      const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
+      const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Customers/${recordId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}`, 'Content-Type': 'application/json' },
+        // 🔴 membership の列だけ。既存列は 1 つも入れない
+        body: JSON.stringify({ fields: { MembershipStartedAt: plan.startedAtIso } }),
+      });
+      console.log(res.ok
+        ? `✅ membership: MembershipStartedAt=${plan.startedAtIso}`
+        : `⚠️ membership: MembershipStartedAt not written (${res.status})`);
+    }
+
+    // 支払い済み期間ぶんの付与（冪等キー＝レコード＋その期の期限）
+    if (plan.entry) {
+      const r = await store.appendEntry(fields.Email, plan.entry);
+      console.log(`ℹ️ membership: accrual ${r.status} (${plan.entry.points}pt / ${plan.entry.periodMonths}m)`);
+    }
+  } catch (e) {
+    // 🔴 入金確認・AccessEnabled・メール送信へ波及させない
+    console.warn('⚠️ membership: not recorded (ignored):', e?.name || 'Error');
+  }
+}
 
 exports.handler = async (event, context) => {
   // CORSヘッダー設定
@@ -218,6 +281,12 @@ exports.handler = async (event, context) => {
       const errorText = await updateResponse.text();
       console.error('⚠️ Airtable update failed:', errorText);
     }
+
+    // ========================================
+    // Step 5: 会員継続制度への反映（best-effort・既定では何もしない）
+    // 🔴 ここで失敗しても手順 1〜4 の結果は変えない
+    // ========================================
+    await recordBankMembership({ recordId: airtableRecordId, fields, expirationDate });
 
     return {
       statusCode: 200,
