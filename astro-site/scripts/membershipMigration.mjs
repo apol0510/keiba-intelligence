@@ -161,6 +161,18 @@ async function airtable(path, init = {}) {
   return { ok: true, data: await res.json() };
 }
 
+/**
+ * Metadata API で schema を読む（PAT に `schema.bases:read` がある場合）。
+ * 🔴 権限が無ければ null を返し、呼び出し側は実データからの推定へ落ちる。
+ */
+async function fetchSchema() {
+  const res = await fetch(`https://api.airtable.com/v0/meta/bases/${AIRTABLE_BASE_ID}/tables`, {
+    headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 async function listAll(table) {
   const out = [];
   let offset;
@@ -189,11 +201,25 @@ async function main() {
   if (!customers.ok) fail(`Customers を読めない (status ${customers.status})`);
   const rows = customers.records;
 
-  // --- 列の有無（実データから判定。Meta API は権限が要るため使わない） ---
+  // --- 列の有無 ---
+  // 🔴 実データからの推定は「値が入っている列」しか見えない。
+  //    列を作った直後は全レコードが空なので未検出になる。
+  //    そのため schema を読めるならそちらを正とする。
+  const schema = await fetchSchema();
   const present = new Set();
-  for (const r of rows) for (const k of Object.keys(r.fields || {})) present.add(k);
+  let source = '実データからの推定（schema 読み取り権限なし）';
+  if (schema) {
+    const t = schema.tables.find((x) => x.name === CUSTOMERS);
+    if (t) {
+      for (const f of t.fields) present.add(f.name);
+      source = 'Metadata API（schema.bases:read）';
+    }
+  }
+  if (!schema) {
+    for (const r of rows) for (const k of Object.keys(r.fields || {})) present.add(k);
+  }
 
-  console.log('=== 追加が必要な列（Customers）===');
+  console.log(`=== 追加が必要な列（Customers）===  [判定元: ${source}]`);
   const missingCols = [];
   for (const [k, name] of Object.entries(CUSTOMER_FIELDS)) {
     const ok = present.has(name);
@@ -202,6 +228,7 @@ async function main() {
   }
 
   const ledger = await listAll(LEDGER_TABLE);
+  const ledgerSchema = schema?.tables.find((x) => x.name === LEDGER_TABLE) || null;
   console.log(`\n=== 台帳テーブル ${LEDGER_TABLE} ===`);
   if (ledger.ok) {
     console.log(`  ✅ 存在（${ledger.records.length} 行）`);
@@ -214,7 +241,14 @@ async function main() {
     console.log(`  ⬜ 未作成 / 読めない (status ${ledger.status})`);
   }
   if (ledger.ok) {
-    console.log(`  必要な列: ${Object.values(LEDGER_FIELDS).join(' / ')}`);
+    if (ledgerSchema) {
+      const have = new Set(ledgerSchema.fields.map((f) => f.name));
+      const missing = Object.values(LEDGER_FIELDS).filter((n) => !have.has(n));
+      console.log(`  列: ${[...have].join(' / ')}`);
+      console.log(missing.length ? `  🔴 不足: ${missing.join(' / ')}` : '  ✅ 必要な列はそろっている');
+    } else {
+      console.log(`  必要な列: ${Object.values(LEDGER_FIELDS).join(' / ')}`);
+    }
   }
 
   // --- backfill 対象 ---

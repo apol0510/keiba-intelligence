@@ -21,13 +21,18 @@ const here = dirname(fileURLToPath(import.meta.url));
 const siteRoot = join(here, '..', '..', '..');
 const read = (p) => readFileSync(join(siteRoot, p), 'utf8');
 
-const UI_FILES = ['src/pages/pricing.astro', 'src/pages/mypage.astro'];
+const UI_FILES = ['src/pages/pricing.astro', 'src/pages/mypage.astro', 'src/pages/terms.astro'];
+const TERMS = 'src/pages/terms.astro';
 const LIB_DIR = 'src/lib/membership';
 const SPEC = '../docs/MEMBERSHIP_REWARDS.md';
 
 /** §7.1 の確定値。UI に出してよい数値はこれだけ。 */
 const CONFIRMED_POINTS = Object.freeze([100, 600, 1200]);
-const CONFIRMED_MONTHS = Object.freeze([3, 12, 24]);
+/**
+ * 3 / 12 / 24 は昇格月数、1 は付与の単位（月額 1 期＝1 か月＝100pt・`PERIOD_MONTHS.MONTHLY`）。
+ * いずれも確定値なので UI に出してよい。
+ */
+const CONFIRMED_MONTHS = Object.freeze([1, 3, 12, 24]);
 /** 猶予日数（「90日」は月数ではなく日数として出る） */
 const CONFIRMED_DAYS = Object.freeze([90]);
 
@@ -255,6 +260,64 @@ describe('保守ラインを崩さない', () => {
         }
       }
     }
+  });
+});
+
+/* ================================================================
+   2.8 利用規約（/terms）と正本の一致
+   ================================================================ */
+
+describe('/terms が確定仕様と一致している', () => {
+  test('🔴 確定した 5 項目がすべて条文にある', () => {
+    const t = read(TERMS);
+    assert.match(t, /KI会員継続制度・KIリワード/, '会員継続制度の条が無い');
+
+    // §3.3 / §8.1 S-4: 現金・預金ではない／換金不可
+    assert.match(t, /現金・預金ではなく/);
+    assert.match(t, /換金・払い戻し・第三者への譲渡はできません/);
+
+    // §7.1 / §7.7: 支払い成功期間に 100pt/月
+    assert.match(t, /1か月あたり100pt/);
+    assert.match(t, /お支払いが成功した期間/);
+    assert.match(t, /お支払いが確認できない期間には付与しません/);
+
+    // §7.1 TBD-6: 契約中は失効しない
+    assert.match(t, /ご契約が続いている間、ポイントは失効しません/);
+
+    // §7.1 TBD-6 / TBD-7: 解約後 90 日で失効
+    assert.match(t, /解約日から90日/);
+
+    // §7.1 TBD-7 / TBD-8: 90 日以内の再加入で復活
+    assert.match(t, /90日以内に再度お申し込み/);
+    assert.match(t, /継続価格ロック/);
+  });
+
+  test('🔴 /terms に未確定事項・新しい条件を書かない', () => {
+    for (const line of codeLines(read(TERMS))) {
+      // 景品の品目・必要ポイントは未確定（§7.5）
+      for (const w of ['コーヒー', 'お米', 'お菓子', 'ギフトカード', '600pt', '1,200pt', '記念品']) {
+        assert.equal(line.includes(w), false, `未確定/別条件を規約に書いている: ${w} → ${line.trim()}`);
+      }
+      // ランク条件も規約には持ち込まない（待遇であって契約条件ではない）
+      for (const w of ['Bronze', 'Silver', 'Gold', 'Platinum']) {
+        assert.equal(line.includes(w), false, `規約にランクを書いている: ${w}`);
+      }
+    }
+  });
+
+  test('🔴 規約の数値は確定値と一致する（正本を変えたら落ちる）', () => {
+    const t = read(TERMS);
+    const rewards = read(join(LIB_DIR, 'rewards.js'));
+    // 100 pt / 月
+    assert.match(rewards, /export const MONTHLY_POINTS = 100;/);
+    assert.ok(t.includes('100pt'), '規約の付与ポイントが確定値と違う');
+    // 90 日
+    assert.match(rewards, /export const GRACE_DAYS = 90;/);
+    assert.ok(t.includes('90日'), '規約の猶予日数が確定値と違う');
+  });
+
+  test('最終更新日が更新されている', () => {
+    assert.match(read(TERMS), /最終更新日: 2026年9月1日/);
   });
 });
 
