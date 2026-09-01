@@ -442,6 +442,68 @@ READ 有効化＋本番アクセス後に再検査:
 
 membership 153 → **177 件**。
 
+### 🔴 WRITE 有効化の失敗と原因（2026-09-01・**未遂**）
+
+`MEMBERSHIP_WRITE_ENABLED=true` を production に設定して再デプロイしたところ、
+**Netlify のビルドが 2 回連続で失敗**した（exit 2）。指示に従いフラグを削除して
+再デプロイし、green に復帰させた。**本番の会員データは一切変わっていない。**
+
+#### 原因（自分で書いたテストの設計ミス）
+
+`stripeWebhook.test.mjs` に
+
+```js
+assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, undefined, '前提: フラグは未設定');
+```
+
+と書いていた。**`npm run build` は本番 env を注入した状態で走る**（Netlify）ため、
+フラグを立てた瞬間にこのテストが落ち、**ビルドごと失敗**した。
+加えて、既定の挙動（membership を書かない）を検証する他のテストも
+ambient のフラグに引きずられて 9 件失敗する状態だった。
+
+🔴 **教訓: ビルド時に走るテストは、本番 env のフラグに依存してはいけない。**
+
+#### 修正
+
+| 対象 | 修正 |
+|---|---|
+| `withWriteFlag(value, fn)` を新設 | 保存 → 設定/削除 → `try/finally` → **元の値を復元** |
+| `beforeEach` | 各テスト開始時に**明示的に未設定へ揃える**（ambient に引きずられない） |
+| `after` | ファイル終了時に **ambient の値を復元**（単純 delete で終わらせない） |
+| 「未設定」を見るテスト | ambient の前提をやめ、テスト内で未設定を作ってから検証 |
+| 「true」を見るテスト | `withWriteFlag('true', ...)` を使い、必ず復元 |
+
+追加テスト: 「ambient が true / undefined のどちらでも結果が変わらない」
+「例外が出ても ambient を復元する」。
+
+静的ガード（`membershipCopy.guard.test.mjs`）:
+
+| # | 内容 |
+|---|---|
+| G-20 | テストが「フラグが未設定であること」を **ambient の前提にしない** |
+| G-21 | env を書き換えるテストは **保存 → 復元**する（単純 delete で終わらない） |
+| G-22 | `stripeWebhook.test.mjs` が `beforeEach` で既定へ揃え、`after` で ambient を戻す |
+
+G-22 は、`beforeEach` のリセットを外すと落ちることを実測で確認した。
+
+#### 検証マトリクス（ローカル実測）
+
+| | `test:stripe` | `test:membership` | `test:auth` | `npm run build` |
+|---|---|---|---|---|
+| フラグ未設定 | ✅ 53 | ✅ 180 | ✅ 96 | ✅ exit 0 |
+| `MEMBERSHIP_WRITE_ENABLED=true` | ✅ 53 | ✅ 180 | ✅ 96 | ✅ exit 0（2 回連続）|
+
+🟡 なお、`npm run build` で 1 度だけ Node の test runner が
+`Unable to deserialize cloned data` で落ちた（アサーション失敗ではない一過性の IPC エラー）。
+再実行 2 回とも exit 0 のため、修正内容とは無関係と判断した。
+
+#### この間の本番状態
+
+- `MEMBERSHIP_WRITE_ENABLED`: 設定 → **削除済み**（現在は未設定）
+- `MEMBERSHIP_READ_ENABLED`: 設定のまま（変更なし）
+- Customers **63 件・変化した列なし** / `MembershipStartedAt` **7 件** / `RewardLedger` **0 行**
+- 🔴 **テスト会員・実会員への人工的な write は行っていない**
+
 ### 静的ガードで固定したこと（`membershipCopy.guard.test.mjs`）
 
 | # | 固定した不変条件 |
