@@ -155,7 +155,13 @@ test('Stripe Functions: 秘密鍵・署名の未設定で止まる配線があ�
   const webhook = read('netlify/functions/stripe-webhook.js');
   assert.match(webhook, /constructEvent\(/, '署名検証をしていない');
   assert.match(webhook, /STRIPE_WEBHOOK_SECRET|WEBHOOK_SECRET/);
-  assert.match(webhook, /alreadyProcessed\(/, '冪等性の配線が無い');
+  assert.match(webhook, /hasProcessed\(/, '冪等性の確認が無い');
+  // 🔴 記録は「処理が成功したあと」。先に記録すると、失敗したイベントが
+  //    再送時に無視され更新が失われる（2026-09-01 の E2E で検出・修正）
+  assert.match(webhook, /markProcessed\(/, '冪等性の記録が無い');
+  const failIdx = webhook.indexOf("error: 'handler_failed'");
+  const markIdx = webhook.lastIndexOf('await markProcessed(');
+  assert.ok(failIdx > 0 && markIdx > failIdx, '成功前に処理済みとして記録している');
 
   const portal = read('netlify/functions/stripe-portal.js');
   assert.match(portal, /resolveEntitlement\(/);

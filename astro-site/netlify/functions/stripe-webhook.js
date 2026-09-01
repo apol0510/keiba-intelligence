@@ -6,6 +6,8 @@
  * 🔴 安全契約:
  *   - **署名検証必須**。`STRIPE_WEBHOOK_SECRET` 未設定なら 503 で止める（無検証で書き込まない）。
  *   - **冪等**。同じ `event.id` を二度処理しない（Netlify Blobs に処理済みを記録）。
+ *     🔴 記録は **処理が成功したあと**に行う。先に記録すると、失敗して 500 を返した
+ *     イベントが再送時に無視され、更新が永久に失われる（2026-09-01 修正）。
  *     Blobs が使えない環境では記録をあきらめて処理を続ける（at-least-once）。
  *   - 書き込むのは **既存フィールドだけ**（PlanType / Status / AccessEnabled）。
  *     🔴 `VenueAccess` は書かない（2026-08-30 に会場で分ける概念を廃止）。
@@ -42,19 +44,44 @@ function escapeFormulaValue(v) {
   return String(v).replace(/"/g, '\\"');
 }
 
-/** 処理済みイベントの記録（best-effort）。 */
-async function alreadyProcessed(eventId) {
+/**
+ * 処理済みイベントの記録（best-effort）。
+ *
+ * 🔴 **確認と記録を分ける。** 記録は「処理が成功したあと」に行うこと。
+ *    先に記録すると、処理が失敗して 500 を返したあと Stripe が再送しても
+ *    「処理済み」として無視され、**その更新が永久に失われる**
+ *    （2026-09-01 の E2E で検出）。
+ *
+ * Blobs が使えない場合は冪等性をあきらめて処理する（at-least-once）。
+ * 二重反映しても書き込む値は同じなので状態は壊れない。
+ */
+async function eventStore() {
   try {
     const { getStore } = await import('@netlify/blobs');
-    const store = getStore('stripe-events');
-    const seen = await store.get(eventId);
-    if (seen) return true;
-    await store.set(eventId, new Date().toISOString());
-    return false;
+    return getStore('stripe-events');
   } catch {
-    // Blobs が使えない場合は冪等性をあきらめて処理する（二重反映しても
-    // 書き込む内容は同じ値なので状態は壊れない）
+    return null;
+  }
+}
+
+async function hasProcessed(eventId) {
+  try {
+    const store = await eventStore();
+    if (!store) return false;
+    return !!(await store.get(eventId));
+  } catch {
     return false;
+  }
+}
+
+async function markProcessed(eventId) {
+  try {
+    const store = await eventStore();
+    if (!store) return;
+    await store.set(eventId, new Date().toISOString());
+  } catch {
+    // 記録できなくても処理そのものは成功している。次の再送で二重反映しうるが
+    // 書き込む値は同じなので状態は壊れない。
   }
 }
 
@@ -120,7 +147,7 @@ export async function handler(event) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'invalid_signature' }) };
   }
 
-  if (await alreadyProcessed(stripeEvent.id)) {
+  if (await hasProcessed(stripeEvent.id)) {
     console.log('ℹ️ stripe-webhook: duplicate event ignored:', stripeEvent.type);
     return { statusCode: 200, headers, body: JSON.stringify({ received: true, duplicate: true }) };
   }
@@ -230,8 +257,12 @@ export async function handler(event) {
   } catch {
     // 🔴 内部エラーの詳細を返さない。Stripe には 500 を返して再送させる。
     console.error('❌ stripe-webhook: handler failed for type:', stripeEvent.type);
+    // 🔴 処理済みとして記録しない。Stripe の再送で復旧させる。
     return { statusCode: 500, headers, body: JSON.stringify({ error: 'handler_failed' }) };
   }
+
+  // 🔴 成功したあとに記録する（失敗したイベントを握りつぶさないため）
+  await markProcessed(stripeEvent.id);
 
   return { statusCode: 200, headers, body: JSON.stringify({ received: true }) };
 }

@@ -292,6 +292,93 @@ PR #80 を `main` へ merge し、本番へ反映した。
 
 ---
 
+## 2026-09-01 Stripe E2E（外部 write なしで完走）
+
+仕様所有者の指示: 本番 Stripe への write（Product / Price / Webhook 登録 /
+Customer Portal 設定 / 本番 env 変更 / 実決済）は行わず、可能な範囲を E2E する。
+
+### 方式
+
+本番 Stripe を叩かずに **関数の実コード**を動かした。
+
+| 対象 | やり方 |
+|---|---|
+| 署名生成・検証 | **本物の `stripe` パッケージ**（`generateTestHeaderString` / `constructEvent`）|
+| Airtable | メモリ上のスタブに差し替え（`mock.module`）|
+| Netlify Blobs | メモリ上のスタブに差し替え |
+| Stripe API（checkout / portal）| スタブに差し替え、**渡す内容**を検証 |
+| entitlement | `planTypeToTier` → `signSession` → `resolveEntitlement` の実物 |
+
+Node の `--experimental-test-module-mocks` を使用。`npm run test:stripe` で実行し、
+`npm run build`（＝Netlify のビルド）にも組み込んだ。
+
+### 🔴 発見して直した本番バグ 2 件
+
+**1. `stripe` パッケージが `package.json` に無く、本番の Stripe 関数が全滅していた。**
+
+- `netlify.toml` は `external_node_modules = [... "stripe"]` と宣言していたが、
+  依存に入っていないため `node_modules/stripe` が存在せず、
+  **本番の `/.netlify/functions/stripe-prices` が 502** を返していた（実測）。
+- 料金ページは Price ID 未設定時に `stripe-prices` を呼ばない実装なので
+  画面には出ていなかったが、**Stripe を有効化した瞬間に全経路が壊れる**状態だった。
+- → `stripe@^22.6.0` を dependencies に追加。
+
+**2. 冪等性の記録が「処理前」に行われ、失敗したイベントが永久に失われていた。**
+
+- `alreadyProcessed()` が確認と同時に処理済みを記録していたため、
+  ハンドラが失敗して 500 を返したあと **Stripe が再送しても無視**され、
+  その付与・剥奪が反映されないままになる。
+- → `hasProcessed()` / `markProcessed()` に分離し、**成功後**に記録するよう修正。
+  静的テスト（`billing.test.mjs`）でも順序を固定した。
+
+### E2E で確認した範囲（41 テスト）
+
+| 経路 | 結果 |
+|---|---|
+| Checkout 完了 → 付与 → 有料表示が開く | ✅ `PlanType=premium / Status=active / AccessEnabled=true` → `showBetting=true` |
+| 解約（`subscription.updated(canceled)`）→ 失効 → 停止 | ✅ `free / inactive / false` → `showBetting=false`・印は残る |
+| `subscription.deleted` → free へ | ✅ |
+| `subscription.updated(active/trialing)` → 付与 | ✅ `past_due` / `incomplete` / `paused` は無視 |
+| `invoice.payment_failed` | ✅ `Status` のみ変更。`PlanType`・`AccessEnabled` は触らず、アクセスは即時停止しない |
+| Checkout 開始（ログイン必須・metadata）| ✅ `mode=subscription` / `line_items[].price` / `ki_plan`・`ki_email` |
+| Customer Portal（解約導線）| ✅ セッションの email で顧客検索 → `return_url` |
+
+| 安全性 | 結果 |
+|---|---|
+| 冪等（同 `event.id` 二度目）| ✅ `duplicate:true`・書き込み 1 回 |
+| 冪等（失敗イベントの再送）| ✅ 修正後は再送で復旧 |
+| 二重付与防止 | ✅ 別 `event.id` は別処理、同一は 1 回 |
+| 他会員混入なし | ✅ 別 email は別レコード。片方の解約が他方に波及しない |
+| 顧客レコード無し | ✅ 作らない・書き込み 0・200 |
+| 署名不正 / 無署名 / 別秘密 / 本文改竄 | ✅ すべて 400・書き込み 0 |
+| `STRIPE_WEBHOOK_SECRET` / `STRIPE_SECRET_KEY` 未設定 | ✅ 503・書き込み 0 |
+| 未知のプラン（保留中の `light` 含む）・email 欠落 | ✅ 付与しない |
+| 内部エラーの詳細露出 | ✅ `handler_failed` のみ。Airtable のメッセージは出ない |
+| Checkout: 未ログイン / 改竄 Cookie / 署名鍵なし | ✅ 401・Stripe を叩かない |
+| Checkout: クライアント申告の email | ✅ 無視。セッション由来のみ使用 |
+| entitlement: 署名鍵なし / 別鍵 / 期限切れ | ✅ すべて guest または free（fail-closed）|
+| `viewFlags` に email を含めない | ✅ |
+
+### 🔴 まだ実施していないこと（すべて外部 write のため停止）
+
+E2E をここから先へ進めるには、**Stripe への外部 write が必要**になる。
+指示どおりその直前で停止した。必要な操作は次の 4 つ（すべて GUI 操作）。
+
+1. **Test Mode で Product / Price を作る**（¥3,980 / 月・JPY・定期）
+2. **Test Mode の Webhook エンドポイントを登録**
+   `…/.netlify/functions/stripe-webhook` に
+   `checkout.session.completed` / `customer.subscription.updated` /
+   `customer.subscription.deleted` / `invoice.payment_failed`
+3. **Customer Portal を有効化**（Test Mode）
+4. **`STRIPE_SECRET_KEY`（`sk_test_…`）/ `STRIPE_PRICE_PREMIUM` /
+   `STRIPE_WEBHOOK_SECRET` を Deploy Preview スコープへ設定**
+
+これらが揃えば、Stripe のテストカード（`4242…`）を使った
+**実際の Checkout 画面 → 本物の webhook 配信**までブランチデプロイ上で通せる。
+本番 env と本番 Stripe には一切触れない。
+
+---
+
 ## Open Questions
 
 1. **`CLAUDE.md` の「メインレース10点ロジック」は F3・5点固定に完全に置き換わったのか、一部が併存しているのか。**
