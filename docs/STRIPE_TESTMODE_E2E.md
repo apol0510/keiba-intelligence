@@ -66,11 +66,24 @@
 
 ### 2. Webhook エンドポイント
 
-送信先は **このブランチの Deploy Preview**。
+送信先は **このブランチのブランチデプロイ**（下記の実測 URL）。
 
 ```
-<DEPLOY_PREVIEW_URL>/.netlify/functions/stripe-webhook
+https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app/.netlify/functions/stripe-webhook
 ```
+
+🔴 **Deploy Preview（`deploy-preview-82--…`）は使えない。**
+本ブランチの差分は手順書 1 ファイルだけなので、Netlify が
+「Canceled build due to no content change」で **Preview のビルドを行わず 404** になる。
+代わりに **ブランチデプロイ**を明示的に起こしてある（2026-09-01 実測で稼働確認済み）。
+
+疎通確認（秘密鍵を入れる前の正常値）:
+
+| 経路 | 期待 |
+|---|---|
+| `/pricing` | 200 |
+| `/.netlify/functions/stripe-prices` | 200・`{"ready":false,…}`（秘密鍵なしでも 500 にしない）|
+| `/.netlify/functions/stripe-webhook`（POST）| **503**（未設定なので無検証で書き込まない）|
 
 送信するイベント（🔴 **5 つ**。以前の手順書は 4 つだったので注意）:
 
@@ -91,18 +104,23 @@ invoice.payment_failed
 
 Test Mode の 設定 → 請求 → カスタマーポータルを有効化。解約とカード変更を許可する。
 
-### 4. 環境変数（🔴 Deploy Preview スコープのみ）
+### 4. 環境変数（🔴 **Branch deploys** スコープのみ）
 
 | Key | Value |
 |---|---|
 | `STRIPE_SECRET_KEY` | `sk_test_…` |
 | `STRIPE_PRICE_PREMIUM` | 手順 1 の `price_…` |
 | `STRIPE_WEBHOOK_SECRET` | 手順 2 の `whsec_…` |
-| `STRIPE_PORTAL_RETURN_URL` | `<DEPLOY_PREVIEW_URL>/mypage` |
+| `STRIPE_PORTAL_RETURN_URL` | `https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app/mypage` |
 | `MEMBERSHIP_WRITE_ENABLED` | `true` ← リワード付与を確認する場合のみ |
 
-🔴 **Deploy contexts は「Deploy previews」だけに限定する。**
-`Production` に入れると本番で課金導線が開いてしまう。
+🔴 **Deploy contexts は「Branch deploys」だけに限定する**
+（送信先がブランチデプロイのため。「Deploy previews」では効かない）。
+`Production` に入れると **本番で課金導線が開いてしまう**。
+
+🔴 Branch deploys スコープには現在 `SESSION_SIGNING_SECRET` / `AIRTABLE_*` /
+`PREVIEW_PAID_KEY` が **Production と同じ値で効いている**（2026-09-01 実測）。
+つまりログインも Airtable 読み書きも本番と同じ相手になる。
 
 🔴 `MEMBERSHIP_WRITE_ENABLED` を入れると **本番 Airtable の `RewardLedger` に行が増える**
 （上記「Airtable は本番と同じベース」参照）。付与まで確認したい場合だけ入れ、
@@ -120,7 +138,7 @@ E2E 後に **Deploy Preview スコープの env とテスト行を削除**する
 
 | # | 操作 | 期待 |
 |---|---|---|
-| 1 | Deploy Preview で**テスト用アドレス**の無料会員としてログイン | 印が見える / 買い目は見えない |
+| 1 | ブランチデプロイで**テスト用アドレス**の無料会員としてログイン | 印が見える / 買い目は見えない |
 | 2 | `/pricing` を開く | ボタンが「このプランを申し込む」に変わっている（金額 ¥3,980）|
 | 3 | 申し込む → Checkout でテストカード `4242 4242 4242 4242` | 決済成功 → `/mypage?checkout=success` |
 | 4 | Stripe の Webhook ログ | `checkout.session.completed` が 200 |
@@ -188,11 +206,11 @@ E2E 後に **Deploy Preview スコープの env とテスト行を削除**する
    - `Customers` の **テスト会員レコード**を削除
    - 🔴 既存の実会員（63 件）には触れない
 2. **Netlify**
-   - Deploy Preview スコープの `STRIPE_SECRET_KEY` / `STRIPE_PRICE_PREMIUM` /
+   - **Branch deploys** スコープの `STRIPE_SECRET_KEY` / `STRIPE_PRICE_PREMIUM` /
      `STRIPE_WEBHOOK_SECRET` / `STRIPE_PORTAL_RETURN_URL` / `MEMBERSHIP_WRITE_ENABLED` を削除
-     （残すと次の PR に効いてしまう）
+     （残すと他のブランチデプロイに効いてしまう）
 3. **Stripe（Test Mode）**
-   - Webhook エンドポイントを削除（Deploy Preview が消えると 404 になるため）
+   - Webhook エンドポイントを削除（ブランチデプロイを消すと 404 になるため）
    - テストの Product / Price は残してよい（Live とは分離されている）
 4. **PR**
    - 記録を残したうえで merge するか close する
@@ -205,9 +223,9 @@ Live での差分は次の 3 点だけ。
 
 | | Test Mode | Live Mode |
 |---|---|---|
-| Webhook 送信先 | Deploy Preview の URL | `https://keiba-intelligence.jp/.netlify/functions/stripe-webhook` |
-| env スコープ | Deploy previews | **Production** |
-| `MEMBERSHIP_WRITE_ENABLED` | Deploy previews に一時設定 | **すでに Production で有効**（2026-09-01 13:28 UTC）|
+| Webhook 送信先 | ブランチデプロイの URL | `https://keiba-intelligence.jp/.netlify/functions/stripe-webhook` |
+| env スコープ | Branch deploys | **Production** |
+| `MEMBERSHIP_WRITE_ENABLED` | Branch deploys に一時設定 | **すでに Production で有効**（2026-09-01 13:28 UTC）|
 
 🔴 Live の Price は **新規に作る**（Test Mode の Price は Live では使えない）。
 🔴 Live の Price 金額を後から書き換えない（継続価格ロックが壊れる）。
