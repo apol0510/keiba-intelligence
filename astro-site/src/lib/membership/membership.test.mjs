@@ -687,17 +687,26 @@ describe('会員クラブの表示ビュー', () => {
         membershipStartedAtIso: '2026-02-15T00:00:00.000Z',
         contractPrice: createContractPrice({ amountYen: 3980, currency: 'jpy', priceId: 'p', startedAtIso: '2026-02-15T00:00:00.000Z' }),
       },
-      ledger: [{ entryId: 'a1', type: ENTRY_TYPE.ACCRUAL, points: 100, occurredAtMs: Date.UTC(2026, 8, 3) }],
+      // 7 期ぶん支払い成功（継続月数は台帳から数える・TBD-9 / TBD-10）
+      ledger: Array.from({ length: 7 }, (_, i) => ({
+        entryId: `a${i + 1}`,
+        type: ENTRY_TYPE.ACCRUAL,
+        points: 100,
+        periodMonths: 1,
+        occurredAtMs: Date.UTC(2026, 2 + i, 3),
+      })),
       config: {},
       catalogSource: { version: 1, status: 'published', items: [{ id: 'a', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 600 }] },
       currentListPriceYen: 5000,
       nowMs: now,
     });
     assert.equal(v.months.value, 7);
+    assert.equal(v.months.source, 'ledger', '支払い済み期間から数える');
     assert.equal(v.rank.rank, RANK.SILVER, '7 か月は Silver（Gold は 12 か月）');
-    assert.equal(v.rewards.balancePoints, 100);
-    assert.equal(v.rewards.monthAccrualPoints, 100);
-    assert.equal(v.gifts.next.remainingPoints, 500);
+    assert.equal(v.rewards.balancePoints, 700);
+    assert.equal(v.rewards.monthAccrualPoints, 100, '今月ぶんだけ');
+    assert.equal(v.gifts.available.length, 1, '600pt で交換できる');
+    assert.equal(v.gifts.next, null, '大の品は 1,200pt なので候補外');
     assert.equal(v.priceLock.status, LOCK_STATUS.LOCKED);
     assert.equal(v.priceLock.contractPriceYen, 3980);
   });

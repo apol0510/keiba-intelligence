@@ -301,10 +301,54 @@ describe('ランク・リワードを認可に使わない', () => {
       'Airtable の列が無い状態でプラン付与の書き込みを増やすと、付与ごと失敗する');
   });
 
+  test('🔴 認可とリワードを混同しない（TBD-10・§7.7）', () => {
+    // 1. リワード側は認可を読まない
+    const rewards = read(join(LIB_DIR, 'rewards.js'));
+    for (const forbidden of ['entitlement', 'canSeeBetting', 'canSeeMarks', 'AccessEnabled', 'PlanType']) {
+      assert.equal(codeLines(rewards).some((l) => l.includes(forbidden)), false,
+        `rewards.js が認可の概念（${forbidden}）を参照している`);
+    }
+
+    // 2. 認可側は台帳・付与を読まない
+    for (const f of ['entitlement.js', 'tiers.js', 'session.js']) {
+      const src = read(join('src/lib/auth', f));
+      for (const forbidden of ['ledger', 'accrual', 'Reward', 'tenure', 'payment_succeeded']) {
+        assert.equal(codeLines(src).some((l) => l.includes(forbidden)), false,
+          `auth/${f} がリワードの概念（${forbidden}）を参照している`);
+      }
+    }
+
+    // 3. webhook: payment_failed は認可（Status）だけを触り、付与を呼ばない
+    const wh = read('netlify/functions/stripe-webhook.js');
+    const failedCase = wh.slice(wh.indexOf("case 'invoice.payment_failed'"), wh.indexOf('default:'));
+    assert.match(failedCase, /applyPlan\(email, \{ status: 'payment_failed' \}\)/,
+      'payment_failed が Status 以外を触っている');
+    assert.equal(failedCase.includes('recordPaidPeriod'), false,
+      '🔴 支払い失敗で付与している（保留にならない）');
+    for (const forbidden of ['planType', 'accessEnabled']) {
+      assert.equal(failedCase.includes(forbidden), false,
+        `payment_failed が ${forbidden} を触っている（認可の挙動を変えてはいけない）`);
+    }
+
+    // 4. 付与は支払い成功でだけ駆動する
+    const okCase = wh.slice(wh.indexOf("case 'invoice.payment_succeeded'"), wh.indexOf("case 'invoice.payment_failed'"));
+    assert.match(okCase, /recordPaidPeriod\(email, invoice\)/);
+    assert.equal(okCase.includes('applyPlan'), false,
+      '🔴 支払い成功で認可を書き換えている（付与だけを行うこと）');
+  });
+
+  test('🔴 継続月数は支払い済み期間から数える（TBD-9 / TBD-10）', () => {
+    const rewards = read(join(LIB_DIR, 'rewards.js'));
+    assert.match(rewards, /export function resolveTenureMonths\(/);
+    assert.match(rewards, /export function tenureMonthsFromLedger\(/);
+    // 起点も台帳も無ければ pending（0 か月へ倒さない）
+    assert.match(rewards, /status: 'pending', months: null, source: null/);
+  });
+
   test('🔴 会員継続制度の書き込みはフラグ付き・別リクエスト・失敗を握りつぶす', () => {
     const src = read('netlify/functions/stripe-webhook.js');
     // フラグ無しでは実行されない
-    for (const fn of ['recordContractPrice', 'recordCancellation']) {
+    for (const fn of ['recordContractPrice', 'recordCancellation', 'recordPaidPeriod']) {
       const body = src.slice(src.indexOf(`async function ${fn}(`));
       assert.match(body.slice(0, 400), /if \(!isWriteEnabled\(process\.env\)\) return;/,
         `${fn} の先頭でフラグを確認していない`);

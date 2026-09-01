@@ -12,6 +12,15 @@
  *    - 表示語は「KIリワード残高」「今月の積み上げ」「次のプレゼントまであと◯◯」
  *      （禁止語は `membershipCopy.guard.test.mjs` が静的に検出する）
  *
+ * 🔴 **付与はカレンダーではなく「支払い成功」で駆動する**（TBD-10・§7.7）。
+ *    支払いが失敗した期間には付与しない。再決済が成功したらその期間ぶんを
+ *    **1 回だけ**反映する（冪等キーが請求期間の識別子なので、再送でも増えない）。
+ *    最終的に未払いのまま終わった期間には、成功イベントが来ないので付与されない。
+ *
+ * 🔴 **認可（見える範囲）とは別物である。** 支払い失敗時に
+ *    アクセスを止めるかどうかは `entitlement.js` 側の話で、ここでは扱わない。
+ *    このモジュールは entitlement を import しない（静的ガードで固定）。
+ *
  * 🔴 fail-closed:
  *    **台帳が読めなければ残高を返さない**（`pending`）。0 pt と言い切らない。
  *    台帳の保存先はまだ無い（`docs/MEMBERSHIP_DATA_MIGRATION.md`）ので、
@@ -45,6 +54,12 @@ export const MONTHLY_POINTS = 100;
 
 /** 年払い（銀行振込 ¥39,800）1 期あたりの月数（**確定値**）。 */
 export const ANNUAL_TERM_MONTHS = 12;
+
+/** 1 期あたりの月数（**確定値**）。付与も継続月数もこの単位で数える。 */
+export const PERIOD_MONTHS = Object.freeze({
+  MONTHLY: 1,
+  ANNUAL: ANNUAL_TERM_MONTHS,
+});
 
 /** 解約後にポイントを保持する日数（**確定値**）。これを過ぎたら失効。 */
 export const GRACE_DAYS = 90;
@@ -86,6 +101,8 @@ export function isValidEntry(entry) {
   if (!ENTRY_TYPES.includes(entry.type)) return false;
   if (!Number.isInteger(entry.points)) return false;
   if (!isFiniteNumber(entry.occurredAtMs)) return false;
+  // 期間の長さ（月数）。省略時は 1 か月として扱う（旧データとの互換）
+  if (entry.periodMonths != null && !(Number.isInteger(entry.periodMonths) && entry.periodMonths > 0)) return false;
   // 付与は正、交換・失効は負でなければならない（符号の取り違えを検出する）
   if (entry.type === ENTRY_TYPE.ACCRUAL && entry.points <= 0) return false;
   if (entry.type === ENTRY_TYPE.REDEMPTION && entry.points >= 0) return false;
@@ -273,6 +290,34 @@ export function buildAccrualEntry({ accrual = ACCRUAL, rank, email, periodRef, o
     points,
     occurredAtMs,
     ref: periodRef,
+    periodMonths: PERIOD_MONTHS.MONTHLY,
+  });
+}
+
+/**
+ * **支払いが成功した請求期間**に対する付与を作る（TBD-10 の中核・§7.7）。
+ *
+ * 🔴 呼ぶのは `invoice.payment_succeeded` を受けたときだけ。
+ *    支払い失敗（`invoice.payment_failed`）では **呼ばない**＝付与しない。
+ *    再決済が成功したときに初めてここへ来るので、
+ *    「保留 → 成功したら 1 回だけ反映」が構造的に成立する。
+ *
+ * 🔴 冪等キーは **請求期間の識別子**（Stripe の invoice id 等）。
+ *    Stripe の再送でも、同じ期間が二度付与されることはない。
+ *
+ * @param {string} o.invoiceRef  請求期間の識別子（invoice id）
+ * @param {number} [o.periodMonths] 月額=1 / 年払い=12
+ */
+export function buildPaidPeriodEntry({
+  accrual = ACCRUAL, rank, email, invoiceRef, periodMonths = PERIOD_MONTHS.MONTHLY, occurredAtMs,
+} = {}) {
+  if (!Number.isInteger(periodMonths) || periodMonths <= 0) return null;
+  const base = buildAccrualEntry({ accrual, rank, email, periodRef: invoiceRef, occurredAtMs });
+  if (!base) return null;
+  return Object.freeze({
+    ...base,
+    points: base.points * periodMonths,
+    periodMonths,
   });
 }
 
@@ -298,7 +343,65 @@ export function buildAnnualAccrualEntry({ accrual = ACCRUAL, email, termRef, occ
     points: accrual.monthlyPoints * ANNUAL_TERM_MONTHS,
     occurredAtMs,
     ref: termRef,
+    periodMonths: PERIOD_MONTHS.ANNUAL,
   });
+}
+
+/* ------------------------------------------------------------------
+   継続月数（TBD-9 / TBD-10）
+   ------------------------------------------------------------------ */
+
+/**
+ * 台帳から継続月数を数える ＝ **支払いが成功した期間の累計**。
+ *
+ * 🔴 これが TBD-10 の「支払い成功まで保留」を実装している:
+ *    失敗した期間には付与エントリが無いので、月数も増えない。
+ */
+export function tenureMonthsFromLedger(entries) {
+  return dedupeEntries(entries)
+    .filter((e) => e.type === ENTRY_TYPE.ACCRUAL)
+    .reduce((sum, e) => sum + (e.periodMonths ?? PERIOD_MONTHS.MONTHLY), 0);
+}
+
+/** 起点からの経過月数（台帳が始まる前の期間を数えるための後方互換）。 */
+export function elapsedMonthsSince(startedAtIso, nowMs) {
+  if (!isNonEmptyString(startedAtIso)) return null;
+  const start = Date.parse(startedAtIso);
+  if (!Number.isFinite(start) || !isFiniteNumber(nowMs) || start > nowMs) return null;
+  const a = new Date(start);
+  const b = new Date(nowMs);
+  let months = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth());
+  if (b.getUTCDate() < a.getUTCDate()) months -= 1;
+  return months < 0 ? 0 : months;
+}
+
+/**
+ * 継続月数を決める（**TBD-9 / TBD-10 の単一判定**）。
+ *
+ * 優先順:
+ *   1. 台帳に支払い済み期間があれば **台帳が正**（保留・未払いが自然に反映される）
+ *   2. 台帳が空で、起点（＝**支払い成功日**）が保存されていれば経過月数
+ *      （台帳が動き出す前から続いている既存会員のための後方互換）
+ *   3. どちらも無ければ **pending**
+ *
+ * 🔴 3 の場合に **0 か月（Bronze）へ倒さない。**
+ *    起点が不明な会員（実データで 11 件中 3 件）を最低ランクで表示しないため。
+ *
+ * @returns {{ status:'ready'|'pending', months:number|null, source:'ledger'|'legacy'|null }}
+ */
+export function resolveTenureMonths({ entries, ledgerKnown = false, startedAtIso = null, nowMs = Date.now() } = {}) {
+  if (ledgerKnown) {
+    const fromLedger = tenureMonthsFromLedger(entries);
+    if (fromLedger > 0) {
+      return Object.freeze({ status: 'ready', months: fromLedger, source: 'ledger' });
+    }
+  }
+  const legacy = elapsedMonthsSince(startedAtIso, nowMs);
+  if (legacy != null) {
+    return Object.freeze({ status: 'ready', months: legacy, source: 'legacy' });
+  }
+  // 🔴 推測で埋めない
+  return Object.freeze({ status: 'pending', months: null, source: null });
 }
 
 /**

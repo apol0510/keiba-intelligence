@@ -11,22 +11,56 @@
  *    これは事故防止であって、承認の代わりではない。
  *    **本番への実行は `CLAUDE.md` の高リスク境界（承認必須）。**
  *
+ * 🔴 **`MembershipStartedAt` に書く値は「支払い成功日」**（TBD-9・`MEMBERSHIP_REWARDS.md` §7.6）。
+ *    Airtable の `CreatedAt` は **申込日であって支払い成功日ではない**
+ *    （銀行振込は pending で作られ、入金確認は手作業のためずれる）。
+ *    そのため `CreatedAt` は **候補として表示するだけ**で、自動では書かない。
+ *    実際に書くには次のどちらかが要る:
+ *      --from-file <path>     … 確認済みの入金日を渡す（推奨）
+ *      --accept-created-at    … 🔴 CreatedAt を支払い成功日として扱うことを明示的に引き受ける
+ *
  * 使い方:
  *   node scripts/membershipMigration.mjs --check     # 読み取りのみ。現状監査
  *   node scripts/membershipMigration.mjs --dry-run   # 書く予定の内容を出すだけ（既定）
- *   node scripts/membershipMigration.mjs --apply --confirm-write   # 🔴 承認後のみ
+ *   node scripts/membershipMigration.mjs --dry-run --from-file paid-dates.json
+ *   node scripts/membershipMigration.mjs --apply --from-file paid-dates.json --confirm-write   # 🔴 承認後のみ
+ *
+ * paid-dates.json の形式（メールアドレス → 支払い成功日）:
+ *   { "member@example.com": "2026-03-24" }
  *
  * 🔴 このスクリプトは **既存列（PlanType / Status / AccessEnabled）を一切変更しない**。
  *    触ってよいのは membership 用に追加した列だけ。
  */
 
+import { createRequire } from 'node:module';
 import { CUSTOMER_FIELDS, LEDGER_TABLE, LEDGER_FIELDS } from '../src/lib/membership/airtableStore.js';
+
+const require = createRequire(import.meta.url);
 
 const API = 'https://api.airtable.com/v0';
 const argv = process.argv.slice(2);
 const has = (f) => argv.includes(f);
 
 const MODE = has('--check') ? 'check' : (has('--apply') ? 'apply' : 'dry-run');
+
+/** 確認済みの支払い成功日（`--from-file`）。無ければ空。 */
+function loadPaidDates() {
+  const i = argv.indexOf('--from-file');
+  if (i < 0 || !argv[i + 1]) return null;
+  try {
+    const { readFileSync } = require('node:fs');
+    const raw = JSON.parse(readFileSync(argv[i + 1], 'utf8'));
+    const out = new Map();
+    for (const [email, date] of Object.entries(raw)) {
+      if (typeof date === 'string' && Number.isFinite(Date.parse(date))) {
+        out.set(String(email).trim().toLowerCase(), date);
+      }
+    }
+    return out;
+  } catch {
+    return null;
+  }
+}
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -145,17 +179,46 @@ async function main() {
   }
 
   // --- 書く予定の内容 ---
+  // 🔴 起点は「支払い成功日」。CreatedAt（申込日）は候補にすぎない（TBD-9・§7.6）
+  const paidDates = loadPaidDates();
+  const acceptCreatedAt = has('--accept-created-at');
+
   const planned = [];
+  const needsConfirmation = [];
   for (const r of paid) {
     const f = r.fields || {};
     if (f[CUSTOMER_FIELDS.STARTED_AT]) continue;   // 既に入っている
-    if (!f.CreatedAt) continue;                    // 🔴 推測で埋めない
-    planned.push({ id: r.id, hash: await maskEmail(f.Email), value: f.CreatedAt });
+    const hash = await maskEmail(f.Email);
+    const confirmed = paidDates?.get(String(f.Email || '').trim().toLowerCase());
+    if (confirmed) {
+      planned.push({ id: r.id, hash, value: confirmed, source: 'confirmed' });
+    } else if (f.CreatedAt && acceptCreatedAt) {
+      planned.push({ id: r.id, hash, value: f.CreatedAt, source: 'created-at' });
+    } else if (f.CreatedAt) {
+      needsConfirmation.push({ hash, candidate: f.CreatedAt });
+    }
+    // CreatedAt も無い会員は 🔴 空のまま（推測も 0 か月補完もしない）
   }
 
   console.log(`\n=== 書き込み予定 ${planned.length} 件（${CUSTOMER_FIELDS.STARTED_AT} のみ）===`);
-  for (const p of planned) console.log(`    ${p.hash}  ← ${String(p.value).slice(0, 10)}`);
-  console.log('  🔴 既存列（PlanType / Status / AccessEnabled）には触れない');
+  for (const p of planned) {
+    console.log(`    ${p.hash}  ← ${String(p.value).slice(0, 10)}  [${p.source}]`);
+  }
+  if (needsConfirmation.length) {
+    console.log(`\n=== 🔴 入金日の確認が必要 ${needsConfirmation.length} 件（このままでは書かない）===`);
+    console.log('    起点は「支払い成功日」。CreatedAt は申込日なので、そのままでは使えない。');
+    console.log('    --from-file で確認済みの入金日を渡すか、--accept-created-at で明示的に引き受けること。');
+    for (const p of needsConfirmation) {
+      console.log(`    ${p.hash}  候補(申込日)=${String(p.candidate).slice(0, 10)}`);
+    }
+  }
+  const unknown = paid.length - planned.length - needsConfirmation.length
+    - paid.filter((r) => r.fields?.[CUSTOMER_FIELDS.STARTED_AT]).length;
+  if (unknown > 0) {
+    console.log(`\n=== 🔴 起点不明 ${unknown} 件（空のままにする）===`);
+    console.log('    推測で埋めない。0 か月（Bronze）でも埋めない。画面は「準備中」になる。');
+  }
+  console.log('\n  🔴 既存列（PlanType / Status / AccessEnabled）には触れない');
 
   if (MODE === 'dry-run') {
     console.log('\n✅ dry-run。書き込みは行っていない。');

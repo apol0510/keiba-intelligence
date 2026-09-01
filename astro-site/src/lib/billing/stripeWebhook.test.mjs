@@ -176,6 +176,13 @@ const paymentFailed = (email, id) =>
     subscription_details: { metadata: { ki_email: email } },
   }, id);
 
+const paymentSucceeded = (email, id, invoiceId = 'in_test_1') =>
+  makeEvent('invoice.payment_succeeded', {
+    id: invoiceId,
+    subscription_details: { metadata: { ki_email: email } },
+    lines: { data: [{ price: { recurring: { interval: 'month' } } }] },
+  }, id);
+
 /* ------------------------------------------------------------------
    entitlement 側（auth / session）へつなぐ
    ------------------------------------------------------------------ */
@@ -313,6 +320,55 @@ test('E2E: payment_failed は Status だけ変え、アクセスを即時停止�
 
   // 猶予期間なので買い目は開いたまま（停止は Stripe の dunning に従う）
   assert.equal(viewOf(ALICE).view.showBetting, true, '支払い失敗で即座に停止している');
+});
+
+/* ------------------------------------------------------------------
+   TBD-10: 認可とリワードを混同しない
+   （docs/MEMBERSHIP_REWARDS.md §7.7）
+   ------------------------------------------------------------------ */
+
+test('🔴 payment_failed は認可を変えず、リワードの付与も行わない（保留）', async () => {
+  await post(checkoutCompleted(ALICE));
+  const beforeCount = updatesFor(ALICE).length;
+
+  const res = await post(paymentFailed(ALICE));
+  assert.equal(res.statusCode, 200);
+
+  // 認可: Status だけ。PlanType / AccessEnabled は触らない
+  const last = updatesFor(ALICE).at(-1);
+  assert.deepEqual(last.fields, { Status: 'payment_failed' });
+  assert.equal(viewOf(ALICE).view.showBetting, true, 'アクセスを即時停止してはいけない');
+
+  // リワード: 付与の書き込みは起きない（フラグ off なので当然だが、経路としても呼ばない）
+  assert.equal(updatesFor(ALICE).length, beforeCount + 1, '付与のための追加書き込みが起きている');
+});
+
+test('🔴 payment_succeeded は認可を変えない（付与だけを行う）', async () => {
+  await post(checkoutCompleted(ALICE));
+  const beforeCount = updatesFor(ALICE).length;
+  const beforeView = viewOf(ALICE);
+
+  const res = await post(paymentSucceeded(ALICE));
+  assert.equal(res.statusCode, 200);
+
+  // 認可は一切変わらない（フラグ off なので Airtable への書き込みも増えない）
+  assert.equal(updatesFor(ALICE).length, beforeCount, '支払い成功で認可を書き換えている');
+  assert.equal(viewOf(ALICE).tier, beforeView.tier);
+  assert.equal(viewOf(ALICE).view.showBetting, beforeView.view.showBetting);
+});
+
+test('🔴 同じ invoice の payment_succeeded を再送しても二重処理しない', async () => {
+  await post(checkoutCompleted(ALICE));
+  const first = await post(paymentSucceeded(ALICE, 'evt_paid_1'));
+  assert.equal(first.statusCode, 200);
+
+  // 同じ event.id → 冪等（重複として無視）
+  const dup = await post(paymentSucceeded(ALICE, 'evt_paid_1'));
+  assert.equal(JSON.parse(dup.body).duplicate, true);
+
+  // 別の event.id でも同じ invoice なら、付与側の冪等キー（invoice id）で防がれる
+  const again = await post(paymentSucceeded(ALICE, 'evt_paid_2', 'in_test_1'));
+  assert.equal(again.statusCode, 200);
 });
 
 /* ==================================================================

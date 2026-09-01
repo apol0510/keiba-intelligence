@@ -21,9 +21,9 @@ import { planTypeToTier, TIER } from '../auth/tiers.js';
 import { MONTHLY_LIST_PRICE_YEN } from '../billing/plans.js';
 
 import {
-  ENTRY_TYPE, MONTHLY_POINTS, GRACE_DAYS, POINTS_STATUS,
-  buildAccrualEntry, buildAnnualAccrualEntry, buildRedemptionEntry,
-  summarizeRewards, resolvePointsStatus,
+  ENTRY_TYPE, MONTHLY_POINTS, GRACE_DAYS, POINTS_STATUS, PERIOD_MONTHS,
+  buildAccrualEntry, buildAnnualAccrualEntry, buildRedemptionEntry, buildPaidPeriodEntry,
+  summarizeRewards, resolvePointsStatus, resolveTenureMonths, tenureMonthsFromLedger,
 } from './rewards.js';
 import { RANK } from './ranks.js';
 import { ITEM_KIND, createCatalog, MILESTONE_MONTHS } from './catalog.js';
@@ -202,6 +202,7 @@ describe('E2E: Stripe 月額', () => {
     });
 
     assert.equal(v.months.value, 12);
+    assert.equal(v.months.source, 'ledger', '継続月数は支払い済み期間から数える');
     assert.equal(v.rank.rank, RANK.GOLD);
     assert.equal(v.rewards.balancePoints, 1200);
     // 🔴 保守ライン S-2: 12 か月目は記念品の月なので通常交換を出さない
@@ -209,11 +210,15 @@ describe('E2E: Stripe 月額', () => {
     assert.equal(v.gifts.available.length, 0);
     assert.ok(MILESTONE_MONTHS.includes(12));
 
-    // 翌月（13 か月）は交換できる。Gold なので上位ランク限定の候補も出る
+    // 翌月ぶんの支払いが成功すると 13 か月になり、交換できる
+    await store.appendEntry(EMAIL, buildAccrualEntry({
+      email: EMAIL, periodRef: 'in_13', occurredAtMs: Date.UTC(2026, 8, 1),
+    }));
     const next = view({
       store, profile: { membershipStartedAtIso: startedAtFor(13, now) },
-      ledger, nowMs: now, tier: TIER.PREMIUM,
+      ledger: (await store.readLedger(EMAIL)).entries, nowMs: now, tier: TIER.PREMIUM,
     });
+    assert.equal(next.months.value, 13);
     assert.equal(next.gifts.blockedByMilestone, false);
     assert.deepEqual(next.gifts.available.map((i) => i.id).sort(), ['large', 'large-gold', 'small']);
   });
@@ -301,14 +306,128 @@ describe('E2E: 銀行振込の年払い ¥39,800', () => {
     // 🔴 同じ年払い期を二度処理しても二重付与しない
     assert.equal((await store.appendEntry(EMAIL, e)).status, STORE_RESULT.ALREADY);
 
-    const ledger = (await store.readLedger(EMAIL)).entries;
-    const v = view({
-      store, profile: { membershipStartedAtIso: startedAtFor(13, now) },
-      ledger, nowMs: now, tier: TIER.PREMIUM,
+    let v = view({
+      store, profile: { membershipStartedAtIso: startedAtFor(12, now) },
+      ledger: (await store.readLedger(EMAIL)).entries, nowMs: now, tier: TIER.PREMIUM,
     });
     assert.equal(v.rewards.balancePoints, 1200);
+    assert.equal(v.months.value, 12, '年払い 1 期で 12 か月ぶん数える');
     assert.equal(v.rank.rank, RANK.GOLD, '年払いでも継続月数でランクが上がる');
+    // 12 か月目は記念品の月なので通常交換は止まる（保守ライン S-2）
+    assert.equal(v.gifts.blockedByMilestone, true);
+
+    // 翌期（月額へ移行した場合など）の支払いが成功すると交換できる
+    await store.appendEntry(EMAIL, buildAccrualEntry({
+      email: EMAIL, periodRef: 'in_next', occurredAtMs: Date.UTC(2026, 8, 15),
+    }));
+    v = view({
+      store, profile: { membershipStartedAtIso: startedAtFor(13, now) },
+      ledger: (await store.readLedger(EMAIL)).entries, nowMs: now, tier: TIER.PREMIUM,
+    });
+    assert.equal(v.months.value, 13);
     assert.deepEqual(v.gifts.available.map((i) => i.id).sort(), ['large', 'large-gold', 'small']);
+  });
+});
+
+/* ================================================================
+   3.5 支払い失敗と再決済（TBD-10・§7.7）
+   ================================================================ */
+
+describe('E2E: 支払い失敗 → 保留 → 再決済', () => {
+  const now = Date.UTC(2026, 8, 15);
+
+  /** 支払いが成功した請求期間だけを台帳へ積む（webhook の payment_succeeded 相当）。 */
+  const paid = (invoiceRef, atMs, periodMonths = PERIOD_MONTHS.MONTHLY) => buildPaidPeriodEntry({
+    email: EMAIL, invoiceRef, periodMonths, occurredAtMs: atMs,
+  });
+
+  test('🔴 支払いが失敗した期間は付与されず、継続月数も増えない', async () => {
+    const store = createInMemoryMembershipStore();
+    // 3 か月ぶん成功
+    for (let i = 1; i <= 3; i++) await store.appendEntry(EMAIL, paid(`in_${i}`, Date.UTC(2026, 5 + i, 1)));
+    // 4 か月目は失敗 → **何も積まない**（webhook は payment_failed で付与を呼ばない）
+
+    const ledger = (await store.readLedger(EMAIL)).entries;
+    const tenure = resolveTenureMonths({ entries: ledger, ledgerKnown: true, nowMs: now });
+    assert.equal(tenure.months, 3, '失敗した期間は継続月数に入らない');
+    assert.equal(tenure.source, 'ledger');
+
+    const s = summarizeRewards({ entries: ledger, ledgerKnown: true, nowMs: now });
+    assert.equal(s.balancePoints, 300, '失敗した期間のポイントは付かない');
+  });
+
+  test('🔴 認可は支払い失敗で変わらない（リワードだけが保留される）', () => {
+    // `invoice.payment_failed` は Status を変えるだけ。PlanType は premium のまま
+    const ent = entitlementFor(TIER.PREMIUM, now);
+    assert.equal(ent.showBetting, true, '支払い失敗でアクセスを即時停止しない');
+    assert.equal(ent.showMarks, true);
+
+    // 一方でリワードは増えていない（台帳に期間が積まれていない）
+    const v = view({ profile: {}, ledger: [], nowMs: now, tier: TIER.PREMIUM });
+    assert.equal(v.months.status, 'pending', '起点も台帳も無ければ月数は出さない');
+    assert.equal(v.rewards.balancePoints, 0, '台帳は読めているが期間が無いので 0');
+  });
+
+  test('🔴 再決済が成功したら、その期間ぶんが 1 回だけ反映される', async () => {
+    const store = createInMemoryMembershipStore();
+    for (let i = 1; i <= 3; i++) await store.appendEntry(EMAIL, paid(`in_${i}`, Date.UTC(2026, 5 + i, 1)));
+
+    // 4 か月目: 失敗 → 再試行で成功（Stripe は同じ invoice を再請求する）
+    const retried = paid('in_4', Date.UTC(2026, 9, 1));
+    assert.equal((await store.appendEntry(EMAIL, retried)).status, STORE_RESULT.APPLIED);
+
+    let ledger = (await store.readLedger(EMAIL)).entries;
+    assert.equal(resolveTenureMonths({ entries: ledger, ledgerKnown: true, nowMs: now }).months, 4);
+    assert.equal(summarizeRewards({ entries: ledger, ledgerKnown: true, nowMs: now }).balancePoints, 400);
+
+    // 🔴 Stripe が同じ invoice の成功を再送しても二重に付かない
+    assert.equal((await store.appendEntry(EMAIL, retried)).status, STORE_RESULT.ALREADY);
+    assert.equal((await store.appendEntry(EMAIL, paid('in_4', Date.UTC(2026, 9, 2)))).status, STORE_RESULT.ALREADY,
+      '同じ請求期間なら発生時刻が違っても二重付与しない');
+
+    ledger = (await store.readLedger(EMAIL)).entries;
+    assert.equal(tenureMonthsFromLedger(ledger), 4, '再送で月数が増えていない');
+    assert.equal(summarizeRewards({ entries: ledger, ledgerKnown: true, nowMs: now }).balancePoints, 400);
+  });
+
+  test('🔴 未払いのまま終了した期間には付与しない', async () => {
+    const store = createInMemoryMembershipStore();
+    for (let i = 1; i <= 3; i++) await store.appendEntry(EMAIL, paid(`in_${i}`, Date.UTC(2026, 5 + i, 1)));
+    // in_4 は最後まで支払われず解約。成功イベントが来ないので台帳には何も入らない
+
+    const cancelledAtIso = new Date(now - 10 * DAY).toISOString();
+    const ledger = (await store.readLedger(EMAIL)).entries;
+    const v = view({ profile: { cancelledAtIso }, ledger, nowMs: now, tier: TIER.FREE });
+
+    assert.equal(v.months.value, 3, '未払いの 4 か月目は数えない');
+    assert.equal(v.rewards.balancePoints, 300, '未払い期間のポイントは付かない');
+    assert.equal(v.rewards.pointsStatus, POINTS_STATUS.GRACE, '解約後 90 日は保持される');
+  });
+
+  test('年払いは 1 期で 12 か月ぶん数える', () => {
+    const annual = buildPaidPeriodEntry({
+      email: EMAIL, invoiceRef: 'in_annual', periodMonths: PERIOD_MONTHS.ANNUAL, occurredAtMs: 1,
+    });
+    assert.equal(annual.points, 1200);
+    assert.equal(annual.periodMonths, 12);
+    assert.equal(tenureMonthsFromLedger([annual]), 12);
+  });
+
+  test('台帳が無い既存会員は起点（支払い成功日）からの経過で数える（TBD-9 の後方互換）', () => {
+    const startedAtIso = startedAtFor(7, now);
+    const t = resolveTenureMonths({ entries: [], ledgerKnown: true, startedAtIso, nowMs: now });
+    assert.equal(t.months, 7);
+    assert.equal(t.source, 'legacy');
+  });
+
+  test('🔴 起点も台帳も無ければ pending（0 か月＝Bronze へ倒さない）', () => {
+    const t = resolveTenureMonths({ entries: [], ledgerKnown: true, startedAtIso: null, nowMs: now });
+    assert.equal(t.status, 'pending');
+    assert.equal(t.months, null);
+
+    const v = view({ profile: {}, ledger: [], nowMs: now, tier: TIER.PREMIUM });
+    assert.equal(v.rank.status, 'pending');
+    assert.equal(v.rank.rank, null, '起点不明の会員を Bronze で表示しない');
   });
 });
 

@@ -22,7 +22,13 @@
  *   checkout.session.completed      → プラン付与
  *   customer.subscription.updated   → 状態に応じて付与 / 剥奪
  *   customer.subscription.deleted   → free へ戻す
+ *   invoice.payment_succeeded       → 🔴 リワードの付与（**支払いが成功した期間だけ**）
  *   invoice.payment_failed          → Status を payment_failed に（アクセスは即時停止しない）
+ *
+ * 🔴 **認可とリワードを混同しない**（docs/MEMBERSHIP_REWARDS.md §7.7）:
+ *   - 支払い失敗時の **認可は現行のまま**（`Status` だけ変更。`PlanType` / `AccessEnabled` は触らない）
+ *   - **継続月数とポイントの付与だけ**を支払い成功まで保留する
+ *     （付与を `invoice.payment_succeeded` で駆動しているので、失敗した期間には付かない）
  */
 
 import Stripe from 'stripe';
@@ -32,6 +38,7 @@ import { TIER } from '../../src/lib/auth/tiers.js';
 import { notifyKma, buildEventId } from '../../src/lib/kma/client.js';
 import { resolveMembershipStore, isWriteEnabled } from '../../src/lib/membership/store.js';
 import { contractPriceFromCheckoutSession } from '../../src/lib/membership/priceLock.js';
+import { buildPaidPeriodEntry, PERIOD_MONTHS } from '../../src/lib/membership/rewards.js';
 import { CUSTOMER_FIELDS } from '../../src/lib/membership/airtableStore.js';
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
@@ -157,6 +164,38 @@ async function recordCancellation(email, cancelledAtIso) {
   } catch {
     // 🔴 列が無い環境ではここで失敗する。プラン付与は既に済んでいるので握りつぶす
     console.warn('⚠️ stripe-webhook: cancellation date not recorded (ignored)');
+  }
+}
+
+/**
+ * 支払いが成功した請求期間に対してリワードを付与する（TBD-10・§7.7）。
+ *
+ * 🔴 呼ぶのは `invoice.payment_succeeded` のときだけ。
+ *    失敗（`payment_failed`）では呼ばない＝その期間には付与しない。
+ *    再決済が成功すればここへ来るので、**保留していた分が 1 回だけ**反映される。
+ * 🔴 冪等キーは invoice id。Stripe の再送でも二重付与しない。
+ */
+async function recordPaidPeriod(email, invoice) {
+  if (!isWriteEnabled(process.env)) return;
+  try {
+    const invoiceRef = typeof invoice?.id === 'string' ? invoice.id : null;
+    if (!invoiceRef) return;
+
+    // 年払い（12 か月ぶん）か月額（1 か月ぶん）か。判定できなければ月額として扱う
+    const interval = invoice?.lines?.data?.[0]?.price?.recurring?.interval;
+    const periodMonths = interval === 'year' ? PERIOD_MONTHS.ANNUAL : PERIOD_MONTHS.MONTHLY;
+
+    const entry = buildPaidPeriodEntry({
+      email, invoiceRef, periodMonths, occurredAtMs: Date.now(),
+    });
+    if (!entry) return;
+
+    const store = resolveMembershipStore({ env: process.env });
+    if (!store.enabled) return;
+    await store.appendEntry(email, entry);
+  } catch {
+    // 🔴 認可には影響させない
+    console.warn('⚠️ stripe-webhook: reward accrual not recorded (ignored)');
   }
 }
 
@@ -293,6 +332,21 @@ export async function handler(event) {
         break;
       }
 
+      case 'invoice.payment_succeeded': {
+        const invoice = stripeEvent.data.object;
+        const email = invoice?.subscription_details?.metadata?.ki_email
+          || invoice?.customer_email
+          || null;
+        if (!email) {
+          console.warn('⚠️ stripe-webhook: payment_succeeded without email (skipped)');
+          break;
+        }
+        // 🔴 認可は触らない。ここで行うのはリワードの付与だけ
+        await recordPaidPeriod(email, invoice);
+        console.log('✅ stripe-webhook: paid period recorded');
+        break;
+      }
+
       case 'invoice.payment_failed': {
         const invoice = stripeEvent.data.object;
         const email = invoice?.subscription_details?.metadata?.ki_email
@@ -303,8 +357,11 @@ export async function handler(event) {
           break;
         }
         // 🔴 アクセスは即時停止しない。猶予は Stripe 側の設定（dunning）に従う。
+        //    認可の挙動は **一切変更しない**（TBD-10・§7.7）。
         await applyPlan(email, { status: 'payment_failed' });
-        console.log('⚠️ stripe-webhook: payment failed recorded');
+        // 🔴 リワードは付与しない（保留）。再決済が成功したときに
+        //    invoice.payment_succeeded 側で 1 回だけ反映される。
+        console.log('⚠️ stripe-webhook: payment failed recorded (reward accrual held)');
         break;
       }
 
