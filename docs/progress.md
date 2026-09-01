@@ -226,6 +226,26 @@ Stripe 側（`stripeWebhook.test.mjs` に 2 件追加）: フラグ無しでは 
 
 テストは membership 100 → **131 件**、stripe 41 → **43 件**。
 
+#### 最新 main の取り込み（2026-09-01）
+
+PR #85 が `a8298dd2` として main へ squash merge されたあと、
+**`origin/main` を本ブランチへ通常 merge した**（🔴 rebase はしていない）。
+
+| 項目 | 値 |
+|---|---|
+| merge commit | `5b77b119`（親 2 つ: `6e31f494` ＋ `a8298dd2`）|
+| 競合 | `docs/MEMBERSHIP_DATA_MIGRATION.md` / `docs/progress.md` の 4 か所 |
+| 解決方針 | いずれも本ブランチ側（新しい記述）を採用。併せて main 側に残っていた古い記述を整理 |
+
+古い記述の整理:
+
+- 「Airtable アダプタは実装していない」→ **実装済み**へ
+- 「本番 env に必要なのは `MEMBERSHIP_WRITE_ENABLED` だけ」→ **段階的有効化の 2 フラグ**へ
+- rollback 表の手順番号を、読み取り有効化の追加に合わせて振り直し
+
+merge 後に `main` との差分が **本 PR 固有の 12 ファイル（+1,391 / −35）** だけであることを確認し、
+`npm run build` を再実行して全通過した。
+
 ### 静的ガードで固定したこと（`membershipCopy.guard.test.mjs`）
 
 | # | 固定した不変条件 |
