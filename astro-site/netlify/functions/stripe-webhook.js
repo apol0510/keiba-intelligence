@@ -137,7 +137,16 @@ async function applyPlan(email, { planType, status, accessEnabled }) {
 async function recordContractPrice(email, session) {
   if (!isWriteEnabled(process.env)) return;
   try {
-    const contract = contractPriceFromCheckoutSession(session, { nowIso: new Date().toISOString() });
+    // 🔴 契約時刻も Stripe が持つ値を使う（受信時刻で代用しない）。
+    //    取れなければ記録しない（あとから正しい値で入れ直せる）。
+    const createdSec = session?.created;
+    if (!Number.isFinite(createdSec) || createdSec <= 0) {
+      console.warn('⚠️ stripe-webhook: session.created missing — contract price held');
+      return;
+    }
+    const contract = contractPriceFromCheckoutSession(session, {
+      nowIso: new Date(Math.floor(createdSec) * 1000).toISOString(),
+    });
     if (!contract) return;
     const store = resolveMembershipStore({ env: process.env });
     if (!store.enabled) return;
@@ -168,12 +177,50 @@ async function recordCancellation(email, cancelledAtIso) {
 }
 
 /**
+ * 請求期間の長さ（月数）を Stripe の price から決める。
+ *
+ * 🔴 **判定できなければ null を返す＝付与しない（fail-closed）。**
+ *    月額へ fallback すると、四半期払い等の請求で **付与量と継続月数が過少になる**。
+ *    また未知の interval を勝手に月額とみなすと、実態と食い違った月数が積み上がる。
+ *    「分からないなら付けない」（保留）方が、あとから正しく付け直せる。
+ */
+export function periodMonthsFromInvoice(invoice) {
+  const recurring = invoice?.lines?.data?.[0]?.price?.recurring;
+  if (!recurring) return null;
+
+  const count = recurring.interval_count == null ? 1 : recurring.interval_count;
+  if (!Number.isInteger(count) || count <= 0) return null;
+
+  switch (recurring.interval) {
+    case 'month': return PERIOD_MONTHS.MONTHLY * count;
+    case 'year': return PERIOD_MONTHS.ANNUAL * count;
+    // 🔴 day / week は月数へ換算できない。unknown も含めて付与しない
+    default: return null;
+  }
+}
+
+/**
+ * 支払いが成功した時刻を **Stripe が持つ値**から取る。
+ *
+ * 🔴 **`Date.now()` を使わない。** webhook は遅延・再送されるので、
+ *    受信時刻を付与日時にすると「今月の積み上げ」が実際の支払い月とずれる。
+ *    正本は `status_transitions.paid_at`（支払いが成立した時刻）。
+ * 🔴 取得できなければ **null を返す＝付与しない（保留）**。推測しない。
+ */
+export function paidAtMsFromInvoice(invoice) {
+  const sec = invoice?.status_transitions?.paid_at;
+  if (!Number.isFinite(sec) || sec <= 0) return null;
+  return Math.floor(sec) * 1000;
+}
+
+/**
  * 支払いが成功した請求期間に対してリワードを付与する（TBD-10・§7.7）。
  *
  * 🔴 呼ぶのは `invoice.payment_succeeded` のときだけ。
  *    失敗（`payment_failed`）では呼ばない＝その期間には付与しない。
  *    再決済が成功すればここへ来るので、**保留していた分が 1 回だけ**反映される。
  * 🔴 冪等キーは invoice id。Stripe の再送でも二重付与しない。
+ * 🔴 期間の長さ・支払い時刻のどちらかが取れなければ **付与しない**（fail-closed）。
  */
 async function recordPaidPeriod(email, invoice) {
   if (!isWriteEnabled(process.env)) return;
@@ -181,13 +228,21 @@ async function recordPaidPeriod(email, invoice) {
     const invoiceRef = typeof invoice?.id === 'string' ? invoice.id : null;
     if (!invoiceRef) return;
 
-    // 年払い（12 か月ぶん）か月額（1 か月ぶん）か。判定できなければ月額として扱う
-    const interval = invoice?.lines?.data?.[0]?.price?.recurring?.interval;
-    const periodMonths = interval === 'year' ? PERIOD_MONTHS.ANNUAL : PERIOD_MONTHS.MONTHLY;
+    const periodMonths = periodMonthsFromInvoice(invoice);
+    if (periodMonths == null) {
+      // 🔴 月額へ fallback しない。付けずに保留する
+      console.warn('⚠️ stripe-webhook: unknown billing interval — accrual held');
+      return;
+    }
 
-    const entry = buildPaidPeriodEntry({
-      email, invoiceRef, periodMonths, occurredAtMs: Date.now(),
-    });
+    const occurredAtMs = paidAtMsFromInvoice(invoice);
+    if (occurredAtMs == null) {
+      // 🔴 受信時刻（Date.now）で代用しない。付けずに保留する
+      console.warn('⚠️ stripe-webhook: paid_at missing — accrual held');
+      return;
+    }
+
+    const entry = buildPaidPeriodEntry({ email, invoiceRef, periodMonths, occurredAtMs });
     if (!entry) return;
 
     const store = resolveMembershipStore({ env: process.env });
@@ -197,6 +252,17 @@ async function recordPaidPeriod(email, invoice) {
     // 🔴 認可には影響させない
     console.warn('⚠️ stripe-webhook: reward accrual not recorded (ignored)');
   }
+}
+
+/**
+ * イベントの発生時刻（Stripe 側の時計）。
+ * 🔴 webhook の受信時刻ではなく **イベントが起きた時刻**を使う。
+ *    再送・遅延で 90 日の起算がずれないようにするため。
+ */
+function stripeEventTimeIso(stripeEvent) {
+  const sec = stripeEvent?.created;
+  if (!Number.isFinite(sec) || sec <= 0) return null;
+  return new Date(Math.floor(sec) * 1000).toISOString();
 }
 
 /** サブスクから email / plan を取り出す（metadata が正）。 */
@@ -297,7 +363,7 @@ export async function handler(event) {
             accessEnabled: false,
           });
           console.log('✅ stripe-webhook: subscription ended, downgraded to free');
-          await recordCancellation(email, new Date().toISOString());
+          await recordCancellation(email, stripeEventTimeIso(stripeEvent));
         } else {
           console.log('ℹ️ stripe-webhook: subscription status ignored:', sub.status);
         }
@@ -317,7 +383,7 @@ export async function handler(event) {
           accessEnabled: false,
         });
         console.log('✅ stripe-webhook: downgraded to free');
-        await recordCancellation(email, new Date().toISOString());
+        await recordCancellation(email, stripeEventTimeIso(stripeEvent));
 
         await notifyKma({
           kind: 'subscription-cancelled',

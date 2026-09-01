@@ -413,6 +413,75 @@ describe('E2E: 支払い失敗 → 保留 → 再決済', () => {
     assert.equal(tenureMonthsFromLedger([annual]), 12);
   });
 
+  test('🔴 webhook が遅れて届いても、付与日時は実際の支払い成功時刻になる', async () => {
+    const store = createInMemoryMembershipStore();
+    // 8 月分の支払いが成功したが、webhook が 9 月に遅延して届いた場合
+    const actuallyPaidAt = Date.UTC(2026, 7, 20);   // 実際の支払い成功時刻（Stripe の paid_at）
+    await store.appendEntry(EMAIL, paid('in_aug', actuallyPaidAt));
+
+    const ledger = (await store.readLedger(EMAIL)).entries;
+    const s = summarizeRewards({ entries: ledger, ledgerKnown: true, nowMs: now });
+
+    assert.equal(s.balancePoints, 100);
+    assert.equal(s.monthAccrualPoints, 0,
+      '🔴 8 月の支払いが「今月（9月）の積み上げ」に混ざってはいけない');
+
+    // 受信時刻を使っていたら 9 月扱いになり、ここが 100 になってしまう
+    const wrong = summarizeRewards({
+      entries: [paid('in_aug_wrong', now)], ledgerKnown: true, nowMs: now,
+    });
+    assert.equal(wrong.monthAccrualPoints, 100, '対比: 受信時刻で積むと当月に入ってしまう');
+  });
+
+  test('🔴 遅延再送・順序入れ替えでも二重付与しない', async () => {
+    const store = createInMemoryMembershipStore();
+    const aug = paid('in_aug', Date.UTC(2026, 7, 20));
+    const sep = paid('in_sep', Date.UTC(2026, 8, 20));
+
+    // 9 月分が先に届き、そのあと 8 月分が遅れて届く
+    await store.appendEntry(EMAIL, sep);
+    await store.appendEntry(EMAIL, aug);
+    // それぞれが再送される
+    assert.equal((await store.appendEntry(EMAIL, aug)).status, STORE_RESULT.ALREADY);
+    assert.equal((await store.appendEntry(EMAIL, sep)).status, STORE_RESULT.ALREADY);
+    // 同じ請求期間で発生時刻だけ違うものが来ても増えない
+    assert.equal((await store.appendEntry(EMAIL, paid('in_aug', Date.UTC(2026, 7, 21)))).status, STORE_RESULT.ALREADY);
+
+    const ledger = (await store.readLedger(EMAIL)).entries;
+    assert.equal(ledger.length, 2, '台帳に 2 行だけ');
+    assert.equal(tenureMonthsFromLedger(ledger), 2);
+    assert.equal(summarizeRewards({ entries: ledger, ledgerKnown: true, nowMs: now }).balancePoints, 200);
+  });
+
+  test('🔴 請求間隔が判定できない期間は付与しない（月額へ丸めない）', () => {
+    // 呼び出し側（webhook）が periodMonths=null を渡さない設計だが、
+    // 万一 0 や負数が来ても付与エントリを作らないことを固定する
+    for (const bad of [0, -1, 1.5, null, undefined, 'month']) {
+      assert.equal(
+        buildPaidPeriodEntry({ email: EMAIL, invoiceRef: 'in_bad', periodMonths: bad, occurredAtMs: now }),
+        null,
+        `periodMonths=${bad} で付与エントリを作っている`,
+      );
+    }
+  });
+
+  test('🔴 支払い時刻が無ければ付与エントリを作らない', () => {
+    for (const bad of [null, undefined, NaN, 'x']) {
+      assert.equal(
+        buildPaidPeriodEntry({ email: EMAIL, invoiceRef: 'in_bad', periodMonths: 1, occurredAtMs: bad }),
+        null,
+        `occurredAtMs=${bad} で付与エントリを作っている`,
+      );
+    }
+  });
+
+  test('四半期払い（3 か月）はそのぶん数える（月額へ潰さない）', () => {
+    const q = buildPaidPeriodEntry({ email: EMAIL, invoiceRef: 'in_q', periodMonths: 3, occurredAtMs: now });
+    assert.equal(q.points, 300);
+    assert.equal(q.periodMonths, 3);
+    assert.equal(tenureMonthsFromLedger([q]), 3);
+  });
+
   test('台帳が無い既存会員は起点（支払い成功日）からの経過で数える（TBD-9 の後方互換）', () => {
     const startedAtIso = startedAtFor(7, now);
     const t = resolveTenureMonths({ entries: [], ledgerKnown: true, startedAtIso, nowMs: now });

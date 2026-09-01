@@ -305,12 +305,17 @@ export function buildAccrualEntry({ accrual = ACCRUAL, rank, email, periodRef, o
  * 🔴 冪等キーは **請求期間の識別子**（Stripe の invoice id 等）。
  *    Stripe の再送でも、同じ期間が二度付与されることはない。
  *
- * @param {string} o.invoiceRef  請求期間の識別子（invoice id）
- * @param {number} [o.periodMonths] 月額=1 / 年払い=12
+ * 🔴 `periodMonths` に **既定値を置かない。** 省略・不正なら付与しない。
+ *    「分からないから月額として付ける」をさせないため（TBD-10 の fail-closed）。
+ *
+ * @param {string} o.invoiceRef   請求期間の識別子（invoice id）
+ * @param {number} o.periodMonths 月額=1 / 四半期=3 / 年払い=12。**必須**
+ * @param {number} o.occurredAtMs 支払いが成功した時刻（Stripe の `paid_at`）。**必須**
  */
 export function buildPaidPeriodEntry({
-  accrual = ACCRUAL, rank, email, invoiceRef, periodMonths = PERIOD_MONTHS.MONTHLY, occurredAtMs,
+  accrual = ACCRUAL, rank, email, invoiceRef, periodMonths, occurredAtMs,
 } = {}) {
+  // 🔴 月額へ丸めない。判定できなければ付与しない
   if (!Number.isInteger(periodMonths) || periodMonths <= 0) return null;
   const base = buildAccrualEntry({ accrual, rank, email, periodRef: invoiceRef, occurredAtMs });
   if (!base) return null;

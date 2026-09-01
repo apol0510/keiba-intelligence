@@ -69,6 +69,70 @@ const CUSTOMERS = process.env.AIRTABLE_TABLE_NAME || 'Customers';
 /** 有料とみなす PlanType（`tiers.js` の planTypeToTier と同じ集合）。 */
 const PAID_PLAN_TYPES = new Set(['premium', 'pro', 'pro-plus', 'light']);
 
+/**
+ * 入金確認日の逆算に使う期間（月数）。
+ *
+ * 🔴 根拠: `netlify/functions/send-payment-confirmation-auto.js` の
+ *    `calculateExpirationDate(planType)` が **入金確認時に**
+ *    `ExpirationDate = その日 + 期間` を書き込んでいる。
+ *    したがって `ExpirationDate − 期間 = 入金確認日` が復元できる。
+ *    （推測ではなく、書き込み側のコードから導ける値である）
+ */
+function termMonthsFor(planType) {
+  switch (planType) {
+    case 'lifetime': return null;   // 2099-12-31 固定なので逆算できない
+    case 'yearly': return 12;
+    case 'light':
+    case 'monthly-nankan':
+    case 'monthly-jra': return 1;
+    default: return null;           // 🔴 既定へ丸めない（不明は不明のまま）
+  }
+}
+
+/** ISO 日付から nか月前を求める（日の繰り上がりを起こさない）。 */
+function minusMonths(iso, months) {
+  const d = new Date(`${String(iso).slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  const day = d.getUTCDate();
+  const base = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - months, 1));
+  const lastDay = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + 1, 0)).getUTCDate();
+  base.setUTCDate(Math.min(day, lastDay));
+  return base.toISOString().slice(0, 10);
+}
+
+/**
+ * 会員レコードから **入金確認日の候補**を導く。
+ *
+ * 🔴 推測しない。導けるのは次をすべて満たすときだけ:
+ *    - `ExpirationDate`（または `有効期限`）がある
+ *    - `plan_type` から期間が確定できる
+ *    - 逆算した日が **未来でない**（未来なら手動延長などで書き換わっている）
+ *    - 申込日（`CreatedAt`）があるなら、その **0〜60 日後**に収まる
+ *      （大きく離れていれば更新後の日付で、初回入金日ではない）
+ */
+function derivePaidAt(fields, nowIso) {
+  const exp = fields.ExpirationDate || fields['有効期限'] || null;
+  const planType = fields.plan_type || null;
+  if (!exp) return { value: null, reason: 'ExpirationDate なし' };
+  if (!planType) return { value: null, reason: 'plan_type なし（期間が確定できない）' };
+
+  const term = termMonthsFor(planType);
+  if (term == null) return { value: null, reason: `期間を確定できない plan_type=${planType}` };
+
+  const derived = minusMonths(exp, term);
+  if (!derived) return { value: null, reason: 'ExpirationDate が日付として読めない' };
+  if (derived > nowIso) return { value: null, reason: `逆算値が未来（${derived}）＝手動延長の可能性` };
+
+  const created = fields.CreatedAt ? String(fields.CreatedAt).slice(0, 10) : null;
+  if (created) {
+    const gapDays = Math.round((Date.parse(derived) - Date.parse(created)) / 86400000);
+    if (gapDays < -1) return { value: null, reason: `逆算値が申込より前（${gapDays}日）＝不整合` };
+    if (gapDays > 60) return { value: null, reason: `申込から${gapDays}日後＝更新後の日付の可能性` };
+    return { value: derived, reason: `ExpirationDate(${String(exp).slice(0, 10)}) − ${term}か月, 申込+${gapDays}日` };
+  }
+  return { value: null, reason: '申込日が無く突合できない（要手動確認）' };
+}
+
 function fail(msg) {
   console.error(`❌ ${msg}`);
   process.exit(1);
@@ -183,39 +247,48 @@ async function main() {
   const paidDates = loadPaidDates();
   const acceptCreatedAt = has('--accept-created-at');
 
+  const nowIso = new Date().toISOString().slice(0, 10);
   const planned = [];
   const needsConfirmation = [];
+  const unknownList = [];
   for (const r of paid) {
     const f = r.fields || {};
     if (f[CUSTOMER_FIELDS.STARTED_AT]) continue;   // 既に入っている
     const hash = await maskEmail(f.Email);
     const confirmed = paidDates?.get(String(f.Email || '').trim().toLowerCase());
+    const derived = derivePaidAt(f, nowIso);
+
     if (confirmed) {
-      planned.push({ id: r.id, hash, value: confirmed, source: 'confirmed' });
+      planned.push({ id: r.id, hash, value: confirmed, source: '確認済み(--from-file)' });
+    } else if (derived.value) {
+      // 🔴 入金確認処理のコードから逆算できた値。根拠を必ず併記する
+      planned.push({ id: r.id, hash, value: derived.value, source: `逆算: ${derived.reason}` });
     } else if (f.CreatedAt && acceptCreatedAt) {
-      planned.push({ id: r.id, hash, value: f.CreatedAt, source: 'created-at' });
+      planned.push({ id: r.id, hash, value: f.CreatedAt, source: '申込日(--accept-created-at)' });
     } else if (f.CreatedAt) {
-      needsConfirmation.push({ hash, candidate: f.CreatedAt });
+      needsConfirmation.push({ hash, candidate: f.CreatedAt, why: derived.reason });
+    } else {
+      unknownList.push({ hash, why: derived.reason });
     }
-    // CreatedAt も無い会員は 🔴 空のまま（推測も 0 か月補完もしない）
   }
 
   console.log(`\n=== 書き込み予定 ${planned.length} 件（${CUSTOMER_FIELDS.STARTED_AT} のみ）===`);
+  console.log('    根拠: send-payment-confirmation-auto.js が入金確認時に');
+  console.log('          ExpirationDate = その日 + 期間 を書いている → 逆算で入金確認日が復元できる');
   for (const p of planned) {
-    console.log(`    ${p.hash}  ← ${String(p.value).slice(0, 10)}  [${p.source}]`);
+    console.log(`    ${p.hash}  ← ${String(p.value).slice(0, 10)}`);
+    console.log(`               ${p.source}`);
   }
   if (needsConfirmation.length) {
-    console.log(`\n=== 🔴 入金日の確認が必要 ${needsConfirmation.length} 件（このままでは書かない）===`);
-    console.log('    起点は「支払い成功日」。CreatedAt は申込日なので、そのままでは使えない。');
-    console.log('    --from-file で確認済みの入金日を渡すか、--accept-created-at で明示的に引き受けること。');
+    console.log(`\n=== 🔴 手動確認が必要 ${needsConfirmation.length} 件（このままでは書かない）===`);
     for (const p of needsConfirmation) {
-      console.log(`    ${p.hash}  候補(申込日)=${String(p.candidate).slice(0, 10)}`);
+      console.log(`    ${p.hash}  申込日=${String(p.candidate).slice(0, 10)}  理由: ${p.why}`);
     }
+    console.log('    --from-file で確認済みの入金日を渡すこと（--accept-created-at は申込日で妥協する場合のみ）。');
   }
-  const unknown = paid.length - planned.length - needsConfirmation.length
-    - paid.filter((r) => r.fields?.[CUSTOMER_FIELDS.STARTED_AT]).length;
-  if (unknown > 0) {
-    console.log(`\n=== 🔴 起点不明 ${unknown} 件（空のままにする）===`);
+  if (unknownList.length) {
+    console.log(`\n=== 🔴 起点不明 ${unknownList.length} 件（空のままにする）===`);
+    for (const p of unknownList) console.log(`    ${p.hash}  理由: ${p.why}`);
     console.log('    推測で埋めない。0 か月（Bronze）でも埋めない。画面は「準備中」になる。');
   }
   console.log('\n  🔴 既存列（PlanType / Status / AccessEnabled）には触れない');

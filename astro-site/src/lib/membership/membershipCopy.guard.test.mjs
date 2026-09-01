@@ -320,7 +320,17 @@ describe('ランク・リワードを認可に使わない', () => {
 
     // 3. webhook: payment_failed は認可（Status）だけを触り、付与を呼ばない
     const wh = read('netlify/functions/stripe-webhook.js');
-    const failedCase = wh.slice(wh.indexOf("case 'invoice.payment_failed'"), wh.indexOf('default:'));
+    /** switch の 1 ケースだけを切り出す（ファイル内の別の switch に引きずられないように）。 */
+    const caseBody = (label) => {
+      const start = wh.indexOf(`case '${label}'`);
+      assert.ok(start > 0, `case '${label}' が見つからない`);
+      const rest = wh.slice(start + 1);
+      const nextCase = rest.indexOf("      case '");
+      const nextDefault = rest.indexOf('      default:');
+      const ends = [nextCase, nextDefault].filter((i) => i >= 0);
+      return ends.length ? rest.slice(0, Math.min(...ends)) : rest;
+    };
+    const failedCase = caseBody('invoice.payment_failed');
     assert.match(failedCase, /applyPlan\(email, \{ status: 'payment_failed' \}\)/,
       'payment_failed が Status 以外を触っている');
     assert.equal(failedCase.includes('recordPaidPeriod'), false,
@@ -331,10 +341,34 @@ describe('ランク・リワードを認可に使わない', () => {
     }
 
     // 4. 付与は支払い成功でだけ駆動する
-    const okCase = wh.slice(wh.indexOf("case 'invoice.payment_succeeded'"), wh.indexOf("case 'invoice.payment_failed'"));
+    const okCase = caseBody('invoice.payment_succeeded');
     assert.match(okCase, /recordPaidPeriod\(email, invoice\)/);
     assert.equal(okCase.includes('applyPlan'), false,
       '🔴 支払い成功で認可を書き換えている（付与だけを行うこと）');
+  });
+
+  test('🔴 付与の前提が欠けたら付与しない（月額へ丸めない・受信時刻で代用しない）', () => {
+    const wh = read('netlify/functions/stripe-webhook.js');
+
+    // 請求間隔: 判定できなければ null（月額へ fallback しない）
+    const interval = wh.slice(wh.indexOf('export function periodMonthsFromInvoice('));
+    assert.match(interval.slice(0, 900), /default: return null;/,
+      '未知の interval を月額へ丸めている');
+    assert.match(interval.slice(0, 900), /interval_count/,
+      'interval_count を無視している（四半期払いが月額になる）');
+
+    // 支払い時刻: Stripe の paid_at を使い、無ければ null
+    const paidAt = wh.slice(wh.indexOf('export function paidAtMsFromInvoice('));
+    assert.match(paidAt.slice(0, 500), /status_transitions\?\.paid_at/);
+    assert.equal(paidAt.slice(0, 500).includes('Date.now()'), false,
+      '🔴 受信時刻で支払い時刻を代用している');
+
+    // 付与本体: どちらかが欠けたら return（保留）
+    const record = wh.slice(wh.indexOf('async function recordPaidPeriod('));
+    assert.match(record.slice(0, 1400), /periodMonths == null[\s\S]*?return;/);
+    assert.match(record.slice(0, 1400), /occurredAtMs == null[\s\S]*?return;/);
+    assert.equal(record.slice(0, 1400).includes('Date.now()'), false,
+      '🔴 付与日時に受信時刻を使っている');
   });
 
   test('🔴 継続月数は支払い済み期間から数える（TBD-9 / TBD-10）', () => {

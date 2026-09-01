@@ -176,11 +176,15 @@ const paymentFailed = (email, id) =>
     subscription_details: { metadata: { ki_email: email } },
   }, id);
 
-const paymentSucceeded = (email, id, invoiceId = 'in_test_1') =>
+const PAID_AT_SEC = Math.floor(Date.parse('2026-08-15T00:00:00Z') / 1000);
+
+const paymentSucceeded = (email, id, invoiceId = 'in_test_1', overrides = {}) =>
   makeEvent('invoice.payment_succeeded', {
     id: invoiceId,
     subscription_details: { metadata: { ki_email: email } },
-    lines: { data: [{ price: { recurring: { interval: 'month' } } }] },
+    lines: { data: [{ price: { recurring: { interval: 'month', interval_count: 1 } } }] },
+    status_transitions: { paid_at: PAID_AT_SEC },
+    ...overrides,
   }, id);
 
 /* ------------------------------------------------------------------
@@ -355,6 +359,77 @@ test('🔴 payment_succeeded は認可を変えない（付与だけを行う）
   assert.equal(updatesFor(ALICE).length, beforeCount, '支払い成功で認可を書き換えている');
   assert.equal(viewOf(ALICE).tier, beforeView.tier);
   assert.equal(viewOf(ALICE).view.showBetting, beforeView.view.showBetting);
+});
+
+/* ------------------------------------------------------------------
+   請求期間・支払い時刻が読めないときは付与しない（fail-closed）
+   ------------------------------------------------------------------ */
+
+test('🔴 未知の請求間隔では付与しない（月額へ fallback しない）', async () => {
+  const { periodMonthsFromInvoice } = await import('../../../netlify/functions/stripe-webhook.js');
+
+  // 判定できるもの
+  assert.equal(periodMonthsFromInvoice({ lines: { data: [{ price: { recurring: { interval: 'month' } } }] } }), 1);
+  assert.equal(periodMonthsFromInvoice({ lines: { data: [{ price: { recurring: { interval: 'year' } } }] } }), 12);
+  assert.equal(
+    periodMonthsFromInvoice({ lines: { data: [{ price: { recurring: { interval: 'month', interval_count: 3 } } }] } }),
+    3, '四半期払いは 3 か月ぶん（月額へ潰さない）',
+  );
+  assert.equal(
+    periodMonthsFromInvoice({ lines: { data: [{ price: { recurring: { interval: 'year', interval_count: 2 } } }] } }),
+    24,
+  );
+
+  // 🔴 判定できないものは null（＝付与しない）
+  for (const bad of [
+    {},
+    { lines: { data: [] } },
+    { lines: { data: [{ price: {} }] } },
+    { lines: { data: [{ price: { recurring: { interval: 'week' } } }] } },
+    { lines: { data: [{ price: { recurring: { interval: 'day' } } }] } },
+    { lines: { data: [{ price: { recurring: { interval: 'quarter' } } }] } },
+    { lines: { data: [{ price: { recurring: { interval: 'month', interval_count: 0 } } }] } },
+    { lines: { data: [{ price: { recurring: { interval: 'month', interval_count: 1.5 } } }] } },
+  ]) {
+    assert.equal(periodMonthsFromInvoice(bad), null, `月額へ fallback している: ${JSON.stringify(bad)}`);
+  }
+});
+
+test('🔴 支払い時刻は Stripe の paid_at を使い、無ければ付与しない', async () => {
+  const { paidAtMsFromInvoice } = await import('../../../netlify/functions/stripe-webhook.js');
+
+  assert.equal(paidAtMsFromInvoice({ status_transitions: { paid_at: PAID_AT_SEC } }), PAID_AT_SEC * 1000);
+
+  // 🔴 受信時刻（Date.now）で代用しない
+  for (const bad of [
+    {},
+    { status_transitions: {} },
+    { status_transitions: { paid_at: null } },
+    { status_transitions: { paid_at: 0 } },
+    { status_transitions: { paid_at: 'x' } },
+  ]) {
+    assert.equal(paidAtMsFromInvoice(bad), null, `推測で時刻を作っている: ${JSON.stringify(bad)}`);
+  }
+});
+
+test('🔴 未知の間隔 / paid_at 欠落でも 200 を返し、認可は変えない', async () => {
+  await post(checkoutCompleted(ALICE));
+  const before = updatesFor(ALICE).length;
+
+  const unknownInterval = await post(
+    paymentSucceeded(ALICE, 'evt_unknown_interval', 'in_x1', {
+      lines: { data: [{ price: { recurring: { interval: 'week' } } }] },
+    }),
+  );
+  assert.equal(unknownInterval.statusCode, 200, 'Stripe に再送させ続けない');
+
+  const noPaidAt = await post(
+    paymentSucceeded(ALICE, 'evt_no_paid_at', 'in_x2', { status_transitions: {} }),
+  );
+  assert.equal(noPaidAt.statusCode, 200);
+
+  assert.equal(updatesFor(ALICE).length, before, '認可を書き換えている');
+  assert.equal(viewOf(ALICE).view.showBetting, true);
 });
 
 test('🔴 同じ invoice の payment_succeeded を再送しても二重処理しない', async () => {
