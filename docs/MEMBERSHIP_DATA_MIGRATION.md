@@ -197,7 +197,7 @@ redemption : redemption:<email>:<交換ID>
 | 段階 | rollback |
 |---|---|
 | 手順 1〜2（列・テーブル追加）後 | **何もしなくてよい。** コードは列を読まない（`MEMBERSHIP_WRITE_ENABLED` 未設定なら書かない）。列を残したままでも既存動作に影響しない |
-| 手順 3（読み取り有効化）後 | 環境変数を戻して再デプロイ。表示が `pending` に戻るだけ |
+| 手順 3（動作確認）後 | 変更なし（読み取りはまだ有効化していない） |
 | 手順 4（backfill）後 | backfill した列を空に戻す。**既存列（`PlanType` / `Status` / `AccessEnabled`）は触っていない**ので会員の権限には影響しない |
 | 手順 5（読み取り有効化）後 | `MEMBERSHIP_READ_ENABLED` を削除して再デプロイ。表示が `pending` に戻るだけ |
 | 手順 6（write 有効化）後 | `MEMBERSHIP_WRITE_ENABLED` を削除して再デプロイ。台帳に入った行は**消さずに残す**（監査のため）。残高の写し（`RewardBalance`）は台帳から再計算できる |
@@ -222,5 +222,5 @@ redemption : redemption:<email>:<交換ID>
   **以後書きに行かない**（`schema_missing`）。読み取りも `null` を返し、
   **空配列を返して「0 件」と誤認させない**。
 - **制度の数値は環境変数を必要としない**（`MEMBERSHIP_REWARDS.md` §7.1 の確定値がコードの定数）。
-  本番 env に追加が必要なのは、write を有効化するときの `MEMBERSHIP_WRITE_ENABLED` だけである。
-- Airtable アダプタは **実装していない**（列が無いため）。`store.js` は注入可能な抽象のみを持つ。
+  本番 env に追加が必要なのは段階的有効化のフラグ 2 つだけである
+  （`MEMBERSHIP_READ_ENABLED` → `MEMBERSHIP_WRITE_ENABLED`）。
