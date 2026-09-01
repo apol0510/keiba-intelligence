@@ -5,7 +5,8 @@
  *
  * ここで守るのは 4 つ。
  *   1. リワードを **現金・預金と誤認させる表現**を出さない（§8 L-8 の前提）
- *   2. **未確定の数値**（ポイント数・必要月数・景品名）を UI へ出さない（§7）
+ *   2. UI に出る数値が **§7.1 の確定値と一致**していること（未確定の品目は出さない）
+ *   2b. **正本（docs）とコードの定数が一致**していること
  *   3. **ランクを認可に使わない**（entitlement 側が membership を参照しない）
  *   4. KAA 型の **育成・ゲーム機能**を KI へ持ち込まない（§1）
  */
@@ -22,6 +23,13 @@ const read = (p) => readFileSync(join(siteRoot, p), 'utf8');
 
 const UI_FILES = ['src/pages/pricing.astro', 'src/pages/mypage.astro'];
 const LIB_DIR = 'src/lib/membership';
+const SPEC = '../docs/MEMBERSHIP_REWARDS.md';
+
+/** §7.1 の確定値。UI に出してよい数値はこれだけ。 */
+const CONFIRMED_POINTS = Object.freeze([100, 600, 1200]);
+const CONFIRMED_MONTHS = Object.freeze([3, 12, 24]);
+/** 猶予日数（「90日」は月数ではなく日数として出る） */
+const CONFIRMED_DAYS = Object.freeze([90]);
 
 /** コメント行を除いた実装行だけを返す（コメントで「〜しない」と書くのは許す）。 */
 function codeLines(src) {
@@ -97,21 +105,29 @@ describe('リワードを現金・預金と誤認させない', () => {
    ================================================================ */
 
 describe('未確定の数値を出さない（TBD-1〜TBD-8）', () => {
-  test('UI に固定のポイント数を書かない', () => {
-    // `500 pt` `1000ポイント` のような固定値。テンプレート（`} pt`）は対象外
-    const re = /\d+\s*(pt|ポイント)(?![）\w])/;
+  test('🔴 UI に出るポイント数は確定値（100 / 600 / 1,200）だけ', () => {
     for (const file of UI_FILES) {
       for (const line of codeLines(read(file))) {
-        assert.doesNotMatch(line, re, `${file}: 固定のポイント数を書いている → ${line.trim()}`);
+        for (const m of line.matchAll(/([\d,]+)\s*(pt|ポイント)(?![）\w])/g)) {
+          const n = Number(m[1].replace(/,/g, ''));
+          assert.ok(CONFIRMED_POINTS.includes(n),
+            `${file}: 確定値でないポイント数 → ${m[0]} / ${line.trim()}`);
+        }
       }
     }
   });
 
-  test('UI に固定の「◯か月で昇格」を書かない', () => {
-    const re = /\d+\s*か月(継続|目|で)/;
+  test('🔴 UI に出る月数・日数は確定値（3 / 12 / 24 か月・90 日）だけ', () => {
     for (const file of UI_FILES) {
       for (const line of codeLines(read(file))) {
-        assert.doesNotMatch(line, re, `${file}: 固定の必要月数を書いている → ${line.trim()}`);
+        for (const m of line.matchAll(/(\d+)\s*か月/g)) {
+          assert.ok(CONFIRMED_MONTHS.includes(Number(m[1])),
+            `${file}: 確定値でない月数 → ${m[0]} / ${line.trim()}`);
+        }
+        for (const m of line.matchAll(/(\d+)\s*日以内/g)) {
+          assert.ok(CONFIRMED_DAYS.includes(Number(m[1])),
+            `${file}: 確定値でない日数 → ${m[0]} / ${line.trim()}`);
+        }
       }
     }
   });
@@ -126,20 +142,38 @@ describe('未確定の数値を出さない（TBD-1〜TBD-8）', () => {
     }
   });
 
-  test('membership モジュールが昇格月数・付与ポイントの既定値を持たない', () => {
+  test('🔴 正本（docs §7.1）とコードの定数が一致している', () => {
+    const spec = read(SPEC);
+    // 正本側にこの表記が残っていること（片方だけ変えたら落ちる）
+    for (const needed of [
+      '**100 pt / 月**',
+      '**Bronze 0 / Silver 3 / Gold 12 / Platinum 24 か月**',
+      '**2 段階: 小 600 pt / 大 1,200 pt**',
+      '**1 点あたり ¥796 以内**',
+      '**12 か月・24 か月**',
+      '**解約後 90 日で失効**',
+    ]) {
+      assert.ok(spec.includes(needed), `正本 §7.1 から「${needed}」が消えている`);
+    }
+
     const ranks = read(join(LIB_DIR, 'ranks.js'));
     const rewards = read(join(LIB_DIR, 'rewards.js'));
-    assert.match(ranks, /RANK_THRESHOLDS_UNSET/);
-    assert.doesNotMatch(
-      ranks,
-      /\[RANK\.(SILVER|GOLD|PLATINUM)\]:\s*\d/,
-      'ranks.js に昇格月数の既定値を書いてはいけない（TBD-2）',
-    );
-    assert.doesNotMatch(
-      rewards,
-      /monthlyPoints:\s*\d/,
-      'rewards.js に付与ポイントの既定値を書いてはいけない（TBD-1）',
-    );
+    const catalog = read(join(LIB_DIR, 'catalog.js'));
+    const priceLock = read(join(LIB_DIR, 'priceLock.js'));
+
+    assert.match(rewards, /export const MONTHLY_POINTS = 100;/);
+    assert.match(rewards, /export const GRACE_DAYS = 90;/);
+    assert.match(rewards, /export const ANNUAL_TERM_MONTHS = 12;/);
+    assert.match(ranks, /\[RANK\.BRONZE\]:\s*0,[\s\S]*\[RANK\.SILVER\]:\s*3,[\s\S]*\[RANK\.GOLD\]:\s*12,[\s\S]*\[RANK\.PLATINUM\]:\s*24,/);
+    assert.match(catalog, /costPoints:\s*600[\s\S]*costPoints:\s*1200/);
+    assert.match(catalog, /export const MAX_ITEM_VALUE_YEN = 796;/);
+    assert.match(catalog, /MILESTONE_MONTHS = Object\.freeze\(\[12, 24\]\)/);
+    assert.match(priceLock, /export const REENTRY_GRACE_DAYS = 90;/);
+  });
+
+  test('🔴 ランク倍率を復活させていない（待遇差は景品側で付ける）', () => {
+    const rewards = read(join(LIB_DIR, 'rewards.js'));
+    assert.match(rewards, /rankBonusPoints:\s*null,/, 'ACCRUAL にランク倍率を入れてはいけない（TBD-1b）');
   });
 
   test('同梱の景品カタログは draft のまま（架空の景品を配らない）', () => {
@@ -182,6 +216,45 @@ describe('正本で廃止された訴求を出さない', () => {
     const pendingBranch = src.indexOf("club.history.status !== 'ready'");
     assert.ok(pendingBranch > 0, 'pending を先に判定していない（未取得を 0 件と言い切ってしまう）');
     assert.ok(pendingBranch < src.indexOf(marker), 'pending の判定が「まだありません」より後ろにある');
+  });
+});
+
+/* ================================================================
+   2.7 保守ライン S-1〜S-3（景表法の総付景品の枠内に留める）
+   ================================================================ */
+
+describe('保守ラインを崩さない', () => {
+  test('🔴 S-1: 景品の上限は月額の 10 分の 2（¥796）に固定されている', () => {
+    const catalog = read(join(LIB_DIR, 'catalog.js'));
+    assert.match(catalog, /export const MAX_ITEM_VALUE_YEN = 796;/);
+    // 月額 ¥3,980 が変われば上限も変わる。両方を同時に見直させるための結び付け
+    const plans = read('src/lib/billing/plans.js');
+    assert.match(plans, /MONTHLY_PRICE_YEN = 3980;/,
+      '月額を変えたら MAX_ITEM_VALUE_YEN（= 月額の10分の2）も見直すこと');
+  });
+
+  test('🔴 S-2: 記念品の月は通常交換を止める分岐がある', () => {
+    const catalog = read(join(LIB_DIR, 'catalog.js'));
+    assert.match(catalog, /isMilestoneMonth\(months\)/);
+    assert.match(catalog, /blockedByMilestone/);
+  });
+
+  test('🔴 S-3: 抽選・くじ・先着を入れていない（全員同一条件＝総付を維持）', () => {
+    const targets = [...UI_FILES];
+    for (const f of readdirSync(join(siteRoot, LIB_DIR))) {
+      if (f.endsWith('.js')) targets.push(join(LIB_DIR, f));
+    }
+    // 「抽選はありません」のような打ち消し文は許す（§8.1 S-3 を明示する文言）
+    const isDenial = (l) => /(ありません|しません|入れない|行いません)/.test(l);
+    for (const file of targets) {
+      for (const line of codeLines(read(file))) {
+        for (const w of ['抽選', 'くじ', '先着', 'ランダム', 'Math.random']) {
+          if (!line.includes(w)) continue;
+          assert.ok(isDenial(line),
+            `${file}: 「${w}」は総付景品の前提を崩す → ${line.trim()}`);
+        }
+      }
+    }
   });
 });
 

@@ -1,6 +1,6 @@
 {
   "version": 0,
   "status": "draft",
-  "note": "景品カタログの実体。商品・必要ポイント・価額はいずれも未確定（docs/MEMBERSHIP_REWARDS.md §7 TBD-3/TBD-4/TBD-5）。確定するまで items は空にしておく。架空の商品・架空のポイント数を入れないこと。景品表示法上の確認（同 §8 L-1〜L-4）が済むまで items を投入しない。",
+  "note": "景品カタログの実体。交換ライン（600 / 1,200 pt）・記念品の月（12 / 24 か月）・価額の上限（1点 ¥796・保守ライン S-1）は docs/MEMBERSHIP_REWARDS.md §7.1 で確定済み。残っているのは品目そのもの（TBD-3b / TBD-4b）で、選定が済むまで items は空にしておく。架空の商品を入れないこと。items に入れる際は kind=redeemable なら costPoints を 600 か 1200 に、kind=milestone なら milestoneMonths を 12 か 24 にすること（それ以外は catalog.js が除外する）。valueYen を書く場合は 796 以内。公開するときに status を published へ変える。",
   "items": []
 }

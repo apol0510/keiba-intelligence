@@ -16,8 +16,9 @@
  *   本ページは **二本柱**である。
  *     柱1: 予想サービスの価値（マトリクス ＋ 月額プラン）
  *     柱2: **続けるほど会員価値が積み上がる**（KI 会員クラブ）
- *   🔴 柱2 に **未確定のポイント数・景品内容・必要月数を出さない**（架空値・例示値も禁止）。
- *      出してよいのは制度名と確定した訴求だけ（`PRICING_BENEFITS`）。
+ *   🔴 柱2 に出してよい数値は **docs/MEMBERSHIP_REWARDS.md §7.1 の確定値だけ**
+ *      （100 pt/月・0/3/12/24 か月・600/1,200 pt・記念品 12/24 か月・解約後 90 日）。
+ *      **景品の品目は未確定**なので書かない（カタログはデータ駆動）。
  */
 
 import BaseLayout from '../layouts/BaseLayout.astro';
@@ -160,12 +161,15 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
         会員ランクが上がり、プレゼントをお選びいただけるようになります。
       </p>
 
-      <!-- 会員ランク -->
+      <!-- 会員ランク（昇格月数は確定値・§7.1） -->
       <div class="pr-rank-ladder" aria-label="会員ランク">
         {RANK_LADDER.map((r, i) => (
           <>
             {i > 0 && <span class="pr-rank-arrow" aria-hidden="true">→</span>}
-            <span class={`pr-rank-step is-${r.rank}`}>{r.label}</span>
+            <span class={`pr-rank-step is-${r.rank}`}>
+              {r.label}
+              <small>{r.months === 0 ? 'ご登録から' : `${r.months}か月`}</small>
+            </span>
           </>
         ))}
       </div>
@@ -185,8 +189,7 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       </ul>
 
       <p class="pr-club-pending">
-        <b>準備中</b>：付与ポイント数・ランクの条件・プレゼントの品目と必要ポイントは、
-        確定しだいこのページとマイページでご案内します。
+        <b>準備中</b>：プレゼントの品目は選定中です。決まりしだい、このページとマイページでご案内します。
       </p>
       <p class="pr-club-legal">
         KIリワードは会員特典のポイントです。現金・預金ではなく、換金・払い戻し・第三者への譲渡はできません。
@@ -223,10 +226,13 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
         <p>いつでも解約できます。解約手続きはマイページから行えます。解約後も無料会員として印までご覧いただけます。</p>
       </details>
       <details><summary>KIリワードとは何ですか？</summary>
-        <p>プレミアムを続けていただくと自動で積み上がる、会員特典のポイントです。ログインや操作は必要ありません。貯まったリワードは、ご用意したプレゼントの中からお選びいただくときに使います。現金・預金ではなく、換金・払い戻し・第三者への譲渡はできません。付与されるポイント数やプレゼントの内容は準備中です。</p>
+        <p>プレミアムを続けていただくと毎月100ptずつ自動で積み上がる、会員特典のポイントです。ログインや操作は必要ありません。600ptと1,200ptの2段階でプレゼントとお引き換えいただけます。抽選はありません。現金・預金ではなく、換金・払い戻し・第三者への譲渡はできません。プレゼントの品目は準備中です。</p>
+      </details>
+      <details><summary>ポイントの有効期限はありますか？</summary>
+        <p>ご契約が続いている間は失効しません。解約された場合は90日以内に再開されるとポイントが戻ります。それを過ぎると失効します。</p>
       </details>
       <details><summary>あとから値上げされませんか？</summary>
-        <p>ご契約中は、加入されたときの価格のまま続けていただけます（継続価格ロック）。新規のお申し込み価格を変更する場合でも、契約中の会員さまの金額は上がりません。解約後に再度お申し込みいただく場合の価格は、現在検討中です。</p>
+        <p>ご契約中は、加入されたときの価格のまま続けていただけます（継続価格ロック）。新規のお申し込み価格を変更する場合でも、契約中の会員さまの金額は上がりません。解約後90日以内に再開された場合は以前の価格が戻り、それを過ぎた場合はその時点の価格になります。</p>
       </details>
       <details><summary>回収率はどう計算していますか？</summary>
         <p>払戻 ÷ 投資 × 100 の実測値です。公開している的中はすべて算入しています。</p>
@@ -655,6 +661,14 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     background: var(--bg-primary);
     color: var(--text-secondary);
     white-space: nowrap;
+  }
+
+  .pr-rank-step small {
+    display: block;
+    font-size: 0.66rem;
+    font-weight: 700;
+    opacity: 0.75;
+    margin-top: 1px;
   }
 
   .pr-rank-step.is-bronze { border-color: #b07a4a; color: #8a5a30; }
