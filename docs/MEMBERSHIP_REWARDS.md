@@ -267,7 +267,7 @@
 
 | 前提 | 正本 | 欠けたときの挙動 |
 |---|---|---|
-| 請求期間の長さ | Stripe の `price.recurring`（`interval` × `interval_count`）| 🔴 **月額へ丸めない。付与しない**（`day` / `week` / 未知の値も同様）|
+| 請求期間の長さ | Stripe の `price.recurring`（`interval` × `interval_count`）| 🔴 **月額へ丸めない。付与しない**（`day` / `week` / 未知の値も同様）。🔴 **`interval_count` が欠けていても 1 で補わない**（実際が四半期・半年払いだった場合に過少なまま確定するため）|
 | 支払い成功の時刻 | Stripe の `status_transitions.paid_at` | 🔴 **受信時刻（`Date.now()`）で代用しない。付与しない** |
 
 - 期間は `month`→1か月 / `year`→12か月に `interval_count` を掛けて数える

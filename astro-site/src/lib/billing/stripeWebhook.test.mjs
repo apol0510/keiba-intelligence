@@ -368,31 +368,62 @@ test('🔴 payment_succeeded は認可を変えない（付与だけを行う）
 test('🔴 未知の請求間隔では付与しない（月額へ fallback しない）', async () => {
   const { periodMonthsFromInvoice } = await import('../../../netlify/functions/stripe-webhook.js');
 
-  // 判定できるもの
-  assert.equal(periodMonthsFromInvoice({ lines: { data: [{ price: { recurring: { interval: 'month' } } }] } }), 1);
-  assert.equal(periodMonthsFromInvoice({ lines: { data: [{ price: { recurring: { interval: 'year' } } }] } }), 12);
-  assert.equal(
-    periodMonthsFromInvoice({ lines: { data: [{ price: { recurring: { interval: 'month', interval_count: 3 } } }] } }),
-    3, '四半期払いは 3 か月ぶん（月額へ潰さない）',
-  );
-  assert.equal(
-    periodMonthsFromInvoice({ lines: { data: [{ price: { recurring: { interval: 'year', interval_count: 2 } } }] } }),
-    24,
-  );
+  const rec = (recurring) => ({ lines: { data: [{ price: { recurring } }] } });
+
+  // 判定できるもの（interval と interval_count が **両方** 揃っている場合だけ）
+  assert.equal(periodMonthsFromInvoice(rec({ interval: 'month', interval_count: 1 })), 1);
+  assert.equal(periodMonthsFromInvoice(rec({ interval: 'year', interval_count: 1 })), 12);
+  assert.equal(periodMonthsFromInvoice(rec({ interval: 'month', interval_count: 3 })), 3,
+    '四半期払いは 3 か月ぶん（月額へ潰さない）');
+  assert.equal(periodMonthsFromInvoice(rec({ interval: 'year', interval_count: 2 })), 24);
 
   // 🔴 判定できないものは null（＝付与しない）
   for (const bad of [
     {},
     { lines: { data: [] } },
     { lines: { data: [{ price: {} }] } },
-    { lines: { data: [{ price: { recurring: { interval: 'week' } } }] } },
-    { lines: { data: [{ price: { recurring: { interval: 'day' } } }] } },
-    { lines: { data: [{ price: { recurring: { interval: 'quarter' } } }] } },
-    { lines: { data: [{ price: { recurring: { interval: 'month', interval_count: 0 } } }] } },
-    { lines: { data: [{ price: { recurring: { interval: 'month', interval_count: 1.5 } } }] } },
+    rec({ interval: 'week', interval_count: 1 }),
+    rec({ interval: 'day', interval_count: 1 }),
+    rec({ interval: 'quarter', interval_count: 1 }),
+    rec({ interval: 'month', interval_count: 0 }),
+    rec({ interval: 'month', interval_count: -1 }),
+    rec({ interval: 'month', interval_count: 1.5 }),
   ]) {
     assert.equal(periodMonthsFromInvoice(bad), null, `月額へ fallback している: ${JSON.stringify(bad)}`);
   }
+});
+
+test('🔴 interval_count が欠落していたら 1 で補わず付与しない', async () => {
+  const { periodMonthsFromInvoice } = await import('../../../netlify/functions/stripe-webhook.js');
+  const rec = (recurring) => ({ lines: { data: [{ price: { recurring } }] } });
+
+  // 🔴 「月額なのだから 1 だろう」と補完してはいけない。
+  //    実際が四半期・半年払いだった場合、付与量と継続月数が過少なまま確定してしまう。
+  for (const missing of [
+    rec({ interval: 'month' }),
+    rec({ interval: 'year' }),
+    rec({ interval: 'month', interval_count: null }),
+    rec({ interval: 'month', interval_count: undefined }),
+    rec({ interval: 'month', interval_count: '1' }),
+    rec({ interval: 'year', interval_count: '' }),
+  ]) {
+    assert.equal(periodMonthsFromInvoice(missing), null,
+      `interval_count 欠落を 1 で補っている: ${JSON.stringify(missing)}`);
+  }
+});
+
+test('🔴 interval_count 欠落の webhook を受けても 200・付与なし・認可不変', async () => {
+  await post(checkoutCompleted(ALICE));
+  const before = updatesFor(ALICE).length;
+
+  const res = await post(
+    paymentSucceeded(ALICE, 'evt_no_count', 'in_no_count', {
+      lines: { data: [{ price: { recurring: { interval: 'month' } } }] }, // interval_count なし
+    }),
+  );
+  assert.equal(res.statusCode, 200, 'Stripe に再送させ続けない');
+  assert.equal(updatesFor(ALICE).length, before, '認可を書き換えている');
+  assert.equal(viewOf(ALICE).view.showBetting, true, '認可の挙動が変わっている');
 });
 
 test('🔴 支払い時刻は Stripe の paid_at を使い、無ければ付与しない', async () => {

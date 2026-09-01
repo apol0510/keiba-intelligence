@@ -453,6 +453,55 @@ describe('E2E: 支払い失敗 → 保留 → 再決済', () => {
     assert.equal(summarizeRewards({ entries: ledger, ledgerKnown: true, nowMs: now }).balancePoints, 200);
   });
 
+  test('🔴 interval_count 欠落: invoice → 付与判定 → 台帳 まで通して付与されない', async () => {
+    const { periodMonthsFromInvoice, paidAtMsFromInvoice } =
+      await import('../../../netlify/functions/stripe-webhook.js');
+
+    const store = createInMemoryMembershipStore();
+    // 先に 2 期ぶん正常に積んでおく（あとで増えていないことを確認するため）
+    await store.appendEntry(EMAIL, paid('in_1', Date.UTC(2026, 6, 20)));
+    await store.appendEntry(EMAIL, paid('in_2', Date.UTC(2026, 7, 20)));
+    const beforeWrites = store.writeCount();
+
+    // interval_count が欠落した invoice が届いた
+    const invoice = {
+      id: 'in_no_count',
+      status_transitions: { paid_at: Math.floor(Date.UTC(2026, 8, 1) / 1000) },
+      lines: { data: [{ price: { recurring: { interval: 'month' } } }] },
+    };
+
+    // webhook が行う判定をそのまま通す
+    const periodMonths = periodMonthsFromInvoice(invoice);
+    assert.equal(periodMonths, null, '🔴 1 で補完している');
+
+    const occurredAtMs = paidAtMsFromInvoice(invoice);
+    assert.ok(Number.isFinite(occurredAtMs), '支払い時刻は取れている（欠落しているのは間隔だけ）');
+
+    // 判定が null なので付与エントリを作らない → 台帳は増えない
+    const entry = buildPaidPeriodEntry({ email: EMAIL, invoiceRef: invoice.id, periodMonths, occurredAtMs });
+    assert.equal(entry, null);
+    assert.equal(store.writeCount(), beforeWrites, '台帳へ書き込まれている');
+
+    const ledger = (await store.readLedger(EMAIL)).entries;
+    assert.equal(ledger.length, 2, '保留されず付与されている');
+    assert.equal(tenureMonthsFromLedger(ledger), 2, '継続月数が増えている');
+    assert.equal(summarizeRewards({ entries: ledger, ledgerKnown: true, nowMs: now }).balancePoints, 200);
+
+    // 🔴 あとで正しい interval_count 付きで再送されれば、そのとき 1 回だけ付く
+    const fixed = { ...invoice, lines: { data: [{ price: { recurring: { interval: 'month', interval_count: 1 } } }] } };
+    const retryMonths = periodMonthsFromInvoice(fixed);
+    assert.equal(retryMonths, 1);
+    const retryEntry = buildPaidPeriodEntry({
+      email: EMAIL, invoiceRef: fixed.id, periodMonths: retryMonths, occurredAtMs: paidAtMsFromInvoice(fixed),
+    });
+    assert.equal((await store.appendEntry(EMAIL, retryEntry)).status, STORE_RESULT.APPLIED);
+    assert.equal((await store.appendEntry(EMAIL, retryEntry)).status, STORE_RESULT.ALREADY, '再送で二重付与しない');
+
+    const after = (await store.readLedger(EMAIL)).entries;
+    assert.equal(tenureMonthsFromLedger(after), 3);
+    assert.equal(summarizeRewards({ entries: after, ledgerKnown: true, nowMs: now }).balancePoints, 300);
+  });
+
   test('🔴 請求間隔が判定できない期間は付与しない（月額へ丸めない）', () => {
     // 呼び出し側（webhook）が periodMonths=null を渡さない設計だが、
     // 万一 0 や負数が来ても付与エントリを作らないことを固定する

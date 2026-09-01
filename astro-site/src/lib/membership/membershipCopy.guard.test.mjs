@@ -356,6 +356,11 @@ describe('ランク・リワードを認可に使わない', () => {
       '未知の interval を月額へ丸めている');
     assert.match(interval.slice(0, 900), /interval_count/,
       'interval_count を無視している（四半期払いが月額になる）');
+    // 🔴 欠落時に 1 で補完しない
+    assert.doesNotMatch(interval.slice(0, 900), /interval_count\s*(==|===)\s*null\s*\?\s*1/,
+      'interval_count 欠落を 1 で補っている');
+    assert.doesNotMatch(interval.slice(0, 900), /interval_count\s*\?\?\s*1/,
+      'interval_count 欠落を 1 で補っている');
 
     // 支払い時刻: Stripe の paid_at を使い、無ければ null
     const paidAt = wh.slice(wh.indexOf('export function paidAtMsFromInvoice('));

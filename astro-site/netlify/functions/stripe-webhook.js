@@ -183,12 +183,19 @@ async function recordCancellation(email, cancelledAtIso) {
  *    月額へ fallback すると、四半期払い等の請求で **付与量と継続月数が過少になる**。
  *    また未知の interval を勝手に月額とみなすと、実態と食い違った月数が積み上がる。
  *    「分からないなら付けない」（保留）方が、あとから正しく付け直せる。
+ *
+ * 🔴 **`interval_count` が無いときも 1 で補わない。**
+ *    Stripe は通常この値を返すので、欠けているのは想定外の状態である。
+ *    そこで 1 を仮定すると、実際が四半期・半年払いだった場合に
+ *    **付与量と継続月数が過少なまま確定してしまう**（あとから気づけない）。
  */
 export function periodMonthsFromInvoice(invoice) {
   const recurring = invoice?.lines?.data?.[0]?.price?.recurring;
   if (!recurring) return null;
 
-  const count = recurring.interval_count == null ? 1 : recurring.interval_count;
+  // 🔴 `interval_count` が無いときに 1 を補わない。
+  //    「前提が欠けたら付与しない」（§7.7）と矛盾するため、推測せず保留する。
+  const count = recurring.interval_count;
   if (!Number.isInteger(count) || count <= 0) return null;
 
   switch (recurring.interval) {
