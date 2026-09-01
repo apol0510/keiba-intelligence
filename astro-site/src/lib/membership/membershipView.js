@@ -15,7 +15,10 @@
 
 import { TIER, tierAtLeast } from '../auth/tiers.js';
 import { RANK_ORDER, RANK_LABEL, resolveRank, readRankThresholds } from './ranks.js';
-import { summarizeRewards, readAccrualConfig, MONTHLY_POINTS, GRACE_DAYS } from './rewards.js';
+import {
+  summarizeRewards, readAccrualConfig, resolveTenureMonths,
+  MONTHLY_POINTS, GRACE_DAYS,
+} from './rewards.js';
 import {
   createCatalog, exchangeView, milestoneItems, isCatalogPublished,
   isMilestoneMonth, MILESTONE_MONTHS, REDEMPTION_TIERS,
@@ -57,22 +60,10 @@ export const CONFIRMED = Object.freeze({
 });
 
 /**
- * 継続月数を求める。
- *
- * 🔴 起点の定義（TBD-9）が未確定なので、**保存された起点が無ければ null**。
- *    「登録日から数える」「初回課金から数える」を勝手に決めない。
+ * 継続月数（後方互換のための薄いラッパ）。
+ * 実体は `rewards.js` の `elapsedMonthsSince`（起点＝**支払い成功日**・TBD-9）。
  */
-export function continuationMonths(startedAtIso, nowMs) {
-  if (typeof startedAtIso !== 'string' || !startedAtIso.trim()) return null;
-  const start = Date.parse(startedAtIso);
-  if (!Number.isFinite(start) || !Number.isFinite(nowMs) || start > nowMs) return null;
-
-  const a = new Date(start);
-  const b = new Date(nowMs);
-  let months = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth());
-  if (b.getUTCDate() < a.getUTCDate()) months -= 1;
-  return months < 0 ? 0 : months;
-}
+export { elapsedMonthsSince as continuationMonths } from './rewards.js';
 
 /**
  * マイページ用のビューを組み立てる。
@@ -104,7 +95,14 @@ export function buildMembershipView({
   const accrual = readAccrualConfig(config);
   const catalog = createCatalog(catalogSource);
 
-  const months = continuationMonths(profile?.membershipStartedAtIso, nowMs);
+  // 継続月数は「支払いが成功した期間」から数える（TBD-9 / TBD-10・§7.6 / §7.7）
+  const tenure = resolveTenureMonths({
+    entries: ledger,
+    ledgerKnown: Array.isArray(ledger),
+    startedAtIso: profile?.membershipStartedAtIso || null,
+    nowMs,
+  });
+  const months = tenure.months;
   const rank = resolveRank(months, thresholds);
 
   const rewards = summarizeRewards({
@@ -135,8 +133,10 @@ export function buildMembershipView({
     tierLabel: entitlement?.tierLabel || null,
 
     months: Object.freeze({
-      status: months == null ? 'pending' : 'ready',
-      value: months,
+      status: tenure.status,
+      value: tenure.months,
+      /** 'ledger'（支払い済み期間の累計）/ 'legacy'（起点からの経過）/ null */
+      source: tenure.source,
     }),
 
     rank: Object.freeze({

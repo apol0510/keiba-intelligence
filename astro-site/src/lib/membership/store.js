@@ -15,7 +15,14 @@
  *    `src/lib/unsubscribe/store.js` と同じ考え方。
  */
 
+import { createAirtableMembershipStore } from './airtableStore.js';
+
 export const MEMBERSHIP_WRITE_ENV = 'MEMBERSHIP_WRITE_ENABLED';
+/**
+ * 読み取りだけを先に有効化するためのフラグ（移行手順 §4 の 3）。
+ * 🔴 書き込みには `MEMBERSHIP_WRITE_ENABLED` が別途必要。
+ */
+export const MEMBERSHIP_READ_ENV = 'MEMBERSHIP_READ_ENABLED';
 
 export const STORE_RESULT = Object.freeze({
   APPLIED: 'applied',
@@ -25,10 +32,38 @@ export const STORE_RESULT = Object.freeze({
   UNAVAILABLE: 'unavailable',
 });
 
+const flagOn = (env, name) => {
+  const v = (env || {})[name];
+  return typeof v === 'string' && v.trim().toLowerCase() === 'true';
+};
+
 /** env の書き込み許可フラグ。'true' 以外はすべて無効（fail-closed）。 */
 export function isWriteEnabled(env) {
-  const v = (env || {})[MEMBERSHIP_WRITE_ENV];
-  return typeof v === 'string' && v.trim().toLowerCase() === 'true';
+  return flagOn(env, MEMBERSHIP_WRITE_ENV);
+}
+
+/** 読み取り許可フラグ。書き込みが有効なら読み取りも当然有効。 */
+export function isReadEnabled(env) {
+  return flagOn(env, MEMBERSHIP_READ_ENV) || isWriteEnabled(env);
+}
+
+/**
+ * 読み取りだけを通し、**書き込みは必ず拒否する**ラッパ。
+ * 移行手順の「読み取りだけを有効化して本番で確認する」段階で使う。
+ */
+export function readOnlyMembershipStore(inner) {
+  const refuse = () => Object.freeze({
+    status: STORE_RESULT.UNAVAILABLE, reason: 'write_disabled', writes: 0,
+  });
+  return Object.freeze({
+    kind: `${inner.kind}:read-only`,
+    enabled: true,
+    reason: null,
+    readProfile: (...a) => inner.readProfile(...a),
+    readLedger: (...a) => inner.readLedger(...a),
+    async appendEntry() { return refuse(); },
+    async saveContractPrice() { return refuse(); },
+  });
 }
 
 /**
@@ -122,12 +157,35 @@ export function createInMemoryMembershipStore({ profiles = {}, ledgers = {} } = 
 /**
  * 実行時に使う store を決める。
  *
- * 🔴 フラグが無い / アダプタが無い → **disabled**（本番の既定）。
+ * 段階:
+ *   フラグ無し                        → **disabled**（本番の現状。何も読まない・書かない）
+ *   `MEMBERSHIP_READ_ENABLED=true`    → Airtable から**読むだけ**（書き込みは拒否）
+ *   `MEMBERSHIP_WRITE_ENABLED=true`   → 読み書き
+ *
+ * 🔴 いずれも **列とテーブルが作成済みであること**が前提
+ *    （`docs/MEMBERSHIP_DATA_MIGRATION.md` §4。列の追加が先、有効化が後）。
+ *    列が無いまま有効化しても、アダプタ側が `schema_missing` を検出して
+ *    書きに行かないので既存の会員データは壊れない。
+ *
+ * @param {object} [o.adapter]  テストで差し替える場合のみ指定
  */
-export function resolveMembershipStore({ env, adapter } = {}) {
-  if (!isWriteEnabled(env)) return createDisabledMembershipStore('write_disabled');
-  if (!adapter || typeof adapter.readProfile !== 'function') {
+export function resolveMembershipStore({ env, adapter, fetchImpl } = {}) {
+  const readable = isReadEnabled(env);
+  if (!readable) return createDisabledMembershipStore('read_disabled');
+
+  let store = adapter;
+  if (!store) {
+    // 実行時に env から Airtable アダプタを組み立てる（値は保持しない）
+    const e = env || {};
+    store = createAirtableMembershipStore({
+      apiKey: e.AIRTABLE_API_KEY,
+      baseId: e.AIRTABLE_BASE_ID,
+      customersTable: e.AIRTABLE_TABLE_NAME || 'Customers',
+      fetchImpl,
+    });
+  }
+  if (!store || typeof store.readProfile !== 'function') {
     return createDisabledMembershipStore('adapter_missing');
   }
-  return adapter;
+  return isWriteEnabled(env) ? store : readOnlyMembershipStore(store);
 }

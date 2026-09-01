@@ -293,12 +293,112 @@ describe('ランク・リワードを認可に使わない', () => {
     assert.doesNotMatch(material[0], /rank|reward|contract/i, '署名材料へ会員クラブの値を足してはいけない');
   });
 
-  test('Stripe webhook が書くフィールドを増やしていない', () => {
+  test('🔴 Stripe webhook のプラン付与が書く列を増やしていない', () => {
     const src = read('netlify/functions/stripe-webhook.js');
+    // applyPlan が組み立てる fields は従来どおり 3 列だけ
     const assigned = [...src.matchAll(/fields\.(\w+)\s*=/g)].map((m) => m[1]).sort();
     assert.deepEqual(assigned, ['AccessEnabled', 'PlanType', 'Status'],
-      'Airtable の列が無い状態で書き込みを増やすと、プラン付与ごと失敗する');
-    assert.equal(src.includes('membership'), false, 'スキーマ移行の承認前に membership を配線しない');
+      'Airtable の列が無い状態でプラン付与の書き込みを増やすと、付与ごと失敗する');
+  });
+
+  test('🔴 認可とリワードを混同しない（TBD-10・§7.7）', () => {
+    // 1. リワード側は認可を読まない
+    const rewards = read(join(LIB_DIR, 'rewards.js'));
+    for (const forbidden of ['entitlement', 'canSeeBetting', 'canSeeMarks', 'AccessEnabled', 'PlanType']) {
+      assert.equal(codeLines(rewards).some((l) => l.includes(forbidden)), false,
+        `rewards.js が認可の概念（${forbidden}）を参照している`);
+    }
+
+    // 2. 認可側は台帳・付与を読まない
+    for (const f of ['entitlement.js', 'tiers.js', 'session.js']) {
+      const src = read(join('src/lib/auth', f));
+      for (const forbidden of ['ledger', 'accrual', 'Reward', 'tenure', 'payment_succeeded']) {
+        assert.equal(codeLines(src).some((l) => l.includes(forbidden)), false,
+          `auth/${f} がリワードの概念（${forbidden}）を参照している`);
+      }
+    }
+
+    // 3. webhook: payment_failed は認可（Status）だけを触り、付与を呼ばない
+    const wh = read('netlify/functions/stripe-webhook.js');
+    /** switch の 1 ケースだけを切り出す（ファイル内の別の switch に引きずられないように）。 */
+    const caseBody = (label) => {
+      const start = wh.indexOf(`case '${label}'`);
+      assert.ok(start > 0, `case '${label}' が見つからない`);
+      const rest = wh.slice(start + 1);
+      const nextCase = rest.indexOf("      case '");
+      const nextDefault = rest.indexOf('      default:');
+      const ends = [nextCase, nextDefault].filter((i) => i >= 0);
+      return ends.length ? rest.slice(0, Math.min(...ends)) : rest;
+    };
+    const failedCase = caseBody('invoice.payment_failed');
+    assert.match(failedCase, /applyPlan\(email, \{ status: 'payment_failed' \}\)/,
+      'payment_failed が Status 以外を触っている');
+    assert.equal(failedCase.includes('recordPaidPeriod'), false,
+      '🔴 支払い失敗で付与している（保留にならない）');
+    for (const forbidden of ['planType', 'accessEnabled']) {
+      assert.equal(failedCase.includes(forbidden), false,
+        `payment_failed が ${forbidden} を触っている（認可の挙動を変えてはいけない）`);
+    }
+
+    // 4. 付与は支払い成功でだけ駆動する
+    const okCase = caseBody('invoice.payment_succeeded');
+    assert.match(okCase, /recordPaidPeriod\(email, invoice\)/);
+    assert.equal(okCase.includes('applyPlan'), false,
+      '🔴 支払い成功で認可を書き換えている（付与だけを行うこと）');
+  });
+
+  test('🔴 付与の前提が欠けたら付与しない（月額へ丸めない・受信時刻で代用しない）', () => {
+    const wh = read('netlify/functions/stripe-webhook.js');
+
+    // 請求間隔: 判定できなければ null（月額へ fallback しない）
+    const interval = wh.slice(wh.indexOf('export function periodMonthsFromInvoice('));
+    assert.match(interval.slice(0, 900), /default: return null;/,
+      '未知の interval を月額へ丸めている');
+    assert.match(interval.slice(0, 900), /interval_count/,
+      'interval_count を無視している（四半期払いが月額になる）');
+    // 🔴 欠落時に 1 で補完しない
+    assert.doesNotMatch(interval.slice(0, 900), /interval_count\s*(==|===)\s*null\s*\?\s*1/,
+      'interval_count 欠落を 1 で補っている');
+    assert.doesNotMatch(interval.slice(0, 900), /interval_count\s*\?\?\s*1/,
+      'interval_count 欠落を 1 で補っている');
+
+    // 支払い時刻: Stripe の paid_at を使い、無ければ null
+    const paidAt = wh.slice(wh.indexOf('export function paidAtMsFromInvoice('));
+    assert.match(paidAt.slice(0, 500), /status_transitions\?\.paid_at/);
+    assert.equal(paidAt.slice(0, 500).includes('Date.now()'), false,
+      '🔴 受信時刻で支払い時刻を代用している');
+
+    // 付与本体: どちらかが欠けたら return（保留）
+    const record = wh.slice(wh.indexOf('async function recordPaidPeriod('));
+    assert.match(record.slice(0, 1400), /periodMonths == null[\s\S]*?return;/);
+    assert.match(record.slice(0, 1400), /occurredAtMs == null[\s\S]*?return;/);
+    assert.equal(record.slice(0, 1400).includes('Date.now()'), false,
+      '🔴 付与日時に受信時刻を使っている');
+  });
+
+  test('🔴 継続月数は支払い済み期間から数える（TBD-9 / TBD-10）', () => {
+    const rewards = read(join(LIB_DIR, 'rewards.js'));
+    assert.match(rewards, /export function resolveTenureMonths\(/);
+    assert.match(rewards, /export function tenureMonthsFromLedger\(/);
+    // 起点も台帳も無ければ pending（0 か月へ倒さない）
+    assert.match(rewards, /status: 'pending', months: null, source: null/);
+  });
+
+  test('🔴 会員継続制度の書き込みはフラグ付き・別リクエスト・失敗を握りつぶす', () => {
+    const src = read('netlify/functions/stripe-webhook.js');
+    // フラグ無しでは実行されない
+    for (const fn of ['recordContractPrice', 'recordCancellation', 'recordPaidPeriod']) {
+      const body = src.slice(src.indexOf(`async function ${fn}(`));
+      assert.match(body.slice(0, 400), /if \(!isWriteEnabled\(process\.env\)\) return;/,
+        `${fn} の先頭でフラグを確認していない`);
+      assert.match(body.slice(0, 1200), /catch \{/, `${fn} が失敗を握りつぶしていない`);
+    }
+    // 🔴 プラン付与の update に membership の列を混ぜていない
+    const applyPlan = src.slice(src.indexOf('async function applyPlan('), src.indexOf('/* ---'));
+    for (const col of ['MembershipStartedAt', 'CancelledAt', 'ContractPrice', 'CUSTOMER_FIELDS']) {
+      assert.equal(applyPlan.includes(col), false,
+        `applyPlan に ${col} を混ぜている（列が無いとプラン付与ごと 422 で落ちる）`);
+    }
   });
 });
 
