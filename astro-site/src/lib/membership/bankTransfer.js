@@ -61,6 +61,31 @@ export function buildBankTermRef({ recordId, expirationDate } = {}) {
   return `bank:${id}:${exp}`;
 }
 
+/**
+ * 有効期限から **入金確認日を復元する**。
+ *
+ * 🔴 これが「再実行での回復」を可能にしている。
+ *    `send-payment-confirmation-auto.js` は入金確認時に
+ *    `ExpirationDate = その日 + 期間` を書く。したがって
+ *    **`ExpirationDate − 期間 = 入金確認日`** が後からでも戻せる。
+ *
+ * 🔴 **現在時刻で代用しない。** 一度目の Step 5 が失敗して数日後に再実行した場合、
+ *    現在時刻を使うと起点も付与日時も実際の入金日とずれる。
+ *
+ * @returns {string|null} `YYYY-MM-DD`。復元できなければ null
+ */
+export function deriveConfirmedAtFromExpiration(expirationDate, periodMonths) {
+  if (!expirationDate || !Number.isInteger(periodMonths) || periodMonths <= 0) return null;
+  const iso = String(expirationDate).slice(0, 10);
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  const day = d.getUTCDate();
+  const base = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - periodMonths, 1));
+  const lastDay = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + 1, 0)).getUTCDate();
+  base.setUTCDate(Math.min(day, lastDay));
+  return base.toISOString().slice(0, 10);
+}
+
 /** 判定の理由（ログ・テスト用。利用者へは出さない）。 */
 export const BANK_SKIP = Object.freeze({
   NO_EMAIL: 'no_email',
@@ -68,6 +93,8 @@ export const BANK_SKIP = Object.freeze({
   NO_EXPIRATION: 'no_expiration',
   NO_RECORD_ID: 'no_record_id',
   ALREADY_STARTED: 'already_started',
+  /** 入金確認日を復元できない（期間が不明など） */
+  NO_CONFIRMED_AT: 'no_confirmed_at',
 });
 
 /**
@@ -77,13 +104,16 @@ export const BANK_SKIP = Object.freeze({
  * @param {object} o.fields        Airtable のレコード（更新前）
  * @param {string} o.recordId
  * @param {string} o.expirationDate この入金で設定した有効期限
- * @param {string} o.confirmedAtIso 入金確認日（＝この処理の実行時刻）
- * @returns {{ startedAtIso: string|null, entry: object|null, skipped: string[] }}
+ * @param {string|null} [o.confirmedAtIso] 入金確認日。
+ *   **初回実行のときだけ**「いま確認した」時刻を渡す。
+ *   🔴 **再実行（回復）のときは渡さない**（null）。`ExpirationDate − 期間` から復元する。
+ *   現在時刻で代用すると、数日後の再実行で起点と付与日時が実際の入金日とずれる。
+ * @returns {{ startedAtIso, entry, confirmedAtIso, skipped }}
  *   startedAtIso … `MembershipStartedAt` に書く値。既に入っていれば null（**上書きしない**）
  *   entry        … 台帳へ積む付与エントリ。判定できなければ null
  */
 export function planBankMembershipUpdate({
-  fields = {}, recordId, expirationDate, confirmedAtIso,
+  fields = {}, recordId, expirationDate, confirmedAtIso = null,
 } = {}) {
   const skipped = [];
   const email = typeof fields.Email === 'string' ? fields.Email.trim() : '';
@@ -94,19 +124,26 @@ export function planBankMembershipUpdate({
   const periodMonths = periodMonthsForBankPlan(fields.plan_type);
   if (periodMonths == null) skipped.push(BANK_SKIP.UNKNOWN_TERM);
 
+  // 🔴 入金確認日: 初回は渡された時刻、再実行（回復）は有効期限から復元する。
+  //    どちらも取れなければ **現在時刻で代用しない**（付与も起点も見送る）。
+  const resolvedConfirmedAt = confirmedAtIso
+    ? String(confirmedAtIso).slice(0, 10)
+    : deriveConfirmedAtFromExpiration(expirationDate, periodMonths);
+  if (!resolvedConfirmedAt) skipped.push(BANK_SKIP.NO_CONFIRMED_AT);
+
   // 🔴 起点は **初回の入金確認日**。更新（2 期目以降）で動かさない
   const alreadyStarted = !!fields.MembershipStartedAt;
   if (alreadyStarted) skipped.push(BANK_SKIP.ALREADY_STARTED);
 
-  const startedAtIso = (!alreadyStarted && email && recordId && confirmedAtIso)
-    ? String(confirmedAtIso).slice(0, 10)
+  const startedAtIso = (!alreadyStarted && email && recordId && resolvedConfirmedAt)
+    ? resolvedConfirmedAt
     : null;
 
   let entry = null;
-  if (email && periodMonths != null && recordId && expirationDate && confirmedAtIso) {
+  if (email && periodMonths != null && recordId && expirationDate && resolvedConfirmedAt) {
     const ref = buildBankTermRef({ recordId, expirationDate });
     const entryId = ref ? buildEntryId({ type: ENTRY_TYPE.ACCRUAL, email, ref }) : null;
-    const occurredAtMs = Date.parse(confirmedAtIso);
+    const occurredAtMs = Date.parse(`${resolvedConfirmedAt}T00:00:00.000Z`);
     if (entryId && Number.isFinite(occurredAtMs)) {
       entry = Object.freeze({
         entryId,
@@ -119,5 +156,10 @@ export function planBankMembershipUpdate({
     }
   }
 
-  return Object.freeze({ startedAtIso, entry, skipped: Object.freeze(skipped) });
+  return Object.freeze({
+    startedAtIso,
+    entry,
+    confirmedAtIso: resolvedConfirmedAt,
+    skipped: Object.freeze(skipped),
+  });
 }
