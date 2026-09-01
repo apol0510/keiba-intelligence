@@ -1,17 +1,22 @@
-# 会員継続制度の永続化 — 移行案と rollback（**未実行**）
+# 会員継続制度の永続化 — 移行手順と rollback
 
 > 本書は `docs/MEMBERSHIP_REWARDS.md` の下位文書。
-> 作成日: 2026-09-01 / 基準コミット `b5a88d27`
+> 作成日: 2026-09-01 / 最終更新: 2026-09-01
 >
-> 🔴 **本書に書かれた操作は一つも実行していない。**
+> **現在地（2026-09-01）**: 仕様所有者の承認を得て、**手順 1〜5（列・テーブル作成／backfill／
+> `MEMBERSHIP_READ_ENABLED`）まで本番で実施済み**。詳細は §2.9、実測結果は
+> `docs/progress.md`「スキーマ移行と READ 有効化」節が正本。
+>
+> 🔴 **`MEMBERSHIP_WRITE_ENABLED=true` は未実施**（承認待ちで停止中）。
 > Airtable の本番スキーマ変更・本番 write は `CLAUDE.md`「High-risk approval boundary」に該当し、
-> 仕様所有者の承認が必要である。本書は **承認境界の手前で停止した状態の設計書**である。
+> **各段階ごとに仕様所有者の承認が必要**である。承認なく次の段階へ進めない。
 
 ---
 
-## 0. 本番の実データ（2026-09-01 read-only 監査）
+## 0. 本番の実データ（2026-09-01 read-only 監査・**移行前**の状態）
 
-`npm run membership:check`（読み取りのみ）で実測した現状。**書き込みは行っていない。**
+`npm run membership:check`（読み取りのみ）で実測した、**列を追加する前**の状態。
+移行後の状態は §2.9 と `docs/progress.md` を参照。
 
 | 項目 | 実測値 |
 |---|---|
@@ -19,8 +24,8 @@
 | 有料会員（`PlanType` ∈ pro / pro-plus / premium / light） | **11**（pro 7 / light 4）|
 | うち支払い方法 | **全件が銀行振込**（Stripe 由来は **0 件**）|
 | `PlanType='premium'`（Stripe webhook が書く値）| **0 件** |
-| 追加が必要な列 | **6 列すべて未作成** |
-| `RewardLedger` テーブル | **未作成**（403。§2.2 の注記参照）|
+| 追加が必要な列 | **6 列すべて未作成** → ✅ 2026-09-01 に追加済み |
+| `RewardLedger` テーブル | **未作成**（403）→ ✅ 2026-09-01 に作成済み |
 | backfill 可能な有料会員 | **8 / 11**（`CreatedAt` あり）|
 | 🔴 起点が不明な有料会員 | **3 / 11**（`CreatedAt` なし・**手動確認が必要**）|
 
@@ -227,10 +232,11 @@ Metadata API を優先する（列を作った直後は全レコードが空で�
 
 | 操作 | 区分 | 状態 |
 |---|---|---|
-| Airtable 本番の列追加（6 列） | production schema migration | **未実行**（承認必要） |
-| 新規テーブル作成 | production schema migration | **未実行**（承認必要） |
-| 既存会員レコードへの backfill | 本番 write | **未実行**（承認必要） |
-| `MEMBERSHIP_WRITE_ENABLED` の有効化 | 本番 env 変更 | **未実行**（承認必要） |
+| Airtable 本番の列追加（6 列） | production schema migration | ✅ **実施済み**（2026-09-01・承認済み） |
+| 新規テーブル作成 | production schema migration | ✅ **実施済み**（同上） |
+| 既存会員レコードへの backfill | 本番 write | ✅ **7 件のみ実施**（同上。残り 4 件は空欄） |
+| `MEMBERSHIP_READ_ENABLED` の有効化 | 本番 env 変更 | ✅ **実施済み**（同上） |
+| `MEMBERSHIP_WRITE_ENABLED` の有効化 | 本番 env 変更 | 🔴 **未実行**（承認必要・停止中） |
 
 🔴 **2026-09-01 更新**: TBD-1〜TBD-8 は **確定した**（`MEMBERSHIP_REWARDS.md` §7.1）。
 制度の数値はコードの定数として実装済みで、**環境変数の設定も不要**である。
@@ -279,7 +285,9 @@ Metadata API を優先する（列を作った直後は全レコードが空で�
 ## 6. 本 PR の実装が満たしている前提
 
 - `MEMBERSHIP_WRITE_ENABLED` が未設定のとき、**Airtable への書き込みは 1 件も発生しない**
-  （`src/lib/membership/store.js` が `unavailable` を返す）。
+  （`src/lib/membership/store.js` が読み取り専用ラッパへ倒す）。
+  2026-09-01 の READ 有効化後に本番で再検査し、**書き込みが増えていないこと**を確認済み
+  （`RewardLedger` 0 行 / 変更列は backfill の `MembershipStartedAt` 7 件のみ）。
 - 🔴 **`stripe-webhook.js` のプラン付与は従来どおり `PlanType` / `Status` / `AccessEnabled`
   の 3 列だけを書く。** 会員継続制度の列（`ContractPrice*` / `CancelledAt`）は
   **`MEMBERSHIP_WRITE_ENABLED=true` のときだけ、別リクエストで**書く。

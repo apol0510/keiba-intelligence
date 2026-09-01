@@ -3,14 +3,23 @@
  *
  * 正本: docs/MEMBERSHIP_REWARDS.md §6 / docs/MEMBERSHIP_DATA_MIGRATION.md
  *
- * 🔴 **Airtable アダプタは実装していない。**
- *    継続月数・契約価格・リワード台帳を置く列／テーブルが **本番にまだ存在しない**ため。
- *    Airtable は未知フィールドへの書き込みでリクエスト全体が失敗するので、
- *    列より先にコードを有効化すると **Stripe webhook のプラン付与まで巻き添えで落ちる**。
- *    列の追加・backfill・有効化の順序と rollback は `docs/MEMBERSHIP_DATA_MIGRATION.md`。
+ * Airtable アダプタは `./airtableStore.js` に実装済み。
+ * 本番の列（`MembershipStartedAt` / `CancelledAt` / `ContractPrice*`）と
+ * `RewardLedger` テーブルは **2026-09-01 に作成済み**である
+ * （`docs/MEMBERSHIP_DATA_MIGRATION.md` §2.9）。
  *
- * 🔴 有効化には **環境変数 `MEMBERSHIP_WRITE_ENABLED=true` と実装済みアダプタの注入の両方**が要る。
- *    どちらか欠ければ `unavailable` を返す。
+ * 🔴 **それでも既定は fail-closed のままにする。**
+ *    Airtable は未知フィールドへの書き込みでリクエスト全体が失敗するため、
+ *    列が無い環境（別ベース・復元直後など）でコードだけ有効になると
+ *    **Stripe webhook のプラン付与まで巻き添えで落ちる**。
+ *    アダプタ側も 422/404/403 を検出したら以後書きに行かない（`schema_missing`）。
+ *
+ * 🔴 段階的有効化（順序を入れ替えない。手順と rollback は移行文書 §4 / §5）:
+ *      フラグ無し                      … 何も読まない・書かない
+ *      `MEMBERSHIP_READ_ENABLED=true`  … 読むだけ（書き込みは拒否）  ← 2026-09-01 時点はここ
+ *      `MEMBERSHIP_WRITE_ENABLED=true` … 読み書き（🔴 未設定・承認待ち）
+ *
+ * 🔴 書き込みが有効でないときは `unavailable` を返し、
  *    **「交換できました」「付与しました」と表示しない**（できていないのに完了と出さない）。
  *    `src/lib/unsubscribe/store.js` と同じ考え方。
  */
