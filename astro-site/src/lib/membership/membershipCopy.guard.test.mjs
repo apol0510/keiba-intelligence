@@ -150,6 +150,42 @@ describe('未確定の数値を出さない（TBD-1〜TBD-8）', () => {
 });
 
 /* ================================================================
+   2.5 廃止済みの訴求を復活させない / 未取得を「0 件」と言い切らない
+   ================================================================ */
+
+describe('正本で廃止された訴求を出さない', () => {
+  test('🔴 実装が無いプレミアム限定コンテンツを訴求しない（RENEWAL_2026_08.md §6.1）', () => {
+    for (const file of UI_FILES) {
+      for (const line of codeLines(read(file))) {
+        for (const w of ['穴馬レポート', '優先メルマガ', '詳細レポート', 'canSeePremiumExtras']) {
+          assert.equal(line.includes(w), false, `${file}: 「${w}」は廃止済み → ${line.trim()}`);
+        }
+      }
+    }
+  });
+
+  test('🔴 廃止済みの価格・会場別アクセスを UI に書かない', () => {
+    for (const file of UI_FILES) {
+      for (const line of codeLines(read(file))) {
+        for (const w of ['88,000', '66,000', '12,000', '6,600', 'venueAccess']) {
+          assert.equal(line.includes(w), false, `${file}: 廃止済みの「${w}」を書いている → ${line.trim()}`);
+        }
+      }
+    }
+  });
+
+  test('🔴 特典履歴は pending と「0 件」を同じ文言にしない', () => {
+    const src = read('src/pages/mypage.astro');
+    const marker = 'まだ受け取られた特典はありません';
+    assert.ok(src.includes(marker), '「まだありません」の分岐が消えている');
+    // pending を先に判定してから 0 件の文言へ落ちること
+    const pendingBranch = src.indexOf("club.history.status !== 'ready'");
+    assert.ok(pendingBranch > 0, 'pending を先に判定していない（未取得を 0 件と言い切ってしまう）');
+    assert.ok(pendingBranch < src.indexOf(marker), 'pending の判定が「まだありません」より後ろにある');
+  });
+});
+
+/* ================================================================
    3. ランクを認可に使わない
    ================================================================ */
 

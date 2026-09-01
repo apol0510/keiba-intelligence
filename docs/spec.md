@@ -76,7 +76,14 @@
   ネイティブアプリ化も現時点のスコープ外。KI は **AI競馬予想 ＋ 長期会員クラブ**である
   （`docs/MEMBERSHIP_REWARDS.md` §1）。
 - **リワードの換金・出金・譲渡**: 実装しない。KIリワードは現金・預金ではない（同 §3.3 / §8 L-8）。
-- **決済ゲートウェイの実装**: 現行は銀行振込自動化。PayPal webhook は `.disabled`。ThriveCart/Zapier は `DESIGN.md`（初期設計）記載であり現行構成の根拠にしない。
+- **決済処理そのもの**: カード情報の保持・与信・請求の実行・請求額の決定は **Stripe が行う**。
+  本リポジトリが持つのは Checkout の開始 / webhook の受信 / Customer Portal への誘導 / 価格の表示のみ
+  （`netlify/functions/stripe-*.js`）。
+  🔴 **請求額の正本は Stripe の Price**。`src/lib/billing/plans.js` の金額は **表示用**であり、
+  Checkout へは Price ID だけを送る（`unit_amount` をコードから送らない）。
+  正本は `docs/RENEWAL_2026_08.md` §6。
+  銀行振込の年払いは Stripe を通さない別経路として併存する（`bank-transfer-application.js` / `/apply`）。
+  PayPal webhook は `.disabled`。ThriveCart/Zapier は `DESIGN.md`（初期設計）記載であり現行構成の根拠にしない。
 - **リポジトリ外の本番インフラ設定**: Netlify の環境変数・DNS・Airtable スキーマの実体は管理画面側。本リポジトリはドキュメントで名前のみ扱う。
 
 ## 4. Current Architecture

@@ -476,6 +476,43 @@ describe('会員クラブの表示ビュー', () => {
     assert.equal(v.priceLock.contractPriceYen, 3980);
   });
 
+  test('🔴 特典履歴: 台帳が読めないときは ready にしない（0件と同じ扱いにしない）', () => {
+    // 付与設定も台帳も無い本番既定 → pending
+    const pending = buildMembershipView({ entitlement: ent(TIER.PREMIUM), config: {} });
+    assert.equal(pending.history.status, 'pending');
+    assert.equal(pending.history.items.length, 0);
+
+    // 設定はあるが台帳が読めない → pending（「まだありません」と言い切らない）
+    const unreadable = buildMembershipView({
+      entitlement: ent(TIER.PREMIUM),
+      ledger: null,
+      config: { KI_REWARD_ACCRUAL: TEST_ACCRUAL },
+    });
+    assert.equal(unreadable.history.status, 'pending');
+
+    // 台帳が読めて交換が 0 件 → ready（本当に受け取っていない）
+    const empty = buildMembershipView({
+      entitlement: ent(TIER.PREMIUM),
+      ledger: [],
+      config: { KI_REWARD_ACCRUAL: TEST_ACCRUAL },
+    });
+    assert.equal(empty.history.status, 'ready');
+    assert.equal(empty.history.items.length, 0);
+
+    // 交換がある → ready かつ件数あり
+    const withHistory = buildMembershipView({
+      entitlement: ent(TIER.PREMIUM),
+      ledger: [
+        { entryId: 'a1', type: ENTRY_TYPE.ACCRUAL, points: 500, occurredAtMs: 1 },
+        { entryId: 'r1', type: ENTRY_TYPE.REDEMPTION, points: -100, occurredAtMs: 2, ref: 'rx1' },
+      ],
+      config: { KI_REWARD_ACCRUAL: TEST_ACCRUAL },
+    });
+    assert.equal(withHistory.history.status, 'ready');
+    assert.equal(withHistory.history.items.length, 1);
+    assert.equal(withHistory.history.items[0].ref, 'rx1');
+  });
+
   test('継続月数: 起点が無ければ null（起点の定義は TBD-9）', () => {
     assert.equal(continuationMonths(null, Date.now()), null);
     assert.equal(continuationMonths('not-a-date', Date.now()), null);

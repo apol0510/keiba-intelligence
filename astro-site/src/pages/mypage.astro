@@ -25,7 +25,6 @@ export const prerender = false;
 const ent = entitlementFromAstro(Astro);
 
 const isPaid = tierAtLeast(ent.tier, TIER.LIGHT);
-const isPremium = ent.tier === TIER.PREMIUM;
 
 /* ------------------------------------------------------------------
    会員クラブ（KI Membership / KIリワード）
@@ -116,7 +115,8 @@ const FEATURES = [
   { label: 'AI指数の数値（無料はモザイク）', open: ent.showBetting },
   { label: 'AI結論（推奨理由の解説）', open: ent.showBetting },
   { label: '馬単の買い目', open: ent.showBetting },
-  { label: '穴馬レポート・優先メルマガ', open: isPremium },
+  // 🔴 「穴馬レポート・優先メルマガ」は docs/RENEWAL_2026_08.md §6.1 で
+  //    「実装が無いものを訴求しない」として廃止済み。復活させない。
 ];
 
 // 🔴 2026-08-30: 会場で分ける概念を廃止。有料は常に南関東＋中央
@@ -211,7 +211,15 @@ const expiresLabel = ent.expiresAtMs
 
               <div class="mp-club-sub">
                 <h3>{MEMBERSHIP_COPY.historyLabel}</h3>
-                {club.history.status === 'ready' && club.history.items.length ? (
+                {/*
+                  🔴 pending（台帳が読めない / 付与設定が未確定）と
+                     ready かつ 0 件（本当に受け取っていない）を **同じ文言にしない**。
+                     読めていないのに「まだありません」と言い切ると、
+                     受け取り済みの特典を無いことにして伝えるおそれがある。
+                */}
+                {club.history.status !== 'ready' ? (
+                  <p class="mp-club-note">{PENDING}</p>
+                ) : club.history.items.length ? (
                   <ul class="mp-gift-list">
                     {club.history.items.map((h) => (
                       <li>
