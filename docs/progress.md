@@ -388,6 +388,60 @@ READ 有効化＋本番アクセス後に再検査:
 
 🔴 **どの段階でも `PlanType` / `Status` / `AccessEnabled` を書き換えない。**
 
+### 銀行振込の入金確認を会員継続制度へ接続（2026-09-01）
+
+既存経路の調査結果（正本）:
+
+```
+/apply（yearly ¥39,800 のみ）
+  → bank-transfer-application.js が Status='pending' / AccessEnabled=false で作成
+  → 入金を確認して Airtable の Status を active にする
+  → Automation が send-payment-confirmation-auto.js を叩く
+     1. レコード取得 → 2. 二重送信チェック（PaymentEmailSent）
+     → 3. メール送信 → 4. PaymentEmailSent / AccessEnabled / ExpirationDate を更新
+```
+
+**手順 4 のあとに手順 5（会員継続制度への反映）を追加**した。
+
+| 要件 | 実装 |
+|---|---|
+| 入金確認日を起点にする | 手順 5 の実行時刻を `MembershipStartedAt` に書く。🔴 **初回だけ**（更新で動かさない）|
+| 支払い済み期間だけ反映 | `plan_type` から期間を決めて 1 期ぶん積む。入金確認が起きた期だけ |
+| 年払いは 12 か月・1,200pt | `BANK_PLAN_TERM_MONTHS.yearly = 12` |
+| 判定不能なら付与しない | `lifetime` / 未知 / 未設定 / 有効期限なし → **付与しない**（月額へ丸めない）|
+| 二重付与しない | 冪等キー `bank:<recordId>:<その期の有効期限>`。やり直しても同じ期限＝同じキー |
+| 既存経路へ波及させない | **別リクエスト**・フラグ付き・**例外を握りつぶす**。応答は 200 のまま |
+| 認可を変更しない | `AccessEnabled` / `Status` / `PlanType` を読み書きしない |
+
+🔴 **`BANK_PLAN_TERM_MONTHS` は `calculateExpirationDate` と同じ規則**にしてある。
+片方だけ変えると **有効期限と継続月数が食い違う**ため、テストで一致を固定した。
+
+#### 🔴 レビューで見つけた欠落バグと修正
+
+**旧構造では、Step 1〜4 が成功したあと Step 5（membership）だけが一時的に失敗すると、
+再実行しても Step 2 の早期 return で Step 5 へ到達できず、リワードが永久に欠落した。**
+
+修正:
+
+- Step 2 の **早期 return を撤去**し、`alreadyConfirmed` フラグで分岐する。
+  - 🔴 メールの再送は**引き続き禁止**（Step 3 をスキップ）
+  - 既存列の更新（Step 4）も**やり直さない**
+  - **Step 5 だけ**を再試行する
+- 再実行時の入金確認日は **`ExpirationDate − 期間` から復元**する
+  （`deriveConfirmedAtFromExpiration`）。
+  🔴 **現在時刻で代用しない**。数日後の再実行で起点と付与日時が実際の入金日とずれるため。
+- 冪等キーは有効期限由来なので、初回と再実行で**同じキー**になる＝二重付与しない。
+- 期間が判定できない場合は **回復もしない**（起点も書かない）。現在時刻へ倒さない。
+
+新規テスト `bankTransfer.test.mjs`（24 件）:
+期間判定の fail-closed / 起点は入金確認日（申込日ではない）/ 更新で起点を動かさない /
+年払い 12 か月・1,200pt / **再実行・メール再送で台帳が増えない** /
+翌期の更新は別の期として 1 回だけ / 他会員混入なし /
+既存の Step 4 に membership の列を混ぜない / membership は Step 4 のあとに呼ぶ /
+`bankTransfer.js` が認可の概念を持たない。
+
+membership 153 → **177 件**。
+
 ### 静的ガードで固定したこと（`membershipCopy.guard.test.mjs`）
 
 | # | 固定した不変条件 |
