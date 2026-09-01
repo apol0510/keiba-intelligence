@@ -205,6 +205,24 @@ redemption : redemption:<email>:<交換ID>
 
 ---
 
+## 2.9 実施状況（2026-09-01）
+
+| 手順 | 状態 |
+|---|---|
+| 1. 列追加（6 列） | ✅ **実施済み** |
+| 2. `RewardLedger` 作成 | ✅ **実施済み**（`PeriodMonths` を追加）|
+| 3. 動作確認（`membership:check`）| ✅ **実施済み** |
+| 4. backfill | ✅ **7 件実施**（逆算で根拠が取れた分のみ。残り 4 件は空欄）|
+| 5. `MEMBERSHIP_READ_ENABLED=true` | ✅ **実施済み**（再デプロイ済み）|
+| 6. `MEMBERSHIP_WRITE_ENABLED=true` | 🔴 **未実施（承認待ちで停止中）** |
+| 7. Stripe テストイベントでの 1 件確認 | 🔴 未実施（手順 6 の後）|
+
+実測結果は `docs/progress.md`「スキーマ移行と READ 有効化」節が正本。
+
+🔴 **PAT には `schema.bases:read` / `schema.bases:write` が必要**である
+（当初の PAT には無く 403 になった）。`membership:check` は schema が読めるときは
+Metadata API を優先する（列を作った直後は全レコードが空で、実データからは列が見えないため）。
+
 ## 3. 実行しない理由（承認境界）
 
 | 操作 | 区分 | 状態 |

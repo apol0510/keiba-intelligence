@@ -298,6 +298,96 @@ merge 後に `main` との差分が **本 PR 固有の 12 ファイル（+1,391 
 `buildPaidPeriodEntry` は `periodMonths` の **既定値を廃止**した
 （省略・不正なら付与しない＝月額へ丸めない）。
 
+### スキーマ移行と READ 有効化（2026-09-01・**本番実施済み**）
+
+仕様所有者の承認を得て、`docs/MEMBERSHIP_DATA_MIGRATION.md` §4 の手順 1〜5 を本番で実施した。
+🔴 **`MEMBERSHIP_WRITE_ENABLED` は設定していない**（手順 6 の直前で停止）。
+
+#### 前提: PAT の scope 追加
+
+当初の PAT は **データ read/write のみ**で `schema.bases:*` を持たず、
+列・テーブルの作成が **403** で実行できなかった。
+仕様所有者が既存 PAT へ `schema.bases:read` / `schema.bases:write` を追加して解決した
+（**トークンの値は変わっていない**ので、本番の他機能への影響はない）。
+
+#### 実施結果
+
+| # | 操作 | 結果 |
+|---|---|---|
+| 1 | `Customers` へ 6 列追加 | ✅ `MembershipStartedAt` / `CancelledAt` / `ContractPriceYen` / `ContractPriceId` / `ContractCurrency` / `ContractStartedAt` |
+| 2 | `RewardLedger` 作成 | ✅ `tblsCzWPnKzhwWqEY`。列: EntryId / Email / Type / Points / OccurredAt / **PeriodMonths** / SourceRef / Note |
+| 3 | PAT 権限確認 | ✅ 新テーブルのデータ read も 200（403 は解消）|
+| 3' | `npm run membership:check` | ✅ 6 列すべて「済」・台帳「存在（0 行）」・必要な列がそろっている |
+| 4 | backfill | ✅ **7 件**（逆算で根拠が取れた分のみ）|
+| 5 | 残り 4 件 | ✅ **空欄のまま**（1 件は `ExpirationDate` なし／3 件は逆算不可）|
+
+🔴 **`--check` が列を実データから推定していたため、列作成直後に「未」と誤判定した。**
+schema が読めるようになったので **Metadata API を優先**するよう修正した
+（列を作った直後は全レコードが空で、実データからは見えないため）。
+
+`RewardLedger` に `PeriodMonths` を追加した（月額=1 / 年払い=12 を台帳に保持し、
+継続月数を支払い済み期間から数えるため）。
+
+#### 手順 6: 意図しない変更が無いことの検証（backfill 前後の全件差分）
+
+| 検査 | 結果 |
+|---|---|
+| レコード数 | 63 → 63（増減なし・追加/削除ゼロ）|
+| 変更された列 | **`MembershipStartedAt` の 7 件のみ** |
+| `PlanType` / `Status` / `AccessEnabled` | ✅ **不変** |
+| `Email` / `VenueAccess` / `ExpirationDate` / `有効期限` / `CreatedAt` / `Plan` / `plan_type` / `PaymentMethod` / `Source` | ✅ **不変** |
+| 分布 | `PlanType` free-registered 52 / pro 7 / light 4、`Status` active 57 / pending 6、`AccessEnabled` true 57 / 空 6（いずれも監査時と同一）|
+
+#### 手順 7: `MEMBERSHIP_READ_ENABLED=true`
+
+production context へ設定し、**再デプロイして反映**した（Netlify の env はデプロイ時に注入される）。
+`MEMBERSHIP_WRITE_ENABLED` は **未設定のまま**。
+
+#### 手順 8: 本番 read-only E2E（実会員の署名 Cookie を使用）
+
+| 対象 | 会員クラブ | 継続月数 | ランク | 残高 / 今月 | 契約価格・ロック |
+|---|---|---|---|---|---|
+| 起点あり（light・起点 2026-05-08）| ✅ 表示 | **3 か月** | **Silver** | 0 pt / 0 pt | 準備中 |
+| 起点なし（pro）| ✅ 表示 | **準備中** | **準備中** | 0 pt / 0 pt | 準備中 |
+| Airtable に無い free 会員 | ✅ 表示 | 準備中 | 準備中 | 0 pt / 0 pt | —（無料は対象外）|
+| 未認証（guest）| **描画されない** | — | — | — | — |
+
+- 🔴 **起点が無い会員が Bronze へ倒れていない**（「準備中」のまま）＝ 意図どおり。
+- 残高が「0 pt」なのは **台帳が読めていて実際に 0 行**だから（`pending` ではない）。
+- 契約価格が「準備中」なのは Stripe 会員がまだ 0 人で `ContractPrice*` が空のため。
+- **他会員混入なし**: 会員ごとに別の値（3 か月/Silver と 準備中）が出ている。
+
+#### 認可の回帰（`/prediction/nankan`・本番実測）
+
+| tier | 印 | AI結論 | 馬柱行 |
+|---|---|---|---|
+| guest | **0** | **0** | 1,064 |
+| free | 251 | **0** | 1,064 |
+| 有料（light / premium）| **0** | **1** | 1,064 |
+
+仕様どおり（R-8: 有料は印を出さず、AI 結論と買い目で結論を示す）。**回帰なし**。
+買い目は有料の抽出パネル側で描画されるため、サーバー HTML 上の
+`\d+-\d+(\.\d+)+` パターンは有料でも 0 件になる（guest の露出検査はこの点で有効）。
+
+#### 手順 8': Airtable への書き込みが増えていないこと
+
+READ 有効化＋本番アクセス後に再検査:
+
+- レコード数 63（不変）／backfill 以降に変わった列は **`MembershipStartedAt` 7 件のみ**
+- **`RewardLedger` 0 行**（付与はまだ動いていない）
+- `PlanType` / `Status` / `AccessEnabled` の分布は監査時と同一
+
+#### rollback の現在地
+
+| 段階 | 現状 | 戻し方 |
+|---|---|---|
+| 列・テーブル追加 | 実施済み | **何もしなくてよい**（フラグを外せば読まれない）|
+| backfill 7 件 | 実施済み | `MembershipStartedAt` を空に戻す（既存列は触っていない）|
+| `MEMBERSHIP_READ_ENABLED` | **設定済み** | env を削除して再デプロイ → 表示が `pending` に戻るだけ |
+| `MEMBERSHIP_WRITE_ENABLED` | 🔴 **未設定（停止中）** | — |
+
+🔴 **どの段階でも `PlanType` / `Status` / `AccessEnabled` を書き換えない。**
+
 ### 静的ガードで固定したこと（`membershipCopy.guard.test.mjs`）
 
 | # | 固定した不変条件 |
