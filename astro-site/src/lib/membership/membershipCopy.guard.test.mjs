@@ -322,6 +322,67 @@ describe('/terms が確定仕様と一致している', () => {
 });
 
 /* ================================================================
+   2.9 テストが ambient な env に依存しない
+   ================================================================ */
+
+describe('ビルド時テストが本番 env フラグに依存しない', () => {
+  /** テスト対象のテストファイル群。 */
+  const TEST_FILES = [
+    'src/lib/billing/stripeWebhook.test.mjs',
+    'src/lib/billing/stripeCheckout.test.mjs',
+    'src/lib/billing/billing.test.mjs',
+    'src/lib/auth/auth.test.mjs',
+    'src/lib/auth/entitlementRoutes.test.mjs',
+    ...readdirSync(join(siteRoot, LIB_DIR)).filter((f) => f.endsWith('.test.mjs')).map((f) => join(LIB_DIR, f)),
+  ];
+
+  /** 本番 env に存在しうる、挙動を変えるフラグ。 */
+  const RUNTIME_FLAGS = ['MEMBERSHIP_WRITE_ENABLED', 'MEMBERSHIP_READ_ENABLED', 'KI_RANK_THRESHOLDS', 'KI_REWARD_ACCRUAL'];
+
+  test('🔴 「フラグが未設定であること」を ambient の前提にしない', () => {
+    // 🔴 これをやると、本番でフラグを有効にした瞬間に `npm run build` が落ちる
+    //    （2026-09-01 に実際に発生し、WRITE 有効化が 2 回失敗した）
+    for (const file of TEST_FILES) {
+      for (const line of codeLines(read(file))) {
+        for (const flag of RUNTIME_FLAGS) {
+          const asserts = line.includes('assert.') && line.includes(`process.env.${flag}`);
+          if (!asserts) continue;
+          // テスト内で値を作ってから検証しているものは可。
+          // ambient をそのまま前提にする書き方（前提: ...）を禁止する
+          assert.equal(line.includes('前提'), false,
+            `${file}: ambient env を前提にしている → ${line.trim()}`);
+        }
+      }
+    }
+  });
+
+  test('🔴 env を書き換えるテストは元の値を復元する（単純 delete で終わらない）', () => {
+    for (const file of TEST_FILES) {
+      const src = read(file);
+      for (const flag of RUNTIME_FLAGS) {
+        const mutates = codeLines(src).some((l) =>
+          l.includes(`process.env.${flag} =`) || l.includes(`delete process.env.${flag}`));
+        if (!mutates) continue;
+        // 保存 → 復元の形跡があること
+        assert.match(src, new RegExp(`(saved|AMBIENT)[\\w]*\\s*=\\s*process\\.env\\.${flag}`),
+          `${file}: ${flag} を書き換える前に元の値を保存していない`);
+        assert.match(src, new RegExp(`process\\.env\\.${flag}\\s*=\\s*(saved|AMBIENT)`),
+          `${file}: ${flag} を元の値へ復元していない（単純 delete で終わっている）`);
+      }
+    }
+  });
+
+  test('🔴 stripeWebhook.test.mjs は各テスト開始時にフラグを既定へ揃える', () => {
+    const src = read('src/lib/billing/stripeWebhook.test.mjs');
+    const hook = src.slice(src.indexOf('beforeEach('), src.indexOf('after('));
+    assert.match(hook, /delete process\.env\.MEMBERSHIP_WRITE_ENABLED;/,
+      'beforeEach で既定（未設定）へ揃えていない');
+    assert.match(src, /after\(\(\) => \{[\s\S]*?MEMBERSHIP_WRITE_ENABLED = AMBIENT_WRITE_FLAG/,
+      'after で ambient の値を復元していない');
+  });
+});
+
+/* ================================================================
    3. ランクを認可に使わない
    ================================================================ */
 

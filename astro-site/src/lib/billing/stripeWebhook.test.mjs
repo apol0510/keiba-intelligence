@@ -17,7 +17,7 @@
  * 🔴 Stripe の Checkout 画面と実際のカード決済だけは対象外（外部 write のため）。
  */
 
-import { test, mock, before, beforeEach } from 'node:test';
+import { test, mock, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
 import Stripe from 'stripe';
 
@@ -114,12 +114,33 @@ before(() => {
   });
 });
 
+/**
+ * 🔴 **このファイルは ambient な `process.env.MEMBERSHIP_WRITE_ENABLED` に依存しない。**
+ *
+ * `npm run build` は本番 env を注入した状態でも走る（Netlify）。
+ * 既定の挙動（membership を書かない）を検証するテストが ambient のフラグに引きずられると、
+ * **本番で WRITE を有効にした瞬間にビルドごと落ちる**（2026-09-01 に実際に発生）。
+ *
+ * そこで **各テストの開始時に明示的に「未設定」へ揃え**、
+ * ファイルの最後に **元の値を復元する**（後続ファイル・本番 env を壊さない）。
+ * フラグを立てて検証したいテストは `withWriteFlag('true', ...)` を使う。
+ */
+const AMBIENT_WRITE_FLAG = process.env.MEMBERSHIP_WRITE_ENABLED;
+
 beforeEach(() => {
   db.reset();
   blobs.store.clear();
   blobs.broken = false;
   process.env[  'STRIPE_SECRET_KEY'] = SECRET_KEY;
   process.env['STRIPE_WEBHOOK_SECRET'] = WEBHOOK_SECRET;
+  // 🔴 既定は「未設定」。ambient に true が入っていても結果を変えない
+  delete process.env.MEMBERSHIP_WRITE_ENABLED;
+});
+
+after(() => {
+  // 🔴 単純な delete にしない。ambient の値を必ず戻す
+  if (AMBIENT_WRITE_FLAG === undefined) delete process.env.MEMBERSHIP_WRITE_ENABLED;
+  else process.env.MEMBERSHIP_WRITE_ENABLED = AMBIENT_WRITE_FLAG;
 });
 
 /* ------------------------------------------------------------------
@@ -235,10 +256,39 @@ test('E2E: Checkout 完了 → プラン付与 → 有料表示が開く', async
 /* ------------------------------------------------------------------
    会員継続制度の列は、フラグが無ければ一切書かない
    （docs/MEMBERSHIP_DATA_MIGRATION.md §6）
+
+   🔴 **ここのテストは ambient な `process.env` に依存してはいけない。**
+      `npm run build` は本番 env を注入した状態でも走る（Netlify）。
+      「フラグが未設定であること」を前提に書くと、本番で
+      `MEMBERSHIP_WRITE_ENABLED=true` を設定した瞬間に **ビルドごと落ちる**
+      （2026-09-01 に実際に発生。WRITE 有効化が 2 回失敗した）。
+      そのため **テスト内で値を決め、必ず元へ戻す**。
    ------------------------------------------------------------------ */
 
+/**
+ * `MEMBERSHIP_WRITE_ENABLED` を指定の値にしてから fn を実行し、**必ず元へ戻す**。
+ *
+ * 🔴 `finally` で単純に `delete` しない。
+ *    ambient に値が入っていた場合（本番 env を注入したビルド）に、
+ *    **後続のテストからその値が消えてしまう**ため、保存した値を復元する。
+ *
+ * @param {string|undefined} value 'true' などの値。undefined なら「未設定」を作る
+ */
+async function withWriteFlag(value, fn) {
+  const saved = process.env.MEMBERSHIP_WRITE_ENABLED;
+  if (value === undefined) delete process.env.MEMBERSHIP_WRITE_ENABLED;
+  else process.env.MEMBERSHIP_WRITE_ENABLED = value;
+  try {
+    return await fn();
+  } finally {
+    if (saved === undefined) delete process.env.MEMBERSHIP_WRITE_ENABLED;
+    else process.env.MEMBERSHIP_WRITE_ENABLED = saved;
+  }
+}
+
 test('🔴 MEMBERSHIP_WRITE_ENABLED が無ければ membership の列を書かない', async () => {
-  assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, undefined, '前提: フラグは未設定');
+  await withWriteFlag(undefined, async () => {
+  assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, undefined, 'テスト内で未設定にできていない');
 
   await post(checkoutCompleted(ALICE));
   await post(subUpdated(ALICE, 'canceled'));
@@ -251,11 +301,12 @@ test('🔴 MEMBERSHIP_WRITE_ENABLED が無ければ membership の列を書か�
       `既存 3 列以外を書いている: ${keys.join(', ')}`,
     );
   }
+  });
 });
 
 test('🔴 フラグを立てても列が無ければプラン付与は成功する（巻き添えで落ちない）', async () => {
-  process.env.MEMBERSHIP_WRITE_ENABLED = 'true';
-  try {
+  await withWriteFlag('true', async () => {
+    assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, 'true', 'テスト内で true にできていない');
     const res = await post(checkoutCompleted(ALICE));
     // 🔴 membership 側の書き込みが失敗しても、プラン付与は 200 で完了すること
     assert.equal(res.statusCode, 200, 'membership の失敗がプラン付与を巻き添えにしている');
@@ -266,8 +317,48 @@ test('🔴 フラグを立てても列が無ければプラン付与は成功す
 
     const after = viewOf(ALICE);
     assert.equal(after.view.showBetting, true, '有料表示が開かない');
+  });
+});
+
+test('🔴 ambient env が true でも undefined でも結果が変わらない', async () => {
+  const saved = process.env.MEMBERSHIP_WRITE_ENABLED;
+  try {
+    // ambient を人工的に作って、どちらでもヘルパが同じ結果を出すことを見る
+    for (const ambient of [undefined, 'true']) {
+      // ambient を作る
+      if (ambient === undefined) delete process.env.MEMBERSHIP_WRITE_ENABLED;
+      else process.env.MEMBERSHIP_WRITE_ENABLED = ambient;
+
+      // ヘルパは ambient に関係なく指定の値を作れる
+      await withWriteFlag(undefined, async () => {
+        assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, undefined, `ambient=${ambient} で未設定にできない`);
+      });
+      await withWriteFlag('true', async () => {
+        assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, 'true', `ambient=${ambient} で true にできない`);
+      });
+
+      // 🔴 実行後に ambient が復元されている（本番 env を壊さない）
+      assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, ambient,
+        `ambient=${ambient} が復元されていない`);
+    }
   } finally {
-    delete process.env.MEMBERSHIP_WRITE_ENABLED;
+    if (saved === undefined) delete process.env.MEMBERSHIP_WRITE_ENABLED;
+    else process.env.MEMBERSHIP_WRITE_ENABLED = saved;
+  }
+});
+
+test('🔴 例外が出ても ambient env を復元する', async () => {
+  const saved = process.env.MEMBERSHIP_WRITE_ENABLED;
+  try {
+    process.env.MEMBERSHIP_WRITE_ENABLED = 'true';
+    await assert.rejects(
+      () => withWriteFlag(undefined, async () => { throw new Error('boom'); }),
+      /boom/,
+    );
+    assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, 'true', '例外時に復元されていない');
+  } finally {
+    if (saved === undefined) delete process.env.MEMBERSHIP_WRITE_ENABLED;
+    else process.env.MEMBERSHIP_WRITE_ENABLED = saved;
   }
 });
 
