@@ -293,12 +293,29 @@ describe('ランク・リワードを認可に使わない', () => {
     assert.doesNotMatch(material[0], /rank|reward|contract/i, '署名材料へ会員クラブの値を足してはいけない');
   });
 
-  test('Stripe webhook が書くフィールドを増やしていない', () => {
+  test('🔴 Stripe webhook のプラン付与が書く列を増やしていない', () => {
     const src = read('netlify/functions/stripe-webhook.js');
+    // applyPlan が組み立てる fields は従来どおり 3 列だけ
     const assigned = [...src.matchAll(/fields\.(\w+)\s*=/g)].map((m) => m[1]).sort();
     assert.deepEqual(assigned, ['AccessEnabled', 'PlanType', 'Status'],
-      'Airtable の列が無い状態で書き込みを増やすと、プラン付与ごと失敗する');
-    assert.equal(src.includes('membership'), false, 'スキーマ移行の承認前に membership を配線しない');
+      'Airtable の列が無い状態でプラン付与の書き込みを増やすと、付与ごと失敗する');
+  });
+
+  test('🔴 会員継続制度の書き込みはフラグ付き・別リクエスト・失敗を握りつぶす', () => {
+    const src = read('netlify/functions/stripe-webhook.js');
+    // フラグ無しでは実行されない
+    for (const fn of ['recordContractPrice', 'recordCancellation']) {
+      const body = src.slice(src.indexOf(`async function ${fn}(`));
+      assert.match(body.slice(0, 400), /if \(!isWriteEnabled\(process\.env\)\) return;/,
+        `${fn} の先頭でフラグを確認していない`);
+      assert.match(body.slice(0, 1200), /catch \{/, `${fn} が失敗を握りつぶしていない`);
+    }
+    // 🔴 プラン付与の update に membership の列を混ぜていない
+    const applyPlan = src.slice(src.indexOf('async function applyPlan('), src.indexOf('/* ---'));
+    for (const col of ['MembershipStartedAt', 'CancelledAt', 'ContractPrice', 'CUSTOMER_FIELDS']) {
+      assert.equal(applyPlan.includes(col), false,
+        `applyPlan に ${col} を混ぜている（列が無いとプラン付与ごと 422 で落ちる）`);
+    }
   });
 });
 

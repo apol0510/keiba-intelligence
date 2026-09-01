@@ -42,7 +42,9 @@ const runtimeEnv = {
   ...(import.meta.env || {}),
 };
 
-const membershipStore = resolveMembershipStore({ env: runtimeEnv, adapter: null });
+// 🔴 フラグ未設定なら disabled（本番の現状）。列が無いまま有効化しても
+//    アダプタが schema_missing を検出して書きに行かない。
+const membershipStore = resolveMembershipStore({ env: runtimeEnv });
 let membershipProfile = null;
 let membershipLedger = null;
 

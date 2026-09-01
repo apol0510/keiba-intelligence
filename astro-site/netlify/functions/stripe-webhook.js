@@ -9,9 +9,12 @@
  *     🔴 記録は **処理が成功したあと**に行う。先に記録すると、失敗して 500 を返した
  *     イベントが再送時に無視され、更新が永久に失われる（2026-09-01 修正）。
  *     Blobs が使えない環境では記録をあきらめて処理を続ける（at-least-once）。
- *   - 書き込むのは **既存フィールドだけ**（PlanType / Status / AccessEnabled）。
+ *   - プラン付与で書き込むのは **既存フィールドだけ**（PlanType / Status / AccessEnabled）。
  *     🔴 `VenueAccess` は書かない（2026-08-30 に会場で分ける概念を廃止）。
- *     Airtable のスキーマ変更は本改修のスコープ外（未知フィールドへ書くと Airtable が失敗する）。
+ *     🔴 会員継続制度の列（`MembershipStartedAt` / `CancelledAt` / `ContractPrice*`）は
+ *     **`MEMBERSHIP_WRITE_ENABLED=true` のときだけ、別リクエストで**書く。
+ *     プラン付与と同じ update に混ぜてはいけない。列がまだ無い環境では Airtable が
+ *     **リクエストごと 422 で失敗**するため、混ぜると **プラン付与まで巻き添えで落ちる**。
  *   - 顧客レコードが無い場合は**作らない**。ログに区分だけ残す。
  *   - Stripe / Airtable のエラー内容を応答へ返さない。
  *
@@ -27,6 +30,9 @@ import Airtable from 'airtable';
 import { planFromMetadata, hasStripeSecret, STRIPE_ENV } from '../../src/lib/billing/plans.js';
 import { TIER } from '../../src/lib/auth/tiers.js';
 import { notifyKma, buildEventId } from '../../src/lib/kma/client.js';
+import { resolveMembershipStore, isWriteEnabled } from '../../src/lib/membership/store.js';
+import { contractPriceFromCheckoutSession } from '../../src/lib/membership/priceLock.js';
+import { CUSTOMER_FIELDS } from '../../src/lib/membership/airtableStore.js';
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -110,6 +116,50 @@ async function applyPlan(email, { planType, status, accessEnabled }) {
   return true;
 }
 
+/* ------------------------------------------------------------------
+   会員継続制度（KI リワード / 価格ロック）への反映
+
+   🔴 **プラン付与とは完全に分離する。**
+      - 既定（`MEMBERSHIP_WRITE_ENABLED` 未設定）では **一切実行されない**
+      - 失敗しても握りつぶす。プラン付与の成否に影響させない
+      - 列がまだ無ければアダプタが `schema_missing` を返して書きに行かない
+   正本: docs/MEMBERSHIP_REWARDS.md §7.1 / docs/MEMBERSHIP_DATA_MIGRATION.md
+   ------------------------------------------------------------------ */
+
+/** 契約時の価格を記録する（M-1 継続価格ロック）。既に入っていれば上書きしない。 */
+async function recordContractPrice(email, session) {
+  if (!isWriteEnabled(process.env)) return;
+  try {
+    const contract = contractPriceFromCheckoutSession(session, { nowIso: new Date().toISOString() });
+    if (!contract) return;
+    const store = resolveMembershipStore({ env: process.env });
+    if (!store.enabled) return;
+    await store.saveContractPrice(email, contract);
+  } catch {
+    // 🔴 プラン付与には影響させない
+    console.warn('⚠️ stripe-webhook: contract price not recorded (ignored)');
+  }
+}
+
+/**
+ * 解約日を記録する（解約後 90 日でポイント失効 / 旧価格ロック復活の起点）。
+ * 🔴 再開時は null に戻す。
+ */
+async function recordCancellation(email, cancelledAtIso) {
+  if (!isWriteEnabled(process.env)) return;
+  try {
+    const record = await findCustomer(email);
+    if (!record) return;
+    await customersTable().update([{
+      id: record.id,
+      fields: { [CUSTOMER_FIELDS.CANCELLED_AT]: cancelledAtIso },
+    }]);
+  } catch {
+    // 🔴 列が無い環境ではここで失敗する。プラン付与は既に済んでいるので握りつぶす
+    console.warn('⚠️ stripe-webhook: cancellation date not recorded (ignored)');
+  }
+}
+
 /** サブスクから email / plan を取り出す（metadata が正）。 */
 function identityFromSubscription(sub) {
   const md = sub?.metadata || {};
@@ -169,6 +219,10 @@ export async function handler(event) {
         });
         console.log('✅ stripe-webhook: plan granted:', plan.id);
 
+        // 🔴 ここから下は会員継続制度。既定では実行されない（フラグ off）
+        await recordContractPrice(email, session);
+        await recordCancellation(email, null);
+
         await notifyKma({
           kind: 'subscription-started',
           identity: email,
@@ -196,6 +250,7 @@ export async function handler(event) {
             accessEnabled: true,
           });
           console.log('✅ stripe-webhook: subscription active:', plan.id);
+          await recordCancellation(email, null); // 再開したので解約日を消す
         } else if (sub.status === 'canceled' || sub.status === 'unpaid' || sub.status === 'incomplete_expired') {
           await applyPlan(email, {
             planType: TIER.FREE,
@@ -203,6 +258,7 @@ export async function handler(event) {
             accessEnabled: false,
           });
           console.log('✅ stripe-webhook: subscription ended, downgraded to free');
+          await recordCancellation(email, new Date().toISOString());
         } else {
           console.log('ℹ️ stripe-webhook: subscription status ignored:', sub.status);
         }
@@ -222,6 +278,7 @@ export async function handler(event) {
           accessEnabled: false,
         });
         console.log('✅ stripe-webhook: downgraded to free');
+        await recordCancellation(email, new Date().toISOString());
 
         await notifyKma({
           kind: 'subscription-cancelled',

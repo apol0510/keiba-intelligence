@@ -221,6 +221,45 @@ test('E2E: Checkout 完了 → プラン付与 → 有料表示が開く', async
   assert.equal(after.view.authenticated, true);
 });
 
+/* ------------------------------------------------------------------
+   会員継続制度の列は、フラグが無ければ一切書かない
+   （docs/MEMBERSHIP_DATA_MIGRATION.md §6）
+   ------------------------------------------------------------------ */
+
+test('🔴 MEMBERSHIP_WRITE_ENABLED が無ければ membership の列を書かない', async () => {
+  assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, undefined, '前提: フラグは未設定');
+
+  await post(checkoutCompleted(ALICE));
+  await post(subUpdated(ALICE, 'canceled'));
+
+  for (const u of updatesFor(ALICE)) {
+    const keys = Object.keys(u.fields).sort();
+    assert.deepEqual(
+      keys.filter((k) => !['PlanType', 'Status', 'AccessEnabled'].includes(k)),
+      [],
+      `既存 3 列以外を書いている: ${keys.join(', ')}`,
+    );
+  }
+});
+
+test('🔴 フラグを立てても列が無ければプラン付与は成功する（巻き添えで落ちない）', async () => {
+  process.env.MEMBERSHIP_WRITE_ENABLED = 'true';
+  try {
+    const res = await post(checkoutCompleted(ALICE));
+    // 🔴 membership 側の書き込みが失敗しても、プラン付与は 200 で完了すること
+    assert.equal(res.statusCode, 200, 'membership の失敗がプラン付与を巻き添えにしている');
+
+    const planUpdate = updatesFor(ALICE).find((u) => u.fields.PlanType);
+    assert.ok(planUpdate, 'プラン付与が行われていない');
+    assert.deepEqual(planUpdate.fields, { PlanType: 'premium', Status: 'active', AccessEnabled: true });
+
+    const after = viewOf(ALICE);
+    assert.equal(after.view.showBetting, true, '有料表示が開かない');
+  } finally {
+    delete process.env.MEMBERSHIP_WRITE_ENABLED;
+  }
+});
+
 test('E2E: 解約 → 失効 → entitlement 停止', async () => {
   await post(checkoutCompleted(ALICE));
   assert.equal(viewOf(ALICE).view.showBetting, true);
