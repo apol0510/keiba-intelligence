@@ -39,7 +39,7 @@ import { notifyKma, buildEventId } from '../../src/lib/kma/client.js';
 import { resolveMembershipStore, isWriteEnabled } from '../../src/lib/membership/store.js';
 import { contractPriceFromCheckoutSession } from '../../src/lib/membership/priceLock.js';
 import { buildPaidPeriodEntry, PERIOD_MONTHS } from '../../src/lib/membership/rewards.js';
-import { CUSTOMER_FIELDS } from '../../src/lib/membership/airtableStore.js';
+import { CUSTOMER_FIELDS, toAirtableDate } from '../../src/lib/membership/airtableStore.js';
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -247,7 +247,8 @@ async function recordCancellation(email, cancelledAtIso) {
     }
     await customersTable().update([{
       id: record.id,
-      fields: { [CUSTOMER_FIELDS.CANCELLED_AT]: cancelledAtIso },
+      // 🔴 CancelledAt は日付だけの列。日時を送ると 422 になる
+      fields: { [CUSTOMER_FIELDS.CANCELLED_AT]: cancelledAtIso ? toAirtableDate(cancelledAtIso) : null },
     }]);
     return MEMBERSHIP_RESULT.OK;
   } catch {

@@ -63,6 +63,34 @@ function isSchemaMissing(status, bodyText) {
 }
 
 /**
+ * 日付だけの列（`Date (ISO)`）へ入れる値を作る。
+ *
+ * 🔴 Airtable の **date 型（時刻なし）** に ISO の日時を送ると
+ *    `422 INVALID_VALUE_FOR_COLUMN` で拒否される（2026-09-02 に発生）。
+ *    列の型は `docs/MEMBERSHIP_DATA_MIGRATION.md` §2.1 / §2.2 で
+ *    `Date (ISO)` と定められており、**送る側を合わせる**のが正しい。
+ * 🔴 `typecast: true` は使わない（勝手な変換を許すと別の列も静かに壊れる）。
+ *
+ * 🔴 日付の切り方は **Asia/Tokyo**。
+ *    日本向けサービスであり、画面表示も JST。UTC で切ると
+ *    JST 早朝の支払いが前日になり、月境界で「今月の積み上げ」がずれる。
+ *
+ * @param {number|string|null} value  ミリ秒 または ISO 文字列
+ * @returns {string|null} `YYYY-MM-DD`。判断できなければ null（＝書かない）
+ */
+export const AIRTABLE_DATE_TIME_ZONE = 'Asia/Tokyo';
+
+export function toAirtableDate(value) {
+  const ms = typeof value === 'number' ? value : Date.parse(String(value || ''));
+  if (!Number.isFinite(ms)) return null;
+  // en-CA は YYYY-MM-DD 形式
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: AIRTABLE_DATE_TIME_ZONE,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date(ms));
+}
+
+/**
  * 応答から「原因を特定できる短い符号」を作る。
  *
  * 🔴 本文をそのまま出さない。Airtable のエラー本文は
@@ -230,7 +258,7 @@ export function createAirtableMembershipStore({
                 [LEDGER_FIELDS.EMAIL]: normEmail(email),
                 [LEDGER_FIELDS.TYPE]: entry.type,
                 [LEDGER_FIELDS.POINTS]: entry.points,
-                [LEDGER_FIELDS.OCCURRED_AT]: new Date(entry.occurredAtMs).toISOString(),
+                [LEDGER_FIELDS.OCCURRED_AT]: toAirtableDate(entry.occurredAtMs),
                 ...(entry.ref ? { [LEDGER_FIELDS.SOURCE_REF]: entry.ref } : {}),
               },
             }],
@@ -263,7 +291,7 @@ export function createAirtableMembershipStore({
               [CUSTOMER_FIELDS.PRICE_YEN]: contract.amountYen,
               [CUSTOMER_FIELDS.CURRENCY]: contract.currency,
               [CUSTOMER_FIELDS.PRICE_ID]: contract.priceId,
-              [CUSTOMER_FIELDS.PRICE_STARTED_AT]: contract.startedAtIso,
+              [CUSTOMER_FIELDS.PRICE_STARTED_AT]: toAirtableDate(contract.startedAtIso),
             },
           },
         });

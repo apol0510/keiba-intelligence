@@ -12,9 +12,11 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import {
   createAirtableMembershipStore, CUSTOMER_FIELDS, LEDGER_TABLE, LEDGER_FIELDS, SCHEMA_MISSING,
+  toAirtableDate, AIRTABLE_DATE_TIME_ZONE,
   errorCodeFrom,
 } from './airtableStore.js';
 import { STORE_RESULT } from './store.js';
@@ -265,4 +267,52 @@ test('🔴 書き込み失敗の reason に符号が入る', async () => {
   });
   assert.equal(r.status, 'unavailable');
   assert.equal(r.reason, 'write_failed:403:INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND');
+});
+
+/* ------------------------------------------------------------------
+   日付だけの列（Date (ISO)）へ書く値
+   ------------------------------------------------------------------ */
+
+test('🔴 日付だけの列には YYYY-MM-DD を送る（日時は 422 になる）', () => {
+  assert.equal(AIRTABLE_DATE_TIME_ZONE, 'Asia/Tokyo');
+  // JST 22:42（= UTC 13:42）→ 同じ日
+  assert.equal(toAirtableDate(Date.parse('2026-09-02T13:42:36.000Z')), '2026-09-02');
+  // 🔴 JST 早朝（UTC は前日）→ JST の日付になる
+  assert.equal(toAirtableDate(Date.parse('2026-09-30T22:00:00.000Z')), '2026-10-01',
+    '🔴 UTC で切っている（月境界で今月の積み上げがずれる）');
+  // ISO 文字列でもミリ秒でも同じ
+  assert.equal(toAirtableDate('2026-09-02T13:42:36.000Z'), toAirtableDate(Date.parse('2026-09-02T13:42:36.000Z')));
+  // 判断できなければ書かない
+  for (const bad of [null, undefined, '', 'not a date', NaN, {}]) {
+    assert.equal(toAirtableDate(bad), null, `🔴 ${JSON.stringify(bad)} を日付として通している`);
+  }
+});
+
+test('🔴 台帳・契約価格の書き込みが日付形式になっている', async () => {
+  let posted = null;
+  const store = createAirtableMembershipStore({
+    apiKey: 'k', baseId: 'b',
+    fetchImpl: async (url, opts) => {
+      if (!opts || (opts.method || 'GET') === 'GET') {
+        return { ok: true, status: 200, json: async () => ({ records: [] }) };
+      }
+      posted = JSON.parse(opts.body);
+      return { ok: true, status: 200, json: async () => ({ records: [{ id: 'rec1' }] }) };
+    },
+  });
+  await store.appendEntry('a@example.com', {
+    entryId: 'e1', type: 'accrual', points: 100,
+    occurredAtMs: Date.parse('2026-09-02T13:42:36.000Z'), periodMonths: 1, sourceRef: 'in_x',
+  });
+  assert.equal(posted.records[0].fields.OccurredAt, '2026-09-02');
+  assert.equal(/T\d\d:/.test(posted.records[0].fields.OccurredAt), false, '🔴 時刻が入っている');
+});
+
+test('🔴 typecast を使わない', () => {
+  // コメントは対象外（使わない理由の説明は書いてよい）
+  const src = readFileSync(new URL('./airtableStore.js', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+    .replace(/^\s*\*.*$/gm, '');
+  assert.equal(/typecast/.test(src), false, '🔴 typecast で押し込んでいる');
 });
