@@ -30,7 +30,7 @@
     "test:validation": "node scripts/utils/validatePrediction.test.js",
     "test:computer-index": "node --test src/utils/computerIndexContract.test.mjs",
     "test:narrative": "node --test src/utils/raceNarrative.test.mjs src/utils/frameNumber.test.mjs src/utils/pedigreeName.test.mjs src/utils/attentionMarks.test.mjs src/utils/bettingPlan.test.mjs",
-    "test:auth": "node --test src/lib/auth/auth.test.mjs src/lib/auth/entitlementRoutes.test.mjs src/lib/auth/previewMode.test.mjs src/lib/auth/magicLinkBase.test.mjs",
+    "test:auth": "node --test src/lib/auth/auth.test.mjs src/lib/auth/entitlementRoutes.test.mjs src/lib/auth/previewMode.test.mjs src/lib/auth/magicLinkBase.test.mjs src/lib/auth/refreshSession.guard.test.mjs",
     "test:stripe": "node --experimental-test-module-mocks --test src/lib/billing/stripeWebhook.test.mjs src/lib/billing/stripeCheckout.test.mjs",
     "test:billing": "node --test src/lib/billing/billing.test.mjs src/lib/http/siteOrigin.test.mjs src/lib/billing/purchaseIntent.test.mjs",
     "test:membership": "node --test src/lib/membership/membership.test.mjs src/lib/membership/membershipCopy.guard.test.mjs src/lib/membership/airtableStore.test.mjs src/lib/membership/membershipE2E.test.mjs src/lib/membership/bankTransfer.test.mjs",
