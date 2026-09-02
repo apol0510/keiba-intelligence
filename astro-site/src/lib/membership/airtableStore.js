@@ -63,6 +63,31 @@ function isSchemaMissing(status, bodyText) {
 }
 
 /**
+ * 応答から「原因を特定できる短い符号」を作る。
+ *
+ * 🔴 本文をそのまま出さない。Airtable のエラー本文は
+ *    フィールド名や値を含むことがある（例: 不正な値をそのまま echo する）。
+ *    ここで取るのは **HTTP status と `error.type`（機械可読な短い符号）だけ**。
+ * 🔴 `error.message` は使わない（値が混ざるため）。
+ *
+ * 例: `403:INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND` / `429` / `422:INVALID_VALUE_FOR_COLUMN`
+ */
+export function errorCodeFrom(status, bodyText) {
+  const code = Number.isFinite(status) ? String(status) : 'unknown';
+  let type = '';
+  try {
+    const j = JSON.parse(String(bodyText || ''));
+    const e = j && j.error;
+    const t = typeof e === 'string' ? e : (e && e.type) || '';
+    // 英数と _ - . のみ。長さも制限する（値が紛れ込む余地を残さない）
+    type = String(t).replace(/[^A-Za-z0-9_.-]/g, '').slice(0, 60);
+  } catch {
+    /* JSON でなければ status だけで判断する */
+  }
+  return type ? `${code}:${type}` : code;
+}
+
+/**
  * Airtable アダプタを作る。
  *
  * @param {object} o
@@ -99,7 +124,13 @@ export function createAirtableMembershipStore({
     let text = '';
     try { text = await res.text(); } catch { /* 読めなくても判定は続ける */ }
     if (isSchemaMissing(res.status, text)) schemaMissing = true;
-    return { ok: false, status: res.status, schemaMissing: isSchemaMissing(res.status, text) };
+    return {
+      ok: false,
+      status: res.status,
+      schemaMissing: isSchemaMissing(res.status, text),
+      // 🔴 原因を追えるだけの符号。本文・値は含めない
+      code: errorCodeFrom(res.status, text),
+    };
   }
 
   async function findCustomer(email) {
@@ -142,7 +173,7 @@ export function createAirtableMembershipStore({
           }),
         });
       } catch {
-        return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'read_failed', profile: null });
+        return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'read_failed:exception', profile: null });
       }
     },
 
@@ -154,7 +185,7 @@ export function createAirtableMembershipStore({
         if (!r.ok) {
           return Object.freeze({
             status: STORE_RESULT.UNAVAILABLE,
-            reason: r.schemaMissing ? SCHEMA_MISSING : 'read_failed',
+            reason: r.schemaMissing ? SCHEMA_MISSING : `read_failed:${r.code}`,
             entries: null,
           });
         }
@@ -172,7 +203,7 @@ export function createAirtableMembershipStore({
         // 🔴 壊れた行は `rewards.js` の isValidEntry が集計から外す（ここでは捨てない）
         return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, entries: Object.freeze(entries) });
       } catch {
-        return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'read_failed', entries: null });
+        return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'read_failed:exception', entries: null });
       }
     },
 
@@ -185,7 +216,7 @@ export function createAirtableMembershipStore({
       try {
         const formula = encodeURIComponent(`{${LEDGER_FIELDS.ENTRY_ID}} = "${escapeFormula(entry.entryId)}"`);
         const found = await call(`${encodeURIComponent(LEDGER_TABLE)}?maxRecords=1&filterByFormula=${formula}`);
-        if (!found.ok) return unavailable(found.schemaMissing ? SCHEMA_MISSING : 'read_failed');
+        if (!found.ok) return unavailable(found.schemaMissing ? SCHEMA_MISSING : `read_failed:${found.code}`);
         if (found.data.records?.length) {
           return Object.freeze({ status: STORE_RESULT.ALREADY, reason: null, writes: 0 });
         }
@@ -205,10 +236,10 @@ export function createAirtableMembershipStore({
             }],
           },
         });
-        if (!created.ok) return unavailable(created.schemaMissing ? SCHEMA_MISSING : 'write_failed');
+        if (!created.ok) return unavailable(created.schemaMissing ? SCHEMA_MISSING : `write_failed:${created.code}`);
         return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: 1 });
       } catch {
-        return unavailable('write_failed');
+        return unavailable('write_failed:exception');
       }
     },
 
@@ -236,10 +267,10 @@ export function createAirtableMembershipStore({
             },
           },
         });
-        if (!updated.ok) return unavailable(updated.schemaMissing ? SCHEMA_MISSING : 'write_failed');
+        if (!updated.ok) return unavailable(updated.schemaMissing ? SCHEMA_MISSING : `write_failed:${updated.code}`);
         return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: 1 });
       } catch {
-        return unavailable('write_failed');
+        return unavailable('write_failed:exception');
       }
     },
   });

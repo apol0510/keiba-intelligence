@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 
 import {
   createAirtableMembershipStore, CUSTOMER_FIELDS, LEDGER_TABLE, LEDGER_FIELDS, SCHEMA_MISSING,
+  errorCodeFrom,
 } from './airtableStore.js';
 import { STORE_RESULT } from './store.js';
 import { ENTRY_TYPE } from './rewards.js';
@@ -206,11 +207,62 @@ describe('安全性', () => {
     const f = () => { throw new Error('network down'); };
     const r = await store(f).readProfile('a@example.com');
     assert.equal(r.status, STORE_RESULT.UNAVAILABLE);
-    assert.equal(r.reason, 'read_failed');
+    // 例外も原因が分かるよう符号を付ける
+    assert.equal(r.reason, 'read_failed:exception');
   });
 
   test('資格情報が無ければアダプタを作らない（disabled へ倒す）', () => {
     assert.equal(createAirtableMembershipStore({ baseId: 'appX', fetchImpl: () => {} }), null);
     assert.equal(createAirtableMembershipStore({ apiKey: 'k', fetchImpl: () => {} }), null);
   });
+});
+
+/* ------------------------------------------------------------------
+   失敗理由に原因の符号を載せる（秘密値・値は含めない）
+   ------------------------------------------------------------------ */
+
+test('🔴 write_failed に HTTP status と error type が付く', () => {
+  assert.equal(errorCodeFrom(403, JSON.stringify({ error: { type: 'INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND' } })),
+    '403:INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND');
+  assert.equal(errorCodeFrom(422, JSON.stringify({ error: { type: 'INVALID_VALUE_FOR_COLUMN' } })),
+    '422:INVALID_VALUE_FOR_COLUMN');
+  // 文字列型の error（古い形）も拾う
+  assert.equal(errorCodeFrom(401, JSON.stringify({ error: 'AUTHENTICATION_REQUIRED' })), '401:AUTHENTICATION_REQUIRED');
+  // JSON でない / type が無いときは status だけ
+  assert.equal(errorCodeFrom(429, 'Too Many Requests'), '429');
+  assert.equal(errorCodeFrom(500, JSON.stringify({ error: {} })), '500');
+});
+
+test('🔴 error.message を載せない（値が混ざるため）', () => {
+  const body = JSON.stringify({
+    error: { type: 'INVALID_VALUE_FOR_COLUMN', message: 'Field "Email" value "himitsu@example.com" is invalid' },
+  });
+  const code = errorCodeFrom(422, body);
+  assert.equal(code, '422:INVALID_VALUE_FOR_COLUMN');
+  for (const leak of ['himitsu@example.com', 'message', 'Field']) {
+    assert.equal(code.includes(leak), false, `🔴 ${leak} が符号に漏れている`);
+  }
+});
+
+test('🔴 符号は英数と _ - . だけ・長さも抑える', () => {
+  const weird = errorCodeFrom(400, JSON.stringify({ error: { type: 'A B<script>"\'#' + 'x'.repeat(200) } }));
+  assert.match(weird, /^400:[A-Za-z0-9_.-]{1,60}$/);
+});
+
+test('🔴 書き込み失敗の reason に符号が入る', async () => {
+  const store = createAirtableMembershipStore({
+    apiKey: 'k', baseId: 'b',
+    fetchImpl: async (url, opts) => {
+      if (!opts || (opts.method || 'GET') === 'GET') {
+        // 同じ EntryId はまだ無い（＝POST まで進む）
+        return { ok: true, status: 200, json: async () => ({ records: [] }) };
+      }
+      return { ok: false, status: 403, text: async () => JSON.stringify({ error: { type: 'INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND' } }) };
+    },
+  });
+  const r = await store.appendEntry('a@example.com', {
+    entryId: 'e1', type: 'accrual', points: 100, occurredAtMs: Date.now(), periodMonths: 1, sourceRef: 'in_x',
+  });
+  assert.equal(r.status, 'unavailable');
+  assert.equal(r.reason, 'write_failed:403:INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND');
 });
