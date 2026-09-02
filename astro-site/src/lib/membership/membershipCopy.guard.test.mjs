@@ -492,11 +492,11 @@ describe('ランク・リワードを認可に使わない', () => {
     assert.equal(paidAt.slice(0, 500).includes('Date.now()'), false,
       '🔴 受信時刻で支払い時刻を代用している');
 
-    // 付与本体: どちらかが欠けたら return（保留）
+    // 付与本体: どちらかが欠けたら保留（SKIPPED を返して付与しない）
     const record = wh.slice(wh.indexOf('async function recordPaidPeriod('));
-    assert.match(record.slice(0, 1400), /periodMonths == null[\s\S]*?return;/);
-    assert.match(record.slice(0, 1400), /occurredAtMs == null[\s\S]*?return;/);
-    assert.equal(record.slice(0, 1400).includes('Date.now()'), false,
+    assert.match(record.slice(0, 1800), /periodMonths == null[\s\S]*?return MEMBERSHIP_RESULT\.SKIPPED;/);
+    assert.match(record.slice(0, 1800), /occurredAtMs == null[\s\S]*?return MEMBERSHIP_RESULT\.SKIPPED;/);
+    assert.equal(record.slice(0, 1800).includes('Date.now()'), false,
       '🔴 付与日時に受信時刻を使っている');
   });
 
@@ -508,15 +508,27 @@ describe('ランク・リワードを認可に使わない', () => {
     assert.match(rewards, /status: 'pending', months: null, source: null/);
   });
 
-  test('🔴 会員継続制度の書き込みはフラグ付き・別リクエスト・失敗を握りつぶす', () => {
+  test('🔴 会員継続制度の書き込みはフラグ付き・別リクエスト・失敗を報告する', () => {
     const src = read('netlify/functions/stripe-webhook.js');
     // フラグ無しでは実行されない
     for (const fn of ['recordContractPrice', 'recordCancellation', 'recordPaidPeriod']) {
       const body = src.slice(src.indexOf(`async function ${fn}(`));
-      assert.match(body.slice(0, 400), /if \(!isWriteEnabled\(process\.env\)\) return;/,
+      // フラグが無ければ何もしない
+      assert.match(body.slice(0, 400), /if \(!isWriteEnabled\(process\.env\)\) return MEMBERSHIP_RESULT\.SKIPPED;/,
         `${fn} の先頭でフラグを確認していない`);
-      assert.match(body.slice(0, 1200), /catch \{/, `${fn} が失敗を握りつぶしていない`);
+      // 🔴 例外でハンドラを巻き添えにしないが、**成功扱いにもしない**
+      assert.match(body.slice(0, 2200), /catch \{[\s\S]*?return MEMBERSHIP_RESULT\.FAILED;/,
+        `${fn} が失敗を FAILED として報告していない（握りつぶすと再送で復旧できない）`);
     }
+
+    // 🔴 失敗したイベントを processed にしない（再送で復旧できる契約）
+    const tail = src.slice(src.indexOf('membershipResults.includes'));
+    assert.match(tail.slice(0, 600), /statusCode: 500/,
+      '🔴 membership 失敗時に 500 を返していない');
+    const markIdx = src.indexOf('await markProcessed(stripeEvent.id);');
+    const failIdx = src.indexOf('membershipResults.includes(MEMBERSHIP_RESULT.FAILED)');
+    assert.ok(failIdx > 0 && failIdx < markIdx,
+      '🔴 失敗判定より前に markProcessed している（再送が duplicate で無視される）');
     // 🔴 プラン付与の update に membership の列を混ぜていない
     const applyPlan = src.slice(src.indexOf('async function applyPlan('), src.indexOf('/* ---'));
     for (const col of ['MembershipStartedAt', 'CancelledAt', 'ContractPrice', 'CUSTOMER_FIELDS']) {
