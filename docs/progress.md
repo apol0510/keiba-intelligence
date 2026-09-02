@@ -72,6 +72,26 @@
 - **Open Question**: 配送されたリンクから `intent` が落ちた原因は未特定
   （SendGrid のクリック追跡による書き換えの可能性）。次回の発生時は上記ログで切り分ける。
 
+
+### 2026-09-02 委譲先が本番デプロイになっていた（`08c16203`）— 原因確定
+
+- **決め手**: 届いたメールのリンクが
+  `https://keiba-intelligence.jp/auth/verify?token=<uuid>` だった。
+  ホストが本番 ／ `&intent=` が無い ／ token が UUID（＝ `send-magic-link`）。
+  つまり **本番の関数がメールを作っていた**（本番 = `main` には購入意図の持ち越しが無い）。
+- **原因**: `start-purchase` の `selfOrigin` が `DEPLOY_PRIME_URL` → `URL` の順で見ていた。
+  実行時に `DEPLOY_PRIME_URL` が取れないと `URL`（＝サイト代表 URL ＝ 本番）に落ち、
+  ブランチデプロイの申し込みが本番の関数へ委譲されていた。
+- **修正**: **リクエスト元の origin を最優先**にする。このリクエストを受けているのが
+  自分である以上、ブラウザが見ている origin がそのまま自分のデプロイである。
+  `DEPLOY_PRIME_URL` / `URL` は origin も Host も取れないときの保険に留める
+  （`siteOrigin.js` の許可ホストしか通さない点は不変）。委譲先を `console.log` に出す。
+- **再現確認**: `URL=本番` / `DEPLOY_PRIME_URL` 未設定 の条件でバンドルを実行し、
+  委譲先がブランチデプロイになることを確認。
+- **前項（`1cbaa561`）の localStorage 控えは維持**。クエリが落ちた場合の保険として有効。
+- **env 確認（値を出したのは秘密値でない `MAGIC_LINK_BASE_URL` のみ）**:
+  branch-deploy にブランチ URL が入っており、本番・Deploy Preview は空。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
