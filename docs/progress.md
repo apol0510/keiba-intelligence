@@ -6,6 +6,22 @@
 >
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
+
+### 2026-09-02 購入導線の ReferenceError 修正（`3de357a7`）
+
+- **症状**: 未ログインで「このプランを申し込む」を押すと、メール確認フォームが出ず
+  「現在お申し込みを受け付けられません。しばらくしてからお試しください。」だけが表示された。
+- **原因**: `openPurchaseAuth` / `submitPurchaseAuth` / `resumeCheckout` を
+  `DOMContentLoaded` コールバックの内側に定義したため、外側スコープの `startCheckout` から参照できず、
+  401 分岐で ReferenceError → `startCheckout` 自身の catch が汎用エラーを表示していた。
+  エンドポイント側は正常（`stripe-create-checkout` は cookie 無しで 401 `login_required`）。
+- **修正**: 購入導線の関数を `startCheckout` と同じ外側スコープへ移動。
+  `DOMContentLoaded` 内はフォーム束縛と `resumeCheckout()` 呼び出しのみ。
+- **再発防止**: `purchaseIntent.test.mjs` に「4関数すべてが `DOMContentLoaded` より前に定義されている」ことを固定（billing 48→49件）。
+- **検証**: branch deploy で実クリック確認済み。CTA 押下 → 汎用エラーなし →
+  `#pr-purchase-auth` が `hidden=false` になりフォームが表示され、入力欄にフォーカスが入る。
+- **未実施**: Test Mode の新規購入本体（確認メール送信以降）はユーザー操作待ちで停止。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
