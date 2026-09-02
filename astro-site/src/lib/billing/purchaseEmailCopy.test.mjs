@@ -64,8 +64,13 @@ describe('購入導線のメール文面', () => {
       '🔴 廃止済みのプラン訴求がメールに残っている');
   });
 
-  test('🔴 認証ページも購入導線では次の一歩を出す', () => {
+  test('🔴 認証ページは「何を確認したか」と「次に何が起きるか」を両方出す', () => {
     const v = read('src/pages/auth/verify.astro');
-    assert.match(v, /お支払い画面へ進みます/);
+    // 何が確認できたのか
+    assert.match(v, /メールアドレスを確認しました/);
+    // 次に何が起きるのか
+    assert.match(v, /このままお支払い画面へ進みます/);
+    // 何を指すか分からない言い方に戻さない
+    assert.equal(v.includes("showSuccess('確認できました'"), false);
   });
 });
