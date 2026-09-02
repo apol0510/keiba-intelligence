@@ -126,34 +126,62 @@ async function applyPlan(email, { planType, status, accessEnabled }) {
 /* ------------------------------------------------------------------
    会員継続制度（KI リワード / 価格ロック）への反映
 
-   🔴 **プラン付与とは完全に分離する。**
+   🔴 **プラン付与（認可）とは分離する。**
       - 既定（`MEMBERSHIP_WRITE_ENABLED` 未設定）では **一切実行されない**
-      - 失敗しても握りつぶす。プラン付与の成否に影響させない
+      - membership 側の失敗で **プラン付与を巻き戻さない**
       - 列がまだ無ければアダプタが `schema_missing` を返して書きに行かない
+
+   🔴 **ただし「失敗を成功扱い」にはしない。**
+      以前は例外を握りつぶして 200 を返し、そのあと `markProcessed()` が走っていた。
+      その結果、**Stripe が再送しても `duplicate` で無視され、付与が永久に失われた**
+      （2026-09-02 の Test Mode E2E で実際に発生。RewardLedger が 0 行のまま）。
+      いまは結果を戻り値で受け取り、**本当に失敗したイベントは processed にせず 500 を返す**。
+      プラン付与は同じ値で冪等に上書きされるので、再送で認可が壊れることはない。
+
    正本: docs/MEMBERSHIP_REWARDS.md §7.1 / docs/MEMBERSHIP_DATA_MIGRATION.md
    ------------------------------------------------------------------ */
 
+/** membership 反映の結果。`FAILED` のときだけ再送が必要。 */
+const MEMBERSHIP_RESULT = Object.freeze({
+  /** 設定が無い等、やることが無い（想定内） */
+  SKIPPED: 'skipped',
+  /** 反映できた */
+  OK: 'ok',
+  /** 🔴 反映すべきだったが失敗した。processed にせず再送させる */
+  FAILED: 'failed',
+});
+
+/** 「やることが無い」＝再送不要とみなす理由。 */
+const EXPECTED_UNAVAILABLE = new Set(['write_disabled', 'schema_missing', 'not_configured', 'adapter_missing']);
+
 /** 契約時の価格を記録する（M-1 継続価格ロック）。既に入っていれば上書きしない。 */
 async function recordContractPrice(email, session) {
-  if (!isWriteEnabled(process.env)) return;
+  if (!isWriteEnabled(process.env)) return MEMBERSHIP_RESULT.SKIPPED;
   try {
     // 🔴 契約時刻も Stripe が持つ値を使う（受信時刻で代用しない）。
     //    取れなければ記録しない（あとから正しい値で入れ直せる）。
     const createdSec = session?.created;
     if (!Number.isFinite(createdSec) || createdSec <= 0) {
       console.warn('⚠️ stripe-webhook: session.created missing — contract price held');
-      return;
+      return MEMBERSHIP_RESULT.SKIPPED;
     }
     const contract = contractPriceFromCheckoutSession(session, {
       nowIso: new Date(Math.floor(createdSec) * 1000).toISOString(),
     });
-    if (!contract) return;
+    if (!contract) return MEMBERSHIP_RESULT.SKIPPED;
     const store = resolveMembershipStore({ env: process.env });
-    if (!store.enabled) return;
-    await store.saveContractPrice(email, contract);
+    if (!store.enabled) return MEMBERSHIP_RESULT.SKIPPED;
+
+    const r = await store.saveContractPrice(email, contract);
+    if (r.status === 'unavailable' && !EXPECTED_UNAVAILABLE.has(r.reason)) {
+      console.warn('⚠️ stripe-webhook: contract price write failed:', r.reason);
+      return MEMBERSHIP_RESULT.FAILED;
+    }
+    return MEMBERSHIP_RESULT.OK;
   } catch {
-    // 🔴 プラン付与には影響させない
-    console.warn('⚠️ stripe-webhook: contract price not recorded (ignored)');
+    // 🔴 プラン付与は巻き戻さない。ただし成功扱いにもしない（再送で復旧させる）
+    console.warn('⚠️ stripe-webhook: contract price not recorded');
+    return MEMBERSHIP_RESULT.FAILED;
   }
 }
 
@@ -162,17 +190,19 @@ async function recordContractPrice(email, session) {
  * 🔴 再開時は null に戻す。
  */
 async function recordCancellation(email, cancelledAtIso) {
-  if (!isWriteEnabled(process.env)) return;
+  if (!isWriteEnabled(process.env)) return MEMBERSHIP_RESULT.SKIPPED;
   try {
     const record = await findCustomer(email);
-    if (!record) return;
+    if (!record) return MEMBERSHIP_RESULT.SKIPPED;
     await customersTable().update([{
       id: record.id,
       fields: { [CUSTOMER_FIELDS.CANCELLED_AT]: cancelledAtIso },
     }]);
+    return MEMBERSHIP_RESULT.OK;
   } catch {
-    // 🔴 列が無い環境ではここで失敗する。プラン付与は既に済んでいるので握りつぶす
-    console.warn('⚠️ stripe-webhook: cancellation date not recorded (ignored)');
+    // 🔴 プラン付与は巻き戻さない。ただし成功扱いにもしない（再送で復旧させる）
+    console.warn('⚠️ stripe-webhook: cancellation date not recorded');
+    return MEMBERSHIP_RESULT.FAILED;
   }
 }
 
@@ -230,34 +260,42 @@ export function paidAtMsFromInvoice(invoice) {
  * 🔴 期間の長さ・支払い時刻のどちらかが取れなければ **付与しない**（fail-closed）。
  */
 async function recordPaidPeriod(email, invoice) {
-  if (!isWriteEnabled(process.env)) return;
+  if (!isWriteEnabled(process.env)) return MEMBERSHIP_RESULT.SKIPPED;
   try {
     const invoiceRef = typeof invoice?.id === 'string' ? invoice.id : null;
-    if (!invoiceRef) return;
+    if (!invoiceRef) return MEMBERSHIP_RESULT.SKIPPED;
 
     const periodMonths = periodMonthsFromInvoice(invoice);
     if (periodMonths == null) {
-      // 🔴 月額へ fallback しない。付けずに保留する
+      // 🔴 月額へ fallback しない。付けずに保留する（再送しても同じなので SKIPPED）
       console.warn('⚠️ stripe-webhook: unknown billing interval — accrual held');
-      return;
+      return MEMBERSHIP_RESULT.SKIPPED;
     }
 
     const occurredAtMs = paidAtMsFromInvoice(invoice);
     if (occurredAtMs == null) {
       // 🔴 受信時刻（Date.now）で代用しない。付けずに保留する
       console.warn('⚠️ stripe-webhook: paid_at missing — accrual held');
-      return;
+      return MEMBERSHIP_RESULT.SKIPPED;
     }
 
     const entry = buildPaidPeriodEntry({ email, invoiceRef, periodMonths, occurredAtMs });
-    if (!entry) return;
+    if (!entry) return MEMBERSHIP_RESULT.SKIPPED;
 
     const store = resolveMembershipStore({ env: process.env });
-    if (!store.enabled) return;
-    await store.appendEntry(email, entry);
+    if (!store.enabled) return MEMBERSHIP_RESULT.SKIPPED;
+
+    const r = await store.appendEntry(email, entry);
+    // `already` は冪等（既に積んである）ので成功扱い
+    if (r.status === 'unavailable' && !EXPECTED_UNAVAILABLE.has(r.reason)) {
+      console.warn('⚠️ stripe-webhook: reward accrual write failed:', r.reason);
+      return MEMBERSHIP_RESULT.FAILED;
+    }
+    return MEMBERSHIP_RESULT.OK;
   } catch {
-    // 🔴 認可には影響させない
-    console.warn('⚠️ stripe-webhook: reward accrual not recorded (ignored)');
+    // 🔴 認可は巻き戻さない。ただし成功扱いにもしない（再送で復旧させる）
+    console.warn('⚠️ stripe-webhook: reward accrual not recorded');
+    return MEMBERSHIP_RESULT.FAILED;
   }
 }
 
@@ -314,6 +352,13 @@ export async function handler(event) {
     return { statusCode: 200, headers, body: JSON.stringify({ received: true, duplicate: true }) };
   }
 
+  /**
+   * 🔴 membership 反映の結果を集める。1 つでも FAILED があれば
+   *    **processed にせず 500 を返し、Stripe に再送させる**。
+   */
+  const membershipResults = [];
+  const track = (r) => { membershipResults.push(r); return r; };
+
   try {
     switch (stripeEvent.type) {
       case 'checkout.session.completed': {
@@ -332,8 +377,8 @@ export async function handler(event) {
         console.log('✅ stripe-webhook: plan granted:', plan.id);
 
         // 🔴 ここから下は会員継続制度。既定では実行されない（フラグ off）
-        await recordContractPrice(email, session);
-        await recordCancellation(email, null);
+        track(await recordContractPrice(email, session));
+        track(await recordCancellation(email, null));
 
         await notifyKma({
           kind: 'subscription-started',
@@ -362,7 +407,7 @@ export async function handler(event) {
             accessEnabled: true,
           });
           console.log('✅ stripe-webhook: subscription active:', plan.id);
-          await recordCancellation(email, null); // 再開したので解約日を消す
+          track(await recordCancellation(email, null)); // 再開したので解約日を消す
         } else if (sub.status === 'canceled' || sub.status === 'unpaid' || sub.status === 'incomplete_expired') {
           await applyPlan(email, {
             planType: TIER.FREE,
@@ -370,7 +415,7 @@ export async function handler(event) {
             accessEnabled: false,
           });
           console.log('✅ stripe-webhook: subscription ended, downgraded to free');
-          await recordCancellation(email, stripeEventTimeIso(stripeEvent));
+          track(await recordCancellation(email, stripeEventTimeIso(stripeEvent)));
         } else {
           console.log('ℹ️ stripe-webhook: subscription status ignored:', sub.status);
         }
@@ -390,7 +435,7 @@ export async function handler(event) {
           accessEnabled: false,
         });
         console.log('✅ stripe-webhook: downgraded to free');
-        await recordCancellation(email, stripeEventTimeIso(stripeEvent));
+        track(await recordCancellation(email, stripeEventTimeIso(stripeEvent)));
 
         await notifyKma({
           kind: 'subscription-cancelled',
@@ -415,7 +460,7 @@ export async function handler(event) {
           break;
         }
         // 🔴 認可は触らない。ここで行うのはリワードの付与だけ
-        await recordPaidPeriod(email, invoice);
+        track(await recordPaidPeriod(email, invoice));
         console.log('✅ stripe-webhook: paid period recorded');
         break;
       }
@@ -446,6 +491,15 @@ export async function handler(event) {
     console.error('❌ stripe-webhook: handler failed for type:', stripeEvent.type);
     // 🔴 処理済みとして記録しない。Stripe の再送で復旧させる。
     return { statusCode: 500, headers, body: JSON.stringify({ error: 'handler_failed' }) };
+  }
+
+  // 🔴 membership の反映に失敗していたら **processed にしない**。
+  //    ここで 200 を返して記録してしまうと、Stripe が再送しても `duplicate` で
+  //    無視され、付与が永久に失われる（2026-09-02 に実際に発生）。
+  //    認可（プラン付与）は既に完了しており、再送時は同じ値で冪等に上書きされる。
+  if (membershipResults.includes(MEMBERSHIP_RESULT.FAILED)) {
+    console.error('❌ stripe-webhook: membership not recorded — will retry:', stripeEvent.type);
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'membership_not_recorded' }) };
   }
 
   // 🔴 成功したあとに記録する（失敗したイベントを握りつぶさないため）

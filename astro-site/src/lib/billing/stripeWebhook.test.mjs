@@ -44,6 +44,8 @@ const db = {
   updates: [],
   selects: [],
   failUpdate: false,
+  /** 特定の書き込みだけ失敗させる述語（membership 側だけ落とす検証用）。 */
+  failUpdateWhen: null,
   reset() {
     this.rows = [
       { id: 'recALICE', fields: { Email: ALICE, PlanType: 'free-registered', Status: 'active', AccessEnabled: true } },
@@ -52,6 +54,7 @@ const db = {
     this.updates = [];
     this.selects = [];
     this.failUpdate = false;
+    this.failUpdateWhen = null;
   },
 };
 
@@ -89,6 +92,10 @@ before(() => {
           },
           async update(list) {
             if (db.failUpdate) throw new Error('airtable is down');
+            if (db.failUpdateWhen && list.some((u) => db.failUpdateWhen(u.fields || {}))) {
+              // Airtable が拒否したときと同じ形（例外）で落とす
+              throw new Error('airtable rejected the update');
+            }
             for (const u of list) {
               db.updates.push({ id: u.id, fields: { ...u.fields } });
               const row = db.rows.find((r) => r.id === u.id);
@@ -552,6 +559,88 @@ test('🔴 未知の間隔 / paid_at 欠落でも 200 を返し、認可は変�
 
   assert.equal(updatesFor(ALICE).length, before, '認可を書き換えている');
   assert.equal(viewOf(ALICE).view.showBetting, true);
+});
+
+/* ------------------------------------------------------------------
+   Airtable の単一選択（singleSelect）の制約
+   （2026-09-02 の Test Mode E2E で 500 handler_failed を招いた盲点）
+   ------------------------------------------------------------------ */
+
+/**
+ * 🔴 `PlanType` / `Status` は Airtable の **単一選択**である。
+ *    登録されていない選択肢を書くと Airtable が 422 で拒否し、
+ *    `applyPlan` が例外を投げて webhook が 500 になる。
+ *    モックは値を素通しするため、この制約はテストで**再現できていなかった**。
+ *    ここでは「コードが書く値の集合」を Airtable の選択肢と突き合わせて固定する。
+ *
+ * 🔴 この一覧を増やすときは **Airtable 側にも選択肢を追加**すること。
+ */
+const AIRTABLE_CHOICES = Object.freeze({
+  // 2026-09-02 時点の実スキーマ（read-only で確認済み）
+  PlanType: ['free-registered', 'light', 'pro', 'premium', 'free'],
+  Status: ['pending', 'active', 'cancelled', 'expired', 'suspended', 'unpaid',
+    'refunded', 'withdrawn', 'test', 'inactive', 'payment_failed'],
+});
+
+test('🔴 webhook が書く PlanType / Status は Airtable の選択肢に存在する', async () => {
+  // 実際にイベントを流して、書き込まれた値を集める
+  await post(checkoutCompleted(ALICE));
+  await post(subUpdated(ALICE, 'canceled'));
+  await post(subDeleted(ALICE));
+  await post(paymentFailed(ALICE));
+  for (const st of ['active', 'trialing']) await post(subUpdated(ALICE, st));
+
+  const written = { PlanType: new Set(), Status: new Set() };
+  for (const u of updatesFor(ALICE)) {
+    for (const k of ['PlanType', 'Status']) {
+      if (u.fields[k] != null) written[k].add(u.fields[k]);
+    }
+  }
+
+  for (const k of ['PlanType', 'Status']) {
+    assert.ok(written[k].size > 0, `${k} の書き込みが観測できていない`);
+    for (const v of written[k]) {
+      assert.ok(
+        AIRTABLE_CHOICES[k].includes(v),
+        `🔴 Airtable の ${k} に選択肢「${v}」が無い → 実環境で 422 になり webhook が 500 になる`,
+      );
+    }
+  }
+});
+
+/* ------------------------------------------------------------------
+   membership の失敗を「成功扱い」にしない（再送で復旧できる契約）
+   ------------------------------------------------------------------ */
+
+test('🔴 membership の書き込みだけ失敗したら processed にせず 500（再送で復旧）', async () => {
+  await withWriteFlag('true', async () => {
+    // 🔴 プラン付与（PlanType）は成功させ、membership の列（CancelledAt）だけ落とす
+    db.failUpdateWhen = (f) => 'CancelledAt' in f;
+    try {
+      const res = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_fail'));
+      assert.equal(res.statusCode, 500, '🔴 membership の失敗を 200 で握りつぶしている');
+      assert.equal(JSON.parse(res.body).error, 'membership_not_recorded');
+
+      // プラン付与自体は完了している（認可を巻き戻さない）
+      const planUpdate = updatesFor(ALICE).find((u) => u.fields.PlanType);
+      assert.deepEqual(planUpdate.fields, { PlanType: 'premium', Status: 'active', AccessEnabled: true });
+    } finally {
+      db.failUpdateWhen = null;
+    }
+
+    // 🔴 processed にしていないので、再送が duplicate 扱いされない＝復旧できる
+    const retry = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_fail'));
+    assert.equal(retry.statusCode, 200, '🔴 再送で復旧できていない');
+    assert.equal(JSON.parse(retry.body).duplicate, undefined, '🔴 duplicate 扱いされ永久に失われる');
+  });
+});
+
+test('🔴 フラグ未設定（やることが無い）は失敗にしない', async () => {
+  const res = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_skip'));
+  assert.equal(res.statusCode, 200);
+  // processed になっているので再送は duplicate
+  const again = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_skip'));
+  assert.equal(JSON.parse(again.body).duplicate, true);
 });
 
 test('🔴 同じ invoice の payment_succeeded を再送しても二重処理しない', async () => {
