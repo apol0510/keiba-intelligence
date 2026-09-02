@@ -116,7 +116,13 @@ exports.handler = async (event) => {
     console.log('✅ Token created:', token);
 
     // 4. SendGrid経由でマジックリンク送信
-    const magicLink = `https://keiba-intelligence.jp/auth/verify?token=${token}`;
+    // 🔴 送信先は既定で本番（従来どおり）。`MAGIC_LINK_BASE_URL` が
+    //    許可リストに載った origin のときだけ、そこへ向ける（Deploy Preview /
+    //    ブランチデプロイで通常のログイン経路を通すため）。
+    //    未設定・壊れた値・許可外ホストは **すべて本番へ倒す**（fail-closed）。
+    //    認証の意味・有効期限・認可条件は変わらない。
+    const { buildMagicLinkUrl } = await import('../../src/lib/auth/magicLinkBase.js');
+    const magicLink = buildMagicLinkUrl(token, process.env);
 
     const msg = {
       to: email,
