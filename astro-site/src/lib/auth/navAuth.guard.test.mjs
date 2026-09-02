@@ -61,18 +61,41 @@ describe('ナビのログイン表示', () => {
     }
   });
 
-  test('🔴 遷移先と案内文が食い違わない', () => {
-    // 無料会員は /free-prediction、有料は /mypage へ行く。
-    // 文言を「マイページへ」に固定すると無料会員に嘘の案内になる。
-    const v = read('src/pages/auth/verify.astro');
-    assert.match(v, /const to = data\.redirectTo \|\| '\/free-prediction'/);
-    assert.match(v, /'\/mypage'\) === 0[\s\S]{0,60}マイページへ移動します/);
-    assert.match(v, /'\/free-prediction'\) === 0[\s\S]{0,40}今日の予想へ移動します/);
-
-    // 行き先を決めているのはサーバー（ここでパスを作らない）
+  test('🔴 通常ログイン後は全会員 /mypage（spec.md §6-9）', () => {
+    // 仕様所有者承認済み（2026-09-02）。docs/spec.md §6-9 / docs/decisions.md。
     const fn = read('netlify/functions/verify-magic-link.js');
-    assert.match(fn, /let redirectTo = '\/free-prediction';/);
-    assert.match(fn, /redirectTo = '\/mypage';/);
+    assert.match(fn, /let redirectTo = '\/mypage';/);
+    // tier・会場で分けない
+    assert.equal(/redirectTo = '\/free-prediction'/.test(fn), false,
+      '🔴 tier で遷移先を分けている（spec.md §6-9 違反）');
+    assert.equal(/TIER\.LIGHT \|\| tier === TIER\.PREMIUM\) redirectTo/.test(fn), false);
+    // 例外は購入途中だけ。固定パスで上書きする
+    assert.match(fn, /redirectTo = resumePathFor\(rawIntent, redirectTo\);/);
+  });
+
+  test('🔴 遷移先を決めるのはサーバー（クライアントはパスを組み立てない）', () => {
+    const v = read('src/pages/auth/verify.astro');
+    assert.match(v, /const to = data\.redirectTo \|\| '\/mypage'/);
+    assert.match(v, /window\.location\.href = data\.redirectTo \|\| '\/mypage'/);
+    // 受け取った値を組み立て直していない（open redirect 防止）
+    assert.equal(/location\.href = ['"`]\/.*\$\{/.test(v), false,
+      '🔴 受け取った値からパスを作っている');
+  });
+
+  test('🔴 文言が実際の遷移先と一致する', () => {
+    const v = read('src/pages/auth/verify.astro');
+    assert.match(v, /'\/mypage'\) === 0[\s\S]{0,60}マイページへ移動します/);
+    assert.match(v, /showSuccess\('ログインしました', where\)/);
+    assert.match(v, /showSuccess\('メールアドレスを確認しました', 'このままお支払い画面へ進みます…'\)/);
+  });
+
+  test('🔴 正本に契約が書かれている', () => {
+    const spec = read('../docs/spec.md');
+    assert.match(spec, /ログイン後の遷移先契約/);
+    assert.match(spec, /tier を問わず全会員 `\/mypage`/);
+    assert.match(spec, /購入途中/);
+    const dec = read('../docs/decisions.md');
+    assert.match(dec, /通常ログイン後の遷移先を全会員 `\/mypage` に統一する/);
   });
 
   test('🔴 マスクはクライアント処理をやめ、サーバー応答に従う', () => {
