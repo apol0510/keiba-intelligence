@@ -1,5 +1,405 @@
 [
   {
+    "date": "2026-09-02",
+    "venue": "大井",
+    "venues": [
+      "大井"
+    ],
+    "totalRaces": 12,
+    "hitRaces": 4,
+    "missRaces": 8,
+    "hitRate": 33.3,
+    "betAmount": 6000,
+    "betPointsPerRace": 5,
+    "totalBetPoints": 60,
+    "totalInvestment": 6000,
+    "totalPayout": 7460,
+    "returnRate": 124.3,
+    "recoveryRate": 124.3,
+    "races": [
+      {
+        "raceNumber": 1,
+        "raceName": "３歳",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "キングスアイ"
+          },
+          "second": {
+            "number": 2,
+            "name": "ジェイケイティアラ"
+          },
+          "third": {
+            "number": 10,
+            "name": "クレマチスノーブル"
+          }
+        },
+        "bettingLines": [
+          "4-1.10.11.2.7.6(抑え5.8.9.12)",
+          "1-4.10.11.2.7.6(抑え5.8.9.12)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "4-1.10.11.2.7.6(抑え5.8.9.12)"
+        ],
+        "umatan": {
+          "combination": "4-2",
+          "payout": 1000
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 2,
+        "raceName": "３歳",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 13,
+            "name": "ワイドポティロン"
+          },
+          "second": {
+            "number": 5,
+            "name": "ナムラソラン"
+          },
+          "third": {
+            "number": 2,
+            "name": "ライクアウィンド"
+          }
+        },
+        "bettingLines": [
+          "2-13.11.12.5.4.9(抑え6.14.10.15.1)",
+          "13-2.11.12.5.4.9(抑え6.14.10.15.1)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "13-2.11.12.5.4.9(抑え6.14.10.15.1)"
+        ],
+        "umatan": {
+          "combination": "13-5",
+          "payout": 2730
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 3,
+        "raceName": "２歳",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "ウィルオンザムーヴ"
+          },
+          "second": {
+            "number": 6,
+            "name": "ワイルドウィーゼル"
+          },
+          "third": {
+            "number": 1,
+            "name": "トライオン"
+          }
+        },
+        "bettingLines": [
+          "4-1.6.5.3.2.7",
+          "1-4.6.5.3.2.7"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "4-1.6.5.3.2.7"
+        ],
+        "umatan": {
+          "combination": "4-6",
+          "payout": 1120
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 4,
+        "raceName": "２歳",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 5,
+            "name": "ロヴァニエミ"
+          },
+          "second": {
+            "number": 4,
+            "name": "アカノヘヤ"
+          },
+          "third": {
+            "number": 11,
+            "name": "タワーコンサート"
+          }
+        },
+        "bettingLines": [
+          "11-6.4.1.2.7.10(抑え8.3)",
+          "6-11.4.1.2.7.10(抑え8.3)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "5-4",
+          "payout": 58690
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 5,
+        "raceName": "Ｃ２",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 2,
+            "name": "ペイシャケリー"
+          },
+          "second": {
+            "number": 12,
+            "name": "ナックレガーロ"
+          },
+          "third": {
+            "number": 8,
+            "name": "サカベンクイーン"
+          }
+        },
+        "bettingLines": [
+          "1-10.2.12.4.11.8(抑え6.5)",
+          "10-1.2.12.4.11.8(抑え6.5)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "2-12",
+          "payout": 2470
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 6,
+        "raceName": "Ｃ２",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "エムティキング"
+          },
+          "second": {
+            "number": 8,
+            "name": "ペイシャキセキ"
+          },
+          "third": {
+            "number": 5,
+            "name": "ゴーディアンノット"
+          }
+        },
+        "bettingLines": [
+          "8-10.9.5.4.13.14(抑え3.2.1)",
+          "10-8.9.5.4.13.14(抑え3.2.1)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "4-8",
+          "payout": 1550
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 7,
+        "raceName": "笠間モンブラン賞",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 3,
+            "name": "スターメイデン"
+          },
+          "second": {
+            "number": 2,
+            "name": "ストライクルックス"
+          },
+          "third": {
+            "number": 8,
+            "name": "エスケイイーグル"
+          }
+        },
+        "bettingLines": [
+          "14-3.8.1.9.2.10(抑え12.15.7)",
+          "3-14.8.1.9.2.10(抑え12.15.7)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "3-14.8.1.9.2.10(抑え12.15.7)"
+        ],
+        "umatan": {
+          "combination": "3-2",
+          "payout": 2610
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 8,
+        "raceName": "ハンター賞",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 8,
+            "name": "ペルセイズ"
+          },
+          "second": {
+            "number": 3,
+            "name": "コスモトロイメル"
+          },
+          "third": {
+            "number": 5,
+            "name": "ランニングビーチ"
+          }
+        },
+        "bettingLines": [
+          "5-10.9.6.3.8.2(抑え7.1)",
+          "10-5.9.6.3.8.2(抑え7.1)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "8-3",
+          "payout": 8200
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 9,
+        "raceName": "フォーチュネイトむくげ特別",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "[J]サクセスゴールド"
+          },
+          "second": {
+            "number": 10,
+            "name": "ムサシタルマエ"
+          },
+          "third": {
+            "number": 6,
+            "name": "[J]リリーサンダー"
+          }
+        },
+        "bettingLines": [
+          "6-5.4.11.10.13.3(抑え12.2.1)",
+          "5-6.4.11.10.13.3(抑え12.2.1)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "4-10",
+          "payout": 3810
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 10,
+        "raceName": "花野特別",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 4,
+            "name": "ドレインザスワンプ"
+          },
+          "second": {
+            "number": 9,
+            "name": "クインズアトリア"
+          },
+          "third": {
+            "number": 1,
+            "name": "ナンセイスコピオン"
+          }
+        },
+        "bettingLines": [
+          "1-8.4.10.11.7.2(抑え3.12.9.5)",
+          "8-1.4.10.11.7.2(抑え3.12.9.5)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "4-9",
+          "payout": 30370
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 11,
+        "raceName": "アフター５スター賞 ＳⅢ",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 3,
+            "name": "ティントレット"
+          },
+          "second": {
+            "number": 13,
+            "name": "ナスティウェザー"
+          },
+          "third": {
+            "number": 8,
+            "name": "マスターオブライフ"
+          }
+        },
+        "bettingLines": [
+          "3-14.8.6.4.15"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "3-13",
+          "payout": 5280
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 12,
+        "raceName": "永代橋賞",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 8,
+            "name": "アポロリヤム"
+          },
+          "second": {
+            "number": 7,
+            "name": "ジューンドラゴン"
+          },
+          "third": {
+            "number": 6,
+            "name": "ケイアイカペラ"
+          }
+        },
+        "bettingLines": [
+          "7-11.4.12.6.8.2(抑え1.3)",
+          "11-7.4.12.6.8.2(抑え1.3)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "8-7",
+          "payout": 4470
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      }
+    ],
+    "verifiedAt": "2026-09-02T12:10:50.224Z"
+  },
+  {
     "date": "2026-09-01",
     "venue": "大井",
     "venues": [
