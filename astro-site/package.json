@@ -5,7 +5,7 @@
   "description": "AI-Powered Intelligence Dashboard for 南関競馬",
   "scripts": {
     "dev": "astro dev",
-    "build": "npm run validate:archive && npm run test:narrative && npm run test:auth && npm run test:billing && npm run test:stripe && npm run test:membership && npm run test:digest && npm run test:raceday && npm run test:nankan && npm run test:prune-function-data && npm run test:archive-sync && npm run test:shared-checkers && npm run test:workflow-transient && astro build && npm run prune:function-data",
+    "build": "npm run validate:archive && npm run test:narrative && npm run test:auth && npm run test:ai-auth && npm run test:billing && npm run test:stripe && npm run test:membership && npm run test:digest && npm run test:raceday && npm run test:nankan && npm run test:prune-function-data && npm run test:archive-sync && npm run test:shared-checkers && npm run test:workflow-transient && astro build && npm run prune:function-data",
     "preview": "astro preview",
     "astro": "astro",
     "test:nankan-recent-races": "node src/utils/getDisplayRecentRacesForNankan.test.js",
@@ -32,6 +32,7 @@
     "test:narrative": "node --test src/utils/raceNarrative.test.mjs src/utils/frameNumber.test.mjs src/utils/pedigreeName.test.mjs src/utils/attentionMarks.test.mjs src/utils/bettingPlan.test.mjs",
     "test:auth": "node --test src/lib/auth/auth.test.mjs src/lib/auth/entitlementRoutes.test.mjs src/lib/auth/previewMode.test.mjs src/lib/auth/magicLinkBase.test.mjs src/lib/auth/refreshSession.guard.test.mjs src/lib/auth/navAuth.guard.test.mjs",
     "test:stripe": "node --experimental-test-module-mocks --test src/lib/billing/stripeWebhook.test.mjs src/lib/billing/stripeCheckout.test.mjs",
+    "test:ai-auth": "node --test src/lib/ai/commentAuth.test.mjs",
     "test:billing": "node --test src/lib/billing/billing.test.mjs src/lib/http/siteOrigin.test.mjs src/lib/billing/purchaseIntent.test.mjs",
     "test:membership": "node --test src/lib/membership/membership.test.mjs src/lib/membership/membershipCopy.guard.test.mjs src/lib/membership/airtableStore.test.mjs src/lib/membership/membershipE2E.test.mjs src/lib/membership/bankTransfer.test.mjs",
     "membership:check": "node scripts/membershipMigration.mjs --check",

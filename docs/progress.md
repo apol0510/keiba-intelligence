@@ -186,6 +186,32 @@
 
 **テスト**: `navAuth.guard.test.mjs` を `test:auth` へ追加（125→129 件）。
 
+
+### 2026-09-02 AI 解説の有料本文が未権限へ渡っていた（是正）
+
+- **脆弱性**: `netlify/functions/gemini-race-analysis.js` は認可を一切見ず、
+  **全文を誰にでも返していた**。マスクはクライアントの表示処理だけだったため、
+  未権限の閲覧者にも有料本文が
+  **HTTP 応答（JSON）／ localStorage キャッシュ／ DOM（ぼかし要素の textContent）**
+  のすべてに渡っていた。さらに応答へ `public, max-age=86400, s-maxage=86400` を
+  付けていたため、**CDN が有料本文を保持しうる**状態だった。
+- **是正（サーバー側 fail-closed）**:
+  - `src/lib/ai/commentPreview.js` を新設。`splitFreePreview` / `buildAnalysisPayload`。
+    **`paid === true` のときだけ全文**。それ以外（undefined / 'true' / 1 等）は無料扱い。
+    戻り値は `{ comment, truncated }` のみで、**隠した本文は返さない**。
+  - `gemini-race-analysis` が Cookie から `resolveEntitlement` し、
+    `showBetting === true` のときだけ全文。例外時は無料扱い。
+  - 応答を `Cache-Control: private, no-store` ＋ `Vary: Cookie` に変更。
+    CORS は `*` をやめ `resolveSiteOrigin` ＋ `Allow-Credentials`。
+  - クライアントは本文を分割しない／隠した本文を DOM へ入れない。
+    `credentials: 'include'` で送り、`truncated` のときは案内だけ出す。
+    表示キャッシュのキーに権限区分を混ぜる。
+  - `sessionStorage` を見てマスクを外すクライアント処理を**廃止**。
+- **認可迂回テスト**: `src/lib/ai/commentAuth.test.mjs`（`npm run test:ai-auth`、build にも組込）。
+  隠す側にしか出ない語句が応答に 1 つも無いこと／`paid` が true 以外は全部無料扱い／
+  戻り値に隠した本文を持たせない／`s-maxage` を付けない／
+  クライアントが分割しない・`blur.textContent` を使わない、を固定。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:

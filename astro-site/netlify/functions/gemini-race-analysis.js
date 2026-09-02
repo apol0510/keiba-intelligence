@@ -83,12 +83,42 @@ const RESULT_PROMPT = `あなたは競馬AI予想の結果振り返りライタ�
 - 箇条書きや番号リストは使わない
 - 「KEIBA Intelligenceがお届けする」等の前置き・自己紹介は不要。いきなり本文から始める`;
 
+/**
+ * 閲覧者が有料本文を見てよいかを **Cookie から**判断する。
+ *
+ * 🔴 判断できないときは無料扱い（fail-closed）。
+ * 🔴 ここで返すのは真偽値だけ。以降の分岐は `buildAnalysisPayload` が行う。
+ */
+async function isPaidViewer(event) {
+  try {
+    const { resolveEntitlement } = await import('../../src/lib/auth/entitlement.js');
+    const ent = resolveEntitlement({
+      cookieHeader: (event.headers && (event.headers.cookie || event.headers.Cookie)) || null,
+      env: process.env,
+      nowMs: Date.now(),
+    });
+    return ent.showBetting === true;
+  } catch (e) {
+    console.warn('⚠️ gemini-race-analysis: entitlement unavailable — free preview');
+    return false;
+  }
+}
+
 exports.handler = async (event, context) => {
+  /*
+   * 🔴 応答は閲覧者の権限で変わる。**共有キャッシュに載せてはいけない。**
+   *    以前は `public, max-age=86400, s-maxage=86400` を付けていたため、
+   *    CDN が有料本文を保持し、未権限の閲覧者へ配る余地があった。
+   */
+  const { resolveSiteOrigin } = await import('../../src/lib/http/siteOrigin.js');
   const headers = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': resolveSiteOrigin(event.headers),
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Content-Type': 'application/json'
+    'Access-Control-Allow-Credentials': 'true',
+    'Content-Type': 'application/json',
+    'Cache-Control': 'private, no-store',
+    Vary: 'Cookie',
   };
 
   if (event.httpMethod === 'OPTIONS') {
@@ -152,10 +182,18 @@ exports.handler = async (event, context) => {
 
     const comment = result.response.text();
 
+    /*
+     * 🔴 有料の本文は **ここで落とす**。
+     *    未権限の閲覧者には可視範囲だけを返し、残りは応答に含めない
+     *    （ぼかしは表示効果であって認可ではない。2026-09-02 の是正）。
+     */
+    const { buildAnalysisPayload } = await import('../../src/lib/ai/commentPreview.js');
+    const payload = buildAnalysisPayload({ comment, paid: await isPaidViewer(event) });
+
     return {
       statusCode: 200,
-      headers: { ...headers, 'Cache-Control': 'public, max-age=86400, s-maxage=86400' },
-      body: JSON.stringify({ success: true, comment })
+      headers,
+      body: JSON.stringify({ success: true, comment: payload.comment, truncated: payload.truncated })
     };
 
   } catch (error) {

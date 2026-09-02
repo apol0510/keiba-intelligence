@@ -47,13 +47,15 @@ describe('ナビのログイン表示', () => {
     }
   });
 
-  test('🔴 マスク解除も Cookie を正本にする（premium が漏れない）', () => {
+  test('🔴 マスクはクライアント処理をやめ、サーバー応答に従う', () => {
     const c = read('src/components/AIRaceComment.astro');
     assert.equal(/sessionStorage\s*\.\s*getItem/.test(c), false,
       '🔴 マスク解除が sessionStorage 依存のまま');
-    assert.match(c, /get-session/);
-    assert.match(c, /data\.showBetting !== true/);
     // 廃止プラン名で判定していない
     assert.equal(/plan === 'pro'/.test(c), false);
+    // クライアントで本文を切らない（切る＝隠す本文が手元にある）
+    assert.equal(c.includes('const hidden = fullText.slice'), false,
+      '🔴 クライアントが本文を分割している');
+    assert.match(c, /credentials: 'include'/);
   });
 });
