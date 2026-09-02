@@ -472,6 +472,23 @@ describe('ランク・リワードを認可に使わない', () => {
       '🔴 支払い成功で認可を書き換えている（付与だけを行うこと）');
   });
 
+  test('🔴 テスト・ドキュメントに実在の Stripe id を書かない', () => {
+    // Netlify の secrets scanning は env の値をリポジトリ内から探す。
+    // STRIPE_PRICE_PREMIUM の実値をテストへ貼るとビルドが落ちる（2026-09-02）。
+    const files = [
+      'src/lib/billing/stripeWebhook.test.mjs',
+      'src/lib/billing/stripeCheckout.test.mjs',
+      'src/lib/membership/membershipE2E.test.mjs',
+    ];
+    // 実 id は「英数 14 文字以上」が続く形。fixture 用の名前は許す
+    const realish = /\b(price|prod|cus|sub|in|cs|acct)_[A-Za-z0-9]{14,}\b/;
+    for (const f of files) {
+      const src = read(f);
+      const hit = src.match(realish);
+      assert.equal(hit, null, `🔴 ${f} に実在の Stripe id らしき値がある: ${hit && hit[0]}`);
+    }
+  });
+
   test('🔴 webhook の応答に個人情報・秘密値を載せない', () => {
     const wh = read('netlify/functions/stripe-webhook.js');
     // 失敗理由は内部の状態名だけ

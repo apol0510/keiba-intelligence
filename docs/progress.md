@@ -139,10 +139,23 @@
 - **テスト**: 実ペイロードの形をそのまま固定した回帰テストを追加（stripe 63→64 件）。
   ガードも `periodMonthsFromRecurring` 側へ付け替え、
   「請求期間の差から月数を推測していない」ことを追加で固定。
-- **未解決（要判断）**: 既に処理済みの `in_1UB7ll...` は
+- **未解決（要判断）**: 既に処理済みの今回の invoice は
   `markProcessed` 済みのため **再送しても復旧しない**。
   Test Mode なので、新しいテスト購入で確認するのが最短
   （processed 記録の削除は禁止のため行わない）。
+
+
+### 2026-09-02 ブランチデプロイのビルド失敗（secrets scanning）
+
+- **原因**: `stripeWebhook.test.mjs` の回帰テストに **Test Price ID の実値**を書いていた。
+  Netlify の secrets scanning が env（`STRIPE_PRICE_PREMIUM`）の値をリポジトリ内に見つけ、
+  `Build script returned non-zero exit code: 2` で失敗していた。
+  ローカル・clean checkout・Node 20 では再現しない（Netlify のビルドプラグインでのみ走る検査）。
+- **修正**: fixture 用の id（`price_FIXTURE_not_a_real_id`）へ置換。
+  docs からも実 invoice id を削除。
+- **再発防止**: テストファイルに実在の Stripe id（`price_` / `cus_` / `sub_` 等 + 英数 14 文字以上）が
+  無いことを固定するガードを追加。
+- 🔴 **`SECRETS_SCAN_OMIT_*` で検査を無効化しない**。実値を書かない方を守る。
 
 ## Final Goal
 

@@ -500,18 +500,21 @@ test('🔴 新しい invoice 形（price.recurring が無い）でも付与で�
   const { priceRefFromInvoice, periodMonthsFromRecurring, periodMonthsFromInvoice, emailFromInvoice } =
     await import('../../../netlify/functions/stripe-webhook.js');
 
+  // 🔴 実在の Price / Customer / Invoice の id は書かない。
+  //    Netlify の secrets scanning が env（STRIPE_PRICE_PREMIUM 等）の値を
+  //    リポジトリ内に見つけるとビルドが失敗する（2026-09-02 に発生）。
   const real = {
     lines: { data: [{
       parent: { subscription_item_details: { subscription: 'sub_x' }, type: 'subscription_item_details' },
       period: { start: 1788330937, end: 1790922937 },
-      pricing: { price_details: { price: 'price_1UAsLMLbPC6OVRqMoZ3VSfRR', product: 'prod_x' }, type: 'price_details' },
+      pricing: { price_details: { price: 'price_FIXTURE_not_a_real_id', product: 'prod_x' }, type: 'price_details' },
     }] },
     parent: { subscription_details: { metadata: { ki_email: 'a@example.com' }, subscription: 'sub_x' } },
     customer_email: 'billing@example.com',
   };
 
   // id だけ取り出せる（Price は呼び出し側が取りに行く）
-  assert.deepEqual(priceRefFromInvoice(real), { recurring: null, priceId: 'price_1UAsLMLbPC6OVRqMoZ3VSfRR' });
+  assert.deepEqual(priceRefFromInvoice(real), { recurring: null, priceId: 'price_FIXTURE_not_a_real_id' });
   // 🔴 period.start / end の差（30 日）から月数を推測しない
   assert.equal(periodMonthsFromInvoice(real), null);
   // 取得した recurring からは判定できる
