@@ -47,6 +47,34 @@ describe('ナビのログイン表示', () => {
     }
   });
 
+  test('🔴 認証完了の表示は「何が起きたか」＋「次に何が起きるか」', () => {
+    const v = read('src/pages/auth/verify.astro');
+
+    // 購入導線
+    assert.match(v, /showSuccess\('メールアドレスを確認しました', 'このままお支払い画面へ進みます…'\)/);
+    // 通常ログイン
+    assert.match(v, /showSuccess\('ログインしました', where\)/);
+
+    // 🔴 技術用語・意味の薄い言い方に戻さない
+    for (const bad of ['認証成功！', 'リダイレクトしています', "showSuccess('確認できました'"]) {
+      assert.equal(v.includes(bad), false, `🔴 「${bad}」に戻っている`);
+    }
+  });
+
+  test('🔴 遷移先と案内文が食い違わない', () => {
+    // 無料会員は /free-prediction、有料は /mypage へ行く。
+    // 文言を「マイページへ」に固定すると無料会員に嘘の案内になる。
+    const v = read('src/pages/auth/verify.astro');
+    assert.match(v, /const to = data\.redirectTo \|\| '\/free-prediction'/);
+    assert.match(v, /'\/mypage'\) === 0[\s\S]{0,60}マイページへ移動します/);
+    assert.match(v, /'\/free-prediction'\) === 0[\s\S]{0,40}今日の予想へ移動します/);
+
+    // 行き先を決めているのはサーバー（ここでパスを作らない）
+    const fn = read('netlify/functions/verify-magic-link.js');
+    assert.match(fn, /let redirectTo = '\/free-prediction';/);
+    assert.match(fn, /redirectTo = '\/mypage';/);
+  });
+
   test('🔴 マスクはクライアント処理をやめ、サーバー応答に従う', () => {
     const c = read('src/components/AIRaceComment.astro');
     assert.equal(/sessionStorage\s*\.\s*getItem/.test(c), false,

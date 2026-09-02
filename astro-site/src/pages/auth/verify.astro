@@ -174,7 +174,16 @@ export const prerender = false;
         if (intent) {
           showSuccess('メールアドレスを確認しました', 'このままお支払い画面へ進みます…');
         } else {
-          showSuccess('認証成功！', 'リダイレクトしています...');
+          /*
+           * 🔴 遷移先は tier で変わる（有料 → /mypage、無料 → /free-prediction）。
+           *    文言を「マイページへ」に固定すると、無料会員には
+           *    実際の遷移先と食い違う案内になる。行き先から選ぶ。
+           */
+          const to = data.redirectTo || '/free-prediction';
+          const where = to.indexOf('/mypage') === 0
+            ? 'マイページへ移動します…'
+            : (to.indexOf('/free-prediction') === 0 ? '今日の予想へ移動します…' : 'ページへ移動します…');
+          showSuccess('ログインしました', where);
         }
         setTimeout(() => {
           window.location.href = data.redirectTo || '/free-prediction';
