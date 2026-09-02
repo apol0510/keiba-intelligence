@@ -179,14 +179,14 @@ export const prerender = false;
            *    文言を「マイページへ」に固定すると、無料会員には
            *    実際の遷移先と食い違う案内になる。行き先から選ぶ。
            */
-          const to = data.redirectTo || '/free-prediction';
+          const to = data.redirectTo || '/mypage';
           const where = to.indexOf('/mypage') === 0
             ? 'マイページへ移動します…'
             : (to.indexOf('/free-prediction') === 0 ? '今日の予想へ移動します…' : 'ページへ移動します…');
           showSuccess('ログインしました', where);
         }
         setTimeout(() => {
-          window.location.href = data.redirectTo || '/free-prediction';
+          window.location.href = data.redirectTo || '/mypage';
         }, 500);
       } else {
         const errorMessage =

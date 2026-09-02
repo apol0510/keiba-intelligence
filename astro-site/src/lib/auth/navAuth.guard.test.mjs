@@ -61,18 +61,25 @@ describe('ナビのログイン表示', () => {
     }
   });
 
-  test('🔴 遷移先と案内文が食い違わない', () => {
-    // 無料会員は /free-prediction、有料は /mypage へ行く。
-    // 文言を「マイページへ」に固定すると無料会員に嘘の案内になる。
-    const v = read('src/pages/auth/verify.astro');
-    assert.match(v, /const to = data\.redirectTo \|\| '\/free-prediction'/);
-    assert.match(v, /'\/mypage'\) === 0[\s\S]{0,60}マイページへ移動します/);
-    assert.match(v, /'\/free-prediction'\) === 0[\s\S]{0,40}今日の予想へ移動します/);
-
-    // 行き先を決めているのはサーバー（ここでパスを作らない）
+  test('🔴 ログイン後は tier を問わずマイページへ', () => {
+    // 無料会員も自分の状態（プラン・KI 会員クラブ）をまず見られるようにする。
     const fn = read('netlify/functions/verify-magic-link.js');
-    assert.match(fn, /let redirectTo = '\/free-prediction';/);
-    assert.match(fn, /redirectTo = '\/mypage';/);
+    assert.match(fn, /let redirectTo = '\/mypage';/);
+    // tier で行き先を分けない
+    assert.equal(/redirectTo = '\/free-prediction'/.test(fn), false,
+      '🔴 無料会員だけ別の場所へ送っている');
+    // 購入導線だけが上書きできる（固定パス）
+    assert.match(fn, /redirectTo = resumePathFor\(rawIntent, redirectTo\);/);
+  });
+
+  test('🔴 遷移先と案内文が食い違わない', () => {
+    const v = read('src/pages/auth/verify.astro');
+    // 行き先はサーバーの値から決める（決め打ちしない）
+    assert.match(v, /const to = data\.redirectTo \|\| '\/mypage'/);
+    assert.match(v, /'\/mypage'\) === 0[\s\S]{0,60}マイページへ移動します/);
+    // 既定の飛び先も揃える
+    assert.equal(v.includes("data.redirectTo || '/free-prediction'"), false,
+      '🔴 既定の飛び先が古いまま');
   });
 
   test('🔴 マスクはクライアント処理をやめ、サーバー応答に従う', () => {
