@@ -92,6 +92,31 @@
 - **env 確認（値を出したのは秘密値でない `MAGIC_LINK_BASE_URL` のみ）**:
   branch-deploy にブランチ URL が入っており、本番・Deploy Preview は空。
 
+
+### 2026-09-02 決済しても無料会員のまま（`e5ca8fb7`）
+
+- **症状**: Test Mode で決済完了 → マイページに遷移したが「現在のプラン: 無料会員」のまま。
+- **原因**: `ki_session` は **発行時点の tier を署名して固定**している。
+  Stripe の決済が通って Airtable が premium になっても、手元の Cookie は free のままで、
+  マイページも予想ページも無料会員として描画される。再ログインするまで直らない。
+- **対応**: `netlify/functions/refresh-session.js` を追加し、決済から戻ったマイページで
+  Cookie を出し直す。認証の入口にはしない:
+  有効な `ki_session` が無ければ 401 ／ email は **セッション由来のみ** ／
+  tier は Airtable の `PlanType` / `ExpirationDate` からだけ決める
+  （`verify-magic-link` と同じ `planTypeToTier` / `applyExpiry`）／
+  **何も書き込まない**（premium を与えるのは Stripe webhook だけ）／
+  **セッションの寿命を延ばさない**（残り時間を引き継ぐ）／
+  env 不足・レコード無し・署名不可のいずれでも降格させない。
+- **画面**: `?checkout=success` のときだけ自動で実行し、反映されたら
+  `?checkout` を落として一度だけ読み込み直す（最大 12 秒待つ）。
+  決済後にページを離れた場合のために、無料表示のときだけ手動更新リンクを出す。
+- **テスト**: `refreshSession.guard.test.mjs` を `test:auth` に追加（117→125 件）。
+- **検証**: 実デプロイで、未ログイン POST / GET / 偽 Cookie のいずれも 401・405 で、
+  `Set-Cookie` を返さないことを確認。
+- **未確認**: 今回の決済で **Stripe webhook が Airtable に premium を書けたか**は未確認
+  （ローカルに Airtable / Stripe の資格情報が無く、read でも確認できない）。
+  手動更新リンクの応答で切り分けられる。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:

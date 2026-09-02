@@ -183,6 +183,11 @@ const expiresLabel = ent.expiresAtMs
               <li>閲覧範囲: <b>{venueLabel}</b></li>
               {expiresLabel && <li>ログインの有効期限: <b>{expiresLabel}</b></li>}
             </ul>
+            {!isPaid && (
+              <button class="mp-refresh" id="mp-refresh" type="button">
+                お支払い済みなのに反映されていない場合はこちら
+              </button>
+            )}
           </div>
 
           <!-- 会員クラブ（KIリワード / ランク / 継続価格ロック） -->
@@ -368,6 +373,38 @@ const expiresLabel = ent.expiresAtMs
   document.addEventListener('DOMContentLoaded', () => {
     syncAfterCheckout();
 
+    // 決済後にページを離れてしまった場合の手動更新
+    const refresh = document.getElementById('mp-refresh');
+    if (refresh) {
+      refresh.addEventListener('click', async () => {
+        const notice = document.getElementById('mp-syncing');
+        refresh.disabled = true;
+        if (notice) {
+          notice.hidden = false;
+          notice.textContent = 'お支払いを確認しています…';
+        }
+        try {
+          const res = await fetch('/.netlify/functions/refresh-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.changed) {
+            window.location.replace(window.location.pathname);
+            return;
+          }
+          if (notice) {
+            notice.textContent = 'お支払いの記録がまだ確認できませんでした。'
+              + '決済直後の場合は少し待ってからもう一度お試しください。';
+          }
+        } catch {
+          if (notice) notice.textContent = '確認できませんでした。しばらくしてからお試しください。';
+        }
+        refresh.disabled = false;
+      });
+    }
+
     const btn = document.getElementById('mp-portal');
     if (!btn) return;
     const msg = document.getElementById('mp-portal-msg');
@@ -470,6 +507,20 @@ const expiresLabel = ent.expiresAtMs
     font-size: 0.85rem;
     line-height: 1.7;
   }
+
+  .mp-refresh {
+    margin-top: 12px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--primary-start);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .mp-refresh:disabled { opacity: 0.6; cursor: default; }
 
   .mp-status-label {
     font-size: 0.75rem;

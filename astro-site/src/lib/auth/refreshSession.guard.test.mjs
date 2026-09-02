@@ -80,4 +80,10 @@ describe('refresh-session', () => {
     // 反映できたら ?checkout を落として読み込み直す（繰り返さない）
     assert.match(page, /window\.location\.replace\(window\.location\.pathname\)/);
   });
+
+  test('🔴 手動更新は無料表示のときだけ出す', () => {
+    const page = read('src/pages/mypage.astro');
+    // 有料表示のときに出しても意味がない（降格ボタンにも見える）
+    assert.match(page, /\{!isPaid && \(\s*<button class="mp-refresh"/);
+  });
 });
