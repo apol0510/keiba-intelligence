@@ -287,6 +287,24 @@
   `Unable to deserialize cloned data` で落ちることがある（`stripeWebhook.test.mjs`・
   `--experimental-test-module-mocks` 使用）。再実行で通る。CI でも 1 回発生。
 
+#### 2026-09-02 修正後の確認（deploy 状態 ＋ ローカル test/build）
+
+| 対象 | 結果 |
+|---|---|
+| branch-deploy `4aadb0a8`（恒久修正） | **ready**（14:24:18 UTC）。**修正コードは branch deploy に載っている** |
+| branch-deploy `4aadb0a8` 1 回目 | `error`（14:18:57 UTC・`Build script returned non-zero exit code: 2`）→ 再実行で ready |
+| deploy `65e05b0c`（progress のみ） | `error` と表示されるが中身は **`Canceled build due to no content change`**（＝ビルド失敗ではなくスキップ）|
+| ローカル `npm run build` | **成功**（`validate:archive` → 全テスト → `astro build` → `prune:function-data` まで完走）|
+| テスト | membership **189** / stripe **64** / auth **134** / billing **61** / ai-auth **11** / narrative **90** — **fail 0** |
+
+- 上記 1 回目の branch-deploy 失敗は、直上の Open Question（`Unable to deserialize cloned data`）と
+  同じ「再実行で通る」挙動。**この Open Question の発生例が 1 件増えた**（未解決）。
+- 🔴 **恒久修正後に「書き込みが成功した」ことはまだ実測していない。**
+  確かめるには Test Mode のイベントをもう 1 件再送する必要があり、成功すれば
+  **本番 Airtable の `RewardLedger` に行が 1 行入る**（高リスク境界・承認待ち）。
+  根拠としては `docs/MEMBERSHIP_DATA_MIGRATION.md` §2.1 / §2.2 の列型が
+  `Date (ISO)`（時刻なし）であることと、422 の符号が一致している。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
