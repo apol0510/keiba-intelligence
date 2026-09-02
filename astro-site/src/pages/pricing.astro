@@ -361,9 +361,14 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    if (document.querySelector('[data-price-for]')) loadPrices();
+  /* ------------------------------------------------------------------
+     購入導線（未ログインで申し込んだとき）
 
+     🔴 これらは **startCheckout と同じスコープ**に置くこと。
+        DOMContentLoaded の内側へ入れると startCheckout から参照できず、
+        クリック時に ReferenceError になって
+        「現在お申し込みを受け付けられません」だけが出る（2026-09-02 に発生）。
+     ------------------------------------------------------------------ */
   /** 購入意図を保持したままメール確認へ切り替える。 */
   let pendingPlan = null;
   function openPurchaseAuth(planId) {
@@ -416,22 +421,29 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     }
   }
 
-  const purchaseForm = document.getElementById('pr-purchase-form');
-  if (purchaseForm) purchaseForm.addEventListener('submit', submitPurchaseAuth);
-
   /**
    * 認証から戻ってきたら、そのまま Checkout を開く。
    * 🔴 `resume` はサーバーが固定パスで付けたプラン id。
    *    ここでも実在するボタンとの一致だけを見て、値を URL として使わない。
    */
-  (function resumeCheckout() {
+  function resumeCheckout() {
     const plan = new URLSearchParams(window.location.search).get('resume');
     if (!plan) return;
     const btn = document.querySelector(`[data-checkout="${CSS.escape(plan)}"]`);
     // ボタンが無い＝未ログイン（Price 未設定 or 認証されていない）なら何もしない
     if (!btn) return;
     startCheckout(plan, btn);
-  })();
+  }
+
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (document.querySelector('[data-price-for]')) loadPrices();
+
+    const purchaseForm = document.getElementById('pr-purchase-form');
+    if (purchaseForm) purchaseForm.addEventListener('submit', submitPurchaseAuth);
+
+    // 認証から戻ってきたら、そのまま Checkout を開く
+    resumeCheckout();
 
     document.querySelectorAll('[data-checkout]').forEach((btn) => {
       btn.addEventListener('click', () => startCheckout(btn.getAttribute('data-checkout'), btn));
