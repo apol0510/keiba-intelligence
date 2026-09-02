@@ -305,6 +305,69 @@
   根拠としては `docs/MEMBERSHIP_DATA_MIGRATION.md` §2.1 / §2.2 の列型が
   `Date (ISO)`（時刻なし）であることと、422 の符号が一致している。
 
+### 2026-09-03 恒久修正の成功と冪等性を実測（Test Mode 再送・承認済み）
+
+仕様所有者の承認を得て、**今回のテスト会員（`0510apolon+test4@gmail.com`）の該当イベントだけ**を再送した。
+
+#### 先に判明したこと（再送の前）
+
+恒久修正 `4aadb0a8` の branch deploy が ready になった **2026-09-02 14:24 UTC 以降**に、
+すでに書き込みが成功していた（前セッションが記録していなかった）。
+
+| 対象 | 値 | 意味 |
+|---|---|---|
+| `RewardLedger` | 1 行 / `Points=100` / `OccurredAt=2026-09-02` / 作成 `14:43:25 UTC` | **日付のみ＝修正後の形式**。22:42 の配信（500 ERR）ではなく 23:43 JST の 200 OK で入った |
+| `ContractPrice*` | `3980` / `jpy` / `price_1UAsLM…` / `ContractStartedAt=2026-09-02` | **日付のみ**。422 は解消済み |
+
+#### 再送（すべて `KI Test Webhook` 宛・イベントは既存のものだけ）
+
+| # | イベント | 実施 | HTTP | 応答 |
+|---|---|---|---|---|
+| 1 | `checkout.session.completed`（`evt_1UBEQvLbPC6OVRqMRi625hqM`）| 2026-09-03 08:43:19 JST | **200** | `{"received":true}` |
+| 2 | `invoice.payment_succeeded`（`evt_1UBEQvLbPC6OVRqMDlBiF5Ul`）| 08:44:27 JST | **200** | `{"received":true}` |
+| 3 | `invoice.payment_succeeded`（同上・冪等性確認）| 08:46:45 JST | **200** | `{"received":true}` |
+
+🔴 応答に `membership` の行が**無い**ことが判定条件である。
+`membershipResultFromStore` は `applied` / `already` 以外をすべて FAILED とし、
+FAILED があれば **500 ＋ `{"error":"membership_not_recorded"}`** を返して processed にしない。
+3 回とも 200 かつ `membership` 無し ＝ **書き込み不能は 1 件も起きていない**。
+
+#### Airtable の実測（再送前 / 1・2 の後 / 3 の後）
+
+| 検査 | 再送前 | 1・2 の後 | 3 の後 |
+|---|---|---|---|
+| `RewardLedger` 行数 | 1 | **1** | **1** |
+| 台帳行の `createdTime` | `2026-09-02T14:43:25Z` | 同一 | 同一 |
+| `ContractPriceYen` / `Currency` / `PriceId` / `ContractStartedAt` | 3980 / jpy / `price_1UAsLM…` / 2026-09-02 | 同一 | 同一 |
+| `Customers` 総数 | 66 | 66 | 66 |
+| `PlanType` | free-registered 52 / pro 7 / light 3 / premium 4 | 同一 | 同一 |
+| `Status` | active 60 / pending 6 | 同一 | 同一 |
+| `AccessEnabled` | true 60 / 空 6 | 同一 | 同一 |
+| `MembershipStartedAt` | 7 件 | 7 件 | 7 件 |
+| `CancelledAt` | 0 件 | 0 件 | 0 件 |
+
+- **冪等性**: `appendEntry` の冪等キーは invoice id。再送 2 回でも **行は 1 行のまま**・
+  `createdTime` も変わらない（作り直しではなく `already` を返している）。
+- **契約価格**: 再送しても `ContractStartedAt` が今日の日付に書き換わっていない
+  ＝ **上書きしない**（M-1 継続価格ロック）が効いている。
+- **既存会員非影響**: `PlanType` / `Status` / `AccessEnabled` / `MembershipStartedAt` /
+  `CancelledAt` のいずれも 3 スナップショットで完全に一致。**実会員の列は 1 つも動いていない。**
+
+#### 🟡 未解決の観察（今回の再送とは無関係・Open Question）
+
+`PlanType` の `light` が **4 → 3**、`premium` が **0 → 4**、総数が **63 → 66** に変わっている
+（`2026-09-01` の記録との比較）。**再送前のスナップショットで既にこの状態**であり、
+今回の 3 回の再送では一切変化していない。
+premium 4 件はいずれもテスト用アドレス（`0510apolon+…@gmail.com`）で、
+**実会員のアドレスが premium になっているものは無い**。
+09-01〜09-02 の E2E 中に light の 1 件が premium へ変わったか、または削除されたかは
+**履歴からは判別できない**。仕様所有者の確認が必要。
+
+#### 実施していないこと（指示どおり）
+
+Stripe の webhook 送信先の設定変更 / Production deploy / merge / E2E の後片付け（テストレコード削除）。
+`KI Stripe Test E2E`（400 `invalid_signature` が続く 2 つ目の送信先）も**未変更**。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
