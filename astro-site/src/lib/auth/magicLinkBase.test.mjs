@@ -133,6 +133,63 @@ describe('🔴 不正値は fail-closed（production 以外へ倒さない）', 
   });
 });
 
+describe('register-free.js（無料登録の確認 URL）も同じポリシー', () => {
+  const src = () => read('netlify/functions/register-free.js');
+
+  /** register-free が組み立てる確認 URL を、実装と同じ手順で再現する。 */
+  const registerUrl = (env, email, token = 'tok_reg') =>
+    `${resolveMagicLinkBase(env)}/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
+
+  test('🔴 本番 URL をハードコードしていない', () => {
+    assert.doesNotMatch(src(), /const magicLink = `https:\/\/keiba-intelligence\.jp\/auth\/verify/,
+      '確認 URL が本番へハードコードされている');
+    assert.match(src(), /resolveMagicLinkBase\(process\.env\)/, '共有ポリシーを使っていない');
+  });
+
+  test('Branch URL → Branch の登録確認 URL', () => {
+    const base = 'https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app';
+    assert.equal(
+      registerUrl({ [MAGIC_LINK_BASE_ENV]: base }, 'a@example.com'),
+      `${base}/auth/verify?token=tok_reg&email=a%40example.com`,
+    );
+  });
+
+  test('env 未設定（Production）→ Production URL', () => {
+    assert.equal(
+      registerUrl({}, 'a@example.com'),
+      'https://keiba-intelligence.jp/auth/verify?token=tok_reg&email=a%40example.com',
+    );
+  });
+
+  test('🔴 許可外 → Production へ fallback（token を外部へ出さない）', () => {
+    for (const bad of ['https://evil.example.com', 'https://keiba-intelligence.jp.evil.com',
+      'http://keiba-intelligence.jp', 'javascript:alert(1)', 'not-a-url', '']) {
+      const url = registerUrl({ [MAGIC_LINK_BASE_ENV]: bad }, 'a@example.com');
+      assert.ok(url.startsWith('https://keiba-intelligence.jp/'), `🔴 外部へ向いた: ${bad} → ${url}`);
+    }
+  });
+
+  test('🔴 + 付きメールアドレスを壊さない', () => {
+    const base = 'https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app';
+    const email = '0510apolon+test2@gmail.com';
+    const url = registerUrl({ [MAGIC_LINK_BASE_ENV]: base }, email);
+    // + は %2B にエンコードされる（生の + はスペースと解釈されうる）
+    assert.match(url, /email=0510apolon%2Btest2%40gmail\.com$/);
+    assert.equal(decodeURIComponent(new URL(url).searchParams.get('email')), email);
+    // 実装が encodeURIComponent を使っていること
+    assert.match(src(), /email=\$\{encodeURIComponent\(email\)\}/);
+  });
+
+  test('🔴 既存の登録フロー（Status / PlanType / AccessEnabled）を変えていない', () => {
+    const s2 = src();
+    // 新規作成時の値（2026-09-02 時点の実装。URL の修正では変えていない）
+    assert.match(s2, /PlanType: 'free-registered',/);
+    assert.match(s2, /Status: 'pending',/);
+    assert.match(s2, /AccessEnabled: false,/,
+      '🔴 無料登録の時点で権限を開いてはいけない（認証後に有効化する）');
+  });
+});
+
 describe('認証の意味・有効期限・認可条件を変えていない', () => {
   test('🔴 send-magic-link.js は URL の組み立てだけを差し替えている', () => {
     const src = read('netlify/functions/send-magic-link.js');

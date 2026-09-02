@@ -265,7 +265,16 @@ async function saveAuthToken(email, token) {
 // マジックリンク生成とメール送信
 async function sendMagicLink(email) {
   const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  const magicLink = `https://keiba-intelligence.jp/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
+
+  // 🔴 登録確認 URL の宛先は `magicLinkBase.js` の共有ポリシーで決める。
+  //    ハードコードしていると Deploy Preview / ブランチデプロイで登録しても
+  //    確認リンクだけ本番へ飛び、そのデプロイにセッションが付かない
+  //    （send-magic-link.js と同型の問題。2026-09-02 修正）。
+  //    未設定・許可外ホストは **本番へ倒す**（fail-closed）。
+  //    🔴 token の宛先なので、許可リスト外のホストへは絶対に向けない。
+  const { resolveMagicLinkBase } = await import('../../src/lib/auth/magicLinkBase.js');
+  const base = resolveMagicLinkBase(process.env);
+  const magicLink = `${base}/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
 
   const subject = '【KEIBA Intelligence】無料会員登録ありがとうございます！';
   const body = `
@@ -319,7 +328,7 @@ async function sendMagicLink(email) {
     </ul>
 
     <div style="text-align: center; margin-top: 32px;">
-      <a href="https://keiba-intelligence.jp/pricing" style="display: inline-block; background-color: #10b981; color: #ffffff !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; border: 2px solid #10b981;">
+      <a href="${base}/pricing" style="display: inline-block; background-color: #10b981; color: #ffffff !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; border: 2px solid #10b981;">
         料金プランを見る →
       </a>
     </div>
@@ -335,7 +344,7 @@ async function sendMagicLink(email) {
 
     <p style="font-size: 14px; color: #64748b; margin-top: 32px; line-height: 1.6;">
       KEIBA Intelligence<br>
-      <a href="https://keiba-intelligence.jp" style="color: #3b82f6; text-decoration: none;">https://keiba-intelligence.jp</a>
+      <a href="${base}" style="color: #3b82f6; text-decoration: none;">${base}</a>
     </p>
   </div>
 </body>
