@@ -128,6 +128,21 @@ describe('認証・認可の契約を変えていない', () => {
     assert.match(reg, /AccessEnabled: false,/);
   });
 
+  test('🔴 購入導線の関数は startCheckout と同じスコープにある', () => {
+    // DOMContentLoaded の内側に置くと startCheckout から参照できず、
+    // クリック時に ReferenceError で「現在お申し込みを受け付けられません」になる
+    const src = read('src/pages/pricing.astro');
+    const ready = src.indexOf("document.addEventListener('DOMContentLoaded'");
+    assert.ok(ready > 0);
+    for (const fn of ['function openPurchaseAuth(', 'async function submitPurchaseAuth(', 'function resumeCheckout(']) {
+      const at = src.indexOf(fn);
+      assert.ok(at > 0, `${fn} が無い`);
+      assert.ok(at < ready, `🔴 ${fn} が DOMContentLoaded の内側にある（startCheckout から見えない）`);
+    }
+    // startCheckout も同じ外側スコープ
+    assert.ok(src.indexOf('async function startCheckout(') < ready);
+  });
+
   test('🔴 /pricing は「無料会員登録」を購入の目的として見せない', () => {
     const src = read('src/pages/pricing.astro');
     const box = src.slice(src.indexOf('pr-purchase-auth'), src.indexOf('pr-plan-msg'));
