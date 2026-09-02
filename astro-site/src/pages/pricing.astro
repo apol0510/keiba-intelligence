@@ -142,6 +142,28 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
         ))}
       </div>
 
+      {/*
+        🔴 未ログインで申し込んだときの「購入手続きの入口」。
+           ここは **無料会員登録の導線ではない**（購入の続きとして見せる）。
+           送信後は登録・ログインのどちらでも、認証を終えると購入へ戻る。
+      */}
+      <div class="pr-purchase-auth" id="pr-purchase-auth" hidden>
+        <h3>購入手続きのためメールアドレスを確認します</h3>
+        <p class="pr-purchase-lead">
+          確認メールをお送りします。メール内のリンクを開くと、<b>このままお申し込みに戻ります</b>。
+        </p>
+        <form id="pr-purchase-form" novalidate>
+          <label class="pr-purchase-label" for="pr-purchase-email">メールアドレス</label>
+          <input class="pr-purchase-input" id="pr-purchase-email" type="email" name="email"
+                 autocomplete="email" inputmode="email" placeholder="your@email.com" required />
+          <button class="pr-btn pr-btn-primary pr-purchase-submit" type="submit">確認メールを送る</button>
+        </form>
+        <p class="pr-purchase-msg" id="pr-purchase-msg" hidden></p>
+        <p class="pr-purchase-note">
+          お支払いはこのあとの画面で行います。確認メールだけでは課金されません。
+        </p>
+      </div>
+
       <p class="pr-plan-msg" id="pr-plan-msg" hidden></p>
 
       {view.showBetting && (
@@ -292,7 +314,10 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       });
 
       if (res.status === 401) {
-        window.location.href = '/login?redirect=/pricing';
+        // 🔴 「まず無料会員登録を」ではなく、購入手続きの続きとして扱う
+        openPurchaseAuth(planId);
+        button.disabled = false;
+        button.textContent = original;
         return;
       }
 
@@ -338,6 +363,75 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
 
   document.addEventListener('DOMContentLoaded', () => {
     if (document.querySelector('[data-price-for]')) loadPrices();
+
+  /** 購入意図を保持したままメール確認へ切り替える。 */
+  let pendingPlan = null;
+  function openPurchaseAuth(planId) {
+    pendingPlan = planId;
+    const box = document.getElementById('pr-purchase-auth');
+    if (!box) return;
+    box.hidden = false;
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const input = document.getElementById('pr-purchase-email');
+    if (input) input.focus();
+  }
+
+  async function submitPurchaseAuth(e) {
+    e.preventDefault();
+    const input = document.getElementById('pr-purchase-email');
+    const msg = document.getElementById('pr-purchase-msg');
+    const btn = document.querySelector('.pr-purchase-submit');
+    const email = (input && input.value || '').trim();
+    if (msg) msg.hidden = true;
+    if (!email) { if (input) input.focus(); return; }
+
+    if (btn) { btn.disabled = true; btn.textContent = '送信中…'; }
+    try {
+      const res = await fetch('/.netlify/functions/start-purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, plan: pendingPlan }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.sent) {
+        if (msg) {
+          msg.hidden = false;
+          msg.className = 'pr-purchase-msg is-ok';
+          msg.textContent = '確認メールをお送りしました。メール内のリンクを開くと、お申し込みに戻ります。';
+        }
+        const form = document.getElementById('pr-purchase-form');
+        if (form) form.hidden = true;
+        return;
+      }
+      throw new Error(data.error || 'failed');
+    } catch {
+      if (msg) {
+        msg.hidden = false;
+        msg.className = 'pr-purchase-msg is-error';
+        msg.textContent = '確認メールを送れませんでした。メールアドレスをご確認のうえ、もう一度お試しください。';
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '確認メールを送る'; }
+    }
+  }
+
+  const purchaseForm = document.getElementById('pr-purchase-form');
+  if (purchaseForm) purchaseForm.addEventListener('submit', submitPurchaseAuth);
+
+  /**
+   * 認証から戻ってきたら、そのまま Checkout を開く。
+   * 🔴 `resume` はサーバーが固定パスで付けたプラン id。
+   *    ここでも実在するボタンとの一致だけを見て、値を URL として使わない。
+   */
+  (function resumeCheckout() {
+    const plan = new URLSearchParams(window.location.search).get('resume');
+    if (!plan) return;
+    const btn = document.querySelector(`[data-checkout="${CSS.escape(plan)}"]`);
+    // ボタンが無い＝未ログイン（Price 未設定 or 認証されていない）なら何もしない
+    if (!btn) return;
+    startCheckout(plan, btn);
+  })();
 
     document.querySelectorAll('[data-checkout]').forEach((btn) => {
       btn.addEventListener('click', () => startCheckout(btn.getAttribute('data-checkout'), btn));
@@ -731,6 +825,70 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     line-height: 1.7;
     color: var(--text-tertiary);
     margin: 0;
+  }
+
+  /* 購入手続きのメール確認 */
+  .pr-purchase-auth {
+    max-width: 520px;
+    margin: 18px auto 0;
+    padding: 20px 22px;
+    background: var(--bg-secondary);
+    border: 2px solid var(--primary-start);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .pr-purchase-auth h3 {
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+  }
+
+  .pr-purchase-lead {
+    font-size: 0.84rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+  }
+
+  .pr-purchase-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .pr-purchase-input {
+    width: 100%;
+    padding: 11px 14px;
+    font-size: 0.95rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    margin-bottom: 12px;
+  }
+
+  .pr-purchase-submit { width: 100%; }
+
+  .pr-purchase-msg {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.82rem;
+    line-height: 1.7;
+  }
+
+  .pr-purchase-msg.is-ok { background: rgba(16, 185, 129, 0.1); color: #065f46; }
+  .pr-purchase-msg.is-error { background: rgba(220, 38, 38, 0.08); color: #991b1b; }
+
+  .pr-purchase-note {
+    margin: 10px 0 0;
+    font-size: 0.74rem;
+    color: var(--text-tertiary);
+    line-height: 1.7;
   }
 
   /* 銀行振込（控えめ） */

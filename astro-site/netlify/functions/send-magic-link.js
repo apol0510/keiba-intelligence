@@ -53,7 +53,8 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { email } = JSON.parse(event.body);
+    // `intent` は任意。購入導線から来たときだけ入る（従来の /login は送らない）
+    const { email, intent } = JSON.parse(event.body);
 
     if (!email) {
       return {
@@ -122,7 +123,10 @@ exports.handler = async (event) => {
     //    未設定・壊れた値・許可外ホストは **すべて本番へ倒す**（fail-closed）。
     //    認証の意味・有効期限・認可条件は変わらない。
     const { buildMagicLinkUrl } = await import('../../src/lib/auth/magicLinkBase.js');
-    const magicLink = buildMagicLinkUrl(token, process.env);
+    // 🔴 購入意図（プラン id）を持ち越す。URL は運ばない（open redirect を作らない）。
+    //    受け付けるのは plans.js に定義のある id だけ。未知・空は意図なしとして無視する。
+    const { intentQuery } = await import('../../src/lib/billing/purchaseIntent.js');
+    const magicLink = buildMagicLinkUrl(token, process.env) + intentQuery(intent);
 
     const msg = {
       to: email,

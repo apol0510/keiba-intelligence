@@ -263,7 +263,7 @@ async function saveAuthToken(email, token) {
 }
 
 // マジックリンク生成とメール送信
-async function sendMagicLink(email) {
+async function sendMagicLink(email, intent) {
   const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
   // 🔴 登録確認 URL の宛先は `magicLinkBase.js` の共有ポリシーで決める。
@@ -274,7 +274,10 @@ async function sendMagicLink(email) {
   //    🔴 token の宛先なので、許可リスト外のホストへは絶対に向けない。
   const { resolveMagicLinkBase } = await import('../../src/lib/auth/magicLinkBase.js');
   const base = resolveMagicLinkBase(process.env);
-  const magicLink = `${base}/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
+  // 🔴 購入意図（プラン id）を持ち越す。URL は運ばない（open redirect を作らない）
+  const { intentQuery } = await import('../../src/lib/billing/purchaseIntent.js');
+  const magicLink = `${base}/auth/verify?token=${token}&email=${encodeURIComponent(email)}`
+    + intentQuery(intent);
 
   const subject = '【KEIBA Intelligence】無料会員登録ありがとうございます！';
   const body = `
@@ -378,7 +381,8 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { email } = JSON.parse(event.body);
+    // `intent` は任意。購入導線から来たときだけ入る（通常の /register は送らない）
+    const { email, intent } = JSON.parse(event.body);
 
     if (!email || !email.includes('@')) {
       return {
@@ -409,7 +413,7 @@ exports.handler = async (event) => {
     }
 
     // 3. マジックリンク送信
-    const token = await sendMagicLink(email);
+    const token = await sendMagicLink(email, intent);
     console.log('✅ マジックリンク送信完了');
 
     // 4. AuthTokensテーブルにトークン保存
