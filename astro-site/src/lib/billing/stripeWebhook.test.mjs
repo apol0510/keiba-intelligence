@@ -19,6 +19,7 @@
 
 import { test, mock, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import Stripe from 'stripe';
 
 import { TIER, planTypeToTier, applyExpiry } from '../auth/tiers.js';
@@ -588,6 +589,59 @@ test('🔴 未知の間隔 / paid_at 欠落でも 200 を返し、認可は変�
 
   assert.equal(updatesFor(ALICE).length, before, '認可を書き換えている');
   assert.equal(viewOf(ALICE).view.showBetting, true);
+});
+
+/* ------------------------------------------------------------------
+   契約価格（継続価格ロック）は metadata.ki_price_id から復元する
+   ------------------------------------------------------------------ */
+
+test('🔴 契約価格は 3,980 / jpy / Test Price ID として組み立てられる', async () => {
+  const { contractPriceFromCheckoutSession } = await import('../membership/priceLock.js');
+
+  // 🔴 Stripe の webhook ペイロードは line_items を展開しない。
+  //    実データ（2026-09-02 Test Mode）と同じ形で検証する。
+  const session = {
+    id: 'cs_test_1',
+    currency: 'jpy',
+    amount_total: 3980,
+    created: Math.floor(Date.parse('2026-09-02T01:47:55Z') / 1000),
+    metadata: { ki_plan: 'premium', ki_email: ALICE, ki_price_id: 'price_test_premium' },
+  };
+  const c = contractPriceFromCheckoutSession(session, { nowIso: '2026-09-02T01:47:55.000Z' });
+  assert.ok(c, '🔴 line_items が無いと契約価格を作れていない（今回の不具合）');
+  assert.equal(c.amountYen, 3980);
+  assert.equal(c.currency, 'jpy');
+  assert.equal(c.priceId, 'price_test_premium');
+});
+
+test('🔴 metadata が欠けていたら推測補完しない', async () => {
+  const { contractPriceFromCheckoutSession } = await import('../membership/priceLock.js');
+  const base = {
+    currency: 'jpy',
+    amount_total: 3980,
+    created: 1788313675,
+    metadata: { ki_plan: 'premium', ki_email: ALICE },
+  };
+  // Price ID が無い → null（¥3,980 だけで作らない）
+  assert.equal(contractPriceFromCheckoutSession(base, { nowIso: '2026-09-02T00:00:00.000Z' }), null);
+  // 金額が無い → null
+  assert.equal(contractPriceFromCheckoutSession(
+    { ...base, amount_total: null, metadata: { ...base.metadata, ki_price_id: 'price_x' } },
+    { nowIso: '2026-09-02T00:00:00.000Z' },
+  ), null);
+  // JPY 以外 → null（通貨の最小単位を推測しない）
+  assert.equal(contractPriceFromCheckoutSession(
+    { ...base, currency: 'usd', metadata: { ...base.metadata, ki_price_id: 'price_x' } },
+    { nowIso: '2026-09-02T00:00:00.000Z' },
+  ), null);
+});
+
+test('🔴 checkout 関数が metadata に ki_price_id を入れている（送信側の契約）', () => {
+  const src = readFileSync(
+    new URL('../../../netlify/functions/stripe-create-checkout.js', import.meta.url), 'utf8');
+  assert.match(src, /metadata: \{ ki_plan: plan\.id, ki_email: ent\.email, ki_price_id: priceId \}/);
+  assert.match(src, /const priceId = priceIdFor\(plan, process\.env\)/,
+    '🔴 priceId をサーバー側で確定していない');
 });
 
 /* ------------------------------------------------------------------

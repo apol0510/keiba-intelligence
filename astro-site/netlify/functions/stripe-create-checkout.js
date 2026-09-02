@@ -100,9 +100,15 @@ export async function handler(event) {
       allow_promotion_codes: true,
       success_url: `${base}/mypage?checkout=success`,
       cancel_url: `${base}/pricing?checkout=cancelled`,
-      metadata: { ki_plan: plan.id, ki_email: ent.email },
+      // 🔴 `ki_price_id` は **サーバー側で env から確定した Price ID**（priceIdFor）。
+      //    クライアントからは受け取らない（金額・プランを申告させない）。
+      //    webhook はこれを読んで契約価格（継続価格ロック）を記録する。
+      //    Stripe の webhook ペイロードは `line_items` を既定で展開しないため、
+      //    metadata に入れておかないと **Price ID が取れず契約価格が保存されない**
+      //    （2026-09-02 の Test Mode E2E で実際に空のまま通過した）。
+      metadata: { ki_plan: plan.id, ki_email: ent.email, ki_price_id: priceId },
       subscription_data: {
-        metadata: { ki_plan: plan.id, ki_email: ent.email },
+        metadata: { ki_plan: plan.id, ki_email: ent.email, ki_price_id: priceId },
       },
     });
 

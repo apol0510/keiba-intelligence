@@ -111,7 +111,8 @@ describe('Stripe 関数が共有ポリシーを使っている', () => {
     assert.match(src, /mode: 'subscription'/);
     assert.match(src, /line_items: \[\{ price: priceId, quantity: 1 \}\]/);
     assert.match(src, /customer_email: ent\.email/);
-    assert.match(src, /metadata: \{ ki_plan: plan\.id, ki_email: ent\.email \}/);
+    // ki_price_id はサーバー側で確定した Price ID（2026-09-02 追加）
+    assert.match(src, /metadata: \{ ki_plan: plan\.id, ki_email: ent\.email, ki_price_id: priceId \}/);
     assert.match(src, /login_required/);
     const portal = read('netlify/functions/stripe-portal.js');
     assert.match(portal, /if \(!ent\.authenticated \|\| !ent\.email\)/);

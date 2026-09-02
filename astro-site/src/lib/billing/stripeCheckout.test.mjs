@@ -142,14 +142,48 @@ test('E2E: ログイン済みなら Checkout URL が返り、metadata が webhoo
   const p = calls.checkout[0];
   assert.equal(p.mode, 'subscription');
   assert.deepEqual(p.line_items, [{ price: PRICE_ID, quantity: 1 }]);
-  assert.deepEqual(p.metadata, { ki_plan: 'premium', ki_email: ALICE });
-  assert.deepEqual(p.subscription_data.metadata, { ki_plan: 'premium', ki_email: ALICE });
+  assert.deepEqual(p.metadata, { ki_plan: 'premium', ki_email: ALICE, ki_price_id: PRICE_ID });
+  assert.deepEqual(p.subscription_data.metadata, { ki_plan: 'premium', ki_email: ALICE, ki_price_id: PRICE_ID });
+  // 🔴 metadata の Price ID は line_items と同じ（＝サーバー側で確定した値）
+  assert.equal(p.metadata.ki_price_id, p.line_items[0].price);
   assert.equal(p.customer_email, ALICE);
   assert.match(p.success_url, /\/mypage\?checkout=success$/);
   assert.match(p.cancel_url, /\/pricing\?checkout=cancelled$/);
   // 🔴 金額をコードから送らない（請求額の正本は Stripe の Price）
   assert.equal(p.line_items[0].price_data, undefined);
   assert.equal(p.amount, undefined);
+});
+
+test('🔴 ki_price_id はサーバー側で確定した priceId（クライアント申告を使わない）', async () => {
+  const res = await checkout({
+    cookie: cookieFor(ALICE),
+    // クライアントが別の Price を申告してくる
+    body: {
+      plan: 'premium',
+      price: 'price_attacker', priceId: 'price_attacker',
+      ki_price_id: 'price_attacker',
+      metadata: { ki_price_id: 'price_attacker' },
+    },
+  });
+  assert.equal(res.statusCode, 200);
+  const p = calls.checkout[0];
+  assert.equal(p.metadata.ki_price_id, PRICE_ID, '🔴 クライアント申告の Price を使っている');
+  assert.equal(p.line_items[0].price, PRICE_ID);
+  assert.equal(JSON.stringify(p).includes('price_attacker'), false, '🔴 申告値が混入している');
+});
+
+test('🔴 Price ID が env に無ければ Checkout を作らない（推測補完しない）', async () => {
+  const saved = process.env['STRIPE_PRICE_PREMIUM'];
+  delete process.env['STRIPE_PRICE_PREMIUM'];
+  try {
+    calls.checkout = [];
+    const res = await checkout({ cookie: cookieFor(ALICE) });
+    assert.equal(res.statusCode, 503, 'Price 未設定で課金導線が開いている');
+    assert.equal(JSON.parse(res.body).error, 'plan_not_configured');
+    assert.equal(calls.checkout.length, 0, 'Stripe を叩いている');
+  } finally {
+    if (saved !== undefined) process.env['STRIPE_PRICE_PREMIUM'] = saved;
+  }
 });
 
 test('🔴 email はセッション由来だけ。本文の申告を無視する', async () => {
