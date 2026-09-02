@@ -13,6 +13,7 @@
 import Stripe from 'stripe';
 import { hasStripeSecret, STRIPE_ENV } from '../../src/lib/billing/plans.js';
 import { resolveEntitlement } from '../../src/lib/auth/entitlement.js';
+import { resolveSiteOrigin, normalizeSiteOrigin } from '../../src/lib/http/siteOrigin.js';
 
 const ALLOWED_ORIGINS = [
   'https://keiba-intelligence.jp',
@@ -22,17 +23,14 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
 ];
 
+/** ポータルからの戻り先。`siteOrigin.js` の共有ポリシー（許可外は本番へ倒す）。 */
 function siteBase(event) {
-  const origin = event.headers.origin || '';
-  if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  const host = event.headers.host || '';
-  if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) return `http://${host}`;
-  return 'https://keiba-intelligence.jp';
+  return resolveSiteOrigin(event.headers);
 }
 
 export async function handler(event) {
   const origin = event.headers.origin || '';
-  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const allowOrigin = normalizeSiteOrigin(origin) || ALLOWED_ORIGINS[0];
   const headers = {
     'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
