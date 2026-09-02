@@ -67,3 +67,65 @@ export function resumePathFor(planId, fallback) {
   if (!v) return fallback;
   return `/pricing?${RESUME_PARAM}=${encodeURIComponent(v)}`;
 }
+
+/* --------------------------------------------------------------------------
+   ブラウザ側の控え（メールのリンクからクエリが落ちたときの保険）
+
+   🔴 メールのリンクに載せた `intent` は、メールクライアントや
+      クリック追跡の書き換えで落ちることがある。落ちると認証後の戻り先が
+      従来の `/free-prediction` になり、購入導線が途切れる（2026-09-02）。
+
+   🔴 保存するのは **プラン id だけ**。URL・メールアドレス・トークンは保存しない。
+   🔴 読み出した値も必ず `normalizeIntent` を通す。保存領域は信用しない。
+   🔴 これは戻り先を決めるためだけのもので、**認可には一切使わない**。
+      tier の付与は従来どおり Stripe の webhook だけが行う。
+   -------------------------------------------------------------------------- */
+
+/** 控えの保存キー。 */
+export const INTENT_STORAGE_KEY = 'ki_purchase_intent';
+/** 控えの有効時間（マジックリンクの有効期限と同じ 15 分）。 */
+export const INTENT_TTL_MS = 15 * 60 * 1000;
+
+/** 控えを保存する。失敗しても購入導線は止めない。 */
+export function storeIntent(storage, planId, nowMs = Date.now()) {
+  const v = normalizeIntent(planId);
+  if (!v || !storage) return false;
+  try {
+    storage.setItem(INTENT_STORAGE_KEY, JSON.stringify({ plan: v, at: nowMs }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 控えを読む。無い・壊れている・期限切れ・未知のプランは null。 */
+export function readStoredIntent(storage, nowMs = Date.now()) {
+  if (!storage) return null;
+  let raw;
+  try {
+    raw = storage.getItem(INTENT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+  if (!raw) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== 'object') return null;
+  if (typeof parsed.at !== 'number' || !Number.isFinite(parsed.at)) return null;
+  if (nowMs - parsed.at > INTENT_TTL_MS || nowMs < parsed.at) return null;
+  return normalizeIntent(parsed.plan);
+}
+
+/** 控えを消す。認証後に一度使ったら残さない。 */
+export function clearStoredIntent(storage) {
+  if (!storage) return;
+  try {
+    storage.removeItem(INTENT_STORAGE_KEY);
+  } catch {
+    /* 保存領域が使えなくても購入導線は止めない */
+  }
+}

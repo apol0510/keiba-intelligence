@@ -146,8 +146,13 @@ export async function handler(event) {
     //    受け取るのは **プラン id だけ**で、戻り先のパスは
     //    `resumePathFor` が固定文字列で組み立てる（open redirect を作らない）。
     //    未知・空・URL 等はすべて無視され、従来の戻り先のままになる。
-    const { resumePathFor } = await import('../../src/lib/billing/purchaseIntent.js');
-    redirectTo = resumePathFor(event.queryStringParameters?.intent, redirectTo);
+    const { resumePathFor, normalizeIntent } = await import('../../src/lib/billing/purchaseIntent.js');
+    const rawIntent = event.queryStringParameters?.intent;
+    redirectTo = resumePathFor(rawIntent, redirectTo);
+    // 🔴 値そのものは出さない（受け取ったか / 有効だったかだけ）
+    console.log('↩︎ redirect:', redirectTo,
+      '| intent received:', rawIntent ? 'yes' : 'no',
+      '| intent valid:', normalizeIntent(rawIntent) ? 'yes' : 'no');
 
     return {
       statusCode: 200,

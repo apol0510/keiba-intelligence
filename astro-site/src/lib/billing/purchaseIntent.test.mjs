@@ -16,6 +16,7 @@ import { dirname, join } from 'node:path';
 import {
   INTENT_PARAM, RESUME_PARAM,
   isPurchasableIntent, normalizeIntent, intentQuery, resumePathFor,
+  INTENT_STORAGE_KEY, INTENT_TTL_MS, storeIntent, readStoredIntent, clearStoredIntent,
 } from './purchaseIntent.js';
 import { PLANS } from './plans.js';
 
@@ -108,7 +109,8 @@ describe('認証・認可の契約を変えていない', () => {
 
   test('🔴 verify は受け取った値をパスに使わず resumePathFor に通す', () => {
     const src = read('netlify/functions/verify-magic-link.js');
-    assert.match(src, /resumePathFor\(event\.queryStringParameters\?\.intent, redirectTo\)/);
+    assert.match(src, /const rawIntent = event\.queryStringParameters\?\.intent;/);
+    assert.match(src, /resumePathFor\(rawIntent, redirectTo\)/);
     // 受け取った値で直接リダイレクトしていない
     assert.equal(/redirectTo = event\.queryStringParameters/.test(src), false);
   });
@@ -145,6 +147,49 @@ describe('認証・認可の契約を変えていない', () => {
     }
     // HTTP で同一デプロイへ委譲する
     assert.ok(src.includes('/.netlify/functions/'));
+  });
+
+  test('🔴 控えは正しいプラン id だけを往復する', () => {
+    const mem = new Map();
+    const store = {
+      getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+      setItem: (k, v) => mem.set(k, v),
+      removeItem: (k) => mem.delete(k),
+    };
+    assert.equal(storeIntent(store, 'premium', 1000), true);
+    assert.equal(readStoredIntent(store, 1000), 'premium');
+    assert.equal(readStoredIntent(store, 1000 + INTENT_TTL_MS + 1), null, '期限切れを返している');
+    assert.equal(readStoredIntent(store, 500), null, '未来の控えを返している');
+    clearStoredIntent(store);
+    assert.equal(readStoredIntent(store, 1000), null);
+
+    // 未知のプランは保存も読み出しもしない
+    assert.equal(storeIntent(store, 'gold', 1000), false);
+    mem.set(INTENT_STORAGE_KEY, JSON.stringify({ plan: 'gold', at: 1000 }));
+    assert.equal(readStoredIntent(store, 1000), null, '🔴 保存領域の値を検証せずに返している');
+    // 壊れた値・URL を入れられても素通ししない
+    for (const bad of ['', 'null', '{', JSON.stringify({ plan: 'https://evil.example', at: 1000 })]) {
+      mem.set(INTENT_STORAGE_KEY, bad);
+      assert.equal(readStoredIntent(store, 1000), null);
+    }
+    // 保存領域が使えなくても落ちない
+    const broken = { getItem() { throw new Error('x'); }, setItem() { throw new Error('x'); }, removeItem() { throw new Error('x'); } };
+    assert.equal(storeIntent(broken, 'premium'), false);
+    assert.equal(readStoredIntent(broken), null);
+    clearStoredIntent(broken);
+    assert.equal(readStoredIntent(null), null);
+  });
+
+  test('🔴 メールのリンクから intent が落ちても購入へ戻れる', () => {
+    // メールクライアント / クリック追跡でクエリが落ちることがある。
+    const pricing = read('src/pages/pricing.astro');
+    assert.match(pricing, /storeIntent\(window\.localStorage, pendingPlan\)/);
+
+    const verify = read('src/pages/auth/verify.astro');
+    // URL の値が最優先、控えは後ろ
+    assert.match(verify, /urlParams\.get\('intent'\) \|\| readStoredIntent\(window\.localStorage\)/);
+    // 一度使ったら残さない
+    assert.match(verify, /clearStoredIntent\(window\.localStorage\)/);
   });
 
   test('🔴 未認証（pending）の会員が購入導線で行き止まりにならない', () => {

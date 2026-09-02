@@ -275,6 +275,8 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
 </BaseLayout>
 
 <script>
+  import { storeIntent } from '../lib/billing/purchaseIntent.js';
+
   // 価格は Stripe から取得する（金額をコードに持たない）
   async function loadPrices() {
     const msg = document.getElementById('pr-plan-msg');
@@ -417,6 +419,9 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.sent) {
+        // 🔴 メールのリンクから intent が落ちても購入へ戻れるように控えを残す。
+        //    保存するのはプラン id だけ。認可には使わない。
+        try { storeIntent(window.localStorage, pendingPlan); } catch { /* 使えなくても続行 */ }
         if (msg) {
           msg.hidden = false;
           msg.className = 'pr-purchase-msg is-ok';

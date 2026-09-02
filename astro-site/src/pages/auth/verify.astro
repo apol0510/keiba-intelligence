@@ -127,6 +127,8 @@ export const prerender = false;
 </style>
 
 <script>
+  import { readStoredIntent, clearStoredIntent } from '../../lib/billing/purchaseIntent.js';
+
   const statusEl = document.getElementById('status') as HTMLHeadingElement;
   const messageEl = document.getElementById('message') as HTMLParagraphElement;
   const contentEl = document.querySelector('.verify-content') as HTMLDivElement;
@@ -143,7 +145,10 @@ export const prerender = false;
     try {
       // 🔴 購入導線から来た場合は intent（プラン id）をそのまま渡す。
       //    戻り先はサーバーが固定パスで決めるので、ここでは値を解釈しない。
-      const intent = urlParams.get('intent');
+      // 🔴 URL の intent が最優先。落ちていたら購入導線が残した控えを使う
+      //    （メールクライアントがクエリを削ることがある）。
+      //    どちらも値はサーバー側で `plans.js` と照合され、戻り先は固定パス。
+      const intent = urlParams.get('intent') || readStoredIntent(window.localStorage);
       const q = `token=${encodeURIComponent(token)}` + (intent ? `&intent=${encodeURIComponent(intent)}` : '');
       const response = await fetch(`/.netlify/functions/verify-magic-link?${q}`);
       const data = await response.json();
@@ -156,6 +161,9 @@ export const prerender = false;
         const plan = data.session.plan?.toLowerCase();
         sessionStorage.setItem('isFreeUser', plan === 'free-registered' ? 'true' : 'false');
         sessionStorage.setItem('isLightUser', plan === 'light' ? 'true' : 'false');
+
+        // 一度使った控えは残さない
+        clearStoredIntent(window.localStorage);
 
         console.log('✅ 認証成功 - プラン:', data.session.plan);
 
