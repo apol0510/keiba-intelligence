@@ -44,6 +44,8 @@ const db = {
   updates: [],
   selects: [],
   failUpdate: false,
+  /** 特定の書き込みだけ失敗させる述語（membership 側だけ落とす検証用）。 */
+  failUpdateWhen: null,
   reset() {
     this.rows = [
       { id: 'recALICE', fields: { Email: ALICE, PlanType: 'free-registered', Status: 'active', AccessEnabled: true } },
@@ -52,6 +54,7 @@ const db = {
     this.updates = [];
     this.selects = [];
     this.failUpdate = false;
+    this.failUpdateWhen = null;
   },
 };
 
@@ -89,6 +92,10 @@ before(() => {
           },
           async update(list) {
             if (db.failUpdate) throw new Error('airtable is down');
+            if (db.failUpdateWhen && list.some((u) => db.failUpdateWhen(u.fields || {}))) {
+              // Airtable が拒否したときと同じ形（例外）で落とす
+              throw new Error('airtable rejected the update');
+            }
             for (const u of list) {
               db.updates.push({ id: u.id, fields: { ...u.fields } });
               const row = db.rows.find((r) => r.id === u.id);
@@ -126,6 +133,17 @@ before(() => {
  * フラグを立てて検証したいテストは `withWriteFlag('true', ...)` を使う。
  */
 const AMBIENT_WRITE_FLAG = process.env.MEMBERSHIP_WRITE_ENABLED;
+/**
+ * 🔴 membership の store は `process.env` の Airtable 資格情報から組み立てられる。
+ *    テスト中に本物の資格情報が見えていると **実 Airtable へ通信してしまう**ので、
+ *    毎テストで外し、ファイル終了時に戻す（ambient に依存しない）。
+ *    この状態では store は `adapter_missing` で使えない＝書き込み不能となり、
+ *    フラグ ON のときは契約どおり FAILED になる。
+ */
+const AMBIENT_AIRTABLE = {
+  key: process.env.AIRTABLE_API_KEY,
+  base: process.env.AIRTABLE_BASE_ID,
+};
 
 beforeEach(() => {
   db.reset();
@@ -135,12 +153,19 @@ beforeEach(() => {
   process.env['STRIPE_WEBHOOK_SECRET'] = WEBHOOK_SECRET;
   // 🔴 既定は「未設定」。ambient に true が入っていても結果を変えない
   delete process.env.MEMBERSHIP_WRITE_ENABLED;
+  // 🔴 実 Airtable へ通信させない（store は adapter_missing になる）
+  delete process.env.AIRTABLE_API_KEY;
+  delete process.env.AIRTABLE_BASE_ID;
 });
 
 after(() => {
   // 🔴 単純な delete にしない。ambient の値を必ず戻す
   if (AMBIENT_WRITE_FLAG === undefined) delete process.env.MEMBERSHIP_WRITE_ENABLED;
   else process.env.MEMBERSHIP_WRITE_ENABLED = AMBIENT_WRITE_FLAG;
+  if (AMBIENT_AIRTABLE.key === undefined) delete process.env.AIRTABLE_API_KEY;
+  else process.env.AIRTABLE_API_KEY = AMBIENT_AIRTABLE.key;
+  if (AMBIENT_AIRTABLE.base === undefined) delete process.env.AIRTABLE_BASE_ID;
+  else process.env.AIRTABLE_BASE_ID = AMBIENT_AIRTABLE.base;
 });
 
 /* ------------------------------------------------------------------
@@ -171,11 +196,20 @@ async function post(evt, { secret, signature, method = 'POST', raw } = {}) {
   });
 }
 
+/**
+ * 実際の Checkout Session に近い形（2026-09-02 の Test Mode 実データより）。
+ * 🔴 `currency` / `amount_total` / `line_items` / `created` が揃っていないと
+ *    契約価格の記録に進まないため、store の失敗経路を検証できない。
+ */
 const checkoutCompleted = (email, plan = 'premium', id) =>
   makeEvent('checkout.session.completed', {
     id: 'cs_test_1',
     metadata: { ki_plan: plan, ki_email: email },
     customer_email: email,
+    currency: 'jpy',
+    amount_total: 3980,
+    created: Math.floor(Date.parse('2026-09-02T01:47:55Z') / 1000),
+    line_items: { data: [{ price: { id: 'price_test_premium' } }] },
   }, id);
 
 const subUpdated = (email, status, plan = 'premium', id) =>
@@ -304,19 +338,21 @@ test('🔴 MEMBERSHIP_WRITE_ENABLED が無ければ membership の列を書か�
   });
 });
 
-test('🔴 フラグを立てても列が無ければプラン付与は成功する（巻き添えで落ちない）', async () => {
+test('🔴 membership が書けなくてもプラン付与（認可）は巻き添えにしない', async () => {
   await withWriteFlag('true', async () => {
     assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, 'true', 'テスト内で true にできていない');
     const res = await post(checkoutCompleted(ALICE));
-    // 🔴 membership 側の書き込みが失敗しても、プラン付与は 200 で完了すること
-    assert.equal(res.statusCode, 200, 'membership の失敗がプラン付与を巻き添えにしている');
+
+    // 🔴 契約: 書き込み不能は 500（再送させる）。ただし認可は巻き戻さない
+    assert.equal(res.statusCode, 500, '🔴 書き込み不能を 200 で通している');
+    assert.equal(JSON.parse(res.body).error, 'membership_not_recorded');
 
     const planUpdate = updatesFor(ALICE).find((u) => u.fields.PlanType);
     assert.ok(planUpdate, 'プラン付与が行われていない');
     assert.deepEqual(planUpdate.fields, { PlanType: 'premium', Status: 'active', AccessEnabled: true });
 
     const after = viewOf(ALICE);
-    assert.equal(after.view.showBetting, true, '有料表示が開かない');
+    assert.equal(after.view.showBetting, true, '有料表示が開かない（認可が巻き戻っている）');
   });
 });
 
@@ -552,6 +588,127 @@ test('🔴 未知の間隔 / paid_at 欠落でも 200 を返し、認可は変�
 
   assert.equal(updatesFor(ALICE).length, before, '認可を書き換えている');
   assert.equal(viewOf(ALICE).view.showBetting, true);
+});
+
+/* ------------------------------------------------------------------
+   Airtable の単一選択（singleSelect）の制約
+   （2026-09-02 の Test Mode E2E で 500 handler_failed を招いた盲点）
+   ------------------------------------------------------------------ */
+
+/**
+ * 🔴 `PlanType` / `Status` は Airtable の **単一選択**である。
+ *    登録されていない選択肢を書くと Airtable が 422 で拒否し、
+ *    `applyPlan` が例外を投げて webhook が 500 になる。
+ *    モックは値を素通しするため、この制約はテストで**再現できていなかった**。
+ *    ここでは「コードが書く値の集合」を Airtable の選択肢と突き合わせて固定する。
+ *
+ * 🔴 この一覧を増やすときは **Airtable 側にも選択肢を追加**すること。
+ */
+const AIRTABLE_CHOICES = Object.freeze({
+  // 2026-09-02 時点の実スキーマ（read-only で確認済み）
+  PlanType: ['free-registered', 'light', 'pro', 'premium', 'free'],
+  Status: ['pending', 'active', 'cancelled', 'expired', 'suspended', 'unpaid',
+    'refunded', 'withdrawn', 'test', 'inactive', 'payment_failed'],
+});
+
+test('🔴 webhook が書く PlanType / Status は Airtable の選択肢に存在する', async () => {
+  // 実際にイベントを流して、書き込まれた値を集める
+  await post(checkoutCompleted(ALICE));
+  await post(subUpdated(ALICE, 'canceled'));
+  await post(subDeleted(ALICE));
+  await post(paymentFailed(ALICE));
+  for (const st of ['active', 'trialing']) await post(subUpdated(ALICE, st));
+
+  const written = { PlanType: new Set(), Status: new Set() };
+  for (const u of updatesFor(ALICE)) {
+    for (const k of ['PlanType', 'Status']) {
+      if (u.fields[k] != null) written[k].add(u.fields[k]);
+    }
+  }
+
+  for (const k of ['PlanType', 'Status']) {
+    assert.ok(written[k].size > 0, `${k} の書き込みが観測できていない`);
+    for (const v of written[k]) {
+      assert.ok(
+        AIRTABLE_CHOICES[k].includes(v),
+        `🔴 Airtable の ${k} に選択肢「${v}」が無い → 実環境で 422 になり webhook が 500 になる`,
+      );
+    }
+  }
+});
+
+/* ------------------------------------------------------------------
+   membership の失敗を「成功扱い」にしない（再送で復旧できる契約）
+   ------------------------------------------------------------------ */
+
+test('🔴 membership 失敗のイベントは processed にしない（何度でも再送で復旧できる）', async () => {
+  await withWriteFlag('true', async () => {
+    const first = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_fail'));
+    assert.equal(first.statusCode, 500);
+
+    // 🔴 processed にしていないので、再送が duplicate 扱いされない
+    for (let i = 0; i < 3; i++) {
+      const retry = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_fail'));
+      assert.equal(JSON.parse(retry.body).duplicate, undefined,
+        '🔴 duplicate 扱いされ、付与が永久に失われる');
+      assert.equal(retry.statusCode, 500, '書き込み不能が続く間は 500 のまま');
+    }
+  });
+
+  // 書き込み不能が解消（フラグ off ＝ やることが無い）なら 200 になり processed になる
+  const ok = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_fail'));
+  assert.equal(ok.statusCode, 200);
+  const dup = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_fail'));
+  assert.equal(JSON.parse(dup.body).duplicate, true, '成功後は processed になる');
+});
+
+test('🔴 フラグ true で store が使えないときは FAILED（200 で通さない）', async () => {
+  // MEMBERSHIP_WRITE_ENABLED=true だが Airtable の資格情報が無い
+  //  → adapter が作れない（adapter_missing）＝ 書き込み不能
+  await withWriteFlag('true', async () => {
+    {
+      const res = await post(checkoutCompleted(ALICE, 'premium', 'evt_store_down'));
+      assert.equal(res.statusCode, 500, '🔴 書き込み不能を 200 で通している（付与を取りこぼす）');
+      assert.equal(JSON.parse(res.body).error, 'membership_not_recorded');
+
+      // 認可（プラン付与）は完了している
+      const planUpdate = updatesFor(ALICE).find((u) => u.fields.PlanType);
+      assert.deepEqual(planUpdate.fields, { PlanType: 'premium', Status: 'active', AccessEnabled: true });
+
+      // 🔴 processed にしていないので再送で復旧できる
+      const retry = await post(checkoutCompleted(ALICE, 'premium', 'evt_store_down'));
+      assert.equal(JSON.parse(retry.body).duplicate, undefined, '🔴 duplicate 扱いで永久に失われる');
+    }
+  });
+});
+
+test('🔴 契約: フラグ true のときの store 応答 → 結果の対応', async () => {
+  const { default: fs } = await import('node:fs');
+  const src = fs.readFileSync(
+    new URL('../../../netlify/functions/stripe-webhook.js', import.meta.url), 'utf8',
+  );
+  // applied / already だけが OK。それ以外はすべて FAILED
+  assert.match(src, /status === 'applied' \|\| status === 'already'\) return MEMBERSHIP_RESULT\.OK;/);
+  assert.match(src, /return MEMBERSHIP_RESULT\.FAILED;\n\}/);
+  // 🔴 「やることが無い」として許す理由リストを持たない（schema_missing 等を通さない）
+  assert.equal(src.includes('EXPECTED_UNAVAILABLE'), false,
+    '🔴 書き込み不能を SKIPPED として通す抜け道が残っている');
+  for (const reason of ['schema_missing', 'not_configured', 'adapter_missing']) {
+    assert.equal(
+      new RegExp(`'${reason}'[^\\n]*SKIPPED`).test(src), false,
+      `🔴 ${reason} を SKIPPED 扱いしている`,
+    );
+  }
+  // store が使えないときは FAILED
+  assert.match(src, /if \(!store\.enabled\) \{[\s\S]{0,200}?return MEMBERSHIP_RESULT\.FAILED;/);
+});
+
+test('🔴 フラグ未設定（やることが無い）は失敗にしない', async () => {
+  const res = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_skip'));
+  assert.equal(res.statusCode, 200);
+  // processed になっているので再送は duplicate
+  const again = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_skip'));
+  assert.equal(JSON.parse(again.body).duplicate, true);
 });
 
 test('🔴 同じ invoice の payment_succeeded を再送しても二重処理しない', async () => {
