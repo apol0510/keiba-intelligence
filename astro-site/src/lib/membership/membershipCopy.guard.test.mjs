@@ -472,6 +472,16 @@ describe('ランク・リワードを認可に使わない', () => {
       '🔴 支払い成功で認可を書き換えている（付与だけを行うこと）');
   });
 
+  test('🔴 webhook の応答に個人情報・秘密値を載せない', () => {
+    const wh = read('netlify/functions/stripe-webhook.js');
+    // 失敗理由は内部の状態名だけ
+    const noteFn = wh.slice(wh.indexOf('function note(label, status, reason)'), wh.indexOf('function membershipResultFromStore'));
+    assert.equal(/email/i.test(noteFn), false, '🔴 応答に載る文字列へ email を入れている');
+    assert.equal(/token|secret|key/i.test(noteFn), false);
+    // 呼び出しごとに空にする（コンテナ再利用で前回分が漏れない）
+    assert.match(wh, /membershipNotes\.length = 0;/);
+  });
+
   test('🔴 付与の前提が欠けたら付与しない（月額へ丸めない・受信時刻で代用しない）', () => {
     const wh = read('netlify/functions/stripe-webhook.js');
 
@@ -518,7 +528,8 @@ describe('ランク・リワードを認可に使わない', () => {
     for (const fn of ['recordContractPrice', 'recordCancellation', 'recordPaidPeriod']) {
       const body = src.slice(src.indexOf(`async function ${fn}(`));
       // フラグが無ければ何もしない
-      assert.match(body.slice(0, 400), /if \(!isWriteEnabled\(process\.env\)\) return MEMBERSHIP_RESULT\.SKIPPED;/,
+      // フラグ無しは SKIPPED（理由を残してから返す形も許す）
+      assert.match(body.slice(0, 400), /if \(!isWriteEnabled\(process\.env\)\)[\s\S]{0,120}?return MEMBERSHIP_RESULT\.SKIPPED;/,
         `${fn} の先頭でフラグを確認していない`);
       // 🔴 例外でハンドラを巻き添えにしないが、**成功扱いにもしない**
       assert.match(body.slice(0, 2200), /catch \{[\s\S]*?return MEMBERSHIP_RESULT\.FAILED;/,
