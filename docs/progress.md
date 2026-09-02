@@ -258,6 +258,35 @@
   全会員 `/mypage` であること／購入途中だけが上書きすること／
   クライアントがパスを組み立てないこと／**正本に契約が書かれていること**を固定。
 
+
+### 2026-09-02 契約項目・RewardLedger が書けなかった原因を確定（422）
+
+- **診断の追加（`8b2cb1da`）**: `errorCodeFrom(status, bodyText)` を入れ、失敗理由を
+  `write_failed:<HTTP status>:<Airtable error.type>` の形にした。
+  🔴 載せるのは **status と `error.type` だけ**。`error.message` は使わない
+  （フィールド名・値を echo することがある）。符号は英数と `_ - .` のみ・60 文字まで。
+- **確定（Test Mode のイベントを1件再送）**:
+  `{"membership":["reward accrual: unavailable/write_failed:422:INVALID_VALUE_FOR_COLUMN"]}`
+  → **403（権限）でも 429（レート制限）でもなく 422**。
+- **原因**: `MembershipStartedAt` / `CancelledAt` / `ContractStartedAt` / `OccurredAt` は
+  `docs/MEMBERSHIP_DATA_MIGRATION.md` §2.1・§2.2 のとおり **`Date (ISO)`（時刻なし）** で
+  作られている。コードが ISO の **日時** を送っていたため拒否されていた。
+  **スキーマは仕様どおりで、誤っていたのは送る側**。
+- **恒久修正（`4aadb0a8`）**: `toAirtableDate(value)` を追加し、日付だけの列へは
+  `YYYY-MM-DD` を送る（`airtableStore` の `OccurredAt` / `ContractStartedAt`、
+  `stripe-webhook` の `CancelledAt`、`send-payment-confirmation-auto` の `MembershipStartedAt`）。
+  🔴 `typecast: true` は使わない。
+  🔴 日付は **Asia/Tokyo** で切る（UTC だと JST 早朝の支払いが前日になり、月境界でずれる）。
+- **テスト**: `airtableStore.test.mjs` 182→189 件。
+- **付随して判明（Open Question）**: Test Mode の webhook 送信先が **2 つ**ある。
+  - `KI Test Webhook` … 実際に処理している方（branch deploy）
+  - `KI Stripe Test E2E` … 同じ branch URL だが **今週 11 件すべて 400 `invalid_signature`**。
+    署名シークレットが branch-deploy の `STRIPE_WEBHOOK_SECRET` と一致していない。
+    同じイベントが二重配信されている。**設定は未変更**（ユーザー判断待ち）。
+- **付随（Open Question）**: `npm run build` 中に Node のテストランナーが
+  `Unable to deserialize cloned data` で落ちることがある（`stripeWebhook.test.mjs`・
+  `--experimental-test-module-mocks` 使用）。再実行で通る。CI でも 1 回発生。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
