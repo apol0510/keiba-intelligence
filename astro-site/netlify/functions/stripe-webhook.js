@@ -249,8 +249,7 @@ async function recordCancellation(email, cancelledAtIso) {
  *    そこで 1 を仮定すると、実際が四半期・半年払いだった場合に
  *    **付与量と継続月数が過少なまま確定してしまう**（あとから気づけない）。
  */
-export function periodMonthsFromInvoice(invoice) {
-  const recurring = invoice?.lines?.data?.[0]?.price?.recurring;
+export function periodMonthsFromRecurring(recurring) {
   if (!recurring) return null;
 
   // 🔴 `interval_count` が無いときに 1 を補わない。
@@ -264,6 +263,54 @@ export function periodMonthsFromInvoice(invoice) {
     // 🔴 day / week は月数へ換算できない。unknown も含めて付与しない
     default: return null;
   }
+}
+
+/**
+ * 請求明細から price の情報を取り出す。
+ *
+ * 🔴 Stripe の invoice 明細は API 版で形が違う。
+ *    旧: `lines.data[0].price.recurring`（そのまま読める）
+ *    新: `lines.data[0].pricing.price_details.price`（**id だけ**で recurring が無い）
+ *    新しい形のときは id を返し、呼び出し側が Price を取りに行く。
+ *    ここで `period.start` / `period.end` の差から月数を推測してはいけない
+ *    （28〜31 日の揺れがあり、四半期・半年払いと区別が付かない）。
+ */
+export function priceRefFromInvoice(invoice) {
+  const line = invoice?.lines?.data?.[0];
+  if (!line) return null;
+
+  const recurring = line.price?.recurring;
+  if (recurring) return { recurring, priceId: line.price?.id || null };
+
+  const priceId = line.pricing?.price_details?.price
+    || (typeof line.price === 'string' ? line.price : null);
+  if (typeof priceId === 'string' && priceId) return { recurring: null, priceId };
+
+  return null;
+}
+
+/**
+ * invoice から会員のメールアドレスを取る。
+ *
+ * 🔴 ここも API 版で場所が違う。
+ *    旧: `invoice.subscription_details.metadata`
+ *    新: `invoice.parent.subscription_details.metadata`
+ *    どちらも無ければ `customer_email`（Stripe 側の請求先）へ落とす。
+ */
+export function emailFromInvoice(invoice) {
+  const meta = invoice?.parent?.subscription_details?.metadata
+    || invoice?.subscription_details?.metadata
+    || null;
+  const fromMeta = meta?.ki_email;
+  if (typeof fromMeta === 'string' && fromMeta.trim()) return fromMeta.trim();
+  const fallback = invoice?.customer_email;
+  return typeof fallback === 'string' && fallback.trim() ? fallback.trim() : null;
+}
+
+/** 旧形（`price.recurring` が展開済み）のときだけ月数を返す。 */
+export function periodMonthsFromInvoice(invoice) {
+  const ref = priceRefFromInvoice(invoice);
+  return ref && ref.recurring ? periodMonthsFromRecurring(ref.recurring) : null;
 }
 
 /**
@@ -289,13 +336,28 @@ export function paidAtMsFromInvoice(invoice) {
  * 🔴 冪等キーは invoice id。Stripe の再送でも二重付与しない。
  * 🔴 期間の長さ・支払い時刻のどちらかが取れなければ **付与しない**（fail-closed）。
  */
-async function recordPaidPeriod(email, invoice) {
+async function recordPaidPeriod(email, invoice, stripe) {
   if (!isWriteEnabled(process.env)) return MEMBERSHIP_RESULT.SKIPPED;
   try {
     const invoiceRef = typeof invoice?.id === 'string' ? invoice.id : null;
     if (!invoiceRef) return MEMBERSHIP_RESULT.SKIPPED;
 
-    const periodMonths = periodMonthsFromInvoice(invoice);
+    const ref = priceRefFromInvoice(invoice);
+    let recurring = ref?.recurring || null;
+
+    // 🔴 新しい API 形では明細に recurring が入らないので Price を取りに行く。
+    //    取れなかったら **FAILED**（再送で復旧させる）。推測はしない。
+    if (!recurring && ref?.priceId && stripe) {
+      try {
+        const price = await stripe.prices.retrieve(ref.priceId);
+        recurring = price?.recurring || null;
+      } catch (err) {
+        console.error('❌ stripe-webhook: price lookup failed:', err && err.message);
+        return MEMBERSHIP_RESULT.FAILED;
+      }
+    }
+
+    const periodMonths = periodMonthsFromRecurring(recurring);
     if (periodMonths == null) {
       // 🔴 月額へ fallback しない。付けずに保留する（再送しても同じなので SKIPPED）
       console.warn('⚠️ stripe-webhook: unknown billing interval — accrual held');
@@ -480,24 +542,20 @@ export async function handler(event) {
 
       case 'invoice.payment_succeeded': {
         const invoice = stripeEvent.data.object;
-        const email = invoice?.subscription_details?.metadata?.ki_email
-          || invoice?.customer_email
-          || null;
+        const email = emailFromInvoice(invoice);
         if (!email) {
           console.warn('⚠️ stripe-webhook: payment_succeeded without email (skipped)');
           break;
         }
         // 🔴 認可は触らない。ここで行うのはリワードの付与だけ
-        track(await recordPaidPeriod(email, invoice));
+        track(await recordPaidPeriod(email, invoice, stripe));
         console.log('✅ stripe-webhook: paid period recorded');
         break;
       }
 
       case 'invoice.payment_failed': {
         const invoice = stripeEvent.data.object;
-        const email = invoice?.subscription_details?.metadata?.ki_email
-          || invoice?.customer_email
-          || null;
+        const email = emailFromInvoice(invoice);
         if (!email) {
           console.warn('⚠️ stripe-webhook: payment_failed without email (skipped)');
           break;

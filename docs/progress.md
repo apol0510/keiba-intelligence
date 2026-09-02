@@ -117,6 +117,33 @@
   （ローカルに Airtable / Stripe の資格情報が無く、read でも確認できない）。
   手動更新リンクの応答で切り分けられる。
 
+
+### 2026-09-02 RewardLedger が付与されない（`invoice` の形が変わっていた）
+
+- **発見**: Test Mode E2E で届いた実ペイロードを検証したところ、
+  `periodMonthsFromInvoice` が **null** を返していた。
+  → `recordPaidPeriod` が SKIPPED になり、**RewardLedger の行が作られていない**。
+  200 を返して `markProcessed` まで進むため、同じイベントの再送では復旧しない。
+- **原因**: Stripe の invoice 明細の形が API 版で違う。
+  - 旧: `lines.data[0].price.recurring`（そのまま読める）
+  - 新: `lines.data[0].pricing.price_details.price`（**id だけ**で `recurring` が無い）
+  同様に会員メールも 旧 `invoice.subscription_details.metadata` →
+  新 `invoice.parent.subscription_details.metadata` へ移動していた
+  （今回は `customer_email` に落ちて拾えていた）。
+- **修正**:
+  - `priceRefFromInvoice` で両方の形から `recurring` または price id を取り出す
+  - id しか無ければ **Stripe から Price を取得**して `recurring` を得る。
+    取得に失敗したら **FAILED（再送で復旧）**。`period.start`/`end` の日数から
+    月数を推測しない（28〜31 日の揺れがあり四半期払いと区別できない）
+  - `emailFromInvoice` で `parent` 配下の metadata も見る
+- **テスト**: 実ペイロードの形をそのまま固定した回帰テストを追加（stripe 63→64 件）。
+  ガードも `periodMonthsFromRecurring` 側へ付け替え、
+  「請求期間の差から月数を推測していない」ことを追加で固定。
+- **未解決（要判断）**: 既に処理済みの `in_1UB7ll...` は
+  `markProcessed` 済みのため **再送しても復旧しない**。
+  Test Mode なので、新しいテスト購入で確認するのが最短
+  （processed 記録の削除は禁止のため行わない）。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:

@@ -466,7 +466,8 @@ describe('ランク・リワードを認可に使わない', () => {
 
     // 4. 付与は支払い成功でだけ駆動する
     const okCase = caseBody('invoice.payment_succeeded');
-    assert.match(okCase, /recordPaidPeriod\(email, invoice\)/);
+    // stripe は Price を引くためだけに渡す（認可には使わない）
+    assert.match(okCase, /recordPaidPeriod\(email, invoice, stripe\)/);
     assert.equal(okCase.includes('applyPlan'), false,
       '🔴 支払い成功で認可を書き換えている（付与だけを行うこと）');
   });
@@ -475,7 +476,7 @@ describe('ランク・リワードを認可に使わない', () => {
     const wh = read('netlify/functions/stripe-webhook.js');
 
     // 請求間隔: 判定できなければ null（月額へ fallback しない）
-    const interval = wh.slice(wh.indexOf('export function periodMonthsFromInvoice('));
+    const interval = wh.slice(wh.indexOf('export function periodMonthsFromRecurring('));
     assert.match(interval.slice(0, 900), /default: return null;/,
       '未知の interval を月額へ丸めている');
     assert.match(interval.slice(0, 900), /interval_count/,
@@ -483,6 +484,9 @@ describe('ランク・リワードを認可に使わない', () => {
     // 🔴 欠落時に 1 で補完しない
     assert.doesNotMatch(interval.slice(0, 900), /interval_count\s*(==|===)\s*null\s*\?\s*1/,
       'interval_count 欠落を 1 で補っている');
+    // 🔴 請求期間の日数から月数を推測しない（28〜31 日の揺れがあり四半期と区別できない）
+    assert.equal(wh.includes('period.end - '), false, '請求期間の差から月数を推測している');
+    assert.equal(/periodMonths\s*=\s*Math\.round/.test(wh), false, '月数を丸めて推測している');
     assert.doesNotMatch(interval.slice(0, 900), /interval_count\s*\?\?\s*1/,
       'interval_count 欠落を 1 で補っている');
 
