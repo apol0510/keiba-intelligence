@@ -33,7 +33,7 @@
     "test:auth": "node --test src/lib/auth/auth.test.mjs src/lib/auth/entitlementRoutes.test.mjs src/lib/auth/previewMode.test.mjs src/lib/auth/magicLinkBase.test.mjs src/lib/auth/refreshSession.guard.test.mjs src/lib/auth/navAuth.guard.test.mjs",
     "test:stripe": "node --experimental-test-module-mocks --test src/lib/billing/stripeWebhook.test.mjs src/lib/billing/stripeCheckout.test.mjs",
     "test:ai-auth": "node --test src/lib/ai/commentAuth.test.mjs",
-    "test:billing": "node --test src/lib/billing/billing.test.mjs src/lib/http/siteOrigin.test.mjs src/lib/billing/purchaseIntent.test.mjs",
+    "test:billing": "node --test src/lib/billing/billing.test.mjs src/lib/billing/purchaseEmailCopy.test.mjs src/lib/http/siteOrigin.test.mjs src/lib/billing/purchaseIntent.test.mjs",
     "test:membership": "node --test src/lib/membership/membership.test.mjs src/lib/membership/membershipCopy.guard.test.mjs src/lib/membership/airtableStore.test.mjs src/lib/membership/membershipE2E.test.mjs src/lib/membership/bankTransfer.test.mjs",
     "membership:check": "node scripts/membershipMigration.mjs --check",
     "membership:dry-run": "node scripts/membershipMigration.mjs --dry-run",

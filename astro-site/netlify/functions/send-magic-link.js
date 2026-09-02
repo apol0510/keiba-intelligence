@@ -128,24 +128,29 @@ exports.handler = async (event) => {
     const { intentQuery } = await import('../../src/lib/billing/purchaseIntent.js');
     const magicLink = buildMagicLinkUrl(token, process.env) + intentQuery(intent);
 
+    // 🔴 購入導線から来た場合は「ログインリンク」ではなく、お支払いへの案内にする
+    const { emailCopyFor } = await import('../../src/lib/billing/purchaseEmailCopy.js');
+    const copy = emailCopyFor(intent, 'login');
+
     const msg = {
       to: email,
       from: process.env.SENDGRID_FROM_EMAIL || 'noreply@em8410.keiba-intelligence.jp',
-      subject: '【KEIBA Intelligence】ログインリンク',
+      subject: copy.subject,
       html: `
 <div style="font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
   <div style="background-color: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-    <h2 style="color: #1e40af; margin-top: 0; font-size: 24px;">ログインリンク</h2>
+    <h2 style="color: #1e40af; margin-top: 0; font-size: 24px;">${copy.heading}</h2>
 
     <p style="color: #334155; font-size: 16px; line-height: 1.6;">${customer.Name || 'お客様'} 様</p>
 
-    <p style="color: #334155; font-size: 16px; line-height: 1.6;">以下のボタンをクリックしてログインしてください。</p>
+    <p style="color: #334155; font-size: 16px; line-height: 1.6;">${copy.lead}</p>
 
     <div style="text-align: center; margin: 32px 0;">
       <a href="${magicLink}" style="display: inline-block; background-color: #3b82f6; color: #ffffff !important; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; border: 2px solid #3b82f6;">
-        ログインする
+        ${copy.cta}
       </a>
     </div>
+    ${copy.note ? `<p style="text-align: center; color: #64748b; font-size: 13px; margin: -16px 0 24px;">${copy.note}</p>` : ''}
 
     <div style="background-color: #f1f5f9; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 4px;">
       <p style="color: #475569; font-size: 14px; margin: 0; line-height: 1.6;">

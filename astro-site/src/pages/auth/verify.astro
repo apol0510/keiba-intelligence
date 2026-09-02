@@ -167,7 +167,12 @@ export const prerender = false;
 
         console.log('✅ 認証成功 - プラン:', data.session.plan);
 
-        showSuccess('認証成功！', 'リダイレクトしています...');
+        // 🔴 購入導線から来たときは「次に何が起きるか」を出す
+        if (intent) {
+          showSuccess('確認できました', 'お支払い画面へ進みます…');
+        } else {
+          showSuccess('認証成功！', 'リダイレクトしています...');
+        }
         setTimeout(() => {
           window.location.href = data.redirectTo || '/free-prediction';
         }, 500);

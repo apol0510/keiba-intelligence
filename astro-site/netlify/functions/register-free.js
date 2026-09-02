@@ -279,7 +279,13 @@ async function sendMagicLink(email, intent) {
   const magicLink = `${base}/auth/verify?token=${token}&email=${encodeURIComponent(email)}`
     + intentQuery(intent);
 
-  const subject = '【KEIBA Intelligence】無料会員登録ありがとうございます！';
+  /*
+   * 🔴 購入導線から来た人に「無料会員登録ありがとうございます！」は出さない。
+   *    受け取った人が知りたいのは「このリンクを開けばお支払いに進む」だけ。
+   */
+  const { emailCopyFor } = await import('../../src/lib/billing/purchaseEmailCopy.js');
+  const copy = emailCopyFor(intent, 'register');
+  const subject = copy.subject;
   const body = `
 <!DOCTYPE html>
 <html>
@@ -294,15 +300,16 @@ async function sendMagicLink(email, intent) {
   </div>
 
   <div style="background: #ffffff; padding: 32px; border-radius: 0 0 12px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-    <h2 style="color: #1e40af; margin-top: 0; font-size: 22px;">無料会員登録ありがとうございます！</h2>
+    <h2 style="color: #1e40af; margin-top: 0; font-size: 22px;">${copy.heading}</h2>
 
-    <p style="color: #334155; font-size: 16px; line-height: 1.6;">以下のボタンをクリックして、登録を完了してください。</p>
+    <p style="color: #334155; font-size: 16px; line-height: 1.6;">${copy.lead}</p>
 
     <div style="text-align: center; margin: 32px 0;">
       <a href="${magicLink}" style="display: inline-block; background-color: #3b82f6; color: #ffffff !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 18px; border: 2px solid #3b82f6;">
-        登録を完了する
+        ${copy.cta}
       </a>
     </div>
+    ${copy.note ? `<p style="text-align: center; color: #64748b; font-size: 13px; margin: -16px 0 24px;">${copy.note}</p>` : ''}
 
     <div style="background-color: #f1f5f9; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 4px;">
       <p style="color: #475569; font-size: 14px; margin: 0 0 8px 0; line-height: 1.6;">
@@ -313,7 +320,7 @@ async function sendMagicLink(email, intent) {
       </p>
     </div>
 
-    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;">
+${copy.showBenefits ? `    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;">
 
     <h3 style="color: #1e40af; margin-top: 0; font-size: 18px;">無料会員の特典</h3>
     <ul style="padding-left: 20px; color: #334155; line-height: 1.8;">
@@ -325,16 +332,15 @@ async function sendMagicLink(email, intent) {
 
     <h3 style="color: #1e40af; font-size: 18px;">有料会員になると...</h3>
     <ul style="padding-left: 20px; color: #334155; line-height: 1.8;">
-      <li style="margin-bottom: 8px;">🎯 全買い目（本線+抑え）が見られる</li>
-      <li style="margin-bottom: 8px;">🎯 全期間の的中実績が見られる</li>
-      <li style="margin-bottom: 8px;">🎯 永久アクセス（買い切り¥88,000）</li>
+      <li style="margin-bottom: 8px;">🎯 南関東4場・中央競馬の全レースの馬単買い目</li>
+      <li style="margin-bottom: 8px;">🎯 AI指数の数値とAI結論</li>
     </ul>
 
     <div style="text-align: center; margin-top: 32px;">
       <a href="${base}/pricing" style="display: inline-block; background-color: #10b981; color: #ffffff !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; border: 2px solid #10b981;">
         料金プランを見る →
       </a>
-    </div>
+    </div>` : ''}
 
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;">
 
