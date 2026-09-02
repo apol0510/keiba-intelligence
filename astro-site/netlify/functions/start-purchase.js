@@ -36,19 +36,36 @@
  *    それらのファイルは本番のログイン・登録経路そのものなので、
  *    この作業では書き換えない。
  *
- * 🔴 委譲先は **自分と同じデプロイ**に固定する。
- *    Netlify がビルド時に注入する `DEPLOY_PRIME_URL` / `URL` を優先し、
- *    無い場合だけリクエスト由来の origin（許可ホストのみ）へ落とす。
- *    Host ヘッダーだけを信じると、ブランチデプロイの申し込みが
- *    本番のマジックリンクを送ってしまう。
+ * 🔴 委譲先は **自分と同じデプロイ**でなければならない。
+ *    別デプロイへ委譲すると、そちらの環境変数でマジックリンクが作られ、
+ *    ブランチデプロイの申し込みなのに本番のリンクが届く（2026-09-02 に発生）。
+ *
+ *    判定は **リクエスト元の origin を最優先**にする。
+ *    このリクエストを受けているのが自分である以上、ブラウザが見ている origin が
+ *    そのまま自分のデプロイである。`URL` は「サイトの代表 URL（＝本番）」なので、
+ *    これを先に見るとブランチデプロイから本番へ委譲してしまう。
+ *    `DEPLOY_PRIME_URL` / `URL` は origin も Host も取れないときの保険に留める。
+ *    いずれも `siteOrigin.js` の許可ホストしか通さない。
  */
 
 import { normalizeIntent } from '../../src/lib/billing/purchaseIntent.js';
 import { normalizeSiteOrigin, resolveSiteOrigin } from '../../src/lib/http/siteOrigin.js';
 
+/** リクエストから origin を復元する。判断できなければ null（既定へ倒さない）。 */
+function originFromRequest(headers) {
+  const h = headers || {};
+  const origin = normalizeSiteOrigin(h.origin || h.Origin || '');
+  if (origin) return origin;
+  const host = String(h.host || h.Host || '').trim();
+  if (!host) return null;
+  const isLocal = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+  return normalizeSiteOrigin(`${isLocal ? 'http' : 'https'}://${host}`);
+}
+
 /** 自分自身（同一デプロイ）の origin。 */
 function selfOrigin(event) {
-  return normalizeSiteOrigin(process.env.DEPLOY_PRIME_URL)
+  return originFromRequest(event.headers)
+    || normalizeSiteOrigin(process.env.DEPLOY_PRIME_URL)
     || normalizeSiteOrigin(process.env.URL)
     || resolveSiteOrigin(event.headers);
 }
@@ -139,7 +156,10 @@ export async function handler(event) {
      */
     const useRegister = !found.exists || found.status === 'pending';
     const path = useRegister ? 'register-free' : 'send-magic-link';
-    const res = await fetch(`${selfOrigin(event)}/.netlify/functions/${path}`, {
+    const target = selfOrigin(event);
+    // 🔴 どのデプロイへ委譲したかは追えるようにする（メールの宛先ホストがここで決まる）
+    console.log('→ start-purchase delegate:', target, path);
+    const res = await fetch(`${target}/.netlify/functions/${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, intent }),

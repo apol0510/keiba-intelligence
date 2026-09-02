@@ -204,13 +204,17 @@ describe('認証・認可の契約を変えていない', () => {
   });
 
   test('🔴 委譲先は自分と同じデプロイに固定する', () => {
-    // Host ヘッダーだけを信じると、ブランチデプロイの申し込みで
-    // 本番のマジックリンクが送られてしまう。
+    // `URL` は「サイトの代表 URL（＝本番）」。これを先に見ると、
+    // ブランチデプロイの申し込みが本番の関数へ渡り、本番のマジックリンクが届く
+    // （2026-09-02 に発生。届いたリンクが keiba-intelligence.jp だった）。
     const src = read('netlify/functions/start-purchase.js');
-    const prime = src.indexOf('DEPLOY_PRIME_URL');
-    const req = src.indexOf('resolveSiteOrigin(event.headers)');
-    assert.ok(prime > 0, 'DEPLOY_PRIME_URL を見ていない');
-    assert.ok(req > prime, '🔴 リクエスト由来の origin を DEPLOY_PRIME_URL より先に使っている');
+    const body = src.slice(src.indexOf('function selfOrigin('));
+    const req = body.indexOf('originFromRequest(event.headers)');
+    const prime = body.indexOf('DEPLOY_PRIME_URL');
+    const url = body.indexOf('process.env.URL');
+    assert.ok(req >= 0 && prime > 0 && url > 0);
+    assert.ok(req < prime && req < url,
+      '🔴 リクエスト由来の origin より先に環境変数を使っている');
   });
 
   test('🔴 購入 CTA は単色にしない（2 色グラデーション）', () => {
