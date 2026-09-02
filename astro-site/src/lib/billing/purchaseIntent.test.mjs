@@ -147,6 +147,17 @@ describe('認証・認可の契約を変えていない', () => {
     assert.ok(src.includes('/.netlify/functions/'));
   });
 
+  test('🔴 未認証（pending）の会員が購入導線で行き止まりにならない', () => {
+    // send-magic-link は Status !== 'active' を 403 で止めるため、
+    // 登録済みで未認証の人は再送もできなくなる。
+    const src = read('netlify/functions/start-purchase.js');
+    assert.match(src, /found\.status === 'pending'/);
+    assert.match(src, /const path = useRegister \? 'register-free' : 'send-magic-link'/);
+    // 認可の判断には使わない（Checkout 側はセッションのまま）
+    assert.equal(src.includes('AccessEnabled'), false);
+    assert.equal(src.includes('PlanType'), false);
+  });
+
   test('🔴 委譲先は自分と同じデプロイに固定する', () => {
     // Host ヘッダーだけを信じると、ブランチデプロイの申し込みで
     // 本番のマジックリンクが送られてしまう。

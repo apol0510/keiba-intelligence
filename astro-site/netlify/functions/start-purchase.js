@@ -62,8 +62,13 @@ const ALLOWED_ORIGINS = [
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** email が Customers に存在するか（存在有無だけを返す）。 */
-async function isExistingCustomer(email) {
+/**
+ * email の会員状態を返す。`null` は「判断できない」。
+ *
+ * 🔴 ここで見るのは **どの既存関数へ委譲するか** を決めるためだけ。
+ *    認可の判断には使わない（Checkout は従来どおりセッションを見る）。
+ */
+async function lookupCustomerStatus(email) {
   const key = process.env.AIRTABLE_API_KEY;
   const base = process.env.AIRTABLE_BASE_ID;
   if (!key || !base) return null; // 判断できない
@@ -75,7 +80,9 @@ async function isExistingCustomer(email) {
   );
   if (!res.ok) return null;
   const data = await res.json();
-  return (data.records || []).length > 0;
+  const rec = (data.records || [])[0];
+  if (!rec) return { exists: false, status: null };
+  return { exists: true, status: rec.fields && rec.fields.Status ? String(rec.fields.Status) : null };
 }
 
 export async function handler(event) {
@@ -112,13 +119,26 @@ export async function handler(event) {
   }
 
   try {
-    const existing = await isExistingCustomer(email);
-    if (existing === null) {
+    const found = await lookupCustomerStatus(email);
+    if (found === null) {
       return { statusCode: 503, headers, body: JSON.stringify({ error: 'not_configured' }) };
     }
 
-    // 🔴 既存の関数へそのまま委譲する（Airtable への書き込み・メール文面を二重管理しない）
-    const path = existing ? 'send-magic-link' : 'register-free';
+    /*
+     * 🔴 既存の関数へそのまま委譲する（Airtable への書き込み・メール文面を二重管理しない）
+     *
+     *    `send-magic-link` は Status が active でない会員を 403 で止める。
+     *    登録したがまだ認証を終えていない人（Status: pending）は
+     *    そのままだと購入導線で行き止まりになり、やり直しもできない。
+     *    その場合は `register-free` を通す。これは本人が `/register` で
+     *    同じアドレスを入力したときと **まったく同じ経路**であり、
+     *    重複レコードも作らない（既存レコードをそのまま返す実装）。
+     *
+     *    active / pending 以外（inactive・payment_failed 等）の扱いは変えない。
+     *    従来どおり `send-magic-link` の判断に委ねる。
+     */
+    const useRegister = !found.exists || found.status === 'pending';
+    const path = useRegister ? 'register-free' : 'send-magic-link';
     const res = await fetch(`${selfOrigin(event)}/.netlify/functions/${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
