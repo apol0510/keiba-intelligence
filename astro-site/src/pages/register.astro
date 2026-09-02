@@ -6,6 +6,16 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
 ---
 
 <BaseLayout title={title} description={description}>
+  {/*
+    🔴 ログイン中にこの画面を開いたときの案内。
+       静的ページなので Cookie は読めない。`BaseLayout` の `syncAuthNav` が
+       読み込み後に `[data-auth-in]` を出す（表示だけ。認可には関係しない）。
+  */}
+  <div class="already-signed-in" data-auth-in hidden>
+    <p>すでにログインしています。</p>
+    <a href="/mypage">マイページへ</a>
+  </div>
+
   <main class="container">
     <div class="register-page">
       <div class="register-header">
@@ -524,4 +534,23 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
     grid-template-columns: 1fr;
   }
 }
+</style>
+
+<style>
+  .already-signed-in {
+    max-width: 520px;
+    margin: 24px auto 0;
+    padding: 14px 18px;
+    border-radius: var(--radius-md);
+    background: var(--outlook-bg);
+    border: 1px solid var(--outlook-border);
+    text-align: center;
+    font-size: 0.9rem;
+  }
+
+  .already-signed-in p { margin: 0 0 8px; color: var(--text-secondary); }
+
+  .already-signed-in a { font-weight: 700; color: var(--primary-start); }
+
+  .already-signed-in[hidden] { display: none !important; }
 </style>

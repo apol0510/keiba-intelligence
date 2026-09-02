@@ -1,5 +1,6 @@
 ---
 import AIChat from '../components/AIChat.astro';
+import { entitlementFromAstro } from '../lib/auth/entitlement.js';
 
 interface Props {
   title: string;
@@ -16,12 +17,24 @@ const {
   canonicalPath
 } = Astro.props;
 
+/*
+ * ナビの「ログイン中かどうか」。
+ *
+ * 🔴 これは **表示だけ**のための値。認可は各ページのサーバー側 entitlement が決める。
+ * 🔴 以前は `sessionStorage` を見ていたが、あれはタブ単位の自己申告で、
+ *    正本である署名付き Cookie とずれる（ログイン済みでも「ログイン」のままになる）。
+ * 🔴 静的ページ（`prerender = true`）では Cookie を読めないので guest として描画し、
+ *    読み込み後に `get-session`（Cookie が正本）で上書きする。
+ */
+const navEnt = entitlementFromAstro(Astro);
+const navAuthed = navEnt.authenticated === true;
+
 const siteTitle = `${title} | KEIBA Intelligence`;
 const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
 ---
 
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-auth={navAuthed ? 'in' : 'out'}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -104,8 +117,13 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
           </div>
           <a href="/pricing">料金プラン</a>
           <span id="auth-nav-button">
-            <a href="/register">無料登録</a>
-            <a href="/login">ログイン</a>
+            <a href="/register" data-auth-out hidden={navAuthed}>無料登録</a>
+            <a href="/login" data-auth-out hidden={navAuthed}>ログイン</a>
+            <a href="/mypage" data-auth-in hidden={!navAuthed}>マイページ</a>
+            <form class="nav-logout" method="POST" action="/.netlify/functions/logout"
+                  data-auth-in hidden={!navAuthed}>
+              <button type="submit">ログアウト</button>
+            </form>
           </span>
         </div>
 
@@ -144,7 +162,7 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
               <span class="footer-stat-label">回収率</span>
             </div>
           </div>
-          <a href="/register" class="footer-cta">無料会員登録 →</a>
+          <a href="/register" class="footer-cta" data-auth-out hidden={navAuthed}>無料会員登録 →</a>
         </div>
 
         <details class="footer-section footer-acc" open>
@@ -173,8 +191,8 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
             <ul>
               <li><a href="/faq">よくある質問</a></li>
               <li><a href="/contact">お問い合わせ</a></li>
-              <li><a href="/login">ログイン</a></li>
-              <li><a href="/mypage">マイページ</a></li>
+              <li data-auth-out hidden={navAuthed}><a href="/login">ログイン</a></li>
+              <li data-auth-in hidden={!navAuthed}><a href="/mypage">マイページ</a></li>
             </ul>
           </div>
         </details>
@@ -292,6 +310,7 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
     }
 
     .nav-links a,
+    .nav-links .nav-logout button,
     .nav-dropdown-trigger {
       position: relative;
       display: inline-flex;
@@ -311,6 +330,7 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
     }
 
     .nav-links a:hover,
+    .nav-links .nav-logout button:hover,
     .nav-dropdown-trigger:hover {
       color: var(--text-inverse);
       border-color: var(--primary-start);
@@ -318,6 +338,15 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
       box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
       transform: translateY(-1px);
     }
+
+    /* ログアウトはフォーム送信だが、見た目はほかのナビ項目にそろえる */
+    .nav-logout { display: inline-flex; margin: 0; }
+    .nav-logout button { font-family: inherit; cursor: pointer; }
+
+    /* 🔴 hidden を効かせる（inline-flex 指定に負けないように） */
+    .nav-links [hidden],
+    .footer-acc-body [hidden],
+    a.footer-cta[hidden] { display: none !important; }
 
     #auth-nav-button {
       display: flex;
@@ -752,32 +781,28 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
       });
     }
 
-    // 認証状態チェック（ナビゲーションボタン更新）
-    function updateAuthButton() {
-      const authButton = document.getElementById('auth-nav-button');
-      if (!authButton) return;
-
-      // sessionStorageからセッション情報を確認
-      const sessionAuth = sessionStorage.getItem('keiba_session');
-      if (sessionAuth) {
-        try {
-          const { user, plan, expiresAt } = JSON.parse(sessionAuth);
-          if (expiresAt && new Date() < new Date(expiresAt) && user) {
-            // ログイン済み → マイページリンク表示
-            authButton.innerHTML = `
-              <a href="/mypage" style="font-weight: 600;">マイページ</a>
-            `;
-            return;
-          }
-        } catch (error) {
-          console.error('Session parse error:', error);
-        }
+    /*
+     * ナビの表示をログイン状態に合わせる。
+     *
+     * 🔴 正本は **署名付き Cookie**。`get-session` はそれを検証して返す。
+     *    以前は `sessionStorage` を見ていたためタブ単位の自己申告に依存し、
+     *    ログイン済みでもナビが「ログイン」のままになっていた（2026-09-02）。
+     * 🔴 ここで変わるのは **表示だけ**。有料コンテンツの認可はサーバー側で決まる。
+     */
+    async function syncAuthNav() {
+      let authed = document.documentElement.dataset.auth === 'in';
+      try {
+        const res = await fetch('/.netlify/functions/get-session', { credentials: 'include' });
+        authed = res.ok && (await res.json().catch(() => ({}))).authenticated === true;
+      } catch {
+        // 通信できなければサーバー描画のままにする
       }
-      // 未ログイン → デフォルトのログインリンクのまま
+      document.documentElement.dataset.auth = authed ? 'in' : 'out';
+      document.querySelectorAll('[data-auth-in]').forEach((el) => { el.hidden = !authed; });
+      document.querySelectorAll('[data-auth-out]').forEach((el) => { el.hidden = authed; });
     }
 
-    // ページ読み込み時に実行
-    updateAuthButton();
+    syncAuthNav();
   </script>
 
   <!-- AI Chat Widget -->

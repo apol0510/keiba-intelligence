@@ -391,19 +391,25 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
 <script is:inline>
   // 有料プラン（pro/pro-plus/light）の場合、AI解説のマスクを解除
   // 静的ページ（prerender=true）でも有料会員にフル表示するため
-  function unmaskAICommentsForPaidUser() {
+  async function unmaskAICommentsForPaidUser() {
+    /*
+     * 🔴 判定の正本は **署名付き Cookie**（`get-session` が検証して返す）。
+     *    以前は `sessionStorage` の `plan` を見ていたため、
+     *      - タブ単位の自己申告に依存していた
+     *      - 判定が 'pro' / 'pro-plus' / 'light' のままで、現行の **premium が漏れていた**
+     *        ＝有料会員なのにマスクが解除されなかった（2026-09-02）
+     * 🔴 取得できないときは **マスクを維持**する（fail-closed）。
+     */
     try {
-      const raw = sessionStorage.getItem('keiba_session');
-      if (!raw) return;
-      const session = JSON.parse(raw);
-      const plan = (session && session.plan || '').toLowerCase();
-      const isPaid = plan === 'pro' || plan === 'pro-plus' || plan === 'light';
-      if (!isPaid) return;
+      const res = await fetch('/.netlify/functions/get-session', { credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json().catch(() => ({}));
+      if (data.showBetting !== true) return;
       document.querySelectorAll('.ai-comment-section[data-masked="true"]').forEach((s) => {
         s.dataset.masked = 'false';
       });
     } catch (e) {
-      // session parse error / sessionStorage 不可 → そのまま（マスク継続）
+      // 通信できない → そのまま（マスク継続）
     }
   }
 
