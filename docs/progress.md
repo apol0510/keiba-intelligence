@@ -22,6 +22,34 @@
   `#pr-purchase-auth` が `hidden=false` になりフォームが表示され、入力欄にフォーカスが入る。
 - **未実施**: Test Mode の新規購入本体（確認メール送信以降）はユーザー操作待ちで停止。
 
+
+### 2026-09-02 購入導線: 502 send_failed の修正と CTA の 2 色化（`3d4e9317`）
+
+- **症状**: 「確認メールを送れませんでした」が必ず出る（`start-purchase` が 502 `send_failed`）。
+- **原因**: `start-purchase` が `send-magic-link.js` / `register-free.js` を **プロセス内で取り込んでいた**。
+  両ファイルは `exports.handler` 形式だが、`package.json` が `"type": "module"` のため
+  esbuild は ESM として扱い、バンドル後は `exports` がバンドル側の変数へ化けて
+  `handler` が `undefined` になる（ローカルで同条件のバンドルを作り再現・確認）。
+  この 2 ファイルは本番のログイン・登録経路そのものなので、本作業では書き換えない。
+- **修正**: **同一デプロイへの HTTP 委譲**へ変更。委譲先は Netlify がビルド時に注入する
+  `DEPLOY_PRIME_URL` / `URL` を優先し、無い場合だけ許可ホストのリクエスト origin へ落とす
+  （Host ヘッダーだけを信じると、ブランチデプロイの申し込みで本番のマジックリンクが送られる）。
+- **あわせて修正**: `send-magic-link` は `Status !== 'active'` を 403 で止めるため、
+  登録済みで未認証（`pending`）の人が購入導線で行き止まりになり、やり直しもできなかった。
+  未登録または `pending` は `register-free` を通す（本人が `/register` で同じアドレスを
+  入力したときと同じ経路。重複レコードも作らない）。
+  `inactive` / `payment_failed` の扱いは変更していない。
+- **UI**: 申し込み CTA と確認メール送信ボタンを `--grad-action`（桃→橙の 2 色）へ。
+  CTA 直下に「① メール確認 → ② お支払い → ③ すぐに利用開始」、押した CTA に
+  `is-open` / `aria-expanded`、確認フォームに `STEP 1 / 3` バッジ・接続矢印・出現アニメーション。
+- **再発防止**: `purchaseIntent.test.mjs` に、プロセス内委譲へ戻っていないこと /
+  `DEPLOY_PRIME_URL` を優先すること / `pending` を `register-free` へ通すこと /
+  購入 CTA が `--grad-action` で単色でないこと、を固定（billing 49→53 件）。
+- **検証**: branch deploy で `invalid_email` 400 / `invalid_plan` 400 / GET 405 /
+  Checkout は cookie 無しで 401。CTA の背景が
+  `linear-gradient(135deg, rgb(236,72,153), rgb(249,115,22))` であることを実ページで確認。
+- **未実施**: 実際の確認メール送信以降（Test Mode 購入本体）はユーザー操作待ちで停止。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
