@@ -129,9 +129,15 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
             </ul>
 
             {plan.purchasable ? (
-              <button class="pr-btn pr-btn-primary pr-plan-cta" type="button" data-checkout={plan.id}>
-                このプランを申し込む
+              <button class="pr-btn pr-btn-action pr-plan-cta" type="button" data-checkout={plan.id}
+                      aria-controls="pr-purchase-auth" aria-expanded="false">
+                <span class="pr-cta-label">このプランを申し込む</span>
               </button>
+              <p class="pr-plan-steps">
+                <span>①&nbsp;メール確認</span><span class="pr-step-sep">→</span>
+                <span>②&nbsp;お支払い</span><span class="pr-step-sep">→</span>
+                <span>③&nbsp;すぐに利用開始</span>
+              </p>
             ) : (
               <>
                 <button class="pr-btn pr-btn-disabled" type="button" disabled>まもなく受付開始</button>
@@ -148,15 +154,20 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
            送信後は登録・ログインのどちらでも、認証を終えると購入へ戻る。
       */}
       <div class="pr-purchase-auth" id="pr-purchase-auth" hidden>
-        <h3>購入手続きのためメールアドレスを確認します</h3>
+        <p class="pr-purchase-step" aria-hidden="true">
+          <span class="pr-purchase-step-now">STEP 1 / 3</span>
+          <span class="pr-purchase-step-of">メールアドレスの確認</span>
+        </p>
+        <h3>お申し込みを続けます</h3>
         <p class="pr-purchase-lead">
-          確認メールをお送りします。メール内のリンクを開くと、<b>このままお申し込みに戻ります</b>。
+          ご本人確認のため、確認メールをお送りします。<br />
+          メール内のリンクを開くと、<b>このままお支払い画面へ進みます</b>。
         </p>
         <form id="pr-purchase-form" novalidate>
           <label class="pr-purchase-label" for="pr-purchase-email">メールアドレス</label>
           <input class="pr-purchase-input" id="pr-purchase-email" type="email" name="email"
                  autocomplete="email" inputmode="email" placeholder="your@email.com" required />
-          <button class="pr-btn pr-btn-primary pr-purchase-submit" type="submit">確認メールを送る</button>
+          <button class="pr-btn pr-btn-action pr-purchase-submit" type="submit">確認メールを送る</button>
         </form>
         <p class="pr-purchase-msg" id="pr-purchase-msg" hidden></p>
         <p class="pr-purchase-note">
@@ -376,6 +387,12 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     const box = document.getElementById('pr-purchase-auth');
     if (!box) return;
     box.hidden = false;
+    // 押した CTA 自身にも「下へ続く」ことを出す（何が起きたか分かるように）
+    document.querySelectorAll('[data-checkout]').forEach((b) => {
+      const mine = b.getAttribute('data-checkout') === planId;
+      b.classList.toggle('is-open', mine);
+      b.setAttribute('aria-expanded', mine ? 'true' : 'false');
+    });
     box.scrollIntoView({ behavior: 'smooth', block: 'center' });
     const input = document.getElementById('pr-purchase-email');
     if (input) input.focus();
@@ -840,15 +857,97 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
   }
 
   /* 購入手続きのメール確認 */
+  /* 🔴 購入の CTA は「行動」の 2 色グラデーション（--grad-action / 桃→橙）。
+     単色は使わない（global.scss の 2026-08-31 のトークン方針に合わせる）。 */
+  .pr-btn-action {
+    background: var(--grad-action);
+    color: var(--text-inverse);
+    box-shadow: 0 6px 18px rgba(236, 72, 153, 0.3);
+  }
+
+  .pr-btn-action:hover {
+    transform: translateY(-2px);
+    color: var(--text-inverse);
+    box-shadow: 0 10px 24px rgba(249, 115, 22, 0.36);
+  }
+
+  .pr-plan-cta {
+    width: 100%;
+    font-size: 1.05rem;
+    padding: 15px 26px;
+  }
+
+  /* 押したあと、どこへ進むのかを CTA 自身に出す */
+  .pr-plan-cta.is-open .pr-cta-label::after {
+    content: ' ↓ 下でメールを確認';
+    font-size: 0.82rem;
+    opacity: 0.9;
+  }
+
+  .pr-plan-cta.is-open { box-shadow: 0 4px 10px rgba(236, 72, 153, 0.22); }
+
+  .pr-plan-steps {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 10px 0 0;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text-tertiary);
+  }
+
+  .pr-step-sep { color: var(--secondary-start); }
+
   .pr-purchase-auth {
+    position: relative;
     max-width: 520px;
     margin: 18px auto 0;
     padding: 20px 22px;
     background: var(--bg-secondary);
-    border: 2px solid var(--primary-start);
+    border: 2px solid var(--action-border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
+    animation: pr-purchase-in 0.28s ease-out both;
   }
+
+  /* プランカードから続いていることを示す矢印 */
+  .pr-purchase-auth::before {
+    content: '';
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    transform: translateX(-50%) rotate(45deg);
+    background: var(--bg-secondary);
+    border-left: 2px solid var(--action-border);
+    border-top: 2px solid var(--action-border);
+  }
+
+  @keyframes pr-purchase-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .pr-purchase-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+
+  .pr-purchase-step-now {
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--grad-action);
+    color: var(--text-inverse);
+    letter-spacing: 0.04em;
+  }
+
+  .pr-purchase-step-of { color: var(--text-secondary); }
 
   .pr-purchase-auth h3 {
     font-family: var(--font-serif);
@@ -883,7 +982,11 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     margin-bottom: 12px;
   }
 
-  .pr-purchase-submit { width: 100%; }
+  .pr-purchase-submit {
+    width: 100%;
+    padding: 14px 26px;
+    font-size: 1rem;
+  }
 
   .pr-purchase-msg {
     margin: 12px 0 0;

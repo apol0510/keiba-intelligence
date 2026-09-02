@@ -25,7 +25,33 @@
  *    変えると、任意のアドレスで会員の有無を判定できてしまう。
  */
 
+/*
+ * 🔴 委譲は **同一デプロイへの HTTP** で行う。プロセス内 import ではない。
+ *
+ *    `send-magic-link.js` / `register-free.js` は `exports.handler` 形式だが、
+ *    `package.json` が `"type": "module"` のため esbuild は ESM として扱う。
+ *    そのため他の関数から取り込むと `exports` がバンドル側の変数に化け、
+ *    `require('./send-magic-link.js').handler` が undefined になる
+ *    （2026-09-02 に 502 send_failed として発生。バンドル再現で確認済み）。
+ *    それらのファイルは本番のログイン・登録経路そのものなので、
+ *    この作業では書き換えない。
+ *
+ * 🔴 委譲先は **自分と同じデプロイ**に固定する。
+ *    Netlify がビルド時に注入する `DEPLOY_PRIME_URL` / `URL` を優先し、
+ *    無い場合だけリクエスト由来の origin（許可ホストのみ）へ落とす。
+ *    Host ヘッダーだけを信じると、ブランチデプロイの申し込みが
+ *    本番のマジックリンクを送ってしまう。
+ */
+
 import { normalizeIntent } from '../../src/lib/billing/purchaseIntent.js';
+import { normalizeSiteOrigin, resolveSiteOrigin } from '../../src/lib/http/siteOrigin.js';
+
+/** 自分自身（同一デプロイ）の origin。 */
+function selfOrigin(event) {
+  return normalizeSiteOrigin(process.env.DEPLOY_PRIME_URL)
+    || normalizeSiteOrigin(process.env.URL)
+    || resolveSiteOrigin(event.headers);
+}
 
 const ALLOWED_ORIGINS = [
   'https://keiba-intelligence.jp',
@@ -54,7 +80,6 @@ async function isExistingCustomer(email) {
 
 export async function handler(event) {
   const origin = event.headers.origin || '';
-  const { normalizeSiteOrigin } = await import('../../src/lib/http/siteOrigin.js');
   const headers = {
     'Access-Control-Allow-Origin': normalizeSiteOrigin(origin) || ALLOWED_ORIGINS[0],
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -93,16 +118,16 @@ export async function handler(event) {
     }
 
     // 🔴 既存の関数へそのまま委譲する（Airtable への書き込み・メール文面を二重管理しない）
-    const target = existing ? './send-magic-link.js' : './register-free.js';
-    const { handler: delegate } = await import(target);
-    const res = await delegate({
-      ...event,
-      httpMethod: 'POST',
+    const path = existing ? 'send-magic-link' : 'register-free';
+    const res = await fetch(`${selfOrigin(event)}/.netlify/functions/${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, intent }),
     });
 
     // 🔴 会員かどうかで応答を変えない（存在判定に使わせない）
-    const ok = res && res.statusCode >= 200 && res.statusCode < 300;
+    const ok = res.ok;
+    if (!ok) console.error(`❌ start-purchase: ${path} responded ${res.status}`);
     return {
       statusCode: ok ? 200 : 502,
       headers,
@@ -110,8 +135,8 @@ export async function handler(event) {
         ? { sent: true }
         : { error: 'send_failed' }),
     };
-  } catch {
-    console.error('❌ start-purchase failed');
+  } catch (err) {
+    console.error('❌ start-purchase failed:', err && err.message);
     return { statusCode: 502, headers, body: JSON.stringify({ error: 'send_failed' }) };
   }
 }

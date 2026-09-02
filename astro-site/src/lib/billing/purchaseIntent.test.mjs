@@ -128,6 +128,46 @@ describe('認証・認可の契約を変えていない', () => {
     assert.match(reg, /AccessEnabled: false,/);
   });
 
+  test('🔴 start-purchase は CJS 関数をプロセス内で取り込まない', () => {
+    // `send-magic-link.js` / `register-free.js` は `exports.handler` 形式だが
+    // package.json が type:module のため esbuild は ESM として扱う。
+    // 取り込むと handler が undefined になり 502 になる（2026-09-02）。
+    // コメントは対象外（禁止事項の説明自体は書いてよい）
+    const src = read('netlify/functions/start-purchase.js')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+    for (const bad of [
+      "import('./send-magic-link", "import('./register-free",
+      "require('./send-magic-link", "require('./register-free",
+      'import(target)',
+    ]) {
+      assert.ok(!src.includes(bad), `🔴 プロセス内委譲が復活している: ${bad}`);
+    }
+    // HTTP で同一デプロイへ委譲する
+    assert.ok(src.includes('/.netlify/functions/'));
+  });
+
+  test('🔴 委譲先は自分と同じデプロイに固定する', () => {
+    // Host ヘッダーだけを信じると、ブランチデプロイの申し込みで
+    // 本番のマジックリンクが送られてしまう。
+    const src = read('netlify/functions/start-purchase.js');
+    const prime = src.indexOf('DEPLOY_PRIME_URL');
+    const req = src.indexOf('resolveSiteOrigin(event.headers)');
+    assert.ok(prime > 0, 'DEPLOY_PRIME_URL を見ていない');
+    assert.ok(req > prime, '🔴 リクエスト由来の origin を DEPLOY_PRIME_URL より先に使っている');
+  });
+
+  test('🔴 購入 CTA は単色にしない（2 色グラデーション）', () => {
+    const src = read('src/pages/pricing.astro');
+    // 申し込みボタン・確認メール送信ボタンはどちらも行動グラデーション
+    assert.ok(/class="pr-btn pr-btn-action pr-plan-cta"/.test(src), '申し込み CTA が pr-btn-action でない');
+    assert.ok(/class="pr-btn pr-btn-action pr-purchase-submit"/.test(src), '送信ボタンが pr-btn-action でない');
+    const rule = src.slice(src.indexOf('.pr-btn-action {'), src.indexOf('.pr-btn-action:hover'));
+    assert.ok(rule.includes('var(--grad-action)'), '🔴 --grad-action を使っていない');
+    assert.ok(!/background:\s*(#|var\(--primary-start\)|var\(--secondary-start\))/.test(rule),
+      '🔴 単色背景になっている');
+  });
+
   test('🔴 購入導線の関数は startCheckout と同じスコープにある', () => {
     // DOMContentLoaded の内側に置くと startCheckout から参照できず、
     // クリック時に ReferenceError で「現在お申し込みを受け付けられません」になる
@@ -145,8 +185,10 @@ describe('認証・認可の契約を変えていない', () => {
 
   test('🔴 /pricing は「無料会員登録」を購入の目的として見せない', () => {
     const src = read('src/pages/pricing.astro');
-    const box = src.slice(src.indexOf('pr-purchase-auth'), src.indexOf('pr-plan-msg'));
-    assert.match(box, /購入手続きのためメールアドレスを確認します/);
+    // 🔴 箱そのものを見る（CTA の aria-controls を拾わないよう開始タグで切る）
+    const box = src.slice(src.indexOf('<div class="pr-purchase-auth"'), src.indexOf('pr-plan-msg'));
+    assert.match(box, /お申し込みを続けます/);
+    assert.match(box, /このままお支払い画面へ進みます/);
     for (const w of ['無料会員登録', '無料登録', 'まず登録']) {
       assert.equal(box.includes(w), false, `🔴 購入導線に「${w}」が出ている`);
     }
