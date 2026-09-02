@@ -142,6 +142,13 @@ export async function handler(event) {
     let redirectTo = '/free-prediction';
     if (tier === TIER.LIGHT || tier === TIER.PREMIUM) redirectTo = '/mypage';
 
+    // 🔴 購入導線から来た場合は購入の続きへ戻す（登録→認証→Checkout を 1 本に繋ぐ）。
+    //    受け取るのは **プラン id だけ**で、戻り先のパスは
+    //    `resumePathFor` が固定文字列で組み立てる（open redirect を作らない）。
+    //    未知・空・URL 等はすべて無視され、従来の戻り先のままになる。
+    const { resumePathFor } = await import('../../src/lib/billing/purchaseIntent.js');
+    redirectTo = resumePathFor(event.queryStringParameters?.intent, redirectTo);
+
     return {
       statusCode: 200,
       headers: responseHeaders,

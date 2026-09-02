@@ -141,7 +141,11 @@ export const prerender = false;
     }
 
     try {
-      const response = await fetch(`/.netlify/functions/verify-magic-link?token=${token}`);
+      // 🔴 購入導線から来た場合は intent（プラン id）をそのまま渡す。
+      //    戻り先はサーバーが固定パスで決めるので、ここでは値を解釈しない。
+      const intent = urlParams.get('intent');
+      const q = `token=${encodeURIComponent(token)}` + (intent ? `&intent=${encodeURIComponent(intent)}` : '');
+      const response = await fetch(`/.netlify/functions/verify-magic-link?${q}`);
       const data = await response.json();
 
       if (response.ok && data.success) {
