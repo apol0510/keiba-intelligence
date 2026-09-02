@@ -50,6 +50,28 @@
   `linear-gradient(135deg, rgb(236,72,153), rgb(249,115,22))` であることを実ページで確認。
 - **未実施**: 実際の確認メール送信以降（Test Mode 購入本体）はユーザー操作待ちで停止。
 
+
+### 2026-09-02 認証後に購入へ戻れない（`1cbaa561`）
+
+- **症状**: 確認メールのリンクを開くと `/free-prediction/` に着き、購入へ戻らない。
+- **サーバー側は実デプロイで各段を確認し、いずれも正常だった**:
+  `start-purchase` の委譲 body に `intent` が入る / `register-free` が
+  `...&intent=premium` のリンクを作る（いずれもバンドル再現で確認）/
+  `/auth/verify` が `verify-magic-link?token=...&intent=premium` を発行する（実デプロイで確認）/
+  `resumePathFor` が `/pricing?resume=premium` を返す
+  （`normalizeIntent('premium')` が deploy 上で有効なことは `start-purchase` の 200 応答で確認）。
+- **未検証だった唯一の区間**: 「メールで配送されたリンクの実物」。
+  テスト会員の write を行わない条件では、この区間を自分で通せなかった。
+- **対応**: クエリの生存に依存しない経路を追加。確認メールを送った時点で
+  プラン id だけを `localStorage` に控え（TTL 15 分）、`/auth/verify` は
+  URL の `intent` を最優先し、無ければ控えを使う（使用後に削除）。
+  控えは読み出し時も `normalizeIntent` を通す。**認可には一切使わない**。
+- **検証**: 実デプロイで、URL に `intent` を付けずに `/auth/verify?token=...` を開くと
+  `verify-magic-link?token=...&intent=premium` が発行されることを確認。
+- **診断**: `verify-magic-link` に「intent を受け取ったか / 有効だったか」だけを出力（値は出さない）。
+- **Open Question**: 配送されたリンクから `intent` が落ちた原因は未特定
+  （SendGrid のクリック追跡による書き換えの可能性）。次回の発生時は上記ログで切り分ける。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
