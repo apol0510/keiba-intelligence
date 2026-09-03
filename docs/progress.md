@@ -469,6 +469,82 @@ Production deploy / merge / E2E の後片付け（テストレコード削除）
 
 **したがって「17 項目すべてが期待どおり」には到達していない。**
 
+### 2026-09-03 完成条件 #12 の確認（read-only）と、残り（#9 / #13–17）の実施計画
+
+#### #12 の判定 ✅（追加 write なし）
+
+本番 Airtable から実データを read-only で読み、**本番と同じコード経路**
+（`airtableStore.readProfile` / `readLedger` → `buildMembershipView`）へ通した。
+
+| `/mypage` の会員クラブ枠 | 値 | 期待 | 判定 |
+|---|---|---|---|
+| KIリワード残高 | **100 pt** | 100 pt | ✅ |
+| 今月の積み上げ | **100 pt** | 100 pt | ✅ |
+| ポイントの状態 | `active` | — | — |
+| 継続月数 | 1（`source=ledger`）| — | — |
+| 会員ランク | Bronze | — | — |
+
+🔴 **描画そのものは開いていない。** `/mypage` を実際に表示するにはログインが必要で、
+マジックリンクの発行（セッション書き込み）とメール送信が発生する＝「追加 write なし」に反する。
+値の算出は本番と同じ関数を実データに通して確認した。
+
+#### 🔴 前提の欠落: `PeriodMonths` の修正が branch deploy に載っていない
+
+Stripe の送信先 `KI Test Webhook` は **branch deploy の URL** を指すが、
+branch deploy は **`4aadb0a8` のまま**である（`57da2619` は deploy-preview しか作られていない）。
+
+| context | 最新 commit | 状態 |
+|---|---|---|
+| branch-deploy | **`4aadb0a8`** | ready（2026-09-02 14:24 UTC）|
+| deploy-preview | `57da2619` | ready（2026-09-03 03:05 UTC）|
+
+**このまま新しい支払いを起こしても、台帳の行はまた `PeriodMonths` が空になる。**
+#9 を満たすには **branch deploy を `57da2619` で作り直すことが先**。
+
+#### 残りの完成条件を満たすために必要な操作（**未実施・承認待ち**）
+
+対象テスト会員: **`0510apolon+test4@gmail.com`（1 レコードのみ）**。
+`applyPlan` は既存レコードを引くだけで**新規作成しない**ため、この会員を使えば
+`Customers` のレコードは増えない。
+
+| 手順 | 操作 | 発生する production Airtable write |
+|---|---|---|
+| 0 | branch deploy を `57da2619` で再ビルド | なし |
+| 1（#9）| branch deploy で **新しい Checkout**（`4242…`）| `Customers`×1 更新（`PlanType`/`Status`/`AccessEnabled`）＋ `Customers`×1 更新（`CancelledAt`=空）＋ **`RewardLedger` +1 行**（`Points=100` / **`PeriodMonths=1`**）|
+| 2（#13–16）| Customer Portal から**解約** | `Customers`×1 更新（`PlanType=free`/`Status=inactive`/`AccessEnabled=false`）＋ `Customers`×1 更新（`CancelledAt`=解約日）。**`RewardLedger` は増えない** |
+| 3（#17）| 支払い失敗を再現（失敗するテストカード）| `Customers`×1 更新（`Status=payment_failed`）。🔴 **`RewardLedger` が増えないことを確認** |
+
+**合計**: `RewardLedger` **+1 行** / `Customers` は **テスト会員 1 レコードに最大 6 回の更新**。
+触れる列は `PlanType` / `Status` / `AccessEnabled` / `CancelledAt` の **4 列だけ**。
+🔴 `ContractPrice*` は既に入っているため**上書きされない**（M-1）。
+🔴 **実会員 65 件には一切触れない**（webhook は email で 1 レコードを引く）。
+
+#### rollback（実施前の値・2026-09-03 実測）
+
+| 対象 | 現在の値 | 戻し方 |
+|---|---|---|
+| `Customers` `PlanType` | `premium` | 手で戻す |
+| `Customers` `Status` | `active` | 手で戻す |
+| `Customers` `AccessEnabled` | `true` | 手で戻す |
+| `Customers` `CancelledAt` | **空** | 空に戻す |
+| `Customers` `ContractPriceYen` / `Currency` / `PriceId` / `ContractStartedAt` | `3980` / `jpy` / `price_1UAsLMLbPC6OVRqMoZ3VSfRR` / `2026-09-02` | 触られない（上書きしない）|
+| `Customers` `MembershipStartedAt` | 空 | 触られない |
+| `RewardLedger` | 1 行（`rec3CBnoBgkapPsdf`）| 追加された行を削除（既存 1 行は残す）|
+| Stripe（Test Mode）| — | 作ったサブスクをキャンセル |
+
+🔴 手順 2 の途中でテスト会員は **free に落ちる**（#14 の期待どおり）。
+🔴 `MEMBERSHIP_WRITE_ENABLED` は本番で有効のままなので、
+   **手順 1 を実行した時点で本番 Airtable に行が増える**。
+
+#### 判断が要る点
+
+- 手順 3 の「支払い失敗」をどのテストカードで再現するかは**実行時に決める**必要がある
+  （サブスク作成時に失敗すると Checkout 自体が完了しないため、
+  「登録は通るが請求で失敗する」カードを選ぶ）。
+- 既存の `RewardLedger` 1 行は修正前に書かれたため `PeriodMonths` が空のままだが、
+  **月額 1 か月ぶんで値としては正しい**（旧行として 1 か月と数えられる）。
+  遡って埋めるかどうかは別途判断。
+
 ### 2026-09-03 二重配信の解消（承認済み・Test Mode のみ）
 
 同一 URL を指す送信先が 2 つあり、片方は今週 12 件すべて 400 `invalid_signature` だった。
