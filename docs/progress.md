@@ -305,6 +305,45 @@
   根拠としては `docs/MEMBERSHIP_DATA_MIGRATION.md` §2.1 / §2.2 の列型が
   `Date (ISO)`（時刻なし）であることと、422 の符号が一致している。
 
+### ✅ 2026-09-03 PR #82 を merge ＋ 本番反映（承認済み）
+
+| 項目 | 値 |
+|---|---|
+| PR | **#82**（58 commits・Draft 解除のうえ merge）|
+| 方式 | **merge commit**（`48038430`）。🔴 squash にしない — 本書が branch の SHA を 25 か所以上参照しているため |
+| 前例 | 大型 PR #80（`da1a8922`）も merge commit |
+| 本番デプロイ | **`48038430` production ready**（2026-09-03 07:58:39 UTC）|
+
+#### 本番での実測（read-only）
+
+| 検査 | 結果 |
+|---|---|
+| guest → `/prediction/nankan` | **302 → `/free-prediction/nankan`** ✅ |
+| guest → `/prediction/jra` | **302 → `/free-prediction/jra`** ✅ |
+| guest → `/prediction/2026-09-03-ooi` | **302 → `/free-prediction/nankan/2026-09-03-ooi`**（転送先 200）✅ |
+| `/free-prediction/{nankan,jra}` | **200** ✅ |
+| `/register` / `/pricing` | **200** ✅ |
+| 無料ページの中身（guest）| **AI結論 0 件**。「買い目」「◎」の出現は
+  **`🔒馬単の買い目` / `印（◎○▲△）は無料会員…` などの説明・CTA・meta のみ**で、
+  実データの買い目・印は**描画されていない** ✅ |
+
+#### 本番に載った主な変更
+
+1. Airtable 422 の恒久修正（`Date (ISO)` 列へ日付だけ送る）
+2. `RewardLedger` に `PeriodMonths` を保存（年払いのランク過少を解消）
+3. 予想ページを URL で無料/有料に分ける
+4. 認証済みアドレスの再登録ブロック
+5. `node --test` の IPC 起因のビルド不安定を解消
+6. 購入導線・ログイン・マイページ・AI解説の是正
+
+🟡 **有料会員が `/free-prediction/*` をブックマークしていると買い目が見えなくなる**
+（設計どおり。買い目は `/prediction/*` に一本化された）。
+
+#### 未実施
+
+🔴 Test Mode の後片付け（テストレコード削除 / Branch deploys スコープの env 削除 /
+webhook 送信先削除）は**行っていない**。再検証できる状態を残してある。
+
 ### 2026-09-03 Deploy Preview のビルド失敗（`9b5b2048`）— ✅ **原因確定・恒久修正**
 
 | 項目 | 値 |
