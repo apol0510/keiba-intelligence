@@ -305,6 +305,30 @@
   根拠としては `docs/MEMBERSHIP_DATA_MIGRATION.md` §2.1 / §2.2 の列型が
   `Date (ISO)`（時刻なし）であることと、422 の符号が一致している。
 
+### 2026-09-03 Deploy Preview のビルド失敗（`9b5b2048`）— 原因未確定
+
+| 項目 | 値 |
+|---|---|
+| 失敗した deploy | deploy-preview `9b5b2048`（2026-09-03 05:28:04 UTC ＝ 14:28 JST）|
+| メッセージ | `Failed during stage 'building site': Build script returned non-zero exit code: 2` |
+| **その後の HEAD** | deploy-preview **`0c10e258` は ready**（07:09 UTC）|
+
+- Netlify の API は**ビルドログ本体を返さない**（`log_access_attributes: null` /
+  `summary.status: unavailable`）ため、**根本原因は特定できていない**。
+- `exit code 2` は既知の Open Question
+  「`npm run build` 中に `Unable to deserialize cloned data` で落ちることがある
+  （`stripeWebhook.test.mjs`・`--experimental-test-module-mocks`）」と**同じ符号**で、
+  `4aadb0a8` の branch-deploy（09-02 14:18:57 UTC）でも同形で落ち、再実行で通っている。
+- 切り分けのため、ローカルで `npm run test:stripe` を **12 回連続実行 → 0 回失敗**。
+  **ローカルでは再現しない**（過去 2 回はいずれも Netlify 側）。
+
+🔴 **「対応済み」と言い切れるのは「現在の HEAD がビルドできること」だけ**である。
+原因が上記の不安定さであれば **未解決で、また起きる**。
+確定させるには失敗ログの「`build.command` failed」より**上の行**が要る。
+
+- 他の deploy-preview の `error` は
+  `Canceled build due to no content change`（docs のみの commit）で、**ビルド失敗ではない**。
+
 ### 2026-09-03 恒久修正の成功と冪等性を実測（Test Mode 再送・承認済み）
 
 仕様所有者の承認を得て、**今回のテスト会員（`0510apolon+test4@gmail.com`）の該当イベントだけ**を再送した。
