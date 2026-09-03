@@ -545,6 +545,19 @@ branch deploy は **`4aadb0a8` のまま**である（`57da2619` は deploy-prev
   **月額 1 か月ぶんで値としては正しい**（旧行として 1 か月と数えられる）。
   遡って埋めるかどうかは別途判断。
 
+### 2026-09-03 手順0 の実施（A-1 承認・`allowed_branches` の一時追加）
+
+仕様所有者の承認（A-1）により、Netlify のビルド設定を**一時的に**変更した。
+
+| 項目 | 変更前 | 変更中 | 戻す先 |
+|---|---|---|---|
+| `allowed_branches` | `["main"]` | `["main","test/stripe-testmode-e2e-2026-09-01"]` | **`["main"]`（E2E 後に必ず戻す）** |
+
+- 変更前の設定は `/tmp/site-before.json` に保存した。
+- 変更したのは `allowed_branches` **1 項目のみ**。`repo_branch` / `stop_builds` /
+  `base` / `cmd` / `dir` は触っていない。
+- 🔴 `main`（production）の扱いは変えていない。
+
 ### 🔴 2026-09-03 手順0（branch deploy 再ビルド）が実行できない — 原因確定
 
 承認を受けて `57da2619` を branch deploy へ再ビルドしようとしたが、**実行できない**。
