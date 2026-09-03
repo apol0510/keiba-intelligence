@@ -67,12 +67,40 @@ function escapeFormulaValue(v) {
  *
  * Blobs が使えない場合は冪等性をあきらめて処理する（at-least-once）。
  * 二重反映しても書き込む値は同じなので状態は壊れない。
+ *
+ * 🔴 **ただし黙って諦めない。** 失敗は必ず 1 行ログに残す（`logBlobsFailure`）。
+ *    引数なしの `catch {}` で握りつぶすと、冪等性が失われても応答にもログにも
+ *    痕跡が出ず、「再送しても `duplicate:true` にならない」原因を切り分けられない
+ *    （2026-09-03 の Test Mode E2E で実際に切り分け不能になった）。
+ */
+
+/**
+ * Blobs の失敗理由を 1 行だけ残す。
+ *
+ * 🔴 **値は出さない。** エラーの種別と文言だけを出し、トークン・顧客情報は混ぜない。
+ *    これで次の 2 つを切り分けられる。
+ *      - `MissingBlobsEnvironmentError` → Blobs の環境が関数に渡っていない
+ *      - `ERR_MODULE_NOT_FOUND` 等      → バンドルに `@netlify/blobs` が載っていない
+ */
+function logBlobsFailure(where, err) {
+  console.error(
+    `🔴 stripe-webhook: Blobs ${where} failed — idempotency degraded (at-least-once):`,
+    err?.name || 'Error',
+    err?.message || ''
+  );
+}
+
+/**
+ * 🔴 **ストアをキャッシュしない。** 一度成功した store を使い回すと、
+ *    あとから Blobs が壊れた状態を検出できなくなる（テストの broken 状態も再現できない）。
+ *    `import()` はモジュールキャッシュが効くので、毎回呼んでも実質的な負荷は無い。
  */
 async function eventStore() {
   try {
     const { getStore } = await import('@netlify/blobs');
     return getStore('stripe-events');
-  } catch {
+  } catch (err) {
+    logBlobsFailure('getStore', err);
     return null;
   }
 }
@@ -82,7 +110,8 @@ async function hasProcessed(eventId) {
     const store = await eventStore();
     if (!store) return false;
     return !!(await store.get(eventId));
-  } catch {
+  } catch (err) {
+    logBlobsFailure('get', err);
     return false;
   }
 }
@@ -92,9 +121,10 @@ async function markProcessed(eventId) {
     const store = await eventStore();
     if (!store) return;
     await store.set(eventId, new Date().toISOString());
-  } catch {
+  } catch (err) {
     // 記録できなくても処理そのものは成功している。次の再送で二重反映しうるが
-    // 書き込む値は同じなので状態は壊れない。
+    // 書き込む値は同じなので状態は壊れない。ただし黙って失わない。
+    logBlobsFailure('set', err);
   }
 }
 

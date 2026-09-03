@@ -945,6 +945,68 @@ stop_builds:      false
 - 🔴 **本番（Live Mode）の送信先には触れていない。** env（`STRIPE_WEBHOOK_SECRET`）も未変更。
 - 判断の記録: `docs/decisions.md`「2026-09-03 — Test Mode の重複 webhook 送信先を無効化する」
 
+### 2026-09-03 R-2 冪等性の切り分け — `@netlify/blobs` を正規依存化 ＋ 失敗の可視化
+
+- **症状**: Test Mode で同一 `event.id` を再送しても、応答が `duplicate:true` にならない
+  （E2E #6 が 🟡 のまま。二重更新が無いことだけは確認済み）。
+- 🔴 **原因は未確定。断定を訂正した。**
+  当初「`@netlify/blobs` が `dependencies` に無いのでバンドルで解決できない」と報告したが、
+  これは**成立しない**。`@netlify/blobs` は `@astrojs/netlify`（本番 `dependencies`）の
+  推移的依存として `node_modules` に載っており（10.5.0・非 dev）、
+  `netlify.toml` の `node_bundler = "esbuild"` は `external_node_modules`
+  （`airtable` / `@sendgrid/mail` / `stripe`）以外を**バンドルに取り込む**。
+- **確定しているのはこれだけ**: `eventStore()` / `hasProcessed()` / `markProcessed()` が
+  引数なしの `catch {}` で失敗を握りつぶしていたため、
+  - `hasProcessed` は常に `false` を返す（＝毎回「初回」扱い）
+  - `markProcessed` は無言で何もしない
+
+  となり、**応答にもログにも痕跡が残らず、次の 2 つを切り分けられなかった**。
+
+  | 想定 | 実際に出るエラー |
+  |---|---|
+  | Blobs の環境が関数に渡っていない | `MissingBlobsEnvironmentError` |
+  | バンドルに載っていない | `ERR_MODULE_NOT_FOUND` 等 |
+
+- **単体テストが緑だった理由**: `stripeWebhook.test.mjs` は `@netlify/blobs` を
+  `mock.module` で差し替えるため、**依存が無くてもテストは通る**。本番だけ壊れる型の欠陥。
+
+#### 実施した修正
+
+1. `@netlify/blobs@^10.5.0` を `astro-site/package.json` の `dependencies` へ**明示**。
+   推移的依存に頼ると上流の都合で黙って消える。
+   lockfile はルートの `dependencies` 1 行だけを追加（**差分は 2 ファイル 2 行・削除 0**）。
+   🔴 `npm install --package-lock-only` は `netlify-cli` 配下の optional/peer エントリを
+   **475 行削除**する正規化を起こしたため、**差し戻して手で最小差分にした**。
+2. `logBlobsFailure(where, err)` を追加し、`getStore` / `get` / `set` の 3 経路すべてで
+   `console.error` に**種別と文言だけ**を 1 行出す（🔴 値・トークン・顧客情報は出さない）。
+3. 🔴 **store をキャッシュしない**（意図的）。一度成功した store を使い回すと、
+   あとから Blobs が壊れても検出できず、テストの broken 状態も再現できなくなる。
+4. 静的ガード `src/lib/billing/stripeWebhookBlobs.guard.test.mjs`（4 件）を追加し
+   `test:stripe` に接続。固定するのは
+   「直接依存であること」「package.json と lockfile がずれないこと」
+   「Blobs 区間に引数なしの `catch {}` を置かないこと」「store をキャッシュしないこと」
+   「記録は処理成功後（`hasProcessed` → `markProcessed` の順）であること」。
+   🔴 ガードは `node --test` を**使わない**。既存ガード
+   「`test:stripe` は `--test` を使わない」（IPC の `Unable to deserialize cloned data` 対策・`c1ae2b8f`）
+   に従い、ファイルを直接実行する。
+
+#### 範囲外として手を付けなかったもの
+
+- `stripe-webhook.js` の他の 5 箇所の引数なし `catch {}`（258 / 284 / 440 / 489 / 631 行）は
+  **いずれも `console.warn` / `console.error` を伴っており黙っていない**。
+  エラー詳細を応答へ返さないための意図的な設計なので、そのままにした。
+  静的ガードも Blobs 区間だけに限定している。
+
+#### テスト結果
+
+| コマンド | 結果 |
+|---|---|
+| `npm run test:stripe` | ✅ webhook 48 / checkout 17 / **新規ガード 4** = 69 pass・0 fail |
+| `npm run build` | ✅ 成功（全テスト → `astro build` → `prune:function-data` まで完走）|
+
+lint / typecheck: **スクリプト未定義のため実行不可**（従来どおり）。
+
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
