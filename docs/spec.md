@@ -207,6 +207,18 @@ devDependency: `netlify-cli ^23.5.0`。Node は `netlify.toml` で `NODE_VERSION
    - `npm run test:computer-index` が不変条件（偽値を総合pt/role に使わない・有効値は従来どおり・null を補完しない）
      と、3画面すべてに契約が適用されていることを静的に検証する。
 
+9. **ログイン後の遷移先契約（2026-09-02 確定・仕様所有者承認）**
+   通常ログインの成功後は **tier を問わず全会員 `/mypage`** へ送る。
+   無料会員も、まず自分の状態（プラン・KI 会員クラブ）を確認できるようにするため。
+   - 唯一の例外は **購入途中**。`resumePathFor` が返す固定パス（`/pricing?resume=<plan id>`）を優先する。
+   - 🔴 遷移先の決定は **サーバー（`verify-magic-link`）** が行う。
+     クライアントは受け取った `redirectTo` に従うだけで、パスを組み立てない（open redirect 防止）。
+   - 🔴 tier・会場で遷移先を分けない（会場別の分岐は 2026-08-30 に廃止済み）。
+   - 認証完了画面の文言は **実際の遷移先に一致**させる
+     （購入途中「メールアドレスを確認しました／このままお支払い画面へ進みます…」、
+     通常ログイン「ログインしました／マイページへ移動します…」）。
+   - `src/lib/auth/navAuth.guard.test.mjs` が固定する。
+
 7. **SSR バンドル契約**
    `netlify.toml` の `included_files`（`horseHistories/`, `featureScores/`, `recentHorseHistories/`, `entries/`, `horseStats/`）は SSR ランタイムが fs 読みするために必要。データ種別を増やす際は追記が必要。
 

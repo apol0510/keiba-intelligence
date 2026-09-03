@@ -466,16 +466,44 @@ describe('ランク・リワードを認可に使わない', () => {
 
     // 4. 付与は支払い成功でだけ駆動する
     const okCase = caseBody('invoice.payment_succeeded');
-    assert.match(okCase, /recordPaidPeriod\(email, invoice\)/);
+    // stripe は Price を引くためだけに渡す（認可には使わない）
+    assert.match(okCase, /recordPaidPeriod\(email, invoice, stripe\)/);
     assert.equal(okCase.includes('applyPlan'), false,
       '🔴 支払い成功で認可を書き換えている（付与だけを行うこと）');
+  });
+
+  test('🔴 テスト・ドキュメントに実在の Stripe id を書かない', () => {
+    // Netlify の secrets scanning は env の値をリポジトリ内から探す。
+    // STRIPE_PRICE_PREMIUM の実値をテストへ貼るとビルドが落ちる（2026-09-02）。
+    const files = [
+      'src/lib/billing/stripeWebhook.test.mjs',
+      'src/lib/billing/stripeCheckout.test.mjs',
+      'src/lib/membership/membershipE2E.test.mjs',
+    ];
+    // 実 id は「英数 14 文字以上」が続く形。fixture 用の名前は許す
+    const realish = /\b(price|prod|cus|sub|in|cs|acct)_[A-Za-z0-9]{14,}\b/;
+    for (const f of files) {
+      const src = read(f);
+      const hit = src.match(realish);
+      assert.equal(hit, null, `🔴 ${f} に実在の Stripe id らしき値がある: ${hit && hit[0]}`);
+    }
+  });
+
+  test('🔴 webhook の応答に個人情報・秘密値を載せない', () => {
+    const wh = read('netlify/functions/stripe-webhook.js');
+    // 失敗理由は内部の状態名だけ
+    const noteFn = wh.slice(wh.indexOf('function note(label, status, reason)'), wh.indexOf('function membershipResultFromStore'));
+    assert.equal(/email/i.test(noteFn), false, '🔴 応答に載る文字列へ email を入れている');
+    assert.equal(/token|secret|key/i.test(noteFn), false);
+    // 呼び出しごとに空にする（コンテナ再利用で前回分が漏れない）
+    assert.match(wh, /membershipNotes\.length = 0;/);
   });
 
   test('🔴 付与の前提が欠けたら付与しない（月額へ丸めない・受信時刻で代用しない）', () => {
     const wh = read('netlify/functions/stripe-webhook.js');
 
     // 請求間隔: 判定できなければ null（月額へ fallback しない）
-    const interval = wh.slice(wh.indexOf('export function periodMonthsFromInvoice('));
+    const interval = wh.slice(wh.indexOf('export function periodMonthsFromRecurring('));
     assert.match(interval.slice(0, 900), /default: return null;/,
       '未知の interval を月額へ丸めている');
     assert.match(interval.slice(0, 900), /interval_count/,
@@ -483,6 +511,9 @@ describe('ランク・リワードを認可に使わない', () => {
     // 🔴 欠落時に 1 で補完しない
     assert.doesNotMatch(interval.slice(0, 900), /interval_count\s*(==|===)\s*null\s*\?\s*1/,
       'interval_count 欠落を 1 で補っている');
+    // 🔴 請求期間の日数から月数を推測しない（28〜31 日の揺れがあり四半期と区別できない）
+    assert.equal(wh.includes('period.end - '), false, '請求期間の差から月数を推測している');
+    assert.equal(/periodMonths\s*=\s*Math\.round/.test(wh), false, '月数を丸めて推測している');
     assert.doesNotMatch(interval.slice(0, 900), /interval_count\s*\?\?\s*1/,
       'interval_count 欠落を 1 で補っている');
 
@@ -492,11 +523,11 @@ describe('ランク・リワードを認可に使わない', () => {
     assert.equal(paidAt.slice(0, 500).includes('Date.now()'), false,
       '🔴 受信時刻で支払い時刻を代用している');
 
-    // 付与本体: どちらかが欠けたら return（保留）
+    // 付与本体: どちらかが欠けたら保留（SKIPPED を返して付与しない）
     const record = wh.slice(wh.indexOf('async function recordPaidPeriod('));
-    assert.match(record.slice(0, 1400), /periodMonths == null[\s\S]*?return;/);
-    assert.match(record.slice(0, 1400), /occurredAtMs == null[\s\S]*?return;/);
-    assert.equal(record.slice(0, 1400).includes('Date.now()'), false,
+    assert.match(record.slice(0, 1800), /periodMonths == null[\s\S]*?return MEMBERSHIP_RESULT\.SKIPPED;/);
+    assert.match(record.slice(0, 1800), /occurredAtMs == null[\s\S]*?return MEMBERSHIP_RESULT\.SKIPPED;/);
+    assert.equal(record.slice(0, 1800).includes('Date.now()'), false,
       '🔴 付与日時に受信時刻を使っている');
   });
 
@@ -508,15 +539,28 @@ describe('ランク・リワードを認可に使わない', () => {
     assert.match(rewards, /status: 'pending', months: null, source: null/);
   });
 
-  test('🔴 会員継続制度の書き込みはフラグ付き・別リクエスト・失敗を握りつぶす', () => {
+  test('🔴 会員継続制度の書き込みはフラグ付き・別リクエスト・失敗を報告する', () => {
     const src = read('netlify/functions/stripe-webhook.js');
     // フラグ無しでは実行されない
     for (const fn of ['recordContractPrice', 'recordCancellation', 'recordPaidPeriod']) {
       const body = src.slice(src.indexOf(`async function ${fn}(`));
-      assert.match(body.slice(0, 400), /if \(!isWriteEnabled\(process\.env\)\) return;/,
+      // フラグが無ければ何もしない
+      // フラグ無しは SKIPPED（理由を残してから返す形も許す）
+      assert.match(body.slice(0, 400), /if \(!isWriteEnabled\(process\.env\)\)[\s\S]{0,120}?return MEMBERSHIP_RESULT\.SKIPPED;/,
         `${fn} の先頭でフラグを確認していない`);
-      assert.match(body.slice(0, 1200), /catch \{/, `${fn} が失敗を握りつぶしていない`);
+      // 🔴 例外でハンドラを巻き添えにしないが、**成功扱いにもしない**
+      assert.match(body.slice(0, 2200), /catch \{[\s\S]*?return MEMBERSHIP_RESULT\.FAILED;/,
+        `${fn} が失敗を FAILED として報告していない（握りつぶすと再送で復旧できない）`);
     }
+
+    // 🔴 失敗したイベントを processed にしない（再送で復旧できる契約）
+    const tail = src.slice(src.indexOf('membershipResults.includes'));
+    assert.match(tail.slice(0, 600), /statusCode: 500/,
+      '🔴 membership 失敗時に 500 を返していない');
+    const markIdx = src.indexOf('await markProcessed(stripeEvent.id);');
+    const failIdx = src.indexOf('membershipResults.includes(MEMBERSHIP_RESULT.FAILED)');
+    assert.ok(failIdx > 0 && failIdx < markIdx,
+      '🔴 失敗判定より前に markProcessed している（再送が duplicate で無視される）');
     // 🔴 プラン付与の update に membership の列を混ぜていない
     const applyPlan = src.slice(src.indexOf('async function applyPlan('), src.indexOf('/* ---'));
     for (const col of ['MembershipStartedAt', 'CancelledAt', 'ContractPrice', 'CUSTOMER_FIELDS']) {

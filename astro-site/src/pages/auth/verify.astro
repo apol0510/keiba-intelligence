@@ -127,6 +127,8 @@ export const prerender = false;
 </style>
 
 <script>
+  import { readStoredIntent, clearStoredIntent } from '../../lib/billing/purchaseIntent.js';
+
   const statusEl = document.getElementById('status') as HTMLHeadingElement;
   const messageEl = document.getElementById('message') as HTMLParagraphElement;
   const contentEl = document.querySelector('.verify-content') as HTMLDivElement;
@@ -141,7 +143,14 @@ export const prerender = false;
     }
 
     try {
-      const response = await fetch(`/.netlify/functions/verify-magic-link?token=${token}`);
+      // 🔴 購入導線から来た場合は intent（プラン id）をそのまま渡す。
+      //    戻り先はサーバーが固定パスで決めるので、ここでは値を解釈しない。
+      // 🔴 URL の intent が最優先。落ちていたら購入導線が残した控えを使う
+      //    （メールクライアントがクエリを削ることがある）。
+      //    どちらも値はサーバー側で `plans.js` と照合され、戻り先は固定パス。
+      const intent = urlParams.get('intent') || readStoredIntent(window.localStorage);
+      const q = `token=${encodeURIComponent(token)}` + (intent ? `&intent=${encodeURIComponent(intent)}` : '');
+      const response = await fetch(`/.netlify/functions/verify-magic-link?${q}`);
       const data = await response.json();
 
       if (response.ok && data.success) {
@@ -153,11 +162,31 @@ export const prerender = false;
         sessionStorage.setItem('isFreeUser', plan === 'free-registered' ? 'true' : 'false');
         sessionStorage.setItem('isLightUser', plan === 'light' ? 'true' : 'false');
 
+        // 一度使った控えは残さない
+        clearStoredIntent(window.localStorage);
+
         console.log('✅ 認証成功 - プラン:', data.session.plan);
 
-        showSuccess('認証成功！', 'リダイレクトしています...');
+        /*
+         * 🔴 購入導線では「何が確認できたか」と「次に何が起きるか」を両方出す。
+         *    「確認できました」だけだと、何を確認したのか分からない。
+         */
+        if (intent) {
+          showSuccess('メールアドレスを確認しました', 'このままお支払い画面へ進みます…');
+        } else {
+          /*
+           * 🔴 遷移先は tier で変わる（有料 → /mypage、無料 → /free-prediction）。
+           *    文言を「マイページへ」に固定すると、無料会員には
+           *    実際の遷移先と食い違う案内になる。行き先から選ぶ。
+           */
+          const to = data.redirectTo || '/mypage';
+          const where = to.indexOf('/mypage') === 0
+            ? 'マイページへ移動します…'
+            : (to.indexOf('/free-prediction') === 0 ? '今日の予想へ移動します…' : 'ページへ移動します…');
+          showSuccess('ログインしました', where);
+        }
         setTimeout(() => {
-          window.location.href = data.redirectTo || '/free-prediction';
+          window.location.href = data.redirectTo || '/mypage';
         }, 500);
       } else {
         const errorMessage =

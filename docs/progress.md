@@ -6,6 +6,876 @@
 >
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
+
+### 2026-09-02 購入導線の ReferenceError 修正（`3de357a7`）
+
+- **症状**: 未ログインで「このプランを申し込む」を押すと、メール確認フォームが出ず
+  「現在お申し込みを受け付けられません。しばらくしてからお試しください。」だけが表示された。
+- **原因**: `openPurchaseAuth` / `submitPurchaseAuth` / `resumeCheckout` を
+  `DOMContentLoaded` コールバックの内側に定義したため、外側スコープの `startCheckout` から参照できず、
+  401 分岐で ReferenceError → `startCheckout` 自身の catch が汎用エラーを表示していた。
+  エンドポイント側は正常（`stripe-create-checkout` は cookie 無しで 401 `login_required`）。
+- **修正**: 購入導線の関数を `startCheckout` と同じ外側スコープへ移動。
+  `DOMContentLoaded` 内はフォーム束縛と `resumeCheckout()` 呼び出しのみ。
+- **再発防止**: `purchaseIntent.test.mjs` に「4関数すべてが `DOMContentLoaded` より前に定義されている」ことを固定（billing 48→49件）。
+- **検証**: branch deploy で実クリック確認済み。CTA 押下 → 汎用エラーなし →
+  `#pr-purchase-auth` が `hidden=false` になりフォームが表示され、入力欄にフォーカスが入る。
+- **未実施**: Test Mode の新規購入本体（確認メール送信以降）はユーザー操作待ちで停止。
+
+
+### 2026-09-02 購入導線: 502 send_failed の修正と CTA の 2 色化（`3d4e9317`）
+
+- **症状**: 「確認メールを送れませんでした」が必ず出る（`start-purchase` が 502 `send_failed`）。
+- **原因**: `start-purchase` が `send-magic-link.js` / `register-free.js` を **プロセス内で取り込んでいた**。
+  両ファイルは `exports.handler` 形式だが、`package.json` が `"type": "module"` のため
+  esbuild は ESM として扱い、バンドル後は `exports` がバンドル側の変数へ化けて
+  `handler` が `undefined` になる（ローカルで同条件のバンドルを作り再現・確認）。
+  この 2 ファイルは本番のログイン・登録経路そのものなので、本作業では書き換えない。
+- **修正**: **同一デプロイへの HTTP 委譲**へ変更。委譲先は Netlify がビルド時に注入する
+  `DEPLOY_PRIME_URL` / `URL` を優先し、無い場合だけ許可ホストのリクエスト origin へ落とす
+  （Host ヘッダーだけを信じると、ブランチデプロイの申し込みで本番のマジックリンクが送られる）。
+- **あわせて修正**: `send-magic-link` は `Status !== 'active'` を 403 で止めるため、
+  登録済みで未認証（`pending`）の人が購入導線で行き止まりになり、やり直しもできなかった。
+  未登録または `pending` は `register-free` を通す（本人が `/register` で同じアドレスを
+  入力したときと同じ経路。重複レコードも作らない）。
+  `inactive` / `payment_failed` の扱いは変更していない。
+- **UI**: 申し込み CTA と確認メール送信ボタンを `--grad-action`（桃→橙の 2 色）へ。
+  CTA 直下に「① メール確認 → ② お支払い → ③ すぐに利用開始」、押した CTA に
+  `is-open` / `aria-expanded`、確認フォームに `STEP 1 / 3` バッジ・接続矢印・出現アニメーション。
+- **再発防止**: `purchaseIntent.test.mjs` に、プロセス内委譲へ戻っていないこと /
+  `DEPLOY_PRIME_URL` を優先すること / `pending` を `register-free` へ通すこと /
+  購入 CTA が `--grad-action` で単色でないこと、を固定（billing 49→53 件）。
+- **検証**: branch deploy で `invalid_email` 400 / `invalid_plan` 400 / GET 405 /
+  Checkout は cookie 無しで 401。CTA の背景が
+  `linear-gradient(135deg, rgb(236,72,153), rgb(249,115,22))` であることを実ページで確認。
+- **未実施**: 実際の確認メール送信以降（Test Mode 購入本体）はユーザー操作待ちで停止。
+
+
+### 2026-09-02 認証後に購入へ戻れない（`1cbaa561`）
+
+- **症状**: 確認メールのリンクを開くと `/free-prediction/` に着き、購入へ戻らない。
+- **サーバー側は実デプロイで各段を確認し、いずれも正常だった**:
+  `start-purchase` の委譲 body に `intent` が入る / `register-free` が
+  `...&intent=premium` のリンクを作る（いずれもバンドル再現で確認）/
+  `/auth/verify` が `verify-magic-link?token=...&intent=premium` を発行する（実デプロイで確認）/
+  `resumePathFor` が `/pricing?resume=premium` を返す
+  （`normalizeIntent('premium')` が deploy 上で有効なことは `start-purchase` の 200 応答で確認）。
+- **未検証だった唯一の区間**: 「メールで配送されたリンクの実物」。
+  テスト会員の write を行わない条件では、この区間を自分で通せなかった。
+- **対応**: クエリの生存に依存しない経路を追加。確認メールを送った時点で
+  プラン id だけを `localStorage` に控え（TTL 15 分）、`/auth/verify` は
+  URL の `intent` を最優先し、無ければ控えを使う（使用後に削除）。
+  控えは読み出し時も `normalizeIntent` を通す。**認可には一切使わない**。
+- **検証**: 実デプロイで、URL に `intent` を付けずに `/auth/verify?token=...` を開くと
+  `verify-magic-link?token=...&intent=premium` が発行されることを確認。
+- **診断**: `verify-magic-link` に「intent を受け取ったか / 有効だったか」だけを出力（値は出さない）。
+- **Open Question**: 配送されたリンクから `intent` が落ちた原因は未特定
+  （SendGrid のクリック追跡による書き換えの可能性）。次回の発生時は上記ログで切り分ける。
+
+
+### 2026-09-02 委譲先が本番デプロイになっていた（`08c16203`）— 原因確定
+
+- **決め手**: 届いたメールのリンクが
+  `https://keiba-intelligence.jp/auth/verify?token=<uuid>` だった。
+  ホストが本番 ／ `&intent=` が無い ／ token が UUID（＝ `send-magic-link`）。
+  つまり **本番の関数がメールを作っていた**（本番 = `main` には購入意図の持ち越しが無い）。
+- **原因**: `start-purchase` の `selfOrigin` が `DEPLOY_PRIME_URL` → `URL` の順で見ていた。
+  実行時に `DEPLOY_PRIME_URL` が取れないと `URL`（＝サイト代表 URL ＝ 本番）に落ち、
+  ブランチデプロイの申し込みが本番の関数へ委譲されていた。
+- **修正**: **リクエスト元の origin を最優先**にする。このリクエストを受けているのが
+  自分である以上、ブラウザが見ている origin がそのまま自分のデプロイである。
+  `DEPLOY_PRIME_URL` / `URL` は origin も Host も取れないときの保険に留める
+  （`siteOrigin.js` の許可ホストしか通さない点は不変）。委譲先を `console.log` に出す。
+- **再現確認**: `URL=本番` / `DEPLOY_PRIME_URL` 未設定 の条件でバンドルを実行し、
+  委譲先がブランチデプロイになることを確認。
+- **前項（`1cbaa561`）の localStorage 控えは維持**。クエリが落ちた場合の保険として有効。
+- **env 確認（値を出したのは秘密値でない `MAGIC_LINK_BASE_URL` のみ）**:
+  branch-deploy にブランチ URL が入っており、本番・Deploy Preview は空。
+
+
+### 2026-09-02 決済しても無料会員のまま（`e5ca8fb7`）
+
+- **症状**: Test Mode で決済完了 → マイページに遷移したが「現在のプラン: 無料会員」のまま。
+- **原因**: `ki_session` は **発行時点の tier を署名して固定**している。
+  Stripe の決済が通って Airtable が premium になっても、手元の Cookie は free のままで、
+  マイページも予想ページも無料会員として描画される。再ログインするまで直らない。
+- **対応**: `netlify/functions/refresh-session.js` を追加し、決済から戻ったマイページで
+  Cookie を出し直す。認証の入口にはしない:
+  有効な `ki_session` が無ければ 401 ／ email は **セッション由来のみ** ／
+  tier は Airtable の `PlanType` / `ExpirationDate` からだけ決める
+  （`verify-magic-link` と同じ `planTypeToTier` / `applyExpiry`）／
+  **何も書き込まない**（premium を与えるのは Stripe webhook だけ）／
+  **セッションの寿命を延ばさない**（残り時間を引き継ぐ）／
+  env 不足・レコード無し・署名不可のいずれでも降格させない。
+- **画面**: `?checkout=success` のときだけ自動で実行し、反映されたら
+  `?checkout` を落として一度だけ読み込み直す（最大 12 秒待つ）。
+  決済後にページを離れた場合のために、無料表示のときだけ手動更新リンクを出す。
+- **テスト**: `refreshSession.guard.test.mjs` を `test:auth` に追加（117→125 件）。
+- **検証**: 実デプロイで、未ログイン POST / GET / 偽 Cookie のいずれも 401・405 で、
+  `Set-Cookie` を返さないことを確認。
+- **未確認**: 今回の決済で **Stripe webhook が Airtable に premium を書けたか**は未確認
+  （ローカルに Airtable / Stripe の資格情報が無く、read でも確認できない）。
+  手動更新リンクの応答で切り分けられる。
+
+
+### 2026-09-02 RewardLedger が付与されない（`invoice` の形が変わっていた）
+
+- **発見**: Test Mode E2E で届いた実ペイロードを検証したところ、
+  `periodMonthsFromInvoice` が **null** を返していた。
+  → `recordPaidPeriod` が SKIPPED になり、**RewardLedger の行が作られていない**。
+  200 を返して `markProcessed` まで進むため、同じイベントの再送では復旧しない。
+- **原因**: Stripe の invoice 明細の形が API 版で違う。
+  - 旧: `lines.data[0].price.recurring`（そのまま読める）
+  - 新: `lines.data[0].pricing.price_details.price`（**id だけ**で `recurring` が無い）
+  同様に会員メールも 旧 `invoice.subscription_details.metadata` →
+  新 `invoice.parent.subscription_details.metadata` へ移動していた
+  （今回は `customer_email` に落ちて拾えていた）。
+- **修正**:
+  - `priceRefFromInvoice` で両方の形から `recurring` または price id を取り出す
+  - id しか無ければ **Stripe から Price を取得**して `recurring` を得る。
+    取得に失敗したら **FAILED（再送で復旧）**。`period.start`/`end` の日数から
+    月数を推測しない（28〜31 日の揺れがあり四半期払いと区別できない）
+  - `emailFromInvoice` で `parent` 配下の metadata も見る
+- **テスト**: 実ペイロードの形をそのまま固定した回帰テストを追加（stripe 63→64 件）。
+  ガードも `periodMonthsFromRecurring` 側へ付け替え、
+  「請求期間の差から月数を推測していない」ことを追加で固定。
+- **未解決（要判断）**: 既に処理済みの今回の invoice は
+  `markProcessed` 済みのため **再送しても復旧しない**。
+  Test Mode なので、新しいテスト購入で確認するのが最短
+  （processed 記録の削除は禁止のため行わない）。
+
+
+### 2026-09-02 ブランチデプロイのビルド失敗（secrets scanning）
+
+- **原因**: `stripeWebhook.test.mjs` の回帰テストに **Test Price ID の実値**を書いていた。
+  Netlify の secrets scanning が env（`STRIPE_PRICE_PREMIUM`）の値をリポジトリ内に見つけ、
+  `Build script returned non-zero exit code: 2` で失敗していた。
+  ローカル・clean checkout・Node 20 では再現しない（Netlify のビルドプラグインでのみ走る検査）。
+- **修正**: fixture 用の id（`price_FIXTURE_not_a_real_id`）へ置換。
+  docs からも実 invoice id を削除。
+- **再発防止**: テストファイルに実在の Stripe id（`price_` / `cus_` / `sub_` 等 + 英数 14 文字以上）が
+  無いことを固定するガードを追加。
+- 🔴 **`SECRETS_SCAN_OMIT_*` で検査を無効化しない**。実値を書かない方を守る。
+
+
+### 2026-09-02 ログイン状態の表示矛盾（read-only 監査 → 修正）
+
+**監査でみつかった矛盾**
+
+| # | 矛盾 | 原因 | 対応 |
+|---|---|---|---|
+| 1 | ログイン済みなのにナビが「無料登録／ログイン」のまま | `BaseLayout` の `updateAuthButton` が **`sessionStorage`**（タブ単位の自己申告）を見ていた。正本は署名付き Cookie | サーバー描画＋`get-session`（Cookie が正本）で切替 |
+| 2 | ナビに「マイページ」が無い | 上と同じ | ログイン中は「マイページ／ログアウト」を出す |
+| 3 | ナビにログアウトが無い（マイページ内だけ） | 導線不足 | ナビにログアウト（`logout` へ POST）を追加 |
+| 4 | フッターは「ログイン」と「マイページ」を**常に両方**表示 | 状態を見ていない | 状態で入れ替え |
+| 5 | ログイン済みでもフッターの「無料会員登録 →」が出る | 同上 | ログイン中は隠す |
+| 6 | ログイン済みで `/login` `/register` を開くとフォームだけ出る | 静的ページで Cookie を読めない | 読み込み後に「すでにログインしています／マイページへ」を出す |
+| 7 | **有料会員なのに AI 解説のマスクが解除されない** | `AIRaceComment` の判定が `sessionStorage` の `plan` かつ **`pro` / `pro-plus` / `light`** のままで、現行の **`premium` が漏れていた** | `get-session` の `showBetting` で判定（取得できなければマスク維持＝fail-closed） |
+
+🔴 いずれも **表示だけ**の修正で、認可はサーバー側の entitlement のまま変更していない。
+
+**Open Question（未修正・要判断）**
+
+- 静的ページ（`prerender = true`）の `AIRaceComment` は、マスク対象のテキストを
+  **DOM に入れてからぼかしている**（`blur.textContent = hidden`）。
+  クライアント判定を Cookie 由来にしても、HTML 自体に本文が含まれる点は変わらない。
+  有料本文を静的ページへ出さない設計にするかは別途判断が必要。
+- マイページの「KI 会員クラブ」で、契約価格・ランク・継続月数が「準備中」なのに
+  リワード残高だけ `0 pt` と出るのは仕様どおり（台帳は読めていて 0 行、
+  契約価格は未記録のため不明）。今回の invoice 修正後は 100 pt になる想定。
+
+**テスト**: `navAuth.guard.test.mjs` を `test:auth` へ追加（125→129 件）。
+
+
+### 2026-09-02 AI 解説の有料本文が未権限へ渡っていた（是正）
+
+- **脆弱性**: `netlify/functions/gemini-race-analysis.js` は認可を一切見ず、
+  **全文を誰にでも返していた**。マスクはクライアントの表示処理だけだったため、
+  未権限の閲覧者にも有料本文が
+  **HTTP 応答（JSON）／ localStorage キャッシュ／ DOM（ぼかし要素の textContent）**
+  のすべてに渡っていた。さらに応答へ `public, max-age=86400, s-maxage=86400` を
+  付けていたため、**CDN が有料本文を保持しうる**状態だった。
+- **是正（サーバー側 fail-closed）**:
+  - `src/lib/ai/commentPreview.js` を新設。`splitFreePreview` / `buildAnalysisPayload`。
+    **`paid === true` のときだけ全文**。それ以外（undefined / 'true' / 1 等）は無料扱い。
+    戻り値は `{ comment, truncated }` のみで、**隠した本文は返さない**。
+  - `gemini-race-analysis` が Cookie から `resolveEntitlement` し、
+    `showBetting === true` のときだけ全文。例外時は無料扱い。
+  - 応答を `Cache-Control: private, no-store` ＋ `Vary: Cookie` に変更。
+    CORS は `*` をやめ `resolveSiteOrigin` ＋ `Allow-Credentials`。
+  - クライアントは本文を分割しない／隠した本文を DOM へ入れない。
+    `credentials: 'include'` で送り、`truncated` のときは案内だけ出す。
+    表示キャッシュのキーに権限区分を混ぜる。
+  - `sessionStorage` を見てマスクを外すクライアント処理を**廃止**。
+- **認可迂回テスト**: `src/lib/ai/commentAuth.test.mjs`（`npm run test:ai-auth`、build にも組込）。
+  隠す側にしか出ない語句が応答に 1 つも無いこと／`paid` が true 以外は全部無料扱い／
+  戻り値に隠した本文を持たせない／`s-maxage` を付けない／
+  クライアントが分割しない・`blur.textContent` を使わない、を固定。
+
+
+### 2026-09-02 購入導線のメール文面（「無料会員登録ありがとうございます」問題）
+
+- **症状**: 有料の申し込みなのに「無料会員登録ありがとうございます！」が届き、
+  受け取った人は **いま何をしているのか** が分からない。
+  知りたいのは 1 つだけ ——「このリンクを開けばお支払いに進む」。
+- **対応**: `src/lib/billing/purchaseEmailCopy.js` を新設し、
+  購入意図の有無で文面を切り替える（`register-free` / `send-magic-link` の両方）。
+  - 件名: 【KEIBA Intelligence】お支払い手続きへお進みください
+  - 見出し: あと1ステップでお申し込み完了です
+  - 本文: ご本人確認のためのメールです。下のボタンを開くと、そのまま**お支払い画面**へ進みます。
+  - ボタン: お支払いへ進む
+  - 注記: このメールだけでは課金されません。お支払い画面で最終金額をご確認いただけます。
+  - 購入手続き中は特典紹介ブロックを出さない
+  - `/auth/verify` の成功表示も「確認できました／お支払い画面へ進みます…」に
+- 🔴 **金額はメールに書かない**（請求額の正本は Stripe の Price）。
+- **あわせて是正**: 無料登録メールに残っていた **廃止済みの訴求**
+  「永久アクセス（買い切り¥88,000）」を削除し、有料の説明を現行仕様
+  （南関東4場・中央の全レース馬単買い目 / AI指数の数値と AI 結論）へ置き換えた。
+  `CLAUDE.md` の「廃止済み（復活させない）」に反していた。
+- **テスト**: `purchaseEmailCopy.test.mjs`（`test:billing` 55→61 件）。
+  購入導線に「無料会員登録」等を出さない／課金されない旨を必ず書く／
+  金額を焼き付けない／買い切り訴求を復活させない、を固定。
+
+
+### 2026-09-02 ログイン後の遷移先を正本仕様として確定（仕様所有者承認）
+
+- **確定内容**: 通常ログインの成功後は **tier を問わず全会員 `/mypage`**。
+  例外は **購入途中のみ**で、`resumePathFor` の固定パス（`/pricing?resume=<plan id>`）を優先する。
+- **正本へ固定**:
+  - `docs/spec.md` §6-9「ログイン後の遷移先契約」
+  - `docs/decisions.md`「2026-09-02 — 通常ログイン後の遷移先を全会員 `/mypage` に統一する」
+- **経緯**: 一度は「正本に規定が無い＝未承認の仕様変更」として revert（`7402a937`）したが、
+  仕様所有者の承認を受けて再適用し、正本へ記載した。
+  変更前の分岐（無料 → `/free-prediction`）は `3cdd0c4e` 由来で、
+  **採用理由は履歴にも残っていなかった**（`decisions.md` に明記）。
+- **不変**: 認可・セッション・有効期限は変更していない。変わるのは遷移先だけ。
+  遷移先を決めるのは従来どおりサーバー（`verify-magic-link`）で、
+  クライアントは `redirectTo` に従うだけ（open redirect を作らない）。
+- **文言**: 実際の遷移先に一致させる。
+  購入途中「メールアドレスを確認しました／このままお支払い画面へ進みます…」、
+  通常ログイン「ログインしました／マイページへ移動します…」。
+- **テスト**: `navAuth.guard.test.mjs` を仕様へ更新（131→134 件）。
+  全会員 `/mypage` であること／購入途中だけが上書きすること／
+  クライアントがパスを組み立てないこと／**正本に契約が書かれていること**を固定。
+
+
+### 2026-09-02 契約項目・RewardLedger が書けなかった原因を確定（422）
+
+- **診断の追加（`8b2cb1da`）**: `errorCodeFrom(status, bodyText)` を入れ、失敗理由を
+  `write_failed:<HTTP status>:<Airtable error.type>` の形にした。
+  🔴 載せるのは **status と `error.type` だけ**。`error.message` は使わない
+  （フィールド名・値を echo することがある）。符号は英数と `_ - .` のみ・60 文字まで。
+- **確定（Test Mode のイベントを1件再送）**:
+  `{"membership":["reward accrual: unavailable/write_failed:422:INVALID_VALUE_FOR_COLUMN"]}`
+  → **403（権限）でも 429（レート制限）でもなく 422**。
+- **原因**: `MembershipStartedAt` / `CancelledAt` / `ContractStartedAt` / `OccurredAt` は
+  `docs/MEMBERSHIP_DATA_MIGRATION.md` §2.1・§2.2 のとおり **`Date (ISO)`（時刻なし）** で
+  作られている。コードが ISO の **日時** を送っていたため拒否されていた。
+  **スキーマは仕様どおりで、誤っていたのは送る側**。
+- **恒久修正（`4aadb0a8`）**: `toAirtableDate(value)` を追加し、日付だけの列へは
+  `YYYY-MM-DD` を送る（`airtableStore` の `OccurredAt` / `ContractStartedAt`、
+  `stripe-webhook` の `CancelledAt`、`send-payment-confirmation-auto` の `MembershipStartedAt`）。
+  🔴 `typecast: true` は使わない。
+  🔴 日付は **Asia/Tokyo** で切る（UTC だと JST 早朝の支払いが前日になり、月境界でずれる）。
+- **テスト**: `airtableStore.test.mjs` 182→189 件。
+- **付随して判明（Open Question）**: Test Mode の webhook 送信先が **2 つ**ある。
+  - `KI Test Webhook` … 実際に処理している方（branch deploy）
+  - `KI Stripe Test E2E` … 同じ branch URL だが **今週 11 件すべて 400 `invalid_signature`**。
+    署名シークレットが branch-deploy の `STRIPE_WEBHOOK_SECRET` と一致していない。
+    同じイベントが二重配信されている。**設定は未変更**（ユーザー判断待ち）。
+- **付随（Open Question）**: `npm run build` 中に Node のテストランナーが
+  `Unable to deserialize cloned data` で落ちることがある（`stripeWebhook.test.mjs`・
+  `--experimental-test-module-mocks` 使用）。再実行で通る。CI でも 1 回発生。
+
+#### 2026-09-02 修正後の確認（deploy 状態 ＋ ローカル test/build）
+
+| 対象 | 結果 |
+|---|---|
+| branch-deploy `4aadb0a8`（恒久修正） | **ready**（14:24:18 UTC）。**修正コードは branch deploy に載っている** |
+| branch-deploy `4aadb0a8` 1 回目 | `error`（14:18:57 UTC・`Build script returned non-zero exit code: 2`）→ 再実行で ready |
+| deploy `65e05b0c`（progress のみ） | `error` と表示されるが中身は **`Canceled build due to no content change`**（＝ビルド失敗ではなくスキップ）|
+| ローカル `npm run build` | **成功**（`validate:archive` → 全テスト → `astro build` → `prune:function-data` まで完走）|
+| テスト | membership **189** / stripe **64** / auth **134** / billing **61** / ai-auth **11** / narrative **90** — **fail 0** |
+
+- 上記 1 回目の branch-deploy 失敗は、直上の Open Question（`Unable to deserialize cloned data`）と
+  同じ「再実行で通る」挙動。**この Open Question の発生例が 1 件増えた**（未解決）。
+- 🔴 **恒久修正後に「書き込みが成功した」ことはまだ実測していない。**
+  確かめるには Test Mode のイベントをもう 1 件再送する必要があり、成功すれば
+  **本番 Airtable の `RewardLedger` に行が 1 行入る**（高リスク境界・承認待ち）。
+  根拠としては `docs/MEMBERSHIP_DATA_MIGRATION.md` §2.1 / §2.2 の列型が
+  `Date (ISO)`（時刻なし）であることと、422 の符号が一致している。
+
+### 2026-09-03 Deploy Preview のビルド失敗（`9b5b2048`）— ✅ **原因確定・恒久修正**
+
+| 項目 | 値 |
+|---|---|
+| 失敗した deploy | deploy-preview `9b5b2048`（2026-09-03 05:28:04 UTC ＝ 14:28 JST）|
+| メッセージ | `Failed during stage 'building site': Build script returned non-zero exit code: 2` |
+| **その後の HEAD** | deploy-preview **`0c10e258` は ready**（07:09 UTC）|
+
+- Netlify の API は**ビルドログ本体を返さない**（`log_access_attributes: null` /
+  `summary.status: unavailable`）ため、**根本原因は特定できていない**。
+- `exit code 2` は既知の Open Question
+  「`npm run build` 中に `Unable to deserialize cloned data` で落ちることがある
+  （`stripeWebhook.test.mjs`・`--experimental-test-module-mocks`）」と**同じ符号**で、
+  `4aadb0a8` の branch-deploy（09-02 14:18:57 UTC）でも同形で落ち、再実行で通っている。
+- 切り分けのため、ローカルで `npm run test:stripe` を **12 回連続実行 → 0 回失敗**。
+  **ローカルでは再現しない**（過去 2 回はいずれも Netlify 側）。
+
+- 他の deploy-preview の `error` は
+  `Canceled build due to no content change`（docs のみの commit）で、**ビルド失敗ではない**。
+
+#### 原因（仕様所有者が提供した失敗ログで確定）
+
+```
+# pass 48 / fail 1
+not ok 2 - src/lib/billing/stripeWebhook.test.mjs
+  failureType: 'uncaughtException'
+  error: 'Unable to deserialize cloned data due to invalid or unsupported version.'
+  stack: #proccessRawBuffer (node:internal/test_runner/runner:358:20)
+```
+
+- **落ちたのは個々のテストではなく「ファイル」**。48 件すべて pass している。
+- `node --test` は**テストファイルを子プロセスで実行し、結果を IPC で受け取る**。
+  親側の `#proccessRawBuffer` が受信データを復号する所で例外になっている。
+- このファイルは webhook ハンドラの `console.log`（`✅ plan granted` /
+  `⚠️ membership store unavailable` / `❌ membership not recorded` …）を**大量に**出す。
+  その生の stdout が IPC のメッセージ境界を壊していた。
+- 発生歴: `4aadb0a8` の branch-deploy（09-02 14:18:57 UTC）/
+  `9b5b2048` の deploy-preview（09-03 05:28:04 UTC）。どちらも再実行で通っていた。
+
+#### 恒久修正
+
+**`--test` を使わず、テストファイルを直接実行する。** 子プロセスも IPC も無くなるので、
+`#proccessRawBuffer` という経路自体が消える。
+
+```diff
+- "test:stripe": "node --experimental-test-module-mocks --test A.test.mjs B.test.mjs"
++ "test:stripe": "node --experimental-test-module-mocks A.test.mjs && node --experimental-test-module-mocks B.test.mjs"
+```
+
+🔴 **ビルドの門番は弱くならない。** 直接実行でも `node:test` が終了コードを立てることを
+実測で確認した（わざと失敗するテストで `--test` 経由・直接実行とも `exit=1`）。
+
+- 再混入防止の静的ガードを `stripeWebhook.test.mjs` に追加
+  （`test:stripe` が `--test` を含まない／`--experimental-test-module-mocks` は残す／
+  2 ファイルが実行対象から外れていない）。
+- 検証: `npm run test:stripe` を **15 回連続実行 → 0 回失敗**。
+  stripe **64 → 65 件**（ガード 1 件追加）。`npm run build` 成功。
+
+🟡 この対処は `test:stripe` だけに入れた。他の suite は `console` 出力が少なく、
+同じ症状は観測されていないため、まとめて変えることはしない。
+
+### 2026-09-03 恒久修正の成功と冪等性を実測（Test Mode 再送・承認済み）
+
+仕様所有者の承認を得て、**今回のテスト会員（`0510apolon+test4@gmail.com`）の該当イベントだけ**を再送した。
+
+#### 先に判明したこと（再送の前）
+
+恒久修正 `4aadb0a8` の branch deploy が ready になった **2026-09-02 14:24 UTC 以降**に、
+すでに書き込みが成功していた（前セッションが記録していなかった）。
+
+| 対象 | 値 | 意味 |
+|---|---|---|
+| `RewardLedger` | 1 行 / `Points=100` / `OccurredAt=2026-09-02` / 作成 `14:43:25 UTC` | **日付のみ＝修正後の形式**。22:42 の配信（500 ERR）ではなく 23:43 JST の 200 OK で入った |
+| `ContractPrice*` | `3980` / `jpy` / `price_1UAsLM…` / `ContractStartedAt=2026-09-02` | **日付のみ**。422 は解消済み |
+
+#### 再送（すべて `KI Test Webhook` 宛・イベントは既存のものだけ）
+
+| # | イベント | 実施 | HTTP | 応答 |
+|---|---|---|---|---|
+| 1 | `checkout.session.completed`（`evt_1UBEQvLbPC6OVRqMRi625hqM`）| 2026-09-03 08:43:19 JST | **200** | `{"received":true}` |
+| 2 | `invoice.payment_succeeded`（`evt_1UBEQvLbPC6OVRqMDlBiF5Ul`）| 08:44:27 JST | **200** | `{"received":true}` |
+| 3 | `invoice.payment_succeeded`（同上・冪等性確認）| 08:46:45 JST | **200** | `{"received":true}` |
+
+🔴 応答に `membership` の行が**無い**ことが判定条件である。
+`membershipResultFromStore` は `applied` / `already` 以外をすべて FAILED とし、
+FAILED があれば **500 ＋ `{"error":"membership_not_recorded"}`** を返して processed にしない。
+3 回とも 200 かつ `membership` 無し ＝ **書き込み不能は 1 件も起きていない**。
+
+#### Airtable の実測（再送前 / 1・2 の後 / 3 の後）
+
+| 検査 | 再送前 | 1・2 の後 | 3 の後 |
+|---|---|---|---|
+| `RewardLedger` 行数 | 1 | **1** | **1** |
+| 台帳行の `createdTime` | `2026-09-02T14:43:25Z` | 同一 | 同一 |
+| `ContractPriceYen` / `Currency` / `PriceId` / `ContractStartedAt` | 3980 / jpy / `price_1UAsLM…` / 2026-09-02 | 同一 | 同一 |
+| `Customers` 総数 | 66 | 66 | 66 |
+| `PlanType` | free-registered 52 / pro 7 / light 3 / premium 4 | 同一 | 同一 |
+| `Status` | active 60 / pending 6 | 同一 | 同一 |
+| `AccessEnabled` | true 60 / 空 6 | 同一 | 同一 |
+| `MembershipStartedAt` | 7 件 | 7 件 | 7 件 |
+| `CancelledAt` | 0 件 | 0 件 | 0 件 |
+
+- **冪等性**: `appendEntry` の冪等キーは invoice id。再送 2 回でも **行は 1 行のまま**・
+  `createdTime` も変わらない（作り直しではなく `already` を返している）。
+- **契約価格**: 再送しても `ContractStartedAt` が今日の日付に書き換わっていない
+  ＝ **上書きしない**（M-1 継続価格ロック）が効いている。
+- **既存会員非影響**: `PlanType` / `Status` / `AccessEnabled` / `MembershipStartedAt` /
+  `CancelledAt` のいずれも 3 スナップショットで完全に一致。**実会員の列は 1 つも動いていない。**
+
+#### 会員数の内訳の変化（**解決済み・不具合ではない**）
+
+`2026-09-01` の記録と比べて `PlanType` の `light` が **4 → 3**、`premium` が **0 → 4**、
+総数が **63 → 66** になっている。
+
+🔴 **`light` 4 → 3 は仕様所有者（MK）が意図して削除した結果である**（2026-09-03 確認済み）。
+**異常・不具合・会員減少として扱わない。この件を再度問題提起しないこと。**
+
+`premium` 4 件はいずれも Stripe Test Mode 用のアドレス（`0510apolon+…@gmail.com`）で、
+実会員のアドレスが premium になっているものは無い。
+いずれも**今回の再送より前**の状態であり、3 回の再送では一切変化していない。
+
+#### 実施していないこと（指示どおり）
+
+Production deploy / merge / E2E の後片付け（テストレコード削除）。
+
+### 2026-09-03 merge 前の完成条件の確認（read-only）— **未達 1 件**
+
+完成条件の正本は `docs/STRIPE_TESTMODE_E2E.md`「実施手順」の **17 項目**
+（A 認可 1–6 / B リワード 7–12 / C 解約・支払い失敗 13–17）と、
+「Live Mode へ進む前の確認」の「**17 項目すべてが期待どおり**」。
+
+#### 実測（Airtable read-only・追加 write なし）
+
+| # | 条件 | 実測値 | 判定 |
+|---|---|---|---|
+| 8 / 10 | `RewardLedger` が **1 行だけ**（再送しても増えない）| 1 行（`rec3CBnoBgkapPsdf` / `createdTime` 不変）| ✅ |
+| 9 | `Type=accrual` | `accrual` | ✅ |
+| 9 | `Points=100` | `100` | ✅ |
+| 9 | **`PeriodMonths=1`** | **空（null）** | 🔴 **未達** |
+| 9 | `SourceRef` が `in_…` | `in_1UBEQrLbPC6OVRqMgArtrkzq` | ✅ |
+| 9 | `OccurredAt` が支払い成功時刻 | `2026-09-02`（JST の支払い成功日）| ✅（粒度は下記）|
+| 11 | `ContractPriceYen=3980` | `3980` | ✅ |
+| 11 | `ContractCurrency=jpy` | `jpy` | ✅ |
+| 11 | `ContractPriceId` が手順 1 の price | `price_1UAsLMLbPC6OVRqMoZ3VSfRR` | ✅（末尾一致・下記）|
+| — | `ContractStartedAt` | `2026-09-02` | ✅ |
+| — | 既存会員非影響 | 総数 66 / free-registered 52・pro 7・light 3・premium 4 / active 60・pending 6 / true 60・空 6 / `MembershipStartedAt` 7 件 / `CancelledAt` 0 件 — **本日 3 回の再送前後で完全一致** | ✅ |
+| — | 実会員に契約価格が混入していないか | 契約価格が入っているのは **テスト用アドレス 1 件のみ** | ✅ |
+
+#### 🔴 未達: `PeriodMonths` が台帳に保存されない
+
+`RewardLedger` には `PeriodMonths` 列が**存在する**（`docs/MEMBERSHIP_DATA_MIGRATION.md` §2.2）が、
+`airtableStore.js` の `LEDGER_FIELDS` に **`PeriodMonths` が無い**。
+そのため **書き込まれず、読み戻しもされない**。
+
+🔴 **影響は完成条件の未達だけではない。** `rewards.js` の継続月数の集計は
+
+```js
+.reduce((sum, e) => sum + (e.periodMonths ?? PERIOD_MONTHS.MONTHLY), 0)
+```
+
+であり、読み戻した行の `periodMonths` が `undefined` になるため **1 か月へ倒れる**。
+
+| 経路 | 台帳に入る `Points` | 集計される月数 | 実際 |
+|---|---|---|---|
+| 月額（Stripe）| 100 | 1 | 1 ✅ 偶然一致 |
+| 四半期（Stripe）| 300 | **1** | 3 🔴 過少 |
+| **年払い（銀行振込）** | 1,200 | **1** | **12 🔴 過少** |
+
+残高（`Points`）は保存されるので正しい。**ずれるのは継続月数＝会員ランク**である。
+銀行振込の年払いは **2026-09-01 から本番で有効**（`MEMBERSHIP_WRITE_ENABLED`）なので、
+次の入金確認から 12 か月分の行が入り、**ランクが 1 か月として数えられる**。
+
+#### ✅ 是正（2026-09-03・仕様所有者の指示）
+
+`LEDGER_FIELDS` へ `PERIOD_MONTHS: 'PeriodMonths'` を追加し、**書き込みと読み出しの両方**に通した。
+
+| 箇所 | 変更 |
+|---|---|
+| `LEDGER_FIELDS` | `PERIOD_MONTHS: 'PeriodMonths'` を追加（列は `MEMBERSHIP_DATA_MIGRATION.md` §2.2 に既定義）|
+| `appendEntry` | 月数が**正の整数のときだけ**書く。🔴 **既定値 1 で埋めない**（`SourceRef` と同じ条件付き）|
+| `readLedger` | `periodMonths` を読み戻す。**そのまま渡す**（壊れた値は `isValidEntry` が弾く）|
+
+- 🔴 **旧行（列が空）との後方互換を維持**: `undefined` のままにするので、
+  従来どおり `?? PERIOD_MONTHS.MONTHLY` で 1 か月として数えられる。
+  既存の 1 行（月額 100 pt）の集計結果は変わらない。
+- 🔴 `rewards.js` の `?? MONTHLY` フォールバックは**変えていない**（旧行の互換がそこに依存しているため）。
+
+テスト **189 → 195 件**（`airtableStore.test.mjs` に 6 件追加）:
+
+| 追加したテスト | 固定する不変条件 |
+|---|---|
+| 年払い（12 か月）の `PeriodMonths` が台帳に入る | 12 と 1,200 pt が両方入る |
+| 月額（1 か月）の `PeriodMonths` が台帳に入る | 1 が入る |
+| 月数が判定できない行は書かない | `undefined` / `null` / `0` / `-3` / `1.5` / `'12'` のいずれでも**列を作らない** |
+| `readLedger` が `PeriodMonths` を読み戻す | 12 が返る |
+| 列が無い旧行は `periodMonths` を作らない | 捨てずに 1 か月として数える |
+| 🔴 **往復**: 年払いを書いて読み戻す | `tenureMonthsFromLedger` が **12**（未保存だと 1 に倒れていた）|
+
+**結果**: membership 195 / stripe 64 / auth 134 / billing 61 / ai-auth 11 / narrative 90 —
+すべて fail 0。`npm run build` 成功（exit 0）。
+
+🔴 **本番 Airtable の既存 1 行は書き換えていない**（追加 write なし）。
+その行は月額 1 か月ぶんで、旧行として 1 か月と数えられるため**値は正しいまま**である。
+
+#### 注記（未達ではないが仕様との差）
+
+- `OccurredAt` は列型が `Date (ISO)`（時刻なし）のため **日付までしか保存できない**。
+  手順 9 の「支払い成功**時刻**」は、日付の粒度でのみ満たされる。
+  これは 422 の恒久修正（`toAirtableDate`）の意図した帰結であり、退行ではない。
+- `ContractPriceId` は Netlify CLI が env の値をマスクするため、
+  **末尾 4 文字（`SfRR`）の一致**でのみ突き合わせた。
+  値そのものは Checkout セッションから webhook が写しているので、
+  branch env の price と一致する経路になっている。
+
+#### 未実施の完成条件（read-only では埋められない）
+
+| # | 内容 | 状態 |
+|---|---|---|
+| 1–6 | A 認可（ログイン → Checkout → 買い目の開閉 → 再送で `duplicate`）| 一部のみ実施（4・6 相当は確認済み）|
+| 12 | `/mypage` に残高 100 pt・今月の積み上げ 100 pt | **未確認** |
+| 13–16 | 解約 → `CancelledAt` → 買い目が閉じる → ポイントは残る | **未実施**（`CancelledAt` 0 件）|
+| 17 | 支払い失敗で `RewardLedger` が増えない | **未実施** |
+
+**したがって「17 項目すべてが期待どおり」には到達していない。**
+
+### 2026-09-03 完成条件 #12 の確認（read-only）と、残り（#9 / #13–17）の実施計画
+
+#### #12 の判定 ✅（追加 write なし）
+
+本番 Airtable から実データを read-only で読み、**本番と同じコード経路**
+（`airtableStore.readProfile` / `readLedger` → `buildMembershipView`）へ通した。
+
+| `/mypage` の会員クラブ枠 | 値 | 期待 | 判定 |
+|---|---|---|---|
+| KIリワード残高 | **100 pt** | 100 pt | ✅ |
+| 今月の積み上げ | **100 pt** | 100 pt | ✅ |
+| ポイントの状態 | `active` | — | — |
+| 継続月数 | 1（`source=ledger`）| — | — |
+| 会員ランク | Bronze | — | — |
+
+🔴 **描画そのものは開いていない。** `/mypage` を実際に表示するにはログインが必要で、
+マジックリンクの発行（セッション書き込み）とメール送信が発生する＝「追加 write なし」に反する。
+値の算出は本番と同じ関数を実データに通して確認した。
+
+#### 🔴 前提の欠落: `PeriodMonths` の修正が branch deploy に載っていない
+
+Stripe の送信先 `KI Test Webhook` は **branch deploy の URL** を指すが、
+branch deploy は **`4aadb0a8` のまま**である（`57da2619` は deploy-preview しか作られていない）。
+
+| context | 最新 commit | 状態 |
+|---|---|---|
+| branch-deploy | **`4aadb0a8`** | ready（2026-09-02 14:24 UTC）|
+| deploy-preview | `57da2619` | ready（2026-09-03 03:05 UTC）|
+
+**このまま新しい支払いを起こしても、台帳の行はまた `PeriodMonths` が空になる。**
+#9 を満たすには **branch deploy を `57da2619` で作り直すことが先**。
+
+#### 残りの完成条件を満たすために必要な操作（**未実施・承認待ち**）
+
+対象テスト会員: **`0510apolon+test4@gmail.com`（1 レコードのみ）**。
+`applyPlan` は既存レコードを引くだけで**新規作成しない**ため、この会員を使えば
+`Customers` のレコードは増えない。
+
+| 手順 | 操作 | 発生する production Airtable write |
+|---|---|---|
+| 0 | branch deploy を `57da2619` で再ビルド | なし |
+| 1（#9）| branch deploy で **新しい Checkout**（`4242…`）| `Customers`×1 更新（`PlanType`/`Status`/`AccessEnabled`）＋ `Customers`×1 更新（`CancelledAt`=空）＋ **`RewardLedger` +1 行**（`Points=100` / **`PeriodMonths=1`**）|
+| 2（#13–16）| Customer Portal から**解約** | `Customers`×1 更新（`PlanType=free`/`Status=inactive`/`AccessEnabled=false`）＋ `Customers`×1 更新（`CancelledAt`=解約日）。**`RewardLedger` は増えない** |
+| 3（#17）| 支払い失敗を再現（失敗するテストカード）| `Customers`×1 更新（`Status=payment_failed`）。🔴 **`RewardLedger` が増えないことを確認** |
+
+**合計**: `RewardLedger` **+1 行** / `Customers` は **テスト会員 1 レコードに最大 6 回の更新**。
+触れる列は `PlanType` / `Status` / `AccessEnabled` / `CancelledAt` の **4 列だけ**。
+🔴 `ContractPrice*` は既に入っているため**上書きされない**（M-1）。
+🔴 **実会員 65 件には一切触れない**（webhook は email で 1 レコードを引く）。
+
+#### rollback（実施前の値・2026-09-03 実測）
+
+| 対象 | 現在の値 | 戻し方 |
+|---|---|---|
+| `Customers` `PlanType` | `premium` | 手で戻す |
+| `Customers` `Status` | `active` | 手で戻す |
+| `Customers` `AccessEnabled` | `true` | 手で戻す |
+| `Customers` `CancelledAt` | **空** | 空に戻す |
+| `Customers` `ContractPriceYen` / `Currency` / `PriceId` / `ContractStartedAt` | `3980` / `jpy` / `price_1UAsLMLbPC6OVRqMoZ3VSfRR` / `2026-09-02` | 触られない（上書きしない）|
+| `Customers` `MembershipStartedAt` | 空 | 触られない |
+| `RewardLedger` | 1 行（`rec3CBnoBgkapPsdf`）| 追加された行を削除（既存 1 行は残す）|
+| Stripe（Test Mode）| — | 作ったサブスクをキャンセル |
+
+🔴 手順 2 の途中でテスト会員は **free に落ちる**（#14 の期待どおり）。
+🔴 `MEMBERSHIP_WRITE_ENABLED` は本番で有効のままなので、
+   **手順 1 を実行した時点で本番 Airtable に行が増える**。
+
+#### 判断が要る点
+
+- 手順 3 の「支払い失敗」をどのテストカードで再現するかは**実行時に決める**必要がある
+  （サブスク作成時に失敗すると Checkout 自体が完了しないため、
+  「登録は通るが請求で失敗する」カードを選ぶ）。
+- 既存の `RewardLedger` 1 行は修正前に書かれたため `PeriodMonths` が空のままだが、
+  **月額 1 か月ぶんで値としては正しい**（旧行として 1 か月と数えられる）。
+  遡って埋めるかどうかは別途判断。
+
+### 2026-09-03 手順0 の実施（A-1 承認・`allowed_branches` の一時追加）
+
+仕様所有者の承認（A-1）により、Netlify のビルド設定を**一時的に**変更した。
+
+| 項目 | 変更前 | 変更中 | 戻す先 |
+|---|---|---|---|
+| `allowed_branches` | `["main"]` | `["main","test/stripe-testmode-e2e-2026-09-01"]` | **`["main"]`（E2E 後に必ず戻す）** |
+
+- 変更前の設定は `/tmp/site-before.json` に保存した。
+- 変更したのは `allowed_branches` **1 項目のみ**。`repo_branch` / `stop_builds` /
+  `base` / `cmd` / `dir` は触っていない。
+- 🔴 `main`（production）の扱いは変えていない。
+
+### 2026-09-03 E2E 実施（#9 / #13–16 完了・#17 のみ承認待ち）
+
+#### 手順0: branch deploy（完了）
+
+| 項目 | 結果 |
+|---|---|
+| branch deploy | **`be4d0178` ready**（2026-09-03 03:36 UTC）|
+| HEAD 一致 | ✅（`git rev-parse HEAD` = `be4d0178`）|
+| 含まれる修正 | `57da2619`（`PeriodMonths` の保存）|
+
+#### #9 ✅ `PeriodMonths` が実データで保存された
+
+Stripe Test Mode でテスト会員に**新しいサブスクを 1 件**作成し、即時請求を発生させた。
+
+| # | 検査 | 結果 |
+|---|---|---|
+| 9 | `Type` | `accrual` ✅ |
+| 9 | `Points` | `100` ✅ |
+| 9 | **`PeriodMonths`** | **`1`** ✅（修正前は空だった）|
+| 9 | `SourceRef` | `in_1UBRZ7LbPC6OVRqM70m6E3mV`（新しい invoice id）✅ |
+| 9 | `OccurredAt` | `2026-09-03`（支払い成功日 JST）✅ |
+
+`RewardLedger` は **1 行 → 2 行**（承認された「追加最大 1 行」ちょうど）。
+
+#### #11 の確定（末尾一致ではなく完全一致）
+
+解約前にサブスクのメタデータを読んだところ
+`ki_price_id = price_1UAsLMLbPC6OVRqMoZ3VSfRR` であり、
+Airtable の `ContractPriceId` と**完全に一致**した。
+（以前は Netlify CLI のマスクにより末尾 4 文字でしか突き合わせできていなかった。）
+
+#### #13 / #15 / #16 ✅ 解約
+
+Checkout 由来（`ki_email` メタデータあり）のサブスク `sub_1UBEQt…` を**即時・返金なし**で解約。
+
+| # | 期待 | 実測 | 判定 |
+|---|---|---|---|
+| 13 | 解約イベントが 200 | `Customers` が更新された＝ webhook が通った | ✅ |
+| 15 | `CancelledAt` に解約日 | **`2026-09-03`** | ✅ |
+| 16 | ポイントは残る | `RewardLedger` **2 行のまま**（削られていない）| ✅ |
+| — | 認可が free へ戻る | `PlanType=free` / `Status=inactive` / `AccessEnabled=空` | ✅ |
+| — | 契約価格は消えない | `ContractPriceYen=3980` / `ContractStartedAt=2026-09-02` のまま | ✅ |
+
+#### #14 ✅（read-only・本番と同じ判定関数）
+
+`tiers.js` の実関数に解約後の実測値を通した。
+
+| 状態 | tier | 印 | 買い目 |
+|---|---|---|---|
+| 解約前 `premium` | premium | — | **開く** |
+| **解約後 `free`（実測）** | free | **見える** | **閉じる** |
+
+#### 既存会員非影響 ✅
+
+| 検査 | 実測 |
+|---|---|
+| `Customers` 総数 | **66**（増減なし）|
+| `PlanType` | free-registered 52 / pro 7 / light 3 / premium 3 / free 1 |
+| `Status` | active 59 / pending 6 / inactive 1 |
+| `MembershipStartedAt` | **7 件**（不変）|
+| `CancelledAt` | 1 件（**テスト会員のみ**）|
+
+premium 4→3・free +1・active 60→59・inactive +1 は、いずれも
+**テスト会員 1 レコードが解約で free に落ちた分**。実会員 65 件は 1 列も動いていない。
+
+#### 🔴 #17 のみ未実施（承認待ち）
+
+`invoice.payment_failed` を起こすには、**支払いに失敗するテストカード**
+（Stripe が公開しているサンドボックス用の番号）を顧客に登録する必要がある。
+運用ルール上、**カード番号の入力は承認なしに行わない**ため、ここで停止した。
+
+- 発生する write: `Customers` の `Status=payment_failed` のみ（1 レコード・1 列）
+- 🔴 `RewardLedger` は**増えないこと**が検査項目そのもの
+- 現在 `RewardLedger` は 2 行
+
+#### `allowed_branches` の復旧 ✅
+
+| 項目 | 実測 | 判定 |
+|---|---|---|
+| `allowed_branches` | `["main"]` | ✅ 変更前と一致 |
+| `repo_branch` / `stop_builds` | `main` / `false` | ✅ |
+| `base` / `cmd` / `dir` | `astro-site` / `npm run build` / `dist` | ✅ |
+
+既に作成済みの branch deploy（`be4d0178`）は**生きたまま**なので、
+Stripe の送信先 URL は引き続き修正済みコードへ届く。
+
+#### 残っている Stripe Test Mode の状態（cleanup は未実施）
+
+- サブスク: `sub_1UBEQt…`（解約済み）/ `sub_1UBRZ7…`（**有効のまま**・今回作成）
+- `RewardLedger` 2 行・`Customers` のテスト会員 1 レコード
+- 🔴 後片付けは指示があるまで行わない
+
+### 2026-09-03 #17 の実施結果 — 🔴 **未達**（Stripe がこの経路では `invoice.payment_failed` を出さない）
+
+承認に従い、Stripe 公式のサンドボックス用「請求が失敗する」テストカード
+`4000 0000 0000 0341`（Stripe Test (multi-country) 発行）**のみ**を使い、
+対象を `0510apolon+test4@gmail.com` **1 会員**に限定して実施した。実カードは使っていない。
+
+#### 実施内容
+
+1. テスト会員に失敗用カードを登録（`pm_1UBRwf…` / `•••• 0341`）
+2. そのカードを支払い手段としてサブスクを作成（初回請求 ¥3,980・即時）
+3. 支払いは**予定どおり失敗**（`pi_3UBRz9…` 失敗・13:10 JST）
+
+#### 🔴 しかし `invoice.payment_failed` は発生しなかった
+
+Stripe 側で実際に起きたイベント（ワークベンチのイベント一覧で確認）:
+
+| 時刻 | イベント |
+|---|---|
+| 13:08:15 | `payment_method.attached`（0341 を顧客へ登録）|
+| 13:10:47 | `payment_intent.created` |
+| 13:10:48 | **`charge.failed`** |
+| 13:10:48 | **`payment_intent.payment_failed`** |
+| 13:10:48 | `payment_intent.canceled`（`cancellation_reason: "failed_invoice"`）|
+
+**`invoice.payment_failed` は 1 件も作られていない。**
+サブスクの**初回**請求が失敗した場合、Stripe は請求書を `failed_invoice` として
+取り消し、サブスク自体を作らずに終える（顧客のサブスクは
+`sub_1UBRZ7…`（有効）と `sub_1UBEQt…`（キャンセル済み）の **2 件のまま**）。
+
+`invoice.payment_failed` は **更新（2 回目以降）の請求が失敗したとき**に出るため、
+再現するには **Stripe Test Clock で請求サイクルを進める**必要がある。
+Test Clock は**新しい顧客を作る**ことになり、
+承認された「対象はテスト会員 1 会員・`Customers` 更新のみ」の範囲を超えるため、
+**ここで停止した**。
+
+#### 検証結果（read-only）
+
+| 検査 | 結果 |
+|---|---|
+| `Status=payment_failed` | 🔴 **未達**（`inactive` のまま）。webhook が発火していないため |
+| `RewardLedger` | ✅ **2 行のまま**（増えていない）|
+| 実会員（`0510apolon` 以外 62 件）| ✅ `payment_failed` **0 件** / `CancelledAt` **0 件** |
+| `Customers` 総数 | ✅ **66**（増減なし）|
+| `MembershipStartedAt` | ✅ **7 件**（不変）|
+
+🔴 **これは KI 側の不具合ではない。** `invoice.payment_failed` のハンドラは
+`applyPlan({ status: 'payment_failed' })` を呼ぶだけで実装は正しく、
+**イベントが発火していないので呼ばれていない**だけである。
+実運用では Checkout が決済成功後にしか `checkout.session.completed` を出さないため、
+「初回失敗」はそもそもプラン付与前で記録対象が無い。
+
+### 2026-09-03 Test Mode E2E 17 項目の最終判定
+
+| # | 区分 | 内容 | 判定 |
+|---|---|---|---|
+| 1 | A 認可 | 無料会員でログイン → 印が見える / 買い目は見えない | **未実施**（ログインにメール受信が必要）|
+| 2 | A 認可 | `/pricing` のボタン表示 | **未実施** |
+| 3 | A 認可 | Checkout でテストカード決済 → 成功 | ✅（2026-09-02 の記録）|
+| 4 | A 認可 | `checkout.session.completed` が 200 | ✅ |
+| 5 | A 認可 | 予想ページで買い目が開く / 印は出ない | **未実施**（ログインが必要）|
+| 6 | A 認可 | 同じイベントを再送 → Airtable が二重更新されない | ✅（不変を実測）／ 🟡 応答の `duplicate:true` は**未観測**（`{"received":true}`）|
+| 7 | B リワード | `invoice.payment_succeeded` が 200 | ✅ |
+| 8 | B リワード | `RewardLedger` が 1 行だけ増える | ✅ |
+| 9 | B リワード | `Type` / `Points=100` / **`PeriodMonths=1`** / `SourceRef` / `OccurredAt` | ✅（修正後に実測）|
+| 10 | B リワード | 同じ invoice を再送 → 行が増えない | ✅ |
+| 11 | B リワード | `ContractPriceYen=3980` / `jpy` / `ContractPriceId` | ✅（`ki_price_id` と完全一致）|
+| 12 | B リワード | `/mypage` 残高 100pt・今月 100pt | ✅（read-only・本番と同じ関数）|
+| 13 | C 解約 | 解約イベントが 200 | ✅ |
+| 14 | C 解約 | 買い目が閉じる / 印は見える | ✅（read-only・`tiers.js` 実関数）|
+| 15 | C 解約 | `CancelledAt` に解約日 | ✅ |
+| 16 | C 解約 | ポイントは残る | ✅ |
+| 17 | C 失敗 | `Status=payment_failed` のみ・台帳が増えない | 🔴 **未達**（台帳が増えないことは ✅、`Status` は発火せず）|
+
+**判定: ✅ 12 / 🟡 1（#6 の一部）/ 未実施 3 / 🔴 未達 1。**
+正本の完成条件「**17 項目すべてが期待どおり**」には **到達していない**。
+
+未実施の 1・2・5 は、いずれも**テスト会員としてログインする**必要があり、
+マジックリンクのメール受信が要る（こちらからは受け取れない）。
+
+#### Test Mode に残っている状態（cleanup 未実施）
+
+- サブスク: `sub_1UBRZ7…`（**有効**）/ `sub_1UBEQt…`（キャンセル済み）
+- 決済手段: `•••• 4242`（成功用）/ **`•••• 0341`（失敗用・今回追加）**
+- `RewardLedger` 2 行 / `Customers` のテスト会員 1 レコード
+- 🔴 後片付けは指示があるまで行わない
+
+### 🔴 2026-09-03 手順0（branch deploy 再ビルド）が実行できない — 原因確定
+
+承認を受けて `57da2619` を branch deploy へ再ビルドしようとしたが、**実行できない**。
+サイトの build 設定が原因で、**このブランチには branch deploy が作られない**。
+
+#### 原因（`netlify api getSite` の実測・read-only）
+
+```
+allowed_branches: ["main"]
+repo_branch:      "main"
+stop_builds:      false
+```
+
+**branch deploy の対象が `main` だけに絞られている。**
+そのため `test/stripe-testmode-e2e-2026-09-01` は、push しても
+**deploy-preview しか作られず、branch deploy は作られない**。
+
+| context | 最新 commit | 時刻 |
+|---|---|---|
+| branch-deploy | **`4aadb0a8`** | 2026-09-02 14:24 UTC（**これ以降 1 件も無い**）|
+| deploy-preview | `57da2619` | 2026-09-03 03:05 UTC（ready）|
+
+直近 100 デプロイを見ても、`4aadb0a8` より新しい branch-deploy は **1 件も存在しない**。
+`4aadb0a8`（14:24）の直後から止まっているため、**その頃に設定が `["main"]` へ絞られた**
+と考えられる（誰がいつ変えたかは API からは分からないので断定しない）。
+
+#### なぜ迂回できないか
+
+| 案 | 可否 |
+|---|---|
+| 既存の build hook を使う | 🔴 その hook は **`main` 用**。誤って **production build** を起こす危険がある |
+| `createSiteBuild` を叩く | 🔴 既定ブランチ（`main`）を建てる＝**Production deploy**。禁止されている |
+| deploy-preview（`57da2619` ready）を使う | 🔴 Stripe の送信先 URL は **branch deploy の URL**。
+  preview を使うには **Stripe の設定変更**が必要で、禁止されている |
+| ブランチに実変更を push | 🔴 `allowed_branches: ["main"]` のままでは、何を push しても branch deploy は作られない |
+
+**したがって手順0 には `allowed_branches` の変更（Netlify のビルド設定変更）が要る。**
+これは承認された「再ビルド」の範囲を超え、しかも
+**意図的に絞られた設定を元へ戻す**ことになるため、**独断で変更せず停止した**。
+
+#### 影響
+
+- 現在の branch deploy URL は **`4aadb0a8` を配信し続けている**（URL は生きており Stripe の配信も通る）。
+  ただし **`PeriodMonths` 修正（`57da2619`）は載っていない**。
+- **完成条件 #9 はこの状態では満たせない**。新しい支払いを起こしても `PeriodMonths` は空のままになる。
+- 本番（`main` / production）には影響しない。修正は branch に commit 済みで、
+  main へ merge すれば production には載る（**merge は未承認・未実施**）。
+
+#### 承認が要る選択
+
+1. `allowed_branches` に `test/stripe-testmode-e2e-2026-09-01` を**一時的に追加**して
+   branch deploy を作り直し、E2E 後に `["main"]` へ戻す
+2. Stripe の送信先 URL を deploy-preview（`deploy-preview-82--…`）へ向け替える
+   （🔴 Stripe 設定変更。現在は禁止）
+3. #9 の実測を諦め、**#9 は単体テスト（往復テスト）での担保にとどめる**
+
+#### 既存 1 行の遡及更新
+
+🔴 **行わない**（仕様所有者の指示・2026-09-03）。
+その行は月額 1 か月ぶんで、旧行として 1 か月と数えられるため**値は正しい**。
+
+### 2026-09-03 二重配信の解消（承認済み・Test Mode のみ）
+
+同一 URL を指す送信先が 2 つあり、片方は今週 12 件すべて 400 `invalid_signature` だった。
+**`KI Stripe Test E2E`（`we_1UAgTiLbPC6OVRqMcfol1yoP`）を無効化**して解消した。
+
+| 送信先 | 変更前 | 変更後 |
+|---|---|---|
+| `KI Test Webhook`（`we_1UAsSe…`）| アクティブ・イベント 5 件 | **変更なし（アクティブ）** |
+| `KI Stripe Test E2E`（`we_1UAgTi…`）| アクティブ・イベント 6 件・今週 12/12 失敗 | **無効** |
+
+- 失うものが無いことを確認済み: `KI Test Webhook` の 5 件は `stripe-webhook.js` の
+  5 つの `case` と完全一致。無効化した側の固有 2 件（`customer.bank_account.updated` /
+  `customer.card.updated`）は**コードに分岐が無く**、逆に付与に必要な
+  `invoice.payment_succeeded` を**持っていなかった**。
+- **削除ではなく無効化**（可逆。設定・署名シークレット・配信履歴は保持）。
+- 🔴 **本番（Live Mode）の送信先には触れていない。** env（`STRIPE_WEBHOOK_SECRET`）も未変更。
+- 判断の記録: `docs/decisions.md`「2026-09-03 — Test Mode の重複 webhook 送信先を無効化する」
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:

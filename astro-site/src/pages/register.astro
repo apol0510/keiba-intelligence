@@ -6,6 +6,16 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
 ---
 
 <BaseLayout title={title} description={description}>
+  {/*
+    🔴 ログイン中にこの画面を開いたときの案内。
+       静的ページなので Cookie は読めない。`BaseLayout` の `syncAuthNav` が
+       読み込み後に `[data-auth-in]` を出す（表示だけ。認可には関係しない）。
+  */}
+  <div class="already-signed-in" data-auth-in hidden>
+    <p>すでにログインしています。</p>
+    <a href="/mypage">マイページへ</a>
+  </div>
+
   <main class="container">
     <div class="register-page">
       <div class="register-header">
@@ -45,6 +55,13 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
         <div class="form-container">
           <h2>メールアドレスで登録</h2>
           <p class="form-description">登録完了メールのリンクをクリックして認証してください</p>
+
+          <!--
+            🔴 結果メッセージはフォームの**上**に置く。
+               以前はフォームの下（ログインリンクの下）にあり、
+               ボタンを押した位置から遠く、画面下に埋もれて気づけなかった。
+          -->
+          <div id="message" class="message" role="status" aria-live="polite" tabindex="-1"></div>
 
           <form id="registerForm" class="register-form">
             <div class="form-group">
@@ -91,8 +108,6 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
               <p>すでに登録済みの方は <a href="/login">ログイン</a></p>
             </div>
           </form>
-
-          <div id="message" class="message"></div>
         </div>
       </section>
 
@@ -123,6 +138,20 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
   const form = document.getElementById('registerForm') as HTMLFormElement;
   const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
   const messageDiv = document.getElementById('message') as HTMLDivElement;
+
+  /**
+   * 結果メッセージを**確実に見える位置**へ運ぶ。
+   * 🔴 出しただけでは、スクロール位置によっては画面外のままになる。
+   *    スクリーンリーダーへは role="status" が読み上げる。
+   */
+  function revealMessage() {
+    try {
+      messageDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      messageDiv.focus({ preventScroll: true });
+    } catch {
+      messageDiv.scrollIntoView();
+    }
+  }
   const emailInput = document.getElementById('email') as HTMLInputElement;
   const emailConfirmInput = document.getElementById('emailConfirm') as HTMLInputElement;
   const emailMatchError = document.getElementById('emailMatchError') as HTMLDivElement;
@@ -175,17 +204,26 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
 
       const data = await response.json();
 
-      if (response.ok) {
-        messageDiv.textContent = '✅ 登録完了メールを送信しました。メールをご確認ください。';
+      if (response.ok && data.alreadyRegistered) {
+        // 🔴 認証済みの会員。メールは送っていないので「送信しました」と言わない
+        messageDiv.innerHTML =
+          'ℹ️ このメールアドレスは既に登録済みです。<a href="/login">ログイン</a>してください。';
+        messageDiv.className = 'message notice';
+      } else if (response.ok) {
+        messageDiv.textContent = data.resent
+          ? '✅ 確認メールを再送しました。メールをご確認ください。'
+          : '✅ 登録完了メールを送信しました。メールをご確認ください。';
         messageDiv.className = 'message success';
         form.reset();
       } else {
         messageDiv.textContent = `❌ ${data.error || '登録に失敗しました'}`;
         messageDiv.className = 'message error';
       }
+      revealMessage();
     } catch (error) {
       messageDiv.textContent = '❌ ネットワークエラーが発生しました';
       messageDiv.className = 'message error';
+      revealMessage();
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = '無料で登録する';
@@ -423,24 +461,53 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
 }
 
 /* メッセージ */
+/* 🔴 空のときは余白を作らない（フォームが下へずれない） */
 .message {
-  margin-top: 1rem;
-  padding: 1rem;
-  border-radius: 6px;
+  display: none;
+}
+
+.message.success,
+.message.error,
+.message.notice {
+  display: block;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
   text-align: center;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  scroll-margin-top: 1rem;
+}
+
+/* キーボード操作でフォーカスを当てたときに枠を二重に出さない */
+.message:focus {
+  outline: none;
 }
 
 .message.success {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
-  border: 1px solid #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  border: 2px solid #22c55e;
 }
 
 .message.error {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border: 1px solid #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  border: 2px solid #ef4444;
+}
+
+/* 登録済みの案内（エラーではないので赤くしない） */
+.message.notice {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  border: 2px solid #3b82f6;
+}
+
+.message.notice a {
+  color: inherit;
+  font-weight: 800;
+  text-decoration: underline;
 }
 
 /* アップグレードセクション */
@@ -524,4 +591,23 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
     grid-template-columns: 1fr;
   }
 }
+</style>
+
+<style>
+  .already-signed-in {
+    max-width: 520px;
+    margin: 24px auto 0;
+    padding: 14px 18px;
+    border-radius: var(--radius-md);
+    background: var(--outlook-bg);
+    border: 1px solid var(--outlook-border);
+    text-align: center;
+    font-size: 0.9rem;
+  }
+
+  .already-signed-in p { margin: 0 0 8px; color: var(--text-secondary); }
+
+  .already-signed-in a { font-weight: 700; color: var(--primary-start); }
+
+  .already-signed-in[hidden] { display: none !important; }
 </style>

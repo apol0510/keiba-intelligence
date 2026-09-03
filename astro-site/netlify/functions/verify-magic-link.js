@@ -139,8 +139,23 @@ export async function handler(event) {
 
     // 5. リダイレクト先
     // 🔴 会場では分けない（2026-08-30 に「ライト＝南関」を廃止）
-    let redirectTo = '/free-prediction';
-    if (tier === TIER.LIGHT || tier === TIER.PREMIUM) redirectTo = '/mypage';
+    // 🔴 ログインできた人は tier を問わずマイページへ（2026-09-02）。
+    //    無料会員も「自分の状態（プラン・KI 会員クラブ）」をまず見せる。
+    //    以前は無料だけ /free-prediction へ送っていたため、
+    //    ログイン直後に自分の状態を確認できなかった。
+    let redirectTo = '/mypage';
+
+    // 🔴 購入導線から来た場合は購入の続きへ戻す（登録→認証→Checkout を 1 本に繋ぐ）。
+    //    受け取るのは **プラン id だけ**で、戻り先のパスは
+    //    `resumePathFor` が固定文字列で組み立てる（open redirect を作らない）。
+    //    未知・空・URL 等はすべて無視され、従来の戻り先のままになる。
+    const { resumePathFor, normalizeIntent } = await import('../../src/lib/billing/purchaseIntent.js');
+    const rawIntent = event.queryStringParameters?.intent;
+    redirectTo = resumePathFor(rawIntent, redirectTo);
+    // 🔴 値そのものは出さない（受け取ったか / 有効だったかだけ）
+    console.log('↩︎ redirect:', redirectTo,
+      '| intent received:', rawIntent ? 'yes' : 'no',
+      '| intent valid:', normalizeIntent(rawIntent) ? 'yes' : 'no');
 
     return {
       statusCode: 200,

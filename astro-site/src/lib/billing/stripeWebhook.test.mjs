@@ -19,6 +19,7 @@
 
 import { test, mock, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import Stripe from 'stripe';
 
 import { TIER, planTypeToTier, applyExpiry } from '../auth/tiers.js';
@@ -44,6 +45,8 @@ const db = {
   updates: [],
   selects: [],
   failUpdate: false,
+  /** 特定の書き込みだけ失敗させる述語（membership 側だけ落とす検証用）。 */
+  failUpdateWhen: null,
   reset() {
     this.rows = [
       { id: 'recALICE', fields: { Email: ALICE, PlanType: 'free-registered', Status: 'active', AccessEnabled: true } },
@@ -52,6 +55,7 @@ const db = {
     this.updates = [];
     this.selects = [];
     this.failUpdate = false;
+    this.failUpdateWhen = null;
   },
 };
 
@@ -89,6 +93,10 @@ before(() => {
           },
           async update(list) {
             if (db.failUpdate) throw new Error('airtable is down');
+            if (db.failUpdateWhen && list.some((u) => db.failUpdateWhen(u.fields || {}))) {
+              // Airtable が拒否したときと同じ形（例外）で落とす
+              throw new Error('airtable rejected the update');
+            }
             for (const u of list) {
               db.updates.push({ id: u.id, fields: { ...u.fields } });
               const row = db.rows.find((r) => r.id === u.id);
@@ -126,6 +134,17 @@ before(() => {
  * フラグを立てて検証したいテストは `withWriteFlag('true', ...)` を使う。
  */
 const AMBIENT_WRITE_FLAG = process.env.MEMBERSHIP_WRITE_ENABLED;
+/**
+ * 🔴 membership の store は `process.env` の Airtable 資格情報から組み立てられる。
+ *    テスト中に本物の資格情報が見えていると **実 Airtable へ通信してしまう**ので、
+ *    毎テストで外し、ファイル終了時に戻す（ambient に依存しない）。
+ *    この状態では store は `adapter_missing` で使えない＝書き込み不能となり、
+ *    フラグ ON のときは契約どおり FAILED になる。
+ */
+const AMBIENT_AIRTABLE = {
+  key: process.env.AIRTABLE_API_KEY,
+  base: process.env.AIRTABLE_BASE_ID,
+};
 
 beforeEach(() => {
   db.reset();
@@ -135,12 +154,19 @@ beforeEach(() => {
   process.env['STRIPE_WEBHOOK_SECRET'] = WEBHOOK_SECRET;
   // 🔴 既定は「未設定」。ambient に true が入っていても結果を変えない
   delete process.env.MEMBERSHIP_WRITE_ENABLED;
+  // 🔴 実 Airtable へ通信させない（store は adapter_missing になる）
+  delete process.env.AIRTABLE_API_KEY;
+  delete process.env.AIRTABLE_BASE_ID;
 });
 
 after(() => {
   // 🔴 単純な delete にしない。ambient の値を必ず戻す
   if (AMBIENT_WRITE_FLAG === undefined) delete process.env.MEMBERSHIP_WRITE_ENABLED;
   else process.env.MEMBERSHIP_WRITE_ENABLED = AMBIENT_WRITE_FLAG;
+  if (AMBIENT_AIRTABLE.key === undefined) delete process.env.AIRTABLE_API_KEY;
+  else process.env.AIRTABLE_API_KEY = AMBIENT_AIRTABLE.key;
+  if (AMBIENT_AIRTABLE.base === undefined) delete process.env.AIRTABLE_BASE_ID;
+  else process.env.AIRTABLE_BASE_ID = AMBIENT_AIRTABLE.base;
 });
 
 /* ------------------------------------------------------------------
@@ -171,11 +197,20 @@ async function post(evt, { secret, signature, method = 'POST', raw } = {}) {
   });
 }
 
+/**
+ * 実際の Checkout Session に近い形（2026-09-02 の Test Mode 実データより）。
+ * 🔴 `currency` / `amount_total` / `line_items` / `created` が揃っていないと
+ *    契約価格の記録に進まないため、store の失敗経路を検証できない。
+ */
 const checkoutCompleted = (email, plan = 'premium', id) =>
   makeEvent('checkout.session.completed', {
     id: 'cs_test_1',
     metadata: { ki_plan: plan, ki_email: email },
     customer_email: email,
+    currency: 'jpy',
+    amount_total: 3980,
+    created: Math.floor(Date.parse('2026-09-02T01:47:55Z') / 1000),
+    line_items: { data: [{ price: { id: 'price_test_premium' } }] },
   }, id);
 
 const subUpdated = (email, status, plan = 'premium', id) =>
@@ -304,19 +339,21 @@ test('🔴 MEMBERSHIP_WRITE_ENABLED が無ければ membership の列を書か�
   });
 });
 
-test('🔴 フラグを立てても列が無ければプラン付与は成功する（巻き添えで落ちない）', async () => {
+test('🔴 membership が書けなくてもプラン付与（認可）は巻き添えにしない', async () => {
   await withWriteFlag('true', async () => {
     assert.equal(process.env.MEMBERSHIP_WRITE_ENABLED, 'true', 'テスト内で true にできていない');
     const res = await post(checkoutCompleted(ALICE));
-    // 🔴 membership 側の書き込みが失敗しても、プラン付与は 200 で完了すること
-    assert.equal(res.statusCode, 200, 'membership の失敗がプラン付与を巻き添えにしている');
+
+    // 🔴 契約: 書き込み不能は 500（再送させる）。ただし認可は巻き戻さない
+    assert.equal(res.statusCode, 500, '🔴 書き込み不能を 200 で通している');
+    assert.equal(JSON.parse(res.body).error, 'membership_not_recorded');
 
     const planUpdate = updatesFor(ALICE).find((u) => u.fields.PlanType);
     assert.ok(planUpdate, 'プラン付与が行われていない');
     assert.deepEqual(planUpdate.fields, { PlanType: 'premium', Status: 'active', AccessEnabled: true });
 
     const after = viewOf(ALICE);
-    assert.equal(after.view.showBetting, true, '有料表示が開かない');
+    assert.equal(after.view.showBetting, true, '有料表示が開かない（認可が巻き戻っている）');
   });
 });
 
@@ -456,6 +493,46 @@ test('🔴 payment_succeeded は認可を変えない（付与だけを行う）
    請求期間・支払い時刻が読めないときは付与しない（fail-closed）
    ------------------------------------------------------------------ */
 
+test('🔴 新しい invoice 形（price.recurring が無い）でも付与できる', async () => {
+  // 2026-09-02 の Test Mode E2E で実際に届いたペイロードの形。
+  // 明細に `price` が無く、`pricing.price_details.price` に id だけが入る。
+  // 旧実装は null を返し、リワードが付与されなかった。
+  const { priceRefFromInvoice, periodMonthsFromRecurring, periodMonthsFromInvoice, emailFromInvoice } =
+    await import('../../../netlify/functions/stripe-webhook.js');
+
+  // 🔴 実在の Price / Customer / Invoice の id は書かない。
+  //    Netlify の secrets scanning が env（STRIPE_PRICE_PREMIUM 等）の値を
+  //    リポジトリ内に見つけるとビルドが失敗する（2026-09-02 に発生）。
+  const real = {
+    lines: { data: [{
+      parent: { subscription_item_details: { subscription: 'sub_x' }, type: 'subscription_item_details' },
+      period: { start: 1788330937, end: 1790922937 },
+      pricing: { price_details: { price: 'price_FIXTURE_not_a_real_id', product: 'prod_x' }, type: 'price_details' },
+    }] },
+    parent: { subscription_details: { metadata: { ki_email: 'a@example.com' }, subscription: 'sub_x' } },
+    customer_email: 'billing@example.com',
+  };
+
+  // id だけ取り出せる（Price は呼び出し側が取りに行く）
+  assert.deepEqual(priceRefFromInvoice(real), { recurring: null, priceId: 'price_FIXTURE_not_a_real_id' });
+  // 🔴 period.start / end の差（30 日）から月数を推測しない
+  assert.equal(periodMonthsFromInvoice(real), null);
+  // 取得した recurring からは判定できる
+  assert.equal(periodMonthsFromRecurring({ interval: 'month', interval_count: 1 }), 1);
+
+  // メールの場所も API 版で違う
+  assert.equal(emailFromInvoice(real), 'a@example.com', 'parent 配下の metadata を見ていない');
+  assert.equal(emailFromInvoice({ subscription_details: { metadata: { ki_email: 'old@example.com' } } }), 'old@example.com');
+  assert.equal(emailFromInvoice({ customer_email: 'fb@example.com' }), 'fb@example.com');
+  assert.equal(emailFromInvoice({}), null);
+
+  // 旧形は今までどおり読める
+  assert.deepEqual(
+    priceRefFromInvoice({ lines: { data: [{ price: { id: 'price_old', recurring: { interval: 'year', interval_count: 1 } } }] } }),
+    { recurring: { interval: 'year', interval_count: 1 }, priceId: 'price_old' },
+  );
+});
+
 test('🔴 未知の請求間隔では付与しない（月額へ fallback しない）', async () => {
   const { periodMonthsFromInvoice } = await import('../../../netlify/functions/stripe-webhook.js');
 
@@ -552,6 +629,180 @@ test('🔴 未知の間隔 / paid_at 欠落でも 200 を返し、認可は変�
 
   assert.equal(updatesFor(ALICE).length, before, '認可を書き換えている');
   assert.equal(viewOf(ALICE).view.showBetting, true);
+});
+
+/* ------------------------------------------------------------------
+   契約価格（継続価格ロック）は metadata.ki_price_id から復元する
+   ------------------------------------------------------------------ */
+
+test('🔴 契約価格は 3,980 / jpy / Test Price ID として組み立てられる', async () => {
+  const { contractPriceFromCheckoutSession } = await import('../membership/priceLock.js');
+
+  // 🔴 Stripe の webhook ペイロードは line_items を展開しない。
+  //    実データ（2026-09-02 Test Mode）と同じ形で検証する。
+  const session = {
+    id: 'cs_test_1',
+    currency: 'jpy',
+    amount_total: 3980,
+    created: Math.floor(Date.parse('2026-09-02T01:47:55Z') / 1000),
+    metadata: { ki_plan: 'premium', ki_email: ALICE, ki_price_id: 'price_test_premium' },
+  };
+  const c = contractPriceFromCheckoutSession(session, { nowIso: '2026-09-02T01:47:55.000Z' });
+  assert.ok(c, '🔴 line_items が無いと契約価格を作れていない（今回の不具合）');
+  assert.equal(c.amountYen, 3980);
+  assert.equal(c.currency, 'jpy');
+  assert.equal(c.priceId, 'price_test_premium');
+});
+
+test('🔴 metadata が欠けていたら推測補完しない', async () => {
+  const { contractPriceFromCheckoutSession } = await import('../membership/priceLock.js');
+  const base = {
+    currency: 'jpy',
+    amount_total: 3980,
+    created: 1788313675,
+    metadata: { ki_plan: 'premium', ki_email: ALICE },
+  };
+  // Price ID が無い → null（¥3,980 だけで作らない）
+  assert.equal(contractPriceFromCheckoutSession(base, { nowIso: '2026-09-02T00:00:00.000Z' }), null);
+  // 金額が無い → null
+  assert.equal(contractPriceFromCheckoutSession(
+    { ...base, amount_total: null, metadata: { ...base.metadata, ki_price_id: 'price_x' } },
+    { nowIso: '2026-09-02T00:00:00.000Z' },
+  ), null);
+  // JPY 以外 → null（通貨の最小単位を推測しない）
+  assert.equal(contractPriceFromCheckoutSession(
+    { ...base, currency: 'usd', metadata: { ...base.metadata, ki_price_id: 'price_x' } },
+    { nowIso: '2026-09-02T00:00:00.000Z' },
+  ), null);
+});
+
+test('🔴 checkout 関数が metadata に ki_price_id を入れている（送信側の契約）', () => {
+  const src = readFileSync(
+    new URL('../../../netlify/functions/stripe-create-checkout.js', import.meta.url), 'utf8');
+  assert.match(src, /metadata: \{ ki_plan: plan\.id, ki_email: ent\.email, ki_price_id: priceId \}/);
+  assert.match(src, /const priceId = priceIdFor\(plan, process\.env\)/,
+    '🔴 priceId をサーバー側で確定していない');
+});
+
+/* ------------------------------------------------------------------
+   Airtable の単一選択（singleSelect）の制約
+   （2026-09-02 の Test Mode E2E で 500 handler_failed を招いた盲点）
+   ------------------------------------------------------------------ */
+
+/**
+ * 🔴 `PlanType` / `Status` は Airtable の **単一選択**である。
+ *    登録されていない選択肢を書くと Airtable が 422 で拒否し、
+ *    `applyPlan` が例外を投げて webhook が 500 になる。
+ *    モックは値を素通しするため、この制約はテストで**再現できていなかった**。
+ *    ここでは「コードが書く値の集合」を Airtable の選択肢と突き合わせて固定する。
+ *
+ * 🔴 この一覧を増やすときは **Airtable 側にも選択肢を追加**すること。
+ */
+const AIRTABLE_CHOICES = Object.freeze({
+  // 2026-09-02 時点の実スキーマ（read-only で確認済み）
+  PlanType: ['free-registered', 'light', 'pro', 'premium', 'free'],
+  Status: ['pending', 'active', 'cancelled', 'expired', 'suspended', 'unpaid',
+    'refunded', 'withdrawn', 'test', 'inactive', 'payment_failed'],
+});
+
+test('🔴 webhook が書く PlanType / Status は Airtable の選択肢に存在する', async () => {
+  // 実際にイベントを流して、書き込まれた値を集める
+  await post(checkoutCompleted(ALICE));
+  await post(subUpdated(ALICE, 'canceled'));
+  await post(subDeleted(ALICE));
+  await post(paymentFailed(ALICE));
+  for (const st of ['active', 'trialing']) await post(subUpdated(ALICE, st));
+
+  const written = { PlanType: new Set(), Status: new Set() };
+  for (const u of updatesFor(ALICE)) {
+    for (const k of ['PlanType', 'Status']) {
+      if (u.fields[k] != null) written[k].add(u.fields[k]);
+    }
+  }
+
+  for (const k of ['PlanType', 'Status']) {
+    assert.ok(written[k].size > 0, `${k} の書き込みが観測できていない`);
+    for (const v of written[k]) {
+      assert.ok(
+        AIRTABLE_CHOICES[k].includes(v),
+        `🔴 Airtable の ${k} に選択肢「${v}」が無い → 実環境で 422 になり webhook が 500 になる`,
+      );
+    }
+  }
+});
+
+/* ------------------------------------------------------------------
+   membership の失敗を「成功扱い」にしない（再送で復旧できる契約）
+   ------------------------------------------------------------------ */
+
+test('🔴 membership 失敗のイベントは processed にしない（何度でも再送で復旧できる）', async () => {
+  await withWriteFlag('true', async () => {
+    const first = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_fail'));
+    assert.equal(first.statusCode, 500);
+
+    // 🔴 processed にしていないので、再送が duplicate 扱いされない
+    for (let i = 0; i < 3; i++) {
+      const retry = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_fail'));
+      assert.equal(JSON.parse(retry.body).duplicate, undefined,
+        '🔴 duplicate 扱いされ、付与が永久に失われる');
+      assert.equal(retry.statusCode, 500, '書き込み不能が続く間は 500 のまま');
+    }
+  });
+
+  // 書き込み不能が解消（フラグ off ＝ やることが無い）なら 200 になり processed になる
+  const ok = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_fail'));
+  assert.equal(ok.statusCode, 200);
+  const dup = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_fail'));
+  assert.equal(JSON.parse(dup.body).duplicate, true, '成功後は processed になる');
+});
+
+test('🔴 フラグ true で store が使えないときは FAILED（200 で通さない）', async () => {
+  // MEMBERSHIP_WRITE_ENABLED=true だが Airtable の資格情報が無い
+  //  → adapter が作れない（adapter_missing）＝ 書き込み不能
+  await withWriteFlag('true', async () => {
+    {
+      const res = await post(checkoutCompleted(ALICE, 'premium', 'evt_store_down'));
+      assert.equal(res.statusCode, 500, '🔴 書き込み不能を 200 で通している（付与を取りこぼす）');
+      assert.equal(JSON.parse(res.body).error, 'membership_not_recorded');
+
+      // 認可（プラン付与）は完了している
+      const planUpdate = updatesFor(ALICE).find((u) => u.fields.PlanType);
+      assert.deepEqual(planUpdate.fields, { PlanType: 'premium', Status: 'active', AccessEnabled: true });
+
+      // 🔴 processed にしていないので再送で復旧できる
+      const retry = await post(checkoutCompleted(ALICE, 'premium', 'evt_store_down'));
+      assert.equal(JSON.parse(retry.body).duplicate, undefined, '🔴 duplicate 扱いで永久に失われる');
+    }
+  });
+});
+
+test('🔴 契約: フラグ true のときの store 応答 → 結果の対応', async () => {
+  const { default: fs } = await import('node:fs');
+  const src = fs.readFileSync(
+    new URL('../../../netlify/functions/stripe-webhook.js', import.meta.url), 'utf8',
+  );
+  // applied / already だけが OK。それ以外はすべて FAILED
+  assert.match(src, /status === 'applied' \|\| status === 'already'\) return MEMBERSHIP_RESULT\.OK;/);
+  assert.match(src, /return MEMBERSHIP_RESULT\.FAILED;\n\}/);
+  // 🔴 「やることが無い」として許す理由リストを持たない（schema_missing 等を通さない）
+  assert.equal(src.includes('EXPECTED_UNAVAILABLE'), false,
+    '🔴 書き込み不能を SKIPPED として通す抜け道が残っている');
+  for (const reason of ['schema_missing', 'not_configured', 'adapter_missing']) {
+    assert.equal(
+      new RegExp(`'${reason}'[^\\n]*SKIPPED`).test(src), false,
+      `🔴 ${reason} を SKIPPED 扱いしている`,
+    );
+  }
+  // store が使えないときは FAILED
+  assert.match(src, /if \(!store\.enabled\) \{[\s\S]{0,200}?return MEMBERSHIP_RESULT\.FAILED;/);
+});
+
+test('🔴 フラグ未設定（やることが無い）は失敗にしない', async () => {
+  const res = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_skip'));
+  assert.equal(res.statusCode, 200);
+  // processed になっているので再送は duplicate
+  const again = await post(checkoutCompleted(ALICE, 'premium', 'evt_ms_skip'));
+  assert.equal(JSON.parse(again.body).duplicate, true);
 });
 
 test('🔴 同じ invoice の payment_succeeded を再送しても二重処理しない', async () => {
@@ -773,4 +1024,39 @@ test('viewFlags は email を含めない（UI へ PII を渡さない）', asyn
   await post(checkoutCompleted(ALICE));
   const { view } = viewOf(ALICE);
   assert.equal(Object.prototype.hasOwnProperty.call(view, 'email'), false);
+});
+
+/* ------------------------------------------------------------------
+   ビルドを不安定にしていた原因を塞いだことを固定する
+
+   🔴 `node --test` は**テストファイルを子プロセスで実行し、結果を IPC で受け取る**。
+      このファイルは webhook ハンドラの console 出力（✅/⚠️/❌）を大量に出すため、
+      その生の stdout が IPC のメッセージ境界を壊し、親側の
+      `#proccessRawBuffer` で
+
+        uncaughtException: Unable to deserialize cloned data due to
+                           invalid or unsupported version.
+
+      が出て **48 件 pass でもファイル単位で fail** になっていた
+      （2026-09-02 `4aadb0a8` / 2026-09-03 `9b5b2048` の Netlify ビルド失敗）。
+
+   🔴 対策は **`--test` を使わずファイルを直接実行する**こと。
+      直接実行なら子プロセスも IPC も無いので、この経路自体が消える。
+      失敗時の終了コードは `node:test` が立てるので、ビルドの門番は弱くならない。
+   ------------------------------------------------------------------ */
+
+test('🔴 test:stripe は --test を使わない（IPC 経由の不安定さを持ち込まない）', () => {
+  const pkg = JSON.parse(
+    readFileSync(new URL('../../../package.json', import.meta.url), 'utf8'),
+  );
+  const cmd = pkg.scripts['test:stripe'];
+  assert.ok(cmd, 'test:stripe が無い');
+  assert.equal(
+    / --test(\s|$)/.test(cmd), false,
+    '🔴 --test を使うと Unable to deserialize cloned data が再発する',
+  );
+  assert.match(cmd, /--experimental-test-module-mocks/, 'モジュールモックの flag が要る');
+  for (const f of ['stripeWebhook.test.mjs', 'stripeCheckout.test.mjs']) {
+    assert.ok(cmd.includes(f), `${f} が実行対象から外れている`);
+  }
 });

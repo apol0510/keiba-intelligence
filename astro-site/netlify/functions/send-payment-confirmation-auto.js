@@ -31,10 +31,12 @@
  */
 async function recordBankMembership({ recordId, fields, expirationDate, confirmedAtIso = null }) {
   try {
-    const [{ resolveMembershipStore, isWriteEnabled }, { planBankMembershipUpdate }] = await Promise.all([
-      import('../../src/lib/membership/store.js'),
-      import('../../src/lib/membership/bankTransfer.js'),
-    ]);
+    const [{ resolveMembershipStore, isWriteEnabled }, { planBankMembershipUpdate }, { toAirtableDate }] =
+      await Promise.all([
+        import('../../src/lib/membership/store.js'),
+        import('../../src/lib/membership/bankTransfer.js'),
+        import('../../src/lib/membership/airtableStore.js'),
+      ]);
     if (!isWriteEnabled(process.env)) return;
 
     const plan = planBankMembershipUpdate({ fields, recordId, expirationDate, confirmedAtIso });
@@ -55,7 +57,8 @@ async function recordBankMembership({ recordId, fields, expirationDate, confirme
         method: 'PATCH',
         headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}`, 'Content-Type': 'application/json' },
         // 🔴 membership の列だけ。既存列は 1 つも入れない
-        body: JSON.stringify({ fields: { MembershipStartedAt: plan.startedAtIso } }),
+        // 🔴 MembershipStartedAt は日付だけの列。日時を送ると 422 になる
+        body: JSON.stringify({ fields: { MembershipStartedAt: toAirtableDate(plan.startedAtIso) } }),
       });
       console.log(res.ok
         ? `✅ membership: MembershipStartedAt=${plan.startedAtIso}`

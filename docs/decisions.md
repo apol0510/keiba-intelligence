@@ -10,6 +10,168 @@
 
 ---
 
+
+## 2026-09-03 — 予想ページを URL で無料 / 有料に分ける
+
+### Status
+
+**採用**（仕様所有者の指示）。実装は `src/lib/auth/entitlement.js` の
+`freePageViewFlags` / `paidPageRedirect`。
+
+### Context
+
+2026-08-28 の改修で「tier をサーバーで判定するようになったため、
+**free 用 URL と有料用 URL を分ける必要が無くなった**」と判断し、
+`/prediction/*` と `/free-prediction/*` を**同じ実装**にしていた
+（同じ `RaceDayBoard` に同じ `view` を渡す）。
+
+その結果、次の 2 つが起きていた（2026-09-03 仕様所有者の指摘）。
+
+| 症状 | 実態 |
+|---|---|
+| 無料会員が pro 予想にアクセスできてしまう | URL に制限が無く、無料の見え方で**ページは開けた** |
+| プレミアム会員で無料予想を開くと買い目が見えてしまう | tier どおりに出していたので**設計どおり**だった |
+
+🔴 **買い目の漏れは起きていなかった。** guest / 無料会員に買い目が出たことはなく、
+`entitlementRoutes.test.mjs` の静的ガードが 7 経路すべてで
+「買い目は `showBetting` のときだけ組み立てる」を固定していた。
+問題は**認可の穴ではなく、URL の意味付け**だった。
+
+### Decision
+
+**URL で分ける。**
+
+| 経路 | 挙動 |
+|---|---|
+| `/prediction/nankan` / `/prediction/jra` / `/prediction/[slug]` | 🔴 **買い目を出せない tier は入れない**。同じ内容の無料ページへ **302** |
+| `/free-prediction/*`（4 経路）| 🔴 **tier を問わず買い目を出さない**。有料会員でも「無料の見え方」|
+
+- 追い出し先は `/pricing` ではなく**同じ開催の無料ページ**にした。
+  無料会員・未登録でも馬柱・過去走・AI短評は見られるべきで、
+  そのページの `TierRibbon` に「プランを見て買い目を受け取る」CTA が既にあるため。
+- 無料ページで落ちるのは `showBetting` が束ねているもの
+  （**買い目・AI指数の実数値・AI結論**）。**印は tier どおり残す**
+  （無料会員に印を見せるのが無料ページの目的そのもの）。
+
+### Rationale
+
+- **fail-closed**: `paidPageRedirect` は `showBetting === true` のときだけ通す。
+  ビューが壊れていても素通ししない。
+- **CSS で隠さない**: 無料ページでは `showBetting` を false にするので、
+  買い目は**組み立て自体が起きない**（HTML に出てこない）。
+- **判定ロジックは 1 か所**: ページ側で tier を書かず、
+  `freePageViewFlags` / `paidPageRedirect` に集約した。
+
+### Consequences
+
+- 有料会員が `/free-prediction/*` のリンクから来ると買い目が見えない。
+  買い目は `/prediction/*` で見る、という導線に一本化される。
+- 2026-08-28 の「URL を分ける必要が無い」という判断は**この判断で置き換わった**。
+  `docs/RENEWAL_2026_08.md` §7.3 に改訂を明記した。
+
+---
+
+## 2026-09-03 — Test Mode の重複 webhook 送信先を無効化する
+
+### Status
+
+**採用**（仕様所有者の指示「KI Stripe Test E2E の二重配信を解消してください」）。
+
+### Context
+
+Stripe Test Mode に、**同一 URL** を指す webhook 送信先が 2 つ存在していた。
+
+| 名前 | ID | リッスン対象 | 今週の配信 |
+|---|---|---|---|
+| `KI Test Webhook` | `we_1UAsSeLbPC6OVRqMXGrVcsGw` | 5 件 | 合計 21 / 失敗 14 |
+| `KI Stripe Test E2E` | `we_1UAgTiLbPC6OVRqMcfol1yoP` | 6 件 | 合計 12 / **失敗 12** |
+
+送信先 URL はどちらも
+`https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app/.netlify/functions/stripe-webhook`。
+
+branch-deploy の `STRIPE_WEBHOOK_SECRET` は `KI Test Webhook` の署名シークレットと一致しており、
+`KI Stripe Test E2E` 宛の配信は **すべて 400 `invalid_signature`** になっていた。
+1 つのイベントが 2 か所へ配信され、片方が必ず失敗する状態だった。
+
+🔴 **署名シークレットを両方に一致させることはできない**。
+`STRIPE_WEBHOOK_SECRET` は 1 つで、`stripe.webhooks.constructEvent` はその 1 つでしか検証しない。
+したがって「2 つとも生かす」選択肢は存在しない。
+
+### Decision
+
+**`KI Stripe Test E2E` を無効化する**（削除ではなく無効化）。
+
+リッスン対象を比較して、失うものが無いことを確認したうえで実施した。
+
+| イベント種別 | `KI Test Webhook` | `KI Stripe Test E2E` | webhook 実装 |
+|---|---|---|---|
+| `checkout.session.completed` | ✅ | ✅ | 処理する |
+| `customer.subscription.updated` | ✅ | ✅ | 処理する |
+| `customer.subscription.deleted` | ✅ | ✅ | 処理する |
+| `invoice.payment_failed` | ✅ | ✅ | 処理する |
+| `invoice.payment_succeeded` | ✅ | **無し** | 処理する（リワード付与） |
+| `customer.bank_account.updated` | 無し | ✅ | **処理しない** |
+| `customer.card.updated` | 無し | ✅ | **処理しない** |
+
+`KI Test Webhook` の 5 件は `stripe-webhook.js` の `switch` が持つ 5 つの `case` と**完全に一致**する。
+`KI Stripe Test E2E` の固有 2 件はコードに分岐が無く、逆に付与に必要な
+`invoice.payment_succeeded` を**持っていない**。
+
+### Rationale
+
+- **削除しない**: 無効化は「イベントが送信されなくなるが、編集は引き続き可能」であり
+  **可逆**。配信履歴も残るため、過去の 400 の調査ができなくなることもない。
+- **`KI Test Webhook` 側を残す**: 署名シークレットが branch-deploy の env と一致しており、
+  実際に 200 を返して会員継続制度の書き込みまで通っている実績がある。
+- **署名シークレットの付け替えをしない**: env を書き換えると、現に成功している経路を
+  壊すリスクがあるうえ、二重配信そのものは解消しない。
+
+### Consequences
+
+- Test Mode のイベントは `KI Test Webhook` の 1 か所だけへ配信される。
+  400 `invalid_signature` の失敗が積み上がらなくなる。
+- 本番（Live Mode）の送信先には**一切触れていない**。
+- 再開したい場合は同じメニューから有効化できる（設定・シークレットは保持されている）。
+
+---
+
+## 2026-09-02 — 通常ログイン後の遷移先を全会員 `/mypage` に統一する
+
+### Status
+
+**採用**（仕様所有者の承認）。契約の記載は `docs/spec.md` §6-9。
+
+### Context
+
+ログイン後の遷移先は **どの正本にも規定が無かった**。
+`docs/spec.md` / `docs/decisions.md` / `docs/RENEWAL_2026_08.md` / `CLAUDE.md` を
+確認したが、`redirectTo` の語も出てこない。
+
+実装では `無料 → /free-prediction` ／ `有料 → /mypage` に分かれていた。
+この形になったのは `3cdd0c4e`（2026-08-30・仕様所有者の指示）で
+会場別分岐（`venueAccess` による `/prediction/jra` `/prediction/nankan`）を廃止したときだが、
+**遷移先をそう決めた理由はコミット本文にも残っていない**（履歴上は採用済みだが理由は未確認）。
+
+無料会員がログインしても自分の状態（プラン・KI 会員クラブ）を確認できず、
+ナビの「マイページ」を自分で押さない限り会員である実感が得られない状態だった。
+
+### Decision
+
+1. 通常ログインの成功後は **tier を問わず全会員 `/mypage`** へ送る。
+2. 例外は **購入途中のみ**。`resumePathFor` の固定パスを優先する。
+3. 遷移先を決めるのは **サーバー**（`verify-magic-link`）のままとする。
+   クライアントは `redirectTo` に従うだけで、受け取った値からパスを組み立てない。
+4. 認証完了画面の文言は **実際の遷移先に一致**させる。
+
+### Consequences
+
+- 無料会員は、ログイン直後に自分のプランと会員クラブの状態を見る。
+  そこから予想ページへはナビで移動する。
+- 認可・セッション・有効期限の扱いは **一切変えていない**。変わるのは遷移先だけ。
+- 遷移先を再び変える場合は、本節と `docs/spec.md` §6-9 を先に更新する。
+
+---
+
 ## 2026-09-01 — 会員継続制度の数値を確定し、景表法の保守ライン内に収める
 
 ### Status

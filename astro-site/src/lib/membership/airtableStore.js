@@ -38,6 +38,15 @@ export const LEDGER_FIELDS = Object.freeze({
   EMAIL: 'Email',
   TYPE: 'Type',
   POINTS: 'Points',
+  /**
+   * 🔴 その付与が**何か月ぶんか**（月額=1 / 四半期=3 / 年払い=12）。
+   *    保存しないと `rewards.js` の `tenureMonthsFromLedger` が
+   *    `(e.periodMonths ?? PERIOD_MONTHS.MONTHLY)` で **1 か月へ倒れ**、
+   *    年払い（1,200 pt）が 1 か月として数えられて**会員ランクが過少になる**
+   *    （2026-09-03 に未保存を発見）。残高（`Points`）は正しいので、
+   *    ずれるのは**継続月数＝ランク**だけである。
+   */
+  PERIOD_MONTHS: 'PeriodMonths',
   OCCURRED_AT: 'OccurredAt',
   SOURCE_REF: 'SourceRef',
 });
@@ -60,6 +69,59 @@ function isSchemaMissing(status, bodyText) {
   if (status !== 422) return false;
   const t = String(bodyText || '');
   return t.includes('UNKNOWN_FIELD_NAME') || t.includes('TABLE_NOT_FOUND');
+}
+
+/**
+ * 日付だけの列（`Date (ISO)`）へ入れる値を作る。
+ *
+ * 🔴 Airtable の **date 型（時刻なし）** に ISO の日時を送ると
+ *    `422 INVALID_VALUE_FOR_COLUMN` で拒否される（2026-09-02 に発生）。
+ *    列の型は `docs/MEMBERSHIP_DATA_MIGRATION.md` §2.1 / §2.2 で
+ *    `Date (ISO)` と定められており、**送る側を合わせる**のが正しい。
+ * 🔴 `typecast: true` は使わない（勝手な変換を許すと別の列も静かに壊れる）。
+ *
+ * 🔴 日付の切り方は **Asia/Tokyo**。
+ *    日本向けサービスであり、画面表示も JST。UTC で切ると
+ *    JST 早朝の支払いが前日になり、月境界で「今月の積み上げ」がずれる。
+ *
+ * @param {number|string|null} value  ミリ秒 または ISO 文字列
+ * @returns {string|null} `YYYY-MM-DD`。判断できなければ null（＝書かない）
+ */
+export const AIRTABLE_DATE_TIME_ZONE = 'Asia/Tokyo';
+
+export function toAirtableDate(value) {
+  const ms = typeof value === 'number' ? value : Date.parse(String(value || ''));
+  if (!Number.isFinite(ms)) return null;
+  // en-CA は YYYY-MM-DD 形式
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: AIRTABLE_DATE_TIME_ZONE,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date(ms));
+}
+
+/**
+ * 応答から「原因を特定できる短い符号」を作る。
+ *
+ * 🔴 本文をそのまま出さない。Airtable のエラー本文は
+ *    フィールド名や値を含むことがある（例: 不正な値をそのまま echo する）。
+ *    ここで取るのは **HTTP status と `error.type`（機械可読な短い符号）だけ**。
+ * 🔴 `error.message` は使わない（値が混ざるため）。
+ *
+ * 例: `403:INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND` / `429` / `422:INVALID_VALUE_FOR_COLUMN`
+ */
+export function errorCodeFrom(status, bodyText) {
+  const code = Number.isFinite(status) ? String(status) : 'unknown';
+  let type = '';
+  try {
+    const j = JSON.parse(String(bodyText || ''));
+    const e = j && j.error;
+    const t = typeof e === 'string' ? e : (e && e.type) || '';
+    // 英数と _ - . のみ。長さも制限する（値が紛れ込む余地を残さない）
+    type = String(t).replace(/[^A-Za-z0-9_.-]/g, '').slice(0, 60);
+  } catch {
+    /* JSON でなければ status だけで判断する */
+  }
+  return type ? `${code}:${type}` : code;
 }
 
 /**
@@ -99,7 +161,13 @@ export function createAirtableMembershipStore({
     let text = '';
     try { text = await res.text(); } catch { /* 読めなくても判定は続ける */ }
     if (isSchemaMissing(res.status, text)) schemaMissing = true;
-    return { ok: false, status: res.status, schemaMissing: isSchemaMissing(res.status, text) };
+    return {
+      ok: false,
+      status: res.status,
+      schemaMissing: isSchemaMissing(res.status, text),
+      // 🔴 原因を追えるだけの符号。本文・値は含めない
+      code: errorCodeFrom(res.status, text),
+    };
   }
 
   async function findCustomer(email) {
@@ -142,7 +210,7 @@ export function createAirtableMembershipStore({
           }),
         });
       } catch {
-        return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'read_failed', profile: null });
+        return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'read_failed:exception', profile: null });
       }
     },
 
@@ -154,7 +222,7 @@ export function createAirtableMembershipStore({
         if (!r.ok) {
           return Object.freeze({
             status: STORE_RESULT.UNAVAILABLE,
-            reason: r.schemaMissing ? SCHEMA_MISSING : 'read_failed',
+            reason: r.schemaMissing ? SCHEMA_MISSING : `read_failed:${r.code}`,
             entries: null,
           });
         }
@@ -165,6 +233,9 @@ export function createAirtableMembershipStore({
             entryId: f[LEDGER_FIELDS.ENTRY_ID],
             type: f[LEDGER_FIELDS.TYPE],
             points: f[LEDGER_FIELDS.POINTS],
+            // 🔴 そのまま渡す（壊れた値は `isValidEntry` が弾く）。
+            //    列が無い旧行は undefined のままにして、従来どおり 1 か月として数える
+            periodMonths: f[LEDGER_FIELDS.PERIOD_MONTHS],
             occurredAtMs: Number.isFinite(at) ? at : NaN,
             ref: f[LEDGER_FIELDS.SOURCE_REF] || null,
           };
@@ -172,7 +243,7 @@ export function createAirtableMembershipStore({
         // 🔴 壊れた行は `rewards.js` の isValidEntry が集計から外す（ここでは捨てない）
         return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, entries: Object.freeze(entries) });
       } catch {
-        return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'read_failed', entries: null });
+        return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'read_failed:exception', entries: null });
       }
     },
 
@@ -185,7 +256,7 @@ export function createAirtableMembershipStore({
       try {
         const formula = encodeURIComponent(`{${LEDGER_FIELDS.ENTRY_ID}} = "${escapeFormula(entry.entryId)}"`);
         const found = await call(`${encodeURIComponent(LEDGER_TABLE)}?maxRecords=1&filterByFormula=${formula}`);
-        if (!found.ok) return unavailable(found.schemaMissing ? SCHEMA_MISSING : 'read_failed');
+        if (!found.ok) return unavailable(found.schemaMissing ? SCHEMA_MISSING : `read_failed:${found.code}`);
         if (found.data.records?.length) {
           return Object.freeze({ status: STORE_RESULT.ALREADY, reason: null, writes: 0 });
         }
@@ -199,16 +270,21 @@ export function createAirtableMembershipStore({
                 [LEDGER_FIELDS.EMAIL]: normEmail(email),
                 [LEDGER_FIELDS.TYPE]: entry.type,
                 [LEDGER_FIELDS.POINTS]: entry.points,
-                [LEDGER_FIELDS.OCCURRED_AT]: new Date(entry.occurredAtMs).toISOString(),
+                [LEDGER_FIELDS.OCCURRED_AT]: toAirtableDate(entry.occurredAtMs),
+                // 🔴 月数は**判定できたときだけ**入れる。既定値（1）で埋めない
+                //    （`buildPaidPeriodEntry` は判定できなければエントリ自体を作らない）
+                ...(Number.isInteger(entry.periodMonths) && entry.periodMonths > 0
+                  ? { [LEDGER_FIELDS.PERIOD_MONTHS]: entry.periodMonths }
+                  : {}),
                 ...(entry.ref ? { [LEDGER_FIELDS.SOURCE_REF]: entry.ref } : {}),
               },
             }],
           },
         });
-        if (!created.ok) return unavailable(created.schemaMissing ? SCHEMA_MISSING : 'write_failed');
+        if (!created.ok) return unavailable(created.schemaMissing ? SCHEMA_MISSING : `write_failed:${created.code}`);
         return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: 1 });
       } catch {
-        return unavailable('write_failed');
+        return unavailable('write_failed:exception');
       }
     },
 
@@ -232,14 +308,14 @@ export function createAirtableMembershipStore({
               [CUSTOMER_FIELDS.PRICE_YEN]: contract.amountYen,
               [CUSTOMER_FIELDS.CURRENCY]: contract.currency,
               [CUSTOMER_FIELDS.PRICE_ID]: contract.priceId,
-              [CUSTOMER_FIELDS.PRICE_STARTED_AT]: contract.startedAtIso,
+              [CUSTOMER_FIELDS.PRICE_STARTED_AT]: toAirtableDate(contract.startedAtIso),
             },
           },
         });
-        if (!updated.ok) return unavailable(updated.schemaMissing ? SCHEMA_MISSING : 'write_failed');
+        if (!updated.ok) return unavailable(updated.schemaMissing ? SCHEMA_MISSING : `write_failed:${updated.code}`);
         return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: 1 });
       } catch {
-        return unavailable('write_failed');
+        return unavailable('write_failed:exception');
       }
     },
   });

@@ -53,7 +53,8 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { email } = JSON.parse(event.body);
+    // `intent` は任意。購入導線から来たときだけ入る（従来の /login は送らない）
+    const { email, intent } = JSON.parse(event.body);
 
     if (!email) {
       return {
@@ -116,26 +117,40 @@ exports.handler = async (event) => {
     console.log('✅ Token created:', token);
 
     // 4. SendGrid経由でマジックリンク送信
-    const magicLink = `https://keiba-intelligence.jp/auth/verify?token=${token}`;
+    // 🔴 送信先は既定で本番（従来どおり）。`MAGIC_LINK_BASE_URL` が
+    //    許可リストに載った origin のときだけ、そこへ向ける（Deploy Preview /
+    //    ブランチデプロイで通常のログイン経路を通すため）。
+    //    未設定・壊れた値・許可外ホストは **すべて本番へ倒す**（fail-closed）。
+    //    認証の意味・有効期限・認可条件は変わらない。
+    const { buildMagicLinkUrl } = await import('../../src/lib/auth/magicLinkBase.js');
+    // 🔴 購入意図（プラン id）を持ち越す。URL は運ばない（open redirect を作らない）。
+    //    受け付けるのは plans.js に定義のある id だけ。未知・空は意図なしとして無視する。
+    const { intentQuery } = await import('../../src/lib/billing/purchaseIntent.js');
+    const magicLink = buildMagicLinkUrl(token, process.env) + intentQuery(intent);
+
+    // 🔴 購入導線から来た場合は「ログインリンク」ではなく、お支払いへの案内にする
+    const { emailCopyFor } = await import('../../src/lib/billing/purchaseEmailCopy.js');
+    const copy = emailCopyFor(intent, 'login');
 
     const msg = {
       to: email,
       from: process.env.SENDGRID_FROM_EMAIL || 'noreply@em8410.keiba-intelligence.jp',
-      subject: '【KEIBA Intelligence】ログインリンク',
+      subject: copy.subject,
       html: `
 <div style="font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
   <div style="background-color: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-    <h2 style="color: #1e40af; margin-top: 0; font-size: 24px;">ログインリンク</h2>
+    <h2 style="color: #1e40af; margin-top: 0; font-size: 24px;">${copy.heading}</h2>
 
     <p style="color: #334155; font-size: 16px; line-height: 1.6;">${customer.Name || 'お客様'} 様</p>
 
-    <p style="color: #334155; font-size: 16px; line-height: 1.6;">以下のボタンをクリックしてログインしてください。</p>
+    <p style="color: #334155; font-size: 16px; line-height: 1.6;">${copy.lead}</p>
 
     <div style="text-align: center; margin: 32px 0;">
       <a href="${magicLink}" style="display: inline-block; background-color: #3b82f6; color: #ffffff !important; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; border: 2px solid #3b82f6;">
-        ログインする
+        ${copy.cta}
       </a>
     </div>
+    ${copy.note ? `<p style="text-align: center; color: #64748b; font-size: 13px; margin: -16px 0 24px;">${copy.note}</p>` : ''}
 
     <div style="background-color: #f1f5f9; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 4px;">
       <p style="color: #475569; font-size: 14px; margin: 0; line-height: 1.6;">

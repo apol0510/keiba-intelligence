@@ -129,9 +129,15 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
             </ul>
 
             {plan.purchasable ? (
-              <button class="pr-btn pr-btn-primary pr-plan-cta" type="button" data-checkout={plan.id}>
-                このプランを申し込む
+              <button class="pr-btn pr-btn-action pr-plan-cta" type="button" data-checkout={plan.id}
+                      aria-controls="pr-purchase-auth" aria-expanded="false">
+                <span class="pr-cta-label">このプランを申し込む</span>
               </button>
+              <p class="pr-plan-steps">
+                <span>①&nbsp;メール確認</span><span class="pr-step-sep">→</span>
+                <span>②&nbsp;お支払い</span><span class="pr-step-sep">→</span>
+                <span>③&nbsp;すぐに利用開始</span>
+              </p>
             ) : (
               <>
                 <button class="pr-btn pr-btn-disabled" type="button" disabled>まもなく受付開始</button>
@@ -140,6 +146,33 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
             )}
           </article>
         ))}
+      </div>
+
+      {/*
+        🔴 未ログインで申し込んだときの「購入手続きの入口」。
+           ここは **無料会員登録の導線ではない**（購入の続きとして見せる）。
+           送信後は登録・ログインのどちらでも、認証を終えると購入へ戻る。
+      */}
+      <div class="pr-purchase-auth" id="pr-purchase-auth" hidden>
+        <p class="pr-purchase-step" aria-hidden="true">
+          <span class="pr-purchase-step-now">STEP 1 / 3</span>
+          <span class="pr-purchase-step-of">メールアドレスの確認</span>
+        </p>
+        <h3>お申し込みを続けます</h3>
+        <p class="pr-purchase-lead">
+          ご本人確認のため、確認メールをお送りします。<br />
+          メール内のリンクを開くと、<b>このままお支払い画面へ進みます</b>。
+        </p>
+        <form id="pr-purchase-form" novalidate>
+          <label class="pr-purchase-label" for="pr-purchase-email">メールアドレス</label>
+          <input class="pr-purchase-input" id="pr-purchase-email" type="email" name="email"
+                 autocomplete="email" inputmode="email" placeholder="your@email.com" required />
+          <button class="pr-btn pr-btn-action pr-purchase-submit" type="submit">確認メールを送る</button>
+        </form>
+        <p class="pr-purchase-msg" id="pr-purchase-msg" hidden></p>
+        <p class="pr-purchase-note">
+          お支払いはこのあとの画面で行います。確認メールだけでは課金されません。
+        </p>
       </div>
 
       <p class="pr-plan-msg" id="pr-plan-msg" hidden></p>
@@ -242,6 +275,8 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
 </BaseLayout>
 
 <script>
+  import { storeIntent } from '../lib/billing/purchaseIntent.js';
+
   // 価格は Stripe から取得する（金額をコードに持たない）
   async function loadPrices() {
     const msg = document.getElementById('pr-plan-msg');
@@ -292,7 +327,10 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       });
 
       if (res.status === 401) {
-        window.location.href = '/login?redirect=/pricing';
+        // 🔴 「まず無料会員登録を」ではなく、購入手続きの続きとして扱う
+        openPurchaseAuth(planId);
+        button.disabled = false;
+        button.textContent = original;
         return;
       }
 
@@ -336,8 +374,98 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     }
   }
 
+  /* ------------------------------------------------------------------
+     購入導線（未ログインで申し込んだとき）
+
+     🔴 これらは **startCheckout と同じスコープ**に置くこと。
+        DOMContentLoaded の内側へ入れると startCheckout から参照できず、
+        クリック時に ReferenceError になって
+        「現在お申し込みを受け付けられません」だけが出る（2026-09-02 に発生）。
+     ------------------------------------------------------------------ */
+  /** 購入意図を保持したままメール確認へ切り替える。 */
+  let pendingPlan = null;
+  function openPurchaseAuth(planId) {
+    pendingPlan = planId;
+    const box = document.getElementById('pr-purchase-auth');
+    if (!box) return;
+    box.hidden = false;
+    // 押した CTA 自身にも「下へ続く」ことを出す（何が起きたか分かるように）
+    document.querySelectorAll('[data-checkout]').forEach((b) => {
+      const mine = b.getAttribute('data-checkout') === planId;
+      b.classList.toggle('is-open', mine);
+      b.setAttribute('aria-expanded', mine ? 'true' : 'false');
+    });
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const input = document.getElementById('pr-purchase-email');
+    if (input) input.focus();
+  }
+
+  async function submitPurchaseAuth(e) {
+    e.preventDefault();
+    const input = document.getElementById('pr-purchase-email');
+    const msg = document.getElementById('pr-purchase-msg');
+    const btn = document.querySelector('.pr-purchase-submit');
+    const email = (input && input.value || '').trim();
+    if (msg) msg.hidden = true;
+    if (!email) { if (input) input.focus(); return; }
+
+    if (btn) { btn.disabled = true; btn.textContent = '送信中…'; }
+    try {
+      const res = await fetch('/.netlify/functions/start-purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, plan: pendingPlan }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.sent) {
+        // 🔴 メールのリンクから intent が落ちても購入へ戻れるように控えを残す。
+        //    保存するのはプラン id だけ。認可には使わない。
+        try { storeIntent(window.localStorage, pendingPlan); } catch { /* 使えなくても続行 */ }
+        if (msg) {
+          msg.hidden = false;
+          msg.className = 'pr-purchase-msg is-ok';
+          msg.textContent = '確認メールをお送りしました。メール内のリンクを開くと、お申し込みに戻ります。';
+        }
+        const form = document.getElementById('pr-purchase-form');
+        if (form) form.hidden = true;
+        return;
+      }
+      throw new Error(data.error || 'failed');
+    } catch {
+      if (msg) {
+        msg.hidden = false;
+        msg.className = 'pr-purchase-msg is-error';
+        msg.textContent = '確認メールを送れませんでした。メールアドレスをご確認のうえ、もう一度お試しください。';
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '確認メールを送る'; }
+    }
+  }
+
+  /**
+   * 認証から戻ってきたら、そのまま Checkout を開く。
+   * 🔴 `resume` はサーバーが固定パスで付けたプラン id。
+   *    ここでも実在するボタンとの一致だけを見て、値を URL として使わない。
+   */
+  function resumeCheckout() {
+    const plan = new URLSearchParams(window.location.search).get('resume');
+    if (!plan) return;
+    const btn = document.querySelector(`[data-checkout="${CSS.escape(plan)}"]`);
+    // ボタンが無い＝未ログイン（Price 未設定 or 認証されていない）なら何もしない
+    if (!btn) return;
+    startCheckout(plan, btn);
+  }
+
+
   document.addEventListener('DOMContentLoaded', () => {
     if (document.querySelector('[data-price-for]')) loadPrices();
+
+    const purchaseForm = document.getElementById('pr-purchase-form');
+    if (purchaseForm) purchaseForm.addEventListener('submit', submitPurchaseAuth);
+
+    // 認証から戻ってきたら、そのまま Checkout を開く
+    resumeCheckout();
 
     document.querySelectorAll('[data-checkout]').forEach((btn) => {
       btn.addEventListener('click', () => startCheckout(btn.getAttribute('data-checkout'), btn));
@@ -731,6 +859,156 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     line-height: 1.7;
     color: var(--text-tertiary);
     margin: 0;
+  }
+
+  /* 購入手続きのメール確認 */
+  /* 🔴 購入の CTA は「行動」の 2 色グラデーション（--grad-action / 桃→橙）。
+     単色は使わない（global.scss の 2026-08-31 のトークン方針に合わせる）。 */
+  .pr-btn-action {
+    background: var(--grad-action);
+    color: var(--text-inverse);
+    box-shadow: 0 6px 18px rgba(236, 72, 153, 0.3);
+  }
+
+  .pr-btn-action:hover {
+    transform: translateY(-2px);
+    color: var(--text-inverse);
+    box-shadow: 0 10px 24px rgba(249, 115, 22, 0.36);
+  }
+
+  .pr-plan-cta {
+    width: 100%;
+    font-size: 1.05rem;
+    padding: 15px 26px;
+  }
+
+  /* 押したあと、どこへ進むのかを CTA 自身に出す */
+  .pr-plan-cta.is-open .pr-cta-label::after {
+    content: ' ↓ 下でメールを確認';
+    font-size: 0.82rem;
+    opacity: 0.9;
+  }
+
+  .pr-plan-cta.is-open { box-shadow: 0 4px 10px rgba(236, 72, 153, 0.22); }
+
+  .pr-plan-steps {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 10px 0 0;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text-tertiary);
+  }
+
+  .pr-step-sep { color: var(--secondary-start); }
+
+  .pr-purchase-auth {
+    position: relative;
+    max-width: 520px;
+    margin: 18px auto 0;
+    padding: 20px 22px;
+    background: var(--bg-secondary);
+    border: 2px solid var(--action-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    animation: pr-purchase-in 0.28s ease-out both;
+  }
+
+  /* プランカードから続いていることを示す矢印 */
+  .pr-purchase-auth::before {
+    content: '';
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    transform: translateX(-50%) rotate(45deg);
+    background: var(--bg-secondary);
+    border-left: 2px solid var(--action-border);
+    border-top: 2px solid var(--action-border);
+  }
+
+  @keyframes pr-purchase-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .pr-purchase-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+
+  .pr-purchase-step-now {
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--grad-action);
+    color: var(--text-inverse);
+    letter-spacing: 0.04em;
+  }
+
+  .pr-purchase-step-of { color: var(--text-secondary); }
+
+  .pr-purchase-auth h3 {
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+  }
+
+  .pr-purchase-lead {
+    font-size: 0.84rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+  }
+
+  .pr-purchase-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .pr-purchase-input {
+    width: 100%;
+    padding: 11px 14px;
+    font-size: 0.95rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    margin-bottom: 12px;
+  }
+
+  .pr-purchase-submit {
+    width: 100%;
+    padding: 14px 26px;
+    font-size: 1rem;
+  }
+
+  .pr-purchase-msg {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.82rem;
+    line-height: 1.7;
+  }
+
+  .pr-purchase-msg.is-ok { background: rgba(16, 185, 129, 0.1); color: #065f46; }
+  .pr-purchase-msg.is-error { background: rgba(220, 38, 38, 0.08); color: #991b1b; }
+
+  .pr-purchase-note {
+    margin: 10px 0 0;
+    font-size: 0.74rem;
+    color: var(--text-tertiary);
+    line-height: 1.7;
   }
 
   /* 銀行振込（控えめ） */

@@ -5,6 +5,10 @@ KEIBA Intelligence の予想画面に関する UI 修正は、以下の **6 経�
 
 ## 対象 6 経路
 
+> 🔴 **2026-09-03**: `/prediction/*` は**有料専用**（入れない tier は無料ページへ 302）、
+> `/free-prediction/*` は**tier を問わず買い目を出さない**。
+> 正本: `docs/decisions.md`「2026-09-03 — 予想ページを URL で無料 / 有料に分ける」
+
 | 区分 | 本番URL | Astroページ実装 | 備考 |
 |------|---------|----------------|------|
 | JRA free | `/free-prediction/jra`（+ `/free-prediction/jra/{date}`） | `src/pages/free-prediction/jra/index.astro` / `[date].astro` | 無料会員向け。独立ページ実装 |

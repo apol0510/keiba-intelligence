@@ -161,6 +161,15 @@ const expiresLabel = ent.expiresAtMs
             <p class="mp-email">{ent.email}</p>
           </header>
 
+          {/*
+            🔴 決済直後は Cookie の tier がまだ古い（署名時点で固定されるため）。
+               `refresh-session` で出し直してから読み込み直す。
+               ここは表示だけで、権限そのものはサーバー側の entitlement が決める。
+          */}
+          <p class="mp-syncing" id="mp-syncing" hidden>
+            お支払いを確認しています。数秒お待ちください…
+          </p>
+
           <!-- プラン -->
           <div class={`mp-status ${isPaid ? 'is-paid' : ''}`}>
             <div class="mp-status-top">
@@ -174,6 +183,11 @@ const expiresLabel = ent.expiresAtMs
               <li>閲覧範囲: <b>{venueLabel}</b></li>
               {expiresLabel && <li>ログインの有効期限: <b>{expiresLabel}</b></li>}
             </ul>
+            {!isPaid && (
+              <button class="mp-refresh" id="mp-refresh" type="button">
+                お支払い済みなのに反映されていない場合はこちら
+              </button>
+            )}
           </div>
 
           <!-- 会員クラブ（KIリワード / ランク / 継続価格ロック） -->
@@ -316,7 +330,81 @@ const expiresLabel = ent.expiresAtMs
 </BaseLayout>
 
 <script>
+  /**
+   * 決済から戻ってきたら、いまの権限で Cookie を出し直す。
+   *
+   * 🔴 tier は署名済み Cookie に焼き付いているので、決済しても
+   *    再ログインするまで無料会員のままになる（2026-09-02 の不具合）。
+   * 🔴 webhook の反映には数秒かかることがあるので、少しだけ待って様子を見る。
+   *    ここでの表示は補助で、認可はサーバー側の entitlement が決める。
+   */
+  async function syncAfterCheckout() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') !== 'success') return;
+
+    const notice = document.getElementById('mp-syncing');
+    if (notice) notice.hidden = false;
+
+    for (let i = 0; i < 6; i += 1) {
+      try {
+        const res = await fetch('/.netlify/functions/refresh-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.changed) {
+          // 反映済み。?checkout を落として読み込み直す（同じ処理を繰り返さない）
+          window.location.replace(window.location.pathname);
+          return;
+        }
+      } catch {
+        /* 通信できなくても待って再試行する */
+      }
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+
+    if (notice) {
+      notice.textContent = 'お支払いの反映に少し時間がかかっています。'
+        + 'このページを再読み込みするか、しばらくしてからご確認ください。';
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
+    syncAfterCheckout();
+
+    // 決済後にページを離れてしまった場合の手動更新
+    const refresh = document.getElementById('mp-refresh');
+    if (refresh) {
+      refresh.addEventListener('click', async () => {
+        const notice = document.getElementById('mp-syncing');
+        refresh.disabled = true;
+        if (notice) {
+          notice.hidden = false;
+          notice.textContent = 'お支払いを確認しています…';
+        }
+        try {
+          const res = await fetch('/.netlify/functions/refresh-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.changed) {
+            window.location.replace(window.location.pathname);
+            return;
+          }
+          if (notice) {
+            notice.textContent = 'お支払いの記録がまだ確認できませんでした。'
+              + '決済直後の場合は少し待ってからもう一度お試しください。';
+          }
+        } catch {
+          if (notice) notice.textContent = '確認できませんでした。しばらくしてからお試しください。';
+        }
+        refresh.disabled = false;
+      });
+    }
+
     const btn = document.getElementById('mp-portal');
     if (!btn) return;
     const msg = document.getElementById('mp-portal-msg');
@@ -408,6 +496,31 @@ const expiresLabel = ent.expiresAtMs
     justify-content: space-between;
     gap: 12px;
   }
+
+  .mp-syncing {
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    background: var(--outlook-bg);
+    border: 1px solid var(--outlook-border);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.7;
+  }
+
+  .mp-refresh {
+    margin-top: 12px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--primary-start);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .mp-refresh:disabled { opacity: 0.6; cursor: default; }
 
   .mp-status-label {
     font-size: 0.75rem;

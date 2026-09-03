@@ -14,6 +14,7 @@
 
 import Stripe from 'stripe';
 import { planById, priceIdFor, hasStripeSecret, STRIPE_ENV } from '../../src/lib/billing/plans.js';
+import { resolveSiteOrigin, normalizeSiteOrigin } from '../../src/lib/http/siteOrigin.js';
 import { resolveEntitlement } from '../../src/lib/auth/entitlement.js';
 
 const ALLOWED_ORIGINS = [
@@ -24,17 +25,23 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
 ];
 
+/**
+ * 決済後の戻り先（`success_url` / `cancel_url`）の基準 origin。
+ *
+ * 🔴 従来は許可リストに Netlify のブランチデプロイ / Deploy Preview が無く、
+ *    **そこから申し込むと本番へ戻されて**いた（Test Mode E2E が成立しない）。
+ *    共有ポリシー `siteOrigin.js` に寄せて、許可ホストなら自分の origin を返す。
+ * 🔴 判断できないときは従来どおり **本番へ倒す**（fail-closed）。
+ * 🔴 認可・課金の条件は一切変えていない。変わるのは戻り先の URL だけ。
+ */
 function siteBase(event) {
-  const origin = event.headers.origin || '';
-  if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  const host = event.headers.host || '';
-  if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) return `http://${host}`;
-  return 'https://keiba-intelligence.jp';
+  return resolveSiteOrigin(event.headers);
 }
 
 export async function handler(event) {
   const origin = event.headers.origin || '';
-  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  // 許可ホストならそのまま返す（ブランチデプロイを含む）。駄目なら本番
+  const allowOrigin = normalizeSiteOrigin(origin) || ALLOWED_ORIGINS[0];
   const headers = {
     'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -93,9 +100,15 @@ export async function handler(event) {
       allow_promotion_codes: true,
       success_url: `${base}/mypage?checkout=success`,
       cancel_url: `${base}/pricing?checkout=cancelled`,
-      metadata: { ki_plan: plan.id, ki_email: ent.email },
+      // 🔴 `ki_price_id` は **サーバー側で env から確定した Price ID**（priceIdFor）。
+      //    クライアントからは受け取らない（金額・プランを申告させない）。
+      //    webhook はこれを読んで契約価格（継続価格ロック）を記録する。
+      //    Stripe の webhook ペイロードは `line_items` を既定で展開しないため、
+      //    metadata に入れておかないと **Price ID が取れず契約価格が保存されない**
+      //    （2026-09-02 の Test Mode E2E で実際に空のまま通過した）。
+      metadata: { ki_plan: plan.id, ki_email: ent.email, ki_price_id: priceId },
       subscription_data: {
-        metadata: { ki_plan: plan.id, ki_email: ent.email },
+        metadata: { ki_plan: plan.id, ki_email: ent.email, ki_price_id: priceId },
       },
     });
 

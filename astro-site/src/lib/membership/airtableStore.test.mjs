@@ -12,12 +12,17 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import {
   createAirtableMembershipStore, CUSTOMER_FIELDS, LEDGER_TABLE, LEDGER_FIELDS, SCHEMA_MISSING,
+  toAirtableDate, AIRTABLE_DATE_TIME_ZONE,
+  errorCodeFrom,
 } from './airtableStore.js';
 import { STORE_RESULT } from './store.js';
-import { ENTRY_TYPE } from './rewards.js';
+import {
+  ENTRY_TYPE, isValidEntry, tenureMonthsFromLedger, buildPaidPeriodEntry,
+} from './rewards.js';
 import { createContractPrice } from './priceLock.js';
 
 const CONTRACT = createContractPrice({
@@ -206,11 +211,223 @@ describe('安全性', () => {
     const f = () => { throw new Error('network down'); };
     const r = await store(f).readProfile('a@example.com');
     assert.equal(r.status, STORE_RESULT.UNAVAILABLE);
-    assert.equal(r.reason, 'read_failed');
+    // 例外も原因が分かるよう符号を付ける
+    assert.equal(r.reason, 'read_failed:exception');
   });
 
   test('資格情報が無ければアダプタを作らない（disabled へ倒す）', () => {
     assert.equal(createAirtableMembershipStore({ baseId: 'appX', fetchImpl: () => {} }), null);
     assert.equal(createAirtableMembershipStore({ apiKey: 'k', fetchImpl: () => {} }), null);
   });
+});
+
+/* ------------------------------------------------------------------
+   失敗理由に原因の符号を載せる（秘密値・値は含めない）
+   ------------------------------------------------------------------ */
+
+test('🔴 write_failed に HTTP status と error type が付く', () => {
+  assert.equal(errorCodeFrom(403, JSON.stringify({ error: { type: 'INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND' } })),
+    '403:INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND');
+  assert.equal(errorCodeFrom(422, JSON.stringify({ error: { type: 'INVALID_VALUE_FOR_COLUMN' } })),
+    '422:INVALID_VALUE_FOR_COLUMN');
+  // 文字列型の error（古い形）も拾う
+  assert.equal(errorCodeFrom(401, JSON.stringify({ error: 'AUTHENTICATION_REQUIRED' })), '401:AUTHENTICATION_REQUIRED');
+  // JSON でない / type が無いときは status だけ
+  assert.equal(errorCodeFrom(429, 'Too Many Requests'), '429');
+  assert.equal(errorCodeFrom(500, JSON.stringify({ error: {} })), '500');
+});
+
+test('🔴 error.message を載せない（値が混ざるため）', () => {
+  const body = JSON.stringify({
+    error: { type: 'INVALID_VALUE_FOR_COLUMN', message: 'Field "Email" value "himitsu@example.com" is invalid' },
+  });
+  const code = errorCodeFrom(422, body);
+  assert.equal(code, '422:INVALID_VALUE_FOR_COLUMN');
+  for (const leak of ['himitsu@example.com', 'message', 'Field']) {
+    assert.equal(code.includes(leak), false, `🔴 ${leak} が符号に漏れている`);
+  }
+});
+
+test('🔴 符号は英数と _ - . だけ・長さも抑える', () => {
+  const weird = errorCodeFrom(400, JSON.stringify({ error: { type: 'A B<script>"\'#' + 'x'.repeat(200) } }));
+  assert.match(weird, /^400:[A-Za-z0-9_.-]{1,60}$/);
+});
+
+test('🔴 書き込み失敗の reason に符号が入る', async () => {
+  const store = createAirtableMembershipStore({
+    apiKey: 'k', baseId: 'b',
+    fetchImpl: async (url, opts) => {
+      if (!opts || (opts.method || 'GET') === 'GET') {
+        // 同じ EntryId はまだ無い（＝POST まで進む）
+        return { ok: true, status: 200, json: async () => ({ records: [] }) };
+      }
+      return { ok: false, status: 403, text: async () => JSON.stringify({ error: { type: 'INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND' } }) };
+    },
+  });
+  const r = await store.appendEntry('a@example.com', {
+    entryId: 'e1', type: 'accrual', points: 100, occurredAtMs: Date.now(), periodMonths: 1, sourceRef: 'in_x',
+  });
+  assert.equal(r.status, 'unavailable');
+  assert.equal(r.reason, 'write_failed:403:INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND');
+});
+
+/* ------------------------------------------------------------------
+   日付だけの列（Date (ISO)）へ書く値
+   ------------------------------------------------------------------ */
+
+test('🔴 日付だけの列には YYYY-MM-DD を送る（日時は 422 になる）', () => {
+  assert.equal(AIRTABLE_DATE_TIME_ZONE, 'Asia/Tokyo');
+  // JST 22:42（= UTC 13:42）→ 同じ日
+  assert.equal(toAirtableDate(Date.parse('2026-09-02T13:42:36.000Z')), '2026-09-02');
+  // 🔴 JST 早朝（UTC は前日）→ JST の日付になる
+  assert.equal(toAirtableDate(Date.parse('2026-09-30T22:00:00.000Z')), '2026-10-01',
+    '🔴 UTC で切っている（月境界で今月の積み上げがずれる）');
+  // ISO 文字列でもミリ秒でも同じ
+  assert.equal(toAirtableDate('2026-09-02T13:42:36.000Z'), toAirtableDate(Date.parse('2026-09-02T13:42:36.000Z')));
+  // 判断できなければ書かない
+  for (const bad of [null, undefined, '', 'not a date', NaN, {}]) {
+    assert.equal(toAirtableDate(bad), null, `🔴 ${JSON.stringify(bad)} を日付として通している`);
+  }
+});
+
+test('🔴 台帳・契約価格の書き込みが日付形式になっている', async () => {
+  let posted = null;
+  const store = createAirtableMembershipStore({
+    apiKey: 'k', baseId: 'b',
+    fetchImpl: async (url, opts) => {
+      if (!opts || (opts.method || 'GET') === 'GET') {
+        return { ok: true, status: 200, json: async () => ({ records: [] }) };
+      }
+      posted = JSON.parse(opts.body);
+      return { ok: true, status: 200, json: async () => ({ records: [{ id: 'rec1' }] }) };
+    },
+  });
+  await store.appendEntry('a@example.com', {
+    entryId: 'e1', type: 'accrual', points: 100,
+    occurredAtMs: Date.parse('2026-09-02T13:42:36.000Z'), periodMonths: 1, sourceRef: 'in_x',
+  });
+  assert.equal(posted.records[0].fields.OccurredAt, '2026-09-02');
+  assert.equal(/T\d\d:/.test(posted.records[0].fields.OccurredAt), false, '🔴 時刻が入っている');
+});
+
+test('🔴 typecast を使わない', () => {
+  // コメントは対象外（使わない理由の説明は書いてよい）
+  const src = readFileSync(new URL('./airtableStore.js', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+    .replace(/^\s*\*.*$/gm, '');
+  assert.equal(/typecast/.test(src), false, '🔴 typecast で押し込んでいる');
+});
+
+/* ------------------------------------------------------------------
+   期間の長さ（月数）を台帳に保存する
+
+   🔴 保存しないと `tenureMonthsFromLedger` が
+      `(e.periodMonths ?? PERIOD_MONTHS.MONTHLY)` で 1 か月へ倒れ、
+      年払い（1,200 pt）が 1 か月として数えられて**ランクが過少になる**。
+      残高は正しいので、ずれるのは継続月数だけ（2026-09-03 に未保存を発見）。
+   ------------------------------------------------------------------ */
+
+/** 台帳へ 1 行書いて、POST された fields を返す。 */
+async function postedLedgerFields(entry) {
+  const f = stubFetch(async (url, init) => {
+    if (init.method === 'POST') return { status: 200, body: { records: [{ id: 'new' }] } };
+    return { status: 200, body: { records: [] } };
+  });
+  await store(f).appendEntry('a@example.com', entry);
+  const posts = f.writes();
+  return posts.length ? posts[0].body.records[0].fields : null;
+}
+
+test('🔴 年払い（12 か月）の PeriodMonths が台帳に入る', async () => {
+  const fields = await postedLedgerFields({
+    entryId: 'e-annual', type: ENTRY_TYPE.ACCRUAL, points: 1200,
+    occurredAtMs: Date.parse('2026-09-02T13:42:36.000Z'), periodMonths: 12, ref: 'term_1',
+  });
+  assert.equal(fields[LEDGER_FIELDS.PERIOD_MONTHS], 12);
+  assert.equal(fields[LEDGER_FIELDS.POINTS], 1200);
+});
+
+test('月額（1 か月）の PeriodMonths が台帳に入る', async () => {
+  const fields = await postedLedgerFields({
+    entryId: 'e-monthly', type: ENTRY_TYPE.ACCRUAL, points: 100,
+    occurredAtMs: 1, periodMonths: 1, ref: 'in_1',
+  });
+  assert.equal(fields[LEDGER_FIELDS.PERIOD_MONTHS], 1);
+});
+
+test('🔴 月数が判定できない行は PeriodMonths を書かない（既定値 1 で埋めない）', async () => {
+  for (const periodMonths of [undefined, null, 0, -3, 1.5, '12']) {
+    const fields = await postedLedgerFields({
+      entryId: `e-${String(periodMonths)}`, type: ENTRY_TYPE.ACCRUAL, points: 100,
+      occurredAtMs: 1, periodMonths,
+    });
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(fields, LEDGER_FIELDS.PERIOD_MONTHS), false,
+      `🔴 ${String(periodMonths)} を月数として書いている`,
+    );
+  }
+});
+
+test('🔴 readLedger が PeriodMonths を読み戻す', async () => {
+  const f = stubFetch(async () => ({
+    status: 200,
+    body: {
+      records: [{
+        id: 'rec1',
+        fields: {
+          [LEDGER_FIELDS.ENTRY_ID]: 'e-annual',
+          [LEDGER_FIELDS.TYPE]: ENTRY_TYPE.ACCRUAL,
+          [LEDGER_FIELDS.POINTS]: 1200,
+          [LEDGER_FIELDS.PERIOD_MONTHS]: 12,
+          [LEDGER_FIELDS.OCCURRED_AT]: '2026-09-02',
+          [LEDGER_FIELDS.SOURCE_REF]: 'term_1',
+        },
+      }],
+    },
+  }));
+  const r = await store(f).readLedger('a@example.com');
+  assert.equal(r.status, STORE_RESULT.APPLIED);
+  assert.equal(r.entries[0].periodMonths, 12);
+});
+
+test('列が無い旧行は periodMonths を作らない（従来どおり 1 か月として数える）', async () => {
+  const f = stubFetch(async () => ({
+    status: 200,
+    body: {
+      records: [{
+        id: 'rec1',
+        fields: {
+          [LEDGER_FIELDS.ENTRY_ID]: 'e-old',
+          [LEDGER_FIELDS.TYPE]: ENTRY_TYPE.ACCRUAL,
+          [LEDGER_FIELDS.POINTS]: 100,
+          [LEDGER_FIELDS.OCCURRED_AT]: '2026-09-02',
+        },
+      }],
+    },
+  }));
+  const r = await store(f).readLedger('a@example.com');
+  assert.equal(r.entries[0].periodMonths, undefined);
+  assert.equal(isValidEntry(r.entries[0]), true, '旧行を壊れた行として捨てない');
+  assert.equal(tenureMonthsFromLedger(r.entries), 1);
+});
+
+test('🔴 往復: 年払いを書いて読み戻すと 12 か月として数えられる', async () => {
+  const entry = buildPaidPeriodEntry({
+    email: 'a@example.com', invoiceRef: 'in_annual',
+    periodMonths: 12, occurredAtMs: Date.parse('2026-09-02T13:42:36.000Z'),
+  });
+  assert.equal(entry.periodMonths, 12);
+
+  // 1. 書く
+  const written = await postedLedgerFields(entry);
+
+  // 2. Airtable が返す形に組み直して読む
+  const f = stubFetch(async () => ({ status: 200, body: { records: [{ id: 'rec1', fields: written }] } }));
+  const r = await store(f).readLedger('a@example.com');
+
+  // 3. 12 か月として集計される（未保存だと 1 に倒れていた）
+  assert.equal(tenureMonthsFromLedger(r.entries), 12);
+  // 残高は未保存でも正しかった（ずれるのは月数だけ）ことも固定する
+  assert.equal(r.entries[0].points, 1200);
 });

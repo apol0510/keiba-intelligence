@@ -264,7 +264,9 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
     min-height: 220px;
   }
 
+  /* 🔴 本文は入れない。案内の下地としての高さだけを持つ */
   :global(.ai-comment-masked-blur) {
+    min-height: 120px;
     filter: blur(6px);
     user-select: none;
     pointer-events: none;
@@ -389,28 +391,26 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
 </style>
 
 <script is:inline>
-  // 有料プラン（pro/pro-plus/light）の場合、AI解説のマスクを解除
-  // 静的ページ（prerender=true）でも有料会員にフル表示するため
-  function unmaskAICommentsForPaidUser() {
-    try {
-      const raw = sessionStorage.getItem('keiba_session');
-      if (!raw) return;
-      const session = JSON.parse(raw);
-      const plan = (session && session.plan || '').toLowerCase();
-      const isPaid = plan === 'pro' || plan === 'pro-plus' || plan === 'light';
-      if (!isPaid) return;
-      document.querySelectorAll('.ai-comment-section[data-masked="true"]').forEach((s) => {
-        s.dataset.masked = 'false';
-      });
-    } catch (e) {
-      // session parse error / sessionStorage 不可 → そのまま（マスク継続）
+  /*
+   * 🔴 マスク解除のクライアント処理は廃止した（2026-09-02）。
+   *    以前は `sessionStorage` の自己申告で `data-masked` を外していたが、
+   *    そもそも **有料本文がサーバーから全員に返っていた** ため、
+   *    ぼかしても HTTP 応答・localStorage・DOM に残っていた。
+   *    いまは `gemini-race-analysis` が Cookie を見て、
+   *    未権限には **可視範囲しか返さない**。ここで隠す／出すことはしない。
+   *
+   * 表示キャッシュを権限ごとに分けるためだけに、1 度だけ状態を問い合わせる。
+   * 🔴 これは認可ではない（認可はサーバーの応答そのもの）。
+   */
+  let viewerKindPromise = null;
+  function viewerKind() {
+    if (!viewerKindPromise) {
+      viewerKindPromise = fetch('/.netlify/functions/get-session', { credentials: 'include' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => (d && d.showBetting === true ? 'p' : 'f'))
+        .catch(() => 'f');
     }
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', unmaskAICommentsForPaidUser);
-  } else {
-    unmaskAICommentsForPaidUser();
+    return viewerKindPromise;
   }
 
   // イベント委譲で全AIコメントセクションに対応（1回だけ登録）
@@ -429,20 +429,22 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
         if (!raw) return null;
         const parsed = JSON.parse(raw);
         if (!parsed || typeof parsed.comment !== 'string' || typeof parsed.timestamp !== 'number') return null;
+        if (typeof parsed.truncated !== 'boolean') return null;
         if (Date.now() - parsed.timestamp > STORAGE_TTL_MS) {
           try { localStorage.removeItem(STORAGE_PREFIX + cacheKey); } catch (e) {}
           return null;
         }
-        return parsed.comment;
+        return { comment: parsed.comment, truncated: parsed.truncated };
       } catch (e) {
         return null;
       }
     }
 
-    function writePersistedComment(cacheKey, comment) {
+    function writePersistedComment(cacheKey, entry) {
       try {
         localStorage.setItem(STORAGE_PREFIX + cacheKey, JSON.stringify({
-          comment,
+          comment: entry.comment,
+          truncated: entry.truncated,
           timestamp: Date.now()
         }));
       } catch (e) {
@@ -473,7 +475,9 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
       // generatedAt が無い場合（古いJSONや result 系で verifiedAt も無いケース）
       // は空文字となり、従来通り日付+会場+R番号で一意化される。
       const cacheVersion = raceData.generatedAt || '';
-      const cacheKey = `${type}-${raceData.date}-${raceData.venue}-${raceData.raceNumber}-${cacheVersion}`;
+      // 🔴 権限が変わると返ってくる本文も変わるのでキーを分ける
+      const kind = await viewerKind();
+      const cacheKey = `${type}-${raceData.date}-${raceData.venue}-${raceData.raceNumber}-${cacheVersion}-${kind}`;
       const isOpen = body.style.display !== 'block';
 
       body.style.display = isOpen ? 'block' : 'none';
@@ -481,11 +485,9 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
       toggleText.textContent = isOpen ? '閉じる' : '解説を見る';
 
       if (isOpen && !window._aiCommentLoaded.has(cacheKey)) {
-        const isMasked = section.dataset.masked === 'true';
-
         // L1: メモリキャッシュ
         if (window._aiCommentCache[cacheKey]) {
-          renderAIComment(textEl, window._aiCommentCache[cacheKey], isMasked, type);
+          renderAIComment(textEl, window._aiCommentCache[cacheKey], type);
           window._aiCommentLoaded.add(cacheKey);
           return;
         }
@@ -494,7 +496,7 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
         const persisted = readPersistedComment(cacheKey);
         if (persisted) {
           window._aiCommentCache[cacheKey] = persisted;
-          renderAIComment(textEl, persisted, isMasked, type);
+          renderAIComment(textEl, persisted, type);
           window._aiCommentLoaded.add(cacheKey);
           return;
         }
@@ -507,16 +509,19 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
         if (!promise) {
           promise = (async () => {
             try {
+              // 🔴 Cookie を送る。返ってくる本文は権限に応じてサーバーが決める
               const res = await fetch('/.netlify/functions/gemini-race-analysis', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ type, raceData })
               });
               const data = await res.json();
               if (data.success && data.comment) {
-                window._aiCommentCache[cacheKey] = data.comment;
-                writePersistedComment(cacheKey, data.comment);
-                return data.comment;
+                const entry = { comment: data.comment, truncated: data.truncated === true };
+                window._aiCommentCache[cacheKey] = entry;
+                writePersistedComment(cacheKey, entry);
+                return entry;
               }
               return null;
             } catch (err) {
@@ -528,11 +533,10 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
           window._aiCommentInflight[cacheKey] = promise;
         }
 
-        const comment = await promise;
+        const entry = await promise;
         loading.style.display = 'none';
-        if (comment) {
-          console.log('[AI Comment] API response length:', comment.length, 'chars');
-          renderAIComment(textEl, comment, isMasked, type);
+        if (entry) {
+          renderAIComment(textEl, entry, type);
         } else {
           textEl.textContent = 'AI解説を取得できませんでした。';
           textEl.classList.add('error');
@@ -541,77 +545,49 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
       }
     });
 
-    function renderAIComment(el, comment, masked, type) {
+    /**
+     * サーバーが返した本文をそのまま描く。
+     *
+     * 🔴 **ここで本文を切らない。** 未権限に見せない部分は
+     *    `gemini-race-analysis` が応答に含めていない。
+     * 🔴 続きがある場合（`truncated`）も、隠れている本文を
+     *    DOM へ入れてぼかすことはしない。案内だけを出す。
+     */
+    function renderAIComment(el, entry, type) {
       el.innerHTML = '';
-      const lines = comment.split('\n').filter(l => l.trim());
+      const text = (entry && entry.comment) || '';
+      const truncated = !!(entry && entry.truncated);
+      const lines = text.split('\n').filter((l) => l.trim());
 
-      if (!masked) {
-        lines.forEach(line => {
-          const p = document.createElement('p');
-          p.textContent = line;
-          el.appendChild(p);
-        });
-        return;
-      }
-
-      // 無料版: 文の総数に応じて可視範囲を動的に決定
-      const fullText = lines.join('\n');
-      const totalSentences = (fullText.match(/。/g) || []).length;
-      // 短文（〜3文）は45%文字数、長文は先頭3文まで表示
-      let cutIdx = -1;
-      if (totalSentences <= 3) {
-        const targetLen = Math.max(50, Math.floor(fullText.length * 0.45));
-        cutIdx = targetLen;
-        const nextPunct = fullText.substring(targetLen).search(/[。、]/);
-        if (nextPunct !== -1 && nextPunct < 40) {
-          cutIdx = targetLen + nextPunct;
-        }
-      } else {
-        let searchFrom = 0;
-        for (let i = 0; i < 3; i++) {
-          const idx = fullText.indexOf('。', searchFrom);
-          if (idx === -1) break;
-          cutIdx = idx;
-          searchFrom = idx + 1;
-        }
-      }
-      if (cutIdx === -1 || cutIdx >= fullText.length - 10) {
-        cutIdx = Math.floor(fullText.length * 0.4);
-      }
-      const visible = fullText.slice(0, cutIdx + 1);
-      const hidden = fullText.slice(cutIdx + 1);
-
-      const visibleLines = visible.split('\n').filter(l => l.trim());
-      visibleLines.forEach((line, i) => {
+      lines.forEach((line, i) => {
         const p = document.createElement('p');
-        p.textContent = i === visibleLines.length - 1 ? line + '…' : line;
+        p.textContent = (truncated && i === lines.length - 1) ? line + '…' : line;
         el.appendChild(p);
       });
 
-      if (hidden.trim()) {
-        const maskWrap = document.createElement('div');
-        maskWrap.className = 'ai-comment-masked';
+      if (!truncated) return;
 
-        const blur = document.createElement('div');
-        blur.className = 'ai-comment-masked-blur';
-        // ブラー領域には隠しテキストの一部を表示（見えそうで見えない演出）
-        blur.textContent = hidden.trim();
-        maskWrap.appendChild(blur);
+      const maskWrap = document.createElement('div');
+      maskWrap.className = 'ai-comment-masked';
 
-        const overlay = document.createElement('div');
-        overlay.className = 'ai-comment-masked-overlay';
-        overlay.innerHTML = `
-          <div class="ai-comment-masked-lock">🔒</div>
-          <div class="ai-comment-masked-title">プロ会員で全文表示</div>
-          <div class="ai-comment-masked-sub">各馬の詳細解説・買い目・期待値分析をご覧いただけます</div>
-          <div class="ai-comment-masked-buttons">
-            <a href="/pricing" class="ai-comment-masked-cta primary">料金プランを見る</a>
-            <a href="/register" class="ai-comment-masked-cta secondary">無料会員登録</a>
-          </div>
-        `;
-        maskWrap.appendChild(overlay);
-        el.appendChild(maskWrap);
-      }
+      // 🔴 見出しだけの飾り。ここに本文は入れない
+      const blur = document.createElement('div');
+      blur.className = 'ai-comment-masked-blur';
+      blur.setAttribute('aria-hidden', 'true');
+      maskWrap.appendChild(blur);
+
+      const overlay = document.createElement('div');
+      overlay.className = 'ai-comment-masked-overlay';
+      overlay.innerHTML = `
+        <div class="ai-comment-masked-lock">🔒</div>
+        <div class="ai-comment-masked-title">プレミアムで全文表示</div>
+        <div class="ai-comment-masked-sub">各馬の詳細解説・買い目・期待値分析をご覧いただけます</div>
+        <div class="ai-comment-masked-buttons">
+          <a href="/pricing" class="ai-comment-masked-cta primary">料金プランを見る</a>
+        </div>
+      `;
+      maskWrap.appendChild(overlay);
+      el.appendChild(maskWrap);
     }
   }
 </script>

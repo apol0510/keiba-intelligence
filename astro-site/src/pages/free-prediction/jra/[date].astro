@@ -10,14 +10,15 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 import RaceDayBoard from '../../../components/newspaper/RaceDayBoard.astro';
 import TierRibbon from '../../../components/newspaper/TierRibbon.astro';
 import { loadJraRaceDayByDate } from '../../../lib/prediction/loadRaceDay.js';
-import { entitlementFromAstro, viewFlags } from '../../../lib/auth/entitlement.js';
+import { entitlementFromAstro, freePageViewFlags } from '../../../lib/auth/entitlement.js';
 
 export const prerender = false;
 
 const { date } = Astro.params;
 
 const entitlement = entitlementFromAstro(Astro);
-const view = viewFlags(entitlement);
+// 🔴 無料ページは tier を問わず買い目を出さない（有料会員でも「無料の見え方」）
+const view = freePageViewFlags(entitlement);
 const day = loadJraRaceDayByDate(date, process.cwd());
 
 const venueNames = day.venues.map((v) => v.venueName).join('・');

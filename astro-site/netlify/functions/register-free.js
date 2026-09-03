@@ -114,7 +114,10 @@ async function registerToAirtable(email) {
 
     if (searchData.records && searchData.records.length > 0) {
       console.log('ℹ️ Airtable customer already exists:', email);
-      return searchData.records[0];
+      // 🔴 既存かどうかを呼び出し側へ伝える。
+      //    以前は既存でも新規と同じ 200 を返し、
+      //    **同じアドレスで何度でも「新規登録」できてしまっていた**（2026-09-03 指摘）。
+      return { record: searchData.records[0], existed: true };
     }
 
     // Step 2: 新規レコード作成
@@ -149,7 +152,7 @@ async function registerToAirtable(email) {
 
     const createData = await createResponse.json();
     console.log('✅ Airtable customer created:', email);
-    return createData.records[0];
+    return { record: (createData.records && createData.records[0]) || null, existed: false };
 
   } catch (error) {
     console.error('❌ Airtable error:', error);
@@ -263,11 +266,29 @@ async function saveAuthToken(email, token) {
 }
 
 // マジックリンク生成とメール送信
-async function sendMagicLink(email) {
+async function sendMagicLink(email, intent) {
   const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  const magicLink = `https://keiba-intelligence.jp/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
 
-  const subject = '【KEIBA Intelligence】無料会員登録ありがとうございます！';
+  // 🔴 登録確認 URL の宛先は `magicLinkBase.js` の共有ポリシーで決める。
+  //    ハードコードしていると Deploy Preview / ブランチデプロイで登録しても
+  //    確認リンクだけ本番へ飛び、そのデプロイにセッションが付かない
+  //    （send-magic-link.js と同型の問題。2026-09-02 修正）。
+  //    未設定・許可外ホストは **本番へ倒す**（fail-closed）。
+  //    🔴 token の宛先なので、許可リスト外のホストへは絶対に向けない。
+  const { resolveMagicLinkBase } = await import('../../src/lib/auth/magicLinkBase.js');
+  const base = resolveMagicLinkBase(process.env);
+  // 🔴 購入意図（プラン id）を持ち越す。URL は運ばない（open redirect を作らない）
+  const { intentQuery } = await import('../../src/lib/billing/purchaseIntent.js');
+  const magicLink = `${base}/auth/verify?token=${token}&email=${encodeURIComponent(email)}`
+    + intentQuery(intent);
+
+  /*
+   * 🔴 購入導線から来た人に「無料会員登録ありがとうございます！」は出さない。
+   *    受け取った人が知りたいのは「このリンクを開けばお支払いに進む」だけ。
+   */
+  const { emailCopyFor } = await import('../../src/lib/billing/purchaseEmailCopy.js');
+  const copy = emailCopyFor(intent, 'register');
+  const subject = copy.subject;
   const body = `
 <!DOCTYPE html>
 <html>
@@ -282,15 +303,16 @@ async function sendMagicLink(email) {
   </div>
 
   <div style="background: #ffffff; padding: 32px; border-radius: 0 0 12px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-    <h2 style="color: #1e40af; margin-top: 0; font-size: 22px;">無料会員登録ありがとうございます！</h2>
+    <h2 style="color: #1e40af; margin-top: 0; font-size: 22px;">${copy.heading}</h2>
 
-    <p style="color: #334155; font-size: 16px; line-height: 1.6;">以下のボタンをクリックして、登録を完了してください。</p>
+    <p style="color: #334155; font-size: 16px; line-height: 1.6;">${copy.lead}</p>
 
     <div style="text-align: center; margin: 32px 0;">
       <a href="${magicLink}" style="display: inline-block; background-color: #3b82f6; color: #ffffff !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 18px; border: 2px solid #3b82f6;">
-        登録を完了する
+        ${copy.cta}
       </a>
     </div>
+    ${copy.note ? `<p style="text-align: center; color: #64748b; font-size: 13px; margin: -16px 0 24px;">${copy.note}</p>` : ''}
 
     <div style="background-color: #f1f5f9; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 4px;">
       <p style="color: #475569; font-size: 14px; margin: 0 0 8px 0; line-height: 1.6;">
@@ -301,7 +323,7 @@ async function sendMagicLink(email) {
       </p>
     </div>
 
-    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;">
+${copy.showBenefits ? `    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;">
 
     <h3 style="color: #1e40af; margin-top: 0; font-size: 18px;">無料会員の特典</h3>
     <ul style="padding-left: 20px; color: #334155; line-height: 1.8;">
@@ -313,16 +335,15 @@ async function sendMagicLink(email) {
 
     <h3 style="color: #1e40af; font-size: 18px;">有料会員になると...</h3>
     <ul style="padding-left: 20px; color: #334155; line-height: 1.8;">
-      <li style="margin-bottom: 8px;">🎯 全買い目（本線+抑え）が見られる</li>
-      <li style="margin-bottom: 8px;">🎯 全期間の的中実績が見られる</li>
-      <li style="margin-bottom: 8px;">🎯 永久アクセス（買い切り¥88,000）</li>
+      <li style="margin-bottom: 8px;">🎯 南関東4場・中央競馬の全レースの馬単買い目</li>
+      <li style="margin-bottom: 8px;">🎯 AI指数の数値とAI結論</li>
     </ul>
 
     <div style="text-align: center; margin-top: 32px;">
-      <a href="https://keiba-intelligence.jp/pricing" style="display: inline-block; background-color: #10b981; color: #ffffff !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; border: 2px solid #10b981;">
+      <a href="${base}/pricing" style="display: inline-block; background-color: #10b981; color: #ffffff !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; border: 2px solid #10b981;">
         料金プランを見る →
       </a>
-    </div>
+    </div>` : ''}
 
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;">
 
@@ -335,7 +356,7 @@ async function sendMagicLink(email) {
 
     <p style="font-size: 14px; color: #64748b; margin-top: 32px; line-height: 1.6;">
       KEIBA Intelligence<br>
-      <a href="https://keiba-intelligence.jp" style="color: #3b82f6; text-decoration: none;">https://keiba-intelligence.jp</a>
+      <a href="${base}" style="color: #3b82f6; text-decoration: none;">${base}</a>
     </p>
   </div>
 </body>
@@ -369,7 +390,8 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { email } = JSON.parse(event.body);
+    // `intent` は任意。購入導線から来たときだけ入る（通常の /register は送らない）
+    const { email, intent } = JSON.parse(event.body);
 
     if (!email || !email.includes('@')) {
       return {
@@ -381,14 +403,43 @@ exports.handler = async (event) => {
 
     console.log('📧 無料会員登録:', email);
 
-    // 1. Airtableに登録
+    // 1. Airtableに登録（既存なら作らずに返る）
+    let airtable = null;
     try {
-      await registerToAirtable(email);
+      airtable = await registerToAirtable(email);
       console.log('✅ Airtable登録完了');
     } catch (error) {
       console.error('⚠️ Airtable登録エラー:', error.message);
       // Airtable失敗は警告のみ（登録は継続）
     }
+
+    /**
+     * 🔴 **認証済みの会員は「新規登録」させない**（2026-09-03 指摘）。
+     *
+     *    以前は同じアドレスで何度でも登録でき、そのたびにマジックリンクが飛んでいた。
+     *    Airtable のレコードは重複しなかったが、画面には毎回「登録完了メールを送信しました」と
+     *    出るため、**登録済みだと気づけず**、メールも無制限に送れてしまっていた。
+     *
+     *    🔴 未認証（Status が active でない）は**再送を許す**。
+     *       本人にメールが届いていないだけの場合に詰むため。
+     */
+    const existedStatus = airtable && airtable.existed
+      ? (airtable.record && airtable.record.fields && airtable.record.fields.Status) || null
+      : null;
+
+    if (existedStatus === 'active') {
+      console.log('ℹ️ 認証済みの会員からの再登録 — メールは送らない:', email);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          alreadyRegistered: true,
+          message: 'このメールアドレスは既に登録済みです。ログインしてください。',
+        }),
+      };
+    }
+
+    const isResend = !!(airtable && airtable.existed);
 
     // 2. SendGrid Marketing Campaignsに登録
     try {
@@ -400,7 +451,7 @@ exports.handler = async (event) => {
     }
 
     // 3. マジックリンク送信
-    const token = await sendMagicLink(email);
+    const token = await sendMagicLink(email, intent);
     console.log('✅ マジックリンク送信完了');
 
     // 4. AuthTokensテーブルにトークン保存
@@ -436,7 +487,8 @@ exports.handler = async (event) => {
       statusCode: 200,
       headers,
       body: JSON.stringify({
-        message: '登録完了メールを送信しました',
+        message: isResend ? '確認メールを再送しました' : '登録完了メールを送信しました',
+        resent: isResend,
         email: email
       }),
     };
