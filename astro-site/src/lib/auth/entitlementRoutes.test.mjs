@@ -56,7 +56,8 @@ for (const route of PREDICTION_ROUTES) {
   test(`${route}: サーバー側 entitlement で tier を決めている`, () => {
     const src = read(route);
     assert.match(src, /entitlementFromAstro\s*\(/, 'entitlementFromAstro を呼んでいない');
-    assert.match(src, /viewFlags\s*\(/, 'viewFlags を使っていない');
+    // 無料ページは `freePageViewFlags`（買い目を落とす版）を使う。どちらでもよい
+    assert.match(src, /(?:freePageV|v)iewFlags\s*\(/, 'viewFlags 系を使っていない');
     assert.match(src, /export const prerender = false/, 'SSR でないと閲覧者ごとの判定ができない');
   });
 
@@ -457,5 +458,48 @@ test('本番ドメインが CORS 許可 origin に入っている（監査 A-8�
     'netlify/functions/logout.js',
   ]) {
     assert.match(read(f), /https:\/\/keiba-intelligence\.jp/, `${f} に本番ドメインが無い`);
+  }
+});
+
+/* ------------------------------------------------------------------
+   URL で無料 / 有料を分ける（2026-09-03）
+
+   🔴 以前は同じ実装を tier で出し分けていたため、
+      無料会員が `/prediction/*` を開けてしまい、
+      有料会員が `/free-prediction/*` で買い目を見られてしまっていた。
+   ------------------------------------------------------------------ */
+
+const FREE_ROUTES = [
+  'src/pages/free-prediction/nankan/index.astro',
+  'src/pages/free-prediction/jra/index.astro',
+  'src/pages/free-prediction/nankan/[slug].astro',
+  'src/pages/free-prediction/jra/[date].astro',
+];
+
+const PAID_ROUTES = [
+  'src/pages/prediction/nankan/index.astro',
+  'src/pages/prediction/jra/index.astro',
+  'src/pages/prediction/[slug].astro',
+];
+
+for (const route of FREE_ROUTES) {
+  test(`${route}: 買い目を tier で出し分けない（freePageViewFlags を使う）`, () => {
+    const src = read(route);
+    assert.match(src, /freePageViewFlags\s*\(/, 'freePageViewFlags を使っていない');
+    refute(/const view = viewFlags\s*\(/, src, '素の viewFlags を使うと有料会員に買い目が出る');
+  });
+}
+
+for (const route of PAID_ROUTES) {
+  test(`${route}: 買い目を出せない tier を入れない`, () => {
+    const src = read(route);
+    assert.match(src, /paidPageRedirect\s*\(/, 'paidPageRedirect を呼んでいない');
+    assert.match(src, /Astro\.redirect\s*\(/, 'リダイレクトしていない');
+  });
+}
+
+test('🔴 無料ページが有料ページの判定を持ち込んでいない', () => {
+  for (const route of FREE_ROUTES) {
+    refute(/paidPageRedirect/, read(route), `無料ページで追い出している: ${route}`);
   }
 });

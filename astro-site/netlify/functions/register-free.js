@@ -114,7 +114,10 @@ async function registerToAirtable(email) {
 
     if (searchData.records && searchData.records.length > 0) {
       console.log('ℹ️ Airtable customer already exists:', email);
-      return searchData.records[0];
+      // 🔴 既存かどうかを呼び出し側へ伝える。
+      //    以前は既存でも新規と同じ 200 を返し、
+      //    **同じアドレスで何度でも「新規登録」できてしまっていた**（2026-09-03 指摘）。
+      return { record: searchData.records[0], existed: true };
     }
 
     // Step 2: 新規レコード作成
@@ -149,7 +152,7 @@ async function registerToAirtable(email) {
 
     const createData = await createResponse.json();
     console.log('✅ Airtable customer created:', email);
-    return createData.records[0];
+    return { record: (createData.records && createData.records[0]) || null, existed: false };
 
   } catch (error) {
     console.error('❌ Airtable error:', error);
@@ -400,14 +403,43 @@ exports.handler = async (event) => {
 
     console.log('📧 無料会員登録:', email);
 
-    // 1. Airtableに登録
+    // 1. Airtableに登録（既存なら作らずに返る）
+    let airtable = null;
     try {
-      await registerToAirtable(email);
+      airtable = await registerToAirtable(email);
       console.log('✅ Airtable登録完了');
     } catch (error) {
       console.error('⚠️ Airtable登録エラー:', error.message);
       // Airtable失敗は警告のみ（登録は継続）
     }
+
+    /**
+     * 🔴 **認証済みの会員は「新規登録」させない**（2026-09-03 指摘）。
+     *
+     *    以前は同じアドレスで何度でも登録でき、そのたびにマジックリンクが飛んでいた。
+     *    Airtable のレコードは重複しなかったが、画面には毎回「登録完了メールを送信しました」と
+     *    出るため、**登録済みだと気づけず**、メールも無制限に送れてしまっていた。
+     *
+     *    🔴 未認証（Status が active でない）は**再送を許す**。
+     *       本人にメールが届いていないだけの場合に詰むため。
+     */
+    const existedStatus = airtable && airtable.existed
+      ? (airtable.record && airtable.record.fields && airtable.record.fields.Status) || null
+      : null;
+
+    if (existedStatus === 'active') {
+      console.log('ℹ️ 認証済みの会員からの再登録 — メールは送らない:', email);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          alreadyRegistered: true,
+          message: 'このメールアドレスは既に登録済みです。ログインしてください。',
+        }),
+      };
+    }
+
+    const isResend = !!(airtable && airtable.existed);
 
     // 2. SendGrid Marketing Campaignsに登録
     try {
@@ -455,7 +487,8 @@ exports.handler = async (event) => {
       statusCode: 200,
       headers,
       body: JSON.stringify({
-        message: '登録完了メールを送信しました',
+        message: isResend ? '確認メールを再送しました' : '登録完了メールを送信しました',
+        resent: isResend,
         email: email
       }),
     };

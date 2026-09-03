@@ -13,12 +13,17 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 import RaceDayBoard from '../../../components/newspaper/RaceDayBoard.astro';
 import TierRibbon from '../../../components/newspaper/TierRibbon.astro';
 import { loadJraRaceDay } from '../../../lib/prediction/loadRaceDay.js';
-import { entitlementFromAstro, viewFlags } from '../../../lib/auth/entitlement.js';
+import { entitlementFromAstro, viewFlags, paidPageRedirect } from '../../../lib/auth/entitlement.js';
 
 export const prerender = false;
 
 const entitlement = entitlementFromAstro(Astro, { venue: 'jra' });
 const view = viewFlags(entitlement);
+
+// 🔴 有料ページは買い目を出せない tier を入れない（fail-closed）。
+//    無料会員・未登録は無料ページへ送る（そちらに案内 CTA がある）。
+const denied = paidPageRedirect(view, '/free-prediction/jra');
+if (denied) return Astro.redirect(denied, 302);
 
 const day = loadJraRaceDay(process.cwd());
 

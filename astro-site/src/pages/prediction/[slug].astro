@@ -18,7 +18,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import RaceDayBoard from '../../components/newspaper/RaceDayBoard.astro';
 import TierRibbon from '../../components/newspaper/TierRibbon.astro';
 import { loadNankanRaceDayBySlug } from '../../lib/prediction/loadRaceDay.js';
-import { entitlementFromAstro, viewFlags } from '../../lib/auth/entitlement.js';
+import { entitlementFromAstro, viewFlags, paidPageRedirect } from '../../lib/auth/entitlement.js';
 
 export const prerender = false;
 
@@ -26,6 +26,11 @@ const { slug } = Astro.params;
 
 const entitlement = entitlementFromAstro(Astro);
 const view = viewFlags(entitlement);
+
+// 🔴 有料ページは買い目を出せない tier を入れない（fail-closed）。
+//    同じ開催の無料ページ（`/free-prediction/nankan/[slug]`）へ送る。
+const denied = paidPageRedirect(view, `/free-prediction/nankan/${slug}`);
+if (denied) return Astro.redirect(denied, 302);
 const day = loadNankanRaceDayBySlug(slug, process.cwd());
 
 const venueNames = day.venues.map((v) => v.venueName).join('・');

@@ -137,3 +137,35 @@ export function viewFlags(entitlement) {
 
 /** guest 用の描画フラグ（テスト・フォールバック用）。 */
 export const GUEST_VIEW = viewFlags(guestEntitlement('default'));
+
+/**
+ * 無料ページ（`/free-prediction/*`）用の描画ビュー。
+ *
+ * 🔴 **tier を問わず買い目を出さない**（2026-09-03 仕様所有者の指示）。
+ *    有料会員が無料ページを開いても「無料の見え方」になる。
+ *    買い目・AI指数・AI結論は `showBetting` が束ねているので、
+ *    ここを false にすることで**組み立て自体が起きない**（CSS で隠すのではない）。
+ *
+ * 🔴 印（`showMarks`）は tier どおりに残す。
+ *    無料会員に印を見せるのが無料ページの目的そのものだから。
+ */
+export function freePageViewFlags(entitlement) {
+  const v = viewFlags(entitlement);
+  return Object.freeze({ ...v, showBetting: false });
+}
+
+/**
+ * 有料ページ（`/prediction/*`）へ入れるか。
+ *
+ * 🔴 **買い目を出せない tier は入れない**（2026-09-03 仕様所有者の指示）。
+ *    以前は同じ URL を tier で出し分けていたが、
+ *    「無料会員が pro 予想にアクセスできてしまう」ため URL で分ける方式へ戻した。
+ *
+ * 🔴 fail-closed。判定できなければ**入れない**。
+ *
+ * @returns {string|null} 追い出す先。入ってよければ null
+ */
+export function paidPageRedirect(view, freeHref) {
+  if (view && view.showBetting === true) return null;
+  return typeof freeHref === 'string' && freeHref ? freeHref : '/pricing';
+}

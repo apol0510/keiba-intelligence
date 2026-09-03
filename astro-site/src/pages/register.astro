@@ -204,8 +204,15 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
 
       const data = await response.json();
 
-      if (response.ok) {
-        messageDiv.textContent = '✅ 登録完了メールを送信しました。メールをご確認ください。';
+      if (response.ok && data.alreadyRegistered) {
+        // 🔴 認証済みの会員。メールは送っていないので「送信しました」と言わない
+        messageDiv.innerHTML =
+          'ℹ️ このメールアドレスは既に登録済みです。<a href="/login">ログイン</a>してください。';
+        messageDiv.className = 'message notice';
+      } else if (response.ok) {
+        messageDiv.textContent = data.resent
+          ? '✅ 確認メールを再送しました。メールをご確認ください。'
+          : '✅ 登録完了メールを送信しました。メールをご確認ください。';
         messageDiv.className = 'message success';
         form.reset();
       } else {
@@ -460,7 +467,8 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
 }
 
 .message.success,
-.message.error {
+.message.error,
+.message.notice {
   display: block;
   margin-bottom: 1.25rem;
   padding: 1rem 1.25rem;
@@ -487,6 +495,19 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
   background: rgba(239, 68, 68, 0.12);
   color: #dc2626;
   border: 2px solid #ef4444;
+}
+
+/* 登録済みの案内（エラーではないので赤くしない） */
+.message.notice {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  border: 2px solid #3b82f6;
+}
+
+.message.notice a {
+  color: inherit;
+  font-weight: 800;
+  text-decoration: underline;
 }
 
 /* アップグレードセクション */

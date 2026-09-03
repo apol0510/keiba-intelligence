@@ -11,6 +11,66 @@
 ---
 
 
+## 2026-09-03 — 予想ページを URL で無料 / 有料に分ける
+
+### Status
+
+**採用**（仕様所有者の指示）。実装は `src/lib/auth/entitlement.js` の
+`freePageViewFlags` / `paidPageRedirect`。
+
+### Context
+
+2026-08-28 の改修で「tier をサーバーで判定するようになったため、
+**free 用 URL と有料用 URL を分ける必要が無くなった**」と判断し、
+`/prediction/*` と `/free-prediction/*` を**同じ実装**にしていた
+（同じ `RaceDayBoard` に同じ `view` を渡す）。
+
+その結果、次の 2 つが起きていた（2026-09-03 仕様所有者の指摘）。
+
+| 症状 | 実態 |
+|---|---|
+| 無料会員が pro 予想にアクセスできてしまう | URL に制限が無く、無料の見え方で**ページは開けた** |
+| プレミアム会員で無料予想を開くと買い目が見えてしまう | tier どおりに出していたので**設計どおり**だった |
+
+🔴 **買い目の漏れは起きていなかった。** guest / 無料会員に買い目が出たことはなく、
+`entitlementRoutes.test.mjs` の静的ガードが 7 経路すべてで
+「買い目は `showBetting` のときだけ組み立てる」を固定していた。
+問題は**認可の穴ではなく、URL の意味付け**だった。
+
+### Decision
+
+**URL で分ける。**
+
+| 経路 | 挙動 |
+|---|---|
+| `/prediction/nankan` / `/prediction/jra` / `/prediction/[slug]` | 🔴 **買い目を出せない tier は入れない**。同じ内容の無料ページへ **302** |
+| `/free-prediction/*`（4 経路）| 🔴 **tier を問わず買い目を出さない**。有料会員でも「無料の見え方」|
+
+- 追い出し先は `/pricing` ではなく**同じ開催の無料ページ**にした。
+  無料会員・未登録でも馬柱・過去走・AI短評は見られるべきで、
+  そのページの `TierRibbon` に「プランを見て買い目を受け取る」CTA が既にあるため。
+- 無料ページで落ちるのは `showBetting` が束ねているもの
+  （**買い目・AI指数の実数値・AI結論**）。**印は tier どおり残す**
+  （無料会員に印を見せるのが無料ページの目的そのもの）。
+
+### Rationale
+
+- **fail-closed**: `paidPageRedirect` は `showBetting === true` のときだけ通す。
+  ビューが壊れていても素通ししない。
+- **CSS で隠さない**: 無料ページでは `showBetting` を false にするので、
+  買い目は**組み立て自体が起きない**（HTML に出てこない）。
+- **判定ロジックは 1 か所**: ページ側で tier を書かず、
+  `freePageViewFlags` / `paidPageRedirect` に集約した。
+
+### Consequences
+
+- 有料会員が `/free-prediction/*` のリンクから来ると買い目が見えない。
+  買い目は `/prediction/*` で見る、という導線に一本化される。
+- 2026-08-28 の「URL を分ける必要が無い」という判断は**この判断で置き換わった**。
+  `docs/RENEWAL_2026_08.md` §7.3 に改訂を明記した。
+
+---
+
 ## 2026-09-03 — Test Mode の重複 webhook 送信先を無効化する
 
 ### Status

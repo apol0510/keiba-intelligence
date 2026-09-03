@@ -722,6 +722,18 @@ Stripe 課金の開始には **サーバー側認可が前提**である（§7�
 - `/free-prediction/nankan` / `/free-prediction/jra`
 - `/free-prediction/nankan/[slug]` / `/free-prediction/jra/[date]`
 
+> 🔴 **2026-09-03 改訂: URL で無料 / 有料を分ける。**
+> 当初は「tier をサーバーで判定するので URL を分ける必要が無い」としていたが、
+> 仕様所有者の指示により次のとおり変更した（`docs/decisions.md` 2026-09-03）。
+>
+> | 経路 | 変更後 |
+> |---|---|
+> | `/prediction/*`（`[slug]` 含む） | **買い目を出せない tier は入れない**。無料ページへ 302 |
+> | `/free-prediction/*` | **tier を問わず買い目を出さない**（有料会員でも無料の見え方）|
+>
+> tier 判定そのものは従来どおりサーバー側 entitlement で行う。変わったのは
+> 「どの URL で何を見せるか」だけである。
+
 ### 7.4 本改修で扱わないもの
 
 監査 A-6 / A-7（管理配信 API の認可）は**別タスク**とする。

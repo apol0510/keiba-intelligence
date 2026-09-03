@@ -26,7 +26,9 @@ import {
   serializeSessionCookie, clearSessionCookie,
 } from './session.js';
 
-import { resolveEntitlement, viewFlags, GUEST_VIEW } from './entitlement.js';
+import {
+  resolveEntitlement, viewFlags, GUEST_VIEW, freePageViewFlags, paidPageRedirect,
+} from './entitlement.js';
 
 const SECRET = 'test-secret-do-not-use-in-production';
 const NOW = Date.parse('2026-08-28T00:00:00Z');
@@ -260,4 +262,64 @@ test('GUEST_VIEW: 既定は何も開けない', () => {
   assert.equal(GUEST_VIEW.tier, TIER.GUEST);
   assert.equal(GUEST_VIEW.showMarks, false);
   assert.equal(GUEST_VIEW.showBetting, false);
+});
+
+/* ------------------------------------------------------------------
+   無料ページ / 有料ページの分離（2026-09-03 仕様所有者の指示）
+
+   🔴 「無料会員が pro 予想にアクセスできてしまう」
+   🔴 「プレミアム会員で無料予想を開くと買い目が見えてしまう」
+      → URL で分ける。有料ページは入れない／無料ページは買い目を出さない。
+   ------------------------------------------------------------------ */
+
+const asView = (tier, showMarks, showBetting) => ({
+  tier, tierLabel: tier, showMarks, showBetting, authenticated: true, preview: false,
+});
+
+test('🔴 無料ページは有料会員でも買い目を出さない', () => {
+  for (const tier of ['light', 'premium']) {
+    const v = freePageViewFlags(asView(tier, true, true));
+    assert.equal(v.showBetting, false, `${tier} に買い目が出ている`);
+  }
+});
+
+test('無料ページでも印は tier どおりに残す（無料会員に印を見せるのが目的）', () => {
+  assert.equal(freePageViewFlags(asView('free', true, false)).showMarks, true);
+  assert.equal(freePageViewFlags(asView('guest', false, false)).showMarks, false);
+});
+
+test('無料ページのビューは tier 表示を壊さない', () => {
+  const v = freePageViewFlags(asView('premium', true, true));
+  assert.equal(v.tier, 'premium');
+  assert.equal(v.authenticated, true);
+});
+
+test('🔴 有料ページ: 買い目を出せない tier は追い出す', () => {
+  for (const tier of ['guest', 'free']) {
+    assert.equal(
+      paidPageRedirect(asView(tier, tier === 'free', false), '/free-prediction/nankan'),
+      '/free-prediction/nankan',
+      `${tier} が有料ページに入れてしまう`,
+    );
+  }
+});
+
+test('有料ページ: 買い目を出せる tier は素通し', () => {
+  for (const tier of ['light', 'premium']) {
+    assert.equal(paidPageRedirect(asView(tier, true, true), '/free-prediction/nankan'), null);
+  }
+});
+
+test('🔴 有料ページ: 判定できないときは入れない（fail-closed）', () => {
+  for (const v of [null, undefined, {}, { showBetting: 'true' }, { showBetting: 1 }]) {
+    assert.equal(
+      paidPageRedirect(v, '/free-prediction/jra'), '/free-prediction/jra',
+      `壊れたビューで素通ししている: ${JSON.stringify(v)}`,
+    );
+  }
+});
+
+test('有料ページ: 行き先が無ければ /pricing へ', () => {
+  assert.equal(paidPageRedirect(asView('free', true, false), ''), '/pricing');
+  assert.equal(paidPageRedirect(asView('free', true, false)), '/pricing');
 });
