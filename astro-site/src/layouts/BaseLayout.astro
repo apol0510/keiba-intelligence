@@ -92,7 +92,7 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
           </span>
         </a>
 
-        <div class="nav-links">
+        <div class="nav-links" id="navLinks">
           <a href="/">ホーム</a>
           <div class="nav-dropdown">
             <span class="nav-dropdown-trigger">無料予想 ▾</span>
@@ -128,7 +128,8 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
         </div>
 
         <!-- モバイルメニューボタン -->
-        <button class="mobile-menu-btn" aria-label="メニュー">
+        <button class="mobile-menu-btn" aria-label="メニュー"
+                aria-controls="navLinks" aria-expanded="false">
           <span></span>
           <span></span>
           <span></span>
@@ -767,9 +768,27 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
     const menuBtn = document.querySelector('.mobile-menu-btn');
     const navLinks = document.querySelector('.nav-links');
 
+    /*
+     * 🔴 開いたら「どこを触っても閉じる」。
+     *
+     *    以前はボタンをもう一度押すまで開きっぱなしで、
+     *    選ぶものが無くてページ下部へスクロールしたいときも、
+     *    メニューが開いたまま裏の本文がスクロールしてしまった（2026-09-03 指摘・iPhone）。
+     *
+     *    閉じる契機は 5 つ:
+     *      1. メニューの外をタップ
+     *      2. メニュー内のリンク・ボタンを選ぶ
+     *      3. Esc キー
+     *      4. ページをスクロールした（＝メニューを使う気が無い）
+     *      5. デスクトップ幅へ戻った
+     */
     if (menuBtn && navLinks) {
-      menuBtn.addEventListener('click', () => {
-        navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
+      let scrollYWhenOpened = 0;
+
+      const isOpen = () => menuBtn.getAttribute('aria-expanded') === 'true';
+
+      function openMenu() {
+        navLinks.style.display = 'flex';
         navLinks.style.flexDirection = 'column';
         navLinks.style.position = 'absolute';
         navLinks.style.top = '100%';
@@ -778,7 +797,45 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
         navLinks.style.padding = 'var(--spacing-md)';
         navLinks.style.borderRadius = 'var(--radius-md)';
         navLinks.style.boxShadow = 'var(--shadow-lg)';
+        menuBtn.setAttribute('aria-expanded', 'true');
+        scrollYWhenOpened = window.scrollY;
+      }
+
+      function closeMenu() {
+        // 🔴 インラインスタイルを残さない。残すと幅が変わったときに崩れる
+        navLinks.removeAttribute('style');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      }
+
+      menuBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // 直後の document ハンドラで閉じ直さない
+        isOpen() ? closeMenu() : openMenu();
       });
+
+      // 1. メニューの外をタップ
+      document.addEventListener('click', (e) => {
+        if (isOpen() && !navLinks.contains(e.target)) closeMenu();
+      });
+
+      // 2. メニュー内のリンク・ボタンを選ぶ（遷移先で開いたままにしない）
+      navLinks.addEventListener('click', (e) => {
+        if (e.target instanceof Element && e.target.closest('a, button')) closeMenu();
+      });
+
+      // 3. Esc キー
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isOpen()) closeMenu();
+      });
+
+      // 4. ページをスクロールした。🔴 開いた直後の微小なズレでは閉じない
+      window.addEventListener('scroll', () => {
+        if (isOpen() && Math.abs(window.scrollY - scrollYWhenOpened) > 10) closeMenu();
+      }, { passive: true });
+
+      // 5. デスクトップ幅へ戻ったら開閉状態を持ち越さない
+      const wideScreen = window.matchMedia('(min-width: 769px)');
+      const onWide = () => { if (wideScreen.matches && isOpen()) closeMenu(); };
+      wideScreen.addEventListener('change', onWide);
     }
 
     /*
