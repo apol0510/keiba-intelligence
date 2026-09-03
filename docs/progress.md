@@ -650,6 +650,92 @@ Stripe の送信先 URL は引き続き修正済みコードへ届く。
 - `RewardLedger` 2 行・`Customers` のテスト会員 1 レコード
 - 🔴 後片付けは指示があるまで行わない
 
+### 2026-09-03 #17 の実施結果 — 🔴 **未達**（Stripe がこの経路では `invoice.payment_failed` を出さない）
+
+承認に従い、Stripe 公式のサンドボックス用「請求が失敗する」テストカード
+`4000 0000 0000 0341`（Stripe Test (multi-country) 発行）**のみ**を使い、
+対象を `0510apolon+test4@gmail.com` **1 会員**に限定して実施した。実カードは使っていない。
+
+#### 実施内容
+
+1. テスト会員に失敗用カードを登録（`pm_1UBRwf…` / `•••• 0341`）
+2. そのカードを支払い手段としてサブスクを作成（初回請求 ¥3,980・即時）
+3. 支払いは**予定どおり失敗**（`pi_3UBRz9…` 失敗・13:10 JST）
+
+#### 🔴 しかし `invoice.payment_failed` は発生しなかった
+
+Stripe 側で実際に起きたイベント（ワークベンチのイベント一覧で確認）:
+
+| 時刻 | イベント |
+|---|---|
+| 13:08:15 | `payment_method.attached`（0341 を顧客へ登録）|
+| 13:10:47 | `payment_intent.created` |
+| 13:10:48 | **`charge.failed`** |
+| 13:10:48 | **`payment_intent.payment_failed`** |
+| 13:10:48 | `payment_intent.canceled`（`cancellation_reason: "failed_invoice"`）|
+
+**`invoice.payment_failed` は 1 件も作られていない。**
+サブスクの**初回**請求が失敗した場合、Stripe は請求書を `failed_invoice` として
+取り消し、サブスク自体を作らずに終える（顧客のサブスクは
+`sub_1UBRZ7…`（有効）と `sub_1UBEQt…`（キャンセル済み）の **2 件のまま**）。
+
+`invoice.payment_failed` は **更新（2 回目以降）の請求が失敗したとき**に出るため、
+再現するには **Stripe Test Clock で請求サイクルを進める**必要がある。
+Test Clock は**新しい顧客を作る**ことになり、
+承認された「対象はテスト会員 1 会員・`Customers` 更新のみ」の範囲を超えるため、
+**ここで停止した**。
+
+#### 検証結果（read-only）
+
+| 検査 | 結果 |
+|---|---|
+| `Status=payment_failed` | 🔴 **未達**（`inactive` のまま）。webhook が発火していないため |
+| `RewardLedger` | ✅ **2 行のまま**（増えていない）|
+| 実会員（`0510apolon` 以外 62 件）| ✅ `payment_failed` **0 件** / `CancelledAt` **0 件** |
+| `Customers` 総数 | ✅ **66**（増減なし）|
+| `MembershipStartedAt` | ✅ **7 件**（不変）|
+
+🔴 **これは KI 側の不具合ではない。** `invoice.payment_failed` のハンドラは
+`applyPlan({ status: 'payment_failed' })` を呼ぶだけで実装は正しく、
+**イベントが発火していないので呼ばれていない**だけである。
+実運用では Checkout が決済成功後にしか `checkout.session.completed` を出さないため、
+「初回失敗」はそもそもプラン付与前で記録対象が無い。
+
+### 2026-09-03 Test Mode E2E 17 項目の最終判定
+
+| # | 区分 | 内容 | 判定 |
+|---|---|---|---|
+| 1 | A 認可 | 無料会員でログイン → 印が見える / 買い目は見えない | **未実施**（ログインにメール受信が必要）|
+| 2 | A 認可 | `/pricing` のボタン表示 | **未実施** |
+| 3 | A 認可 | Checkout でテストカード決済 → 成功 | ✅（2026-09-02 の記録）|
+| 4 | A 認可 | `checkout.session.completed` が 200 | ✅ |
+| 5 | A 認可 | 予想ページで買い目が開く / 印は出ない | **未実施**（ログインが必要）|
+| 6 | A 認可 | 同じイベントを再送 → Airtable が二重更新されない | ✅（不変を実測）／ 🟡 応答の `duplicate:true` は**未観測**（`{"received":true}`）|
+| 7 | B リワード | `invoice.payment_succeeded` が 200 | ✅ |
+| 8 | B リワード | `RewardLedger` が 1 行だけ増える | ✅ |
+| 9 | B リワード | `Type` / `Points=100` / **`PeriodMonths=1`** / `SourceRef` / `OccurredAt` | ✅（修正後に実測）|
+| 10 | B リワード | 同じ invoice を再送 → 行が増えない | ✅ |
+| 11 | B リワード | `ContractPriceYen=3980` / `jpy` / `ContractPriceId` | ✅（`ki_price_id` と完全一致）|
+| 12 | B リワード | `/mypage` 残高 100pt・今月 100pt | ✅（read-only・本番と同じ関数）|
+| 13 | C 解約 | 解約イベントが 200 | ✅ |
+| 14 | C 解約 | 買い目が閉じる / 印は見える | ✅（read-only・`tiers.js` 実関数）|
+| 15 | C 解約 | `CancelledAt` に解約日 | ✅ |
+| 16 | C 解約 | ポイントは残る | ✅ |
+| 17 | C 失敗 | `Status=payment_failed` のみ・台帳が増えない | 🔴 **未達**（台帳が増えないことは ✅、`Status` は発火せず）|
+
+**判定: ✅ 12 / 🟡 1（#6 の一部）/ 未実施 3 / 🔴 未達 1。**
+正本の完成条件「**17 項目すべてが期待どおり**」には **到達していない**。
+
+未実施の 1・2・5 は、いずれも**テスト会員としてログインする**必要があり、
+マジックリンクのメール受信が要る（こちらからは受け取れない）。
+
+#### Test Mode に残っている状態（cleanup 未実施）
+
+- サブスク: `sub_1UBRZ7…`（**有効**）/ `sub_1UBEQt…`（キャンセル済み）
+- 決済手段: `•••• 4242`（成功用）/ **`•••• 0341`（失敗用・今回追加）**
+- `RewardLedger` 2 行 / `Customers` のテスト会員 1 レコード
+- 🔴 後片付けは指示があるまで行わない
+
 ### 🔴 2026-09-03 手順0（branch deploy 再ビルド）が実行できない — 原因確定
 
 承認を受けて `57da2619` を branch deploy へ再ビルドしようとしたが、**実行できない**。
