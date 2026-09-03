@@ -367,8 +367,25 @@ FAILED があれば **500 ＋ `{"error":"membership_not_recorded"}`** を返し�
 
 #### 実施していないこと（指示どおり）
 
-Stripe の webhook 送信先の設定変更 / Production deploy / merge / E2E の後片付け（テストレコード削除）。
-`KI Stripe Test E2E`（400 `invalid_signature` が続く 2 つ目の送信先）も**未変更**。
+Production deploy / merge / E2E の後片付け（テストレコード削除）。
+
+### 2026-09-03 二重配信の解消（承認済み・Test Mode のみ）
+
+同一 URL を指す送信先が 2 つあり、片方は今週 12 件すべて 400 `invalid_signature` だった。
+**`KI Stripe Test E2E`（`we_1UAgTiLbPC6OVRqMcfol1yoP`）を無効化**して解消した。
+
+| 送信先 | 変更前 | 変更後 |
+|---|---|---|
+| `KI Test Webhook`（`we_1UAsSe…`）| アクティブ・イベント 5 件 | **変更なし（アクティブ）** |
+| `KI Stripe Test E2E`（`we_1UAgTi…`）| アクティブ・イベント 6 件・今週 12/12 失敗 | **無効** |
+
+- 失うものが無いことを確認済み: `KI Test Webhook` の 5 件は `stripe-webhook.js` の
+  5 つの `case` と完全一致。無効化した側の固有 2 件（`customer.bank_account.updated` /
+  `customer.card.updated`）は**コードに分岐が無く**、逆に付与に必要な
+  `invoice.payment_succeeded` を**持っていなかった**。
+- **削除ではなく無効化**（可逆。設定・署名シークレット・配信履歴は保持）。
+- 🔴 **本番（Live Mode）の送信先には触れていない。** env（`STRIPE_WEBHOOK_SECRET`）も未変更。
+- 判断の記録: `docs/decisions.md`「2026-09-03 — Test Mode の重複 webhook 送信先を無効化する」
 
 ## Final Goal
 

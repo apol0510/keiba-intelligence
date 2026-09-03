@@ -11,6 +11,70 @@
 ---
 
 
+## 2026-09-03 — Test Mode の重複 webhook 送信先を無効化する
+
+### Status
+
+**採用**（仕様所有者の指示「KI Stripe Test E2E の二重配信を解消してください」）。
+
+### Context
+
+Stripe Test Mode に、**同一 URL** を指す webhook 送信先が 2 つ存在していた。
+
+| 名前 | ID | リッスン対象 | 今週の配信 |
+|---|---|---|---|
+| `KI Test Webhook` | `we_1UAsSeLbPC6OVRqMXGrVcsGw` | 5 件 | 合計 21 / 失敗 14 |
+| `KI Stripe Test E2E` | `we_1UAgTiLbPC6OVRqMcfol1yoP` | 6 件 | 合計 12 / **失敗 12** |
+
+送信先 URL はどちらも
+`https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app/.netlify/functions/stripe-webhook`。
+
+branch-deploy の `STRIPE_WEBHOOK_SECRET` は `KI Test Webhook` の署名シークレットと一致しており、
+`KI Stripe Test E2E` 宛の配信は **すべて 400 `invalid_signature`** になっていた。
+1 つのイベントが 2 か所へ配信され、片方が必ず失敗する状態だった。
+
+🔴 **署名シークレットを両方に一致させることはできない**。
+`STRIPE_WEBHOOK_SECRET` は 1 つで、`stripe.webhooks.constructEvent` はその 1 つでしか検証しない。
+したがって「2 つとも生かす」選択肢は存在しない。
+
+### Decision
+
+**`KI Stripe Test E2E` を無効化する**（削除ではなく無効化）。
+
+リッスン対象を比較して、失うものが無いことを確認したうえで実施した。
+
+| イベント種別 | `KI Test Webhook` | `KI Stripe Test E2E` | webhook 実装 |
+|---|---|---|---|
+| `checkout.session.completed` | ✅ | ✅ | 処理する |
+| `customer.subscription.updated` | ✅ | ✅ | 処理する |
+| `customer.subscription.deleted` | ✅ | ✅ | 処理する |
+| `invoice.payment_failed` | ✅ | ✅ | 処理する |
+| `invoice.payment_succeeded` | ✅ | **無し** | 処理する（リワード付与） |
+| `customer.bank_account.updated` | 無し | ✅ | **処理しない** |
+| `customer.card.updated` | 無し | ✅ | **処理しない** |
+
+`KI Test Webhook` の 5 件は `stripe-webhook.js` の `switch` が持つ 5 つの `case` と**完全に一致**する。
+`KI Stripe Test E2E` の固有 2 件はコードに分岐が無く、逆に付与に必要な
+`invoice.payment_succeeded` を**持っていない**。
+
+### Rationale
+
+- **削除しない**: 無効化は「イベントが送信されなくなるが、編集は引き続き可能」であり
+  **可逆**。配信履歴も残るため、過去の 400 の調査ができなくなることもない。
+- **`KI Test Webhook` 側を残す**: 署名シークレットが branch-deploy の env と一致しており、
+  実際に 200 を返して会員継続制度の書き込みまで通っている実績がある。
+- **署名シークレットの付け替えをしない**: env を書き換えると、現に成功している経路を
+  壊すリスクがあるうえ、二重配信そのものは解消しない。
+
+### Consequences
+
+- Test Mode のイベントは `KI Test Webhook` の 1 か所だけへ配信される。
+  400 `invalid_signature` の失敗が積み上がらなくなる。
+- 本番（Live Mode）の送信先には**一切触れていない**。
+- 再開したい場合は同じメニューから有効化できる（設定・シークレットは保持されている）。
+
+---
+
 ## 2026-09-02 — 通常ログイン後の遷移先を全会員 `/mypage` に統一する
 
 ### Status
