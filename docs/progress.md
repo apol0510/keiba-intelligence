@@ -1088,6 +1088,55 @@ stop_builds:      false
 
 lint / typecheck: **スクリプト未定義のため実行不可**（従来どおり）。
 
+#### branch deploy（承認済み・`allowed_branches` の一時追加）
+
+Stripe Test Mode の送信先は **`test/stripe-testmode-e2e-2026-09-01` の branch deploy URL**
+（`https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app`）である。
+🔴 **Stripe の送信先 URL は変更しない**方針のため、修正を**このブランチへ cherry-pick** した
+（新規ブランチ名で branch deploy を作ると URL が変わり、Stripe から届かない）。
+
+| 項目 | 変更前 | 変更中 | 戻した先 |
+|---|---|---|---|
+| `allowed_branches` | `["main"]` | `["main","test/stripe-testmode-e2e-2026-09-01"]` | ✅ **`["main"]`** |
+
+- 変更前の設定は scratchpad の `site-before.json` に保存。
+- 変更したのは `allowed_branches` **1 項目のみ**。復旧後に
+  `repo_branch` / `stop_builds` / `base` / `cmd` / `dir` / `functions_dir` /
+  `skip_prs` / `package_path` / `build_filter` / `skip_automatic_builds` が
+  **変更前と完全一致**することを read-only で確認した。
+- 🔴 `main`（production）の扱いは変えていない。
+
+| 検査 | 結果 |
+|---|---|
+| branch deploy | ✅ **`f84431de` ready**（2026-09-03 14:17 UTC・`deploy_time` 53s・`error_message: null`）|
+| HEAD 一致 | ✅ `git rev-parse test/stripe-testmode-e2e-2026-09-01` = `f84431de` = `commit_ref` |
+| エンドポイント疎通 | ✅ 署名なし POST → **400 `invalid_signature`**（書き込み前に fail-closed）|
+| `allowed_branches` 復旧後も URL 生存 | ✅ `GET /` → **200**（既存 deploy は削除されない）|
+
+#### 🔴 実測（#6）は未実施 — 手段が無く停止
+
+| 項目 | 状態 |
+|---|---|
+| 同一 `event.id` の再送 → 2 回目 `duplicate:true` | 🔴 **未実施** |
+| Airtable / `RewardLedger` に追加更新なし | 🔴 **未実施** |
+
+理由: ローカルに **Stripe CLI が無く**、`STRIPE_SECRET_KEY`（Test）/ `STRIPE_WEBHOOK_SECRET` /
+`AIRTABLE_API_KEY` の**いずれも未設定**。署名なしの POST は 400 で弾かれるため、
+再送を成立させられない。
+
+🔴 Netlify の env から値を取り出す方法は取らなかった。
+`CLAUDE.md`「Immediate stop conditions」の
+**「secret・token・認証値が出力される可能性」**に該当するため、独断で実行しない。
+
+#### Draft PR
+
+| 項目 | 値 |
+|---|---|
+| PR | **#95**（Draft・base `main`・`MERGEABLE`）|
+| branch | `fix/blobs-dependency-idempotency-2026-09-03`（`origin/main` `e8cdad36` を merge 済み）|
+
+🔴 **未実施の高リスク操作**: main merge / Production deploy / Stripe 設定変更 / Test Mode の cleanup。
+
 
 ## Final Goal
 
