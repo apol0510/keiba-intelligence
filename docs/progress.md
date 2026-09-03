@@ -369,6 +369,79 @@ FAILED があれば **500 ＋ `{"error":"membership_not_recorded"}`** を返し�
 
 Production deploy / merge / E2E の後片付け（テストレコード削除）。
 
+### 2026-09-03 merge 前の完成条件の確認（read-only）— **未達 1 件**
+
+完成条件の正本は `docs/STRIPE_TESTMODE_E2E.md`「実施手順」の **17 項目**
+（A 認可 1–6 / B リワード 7–12 / C 解約・支払い失敗 13–17）と、
+「Live Mode へ進む前の確認」の「**17 項目すべてが期待どおり**」。
+
+#### 実測（Airtable read-only・追加 write なし）
+
+| # | 条件 | 実測値 | 判定 |
+|---|---|---|---|
+| 8 / 10 | `RewardLedger` が **1 行だけ**（再送しても増えない）| 1 行（`rec3CBnoBgkapPsdf` / `createdTime` 不変）| ✅ |
+| 9 | `Type=accrual` | `accrual` | ✅ |
+| 9 | `Points=100` | `100` | ✅ |
+| 9 | **`PeriodMonths=1`** | **空（null）** | 🔴 **未達** |
+| 9 | `SourceRef` が `in_…` | `in_1UBEQrLbPC6OVRqMgArtrkzq` | ✅ |
+| 9 | `OccurredAt` が支払い成功時刻 | `2026-09-02`（JST の支払い成功日）| ✅（粒度は下記）|
+| 11 | `ContractPriceYen=3980` | `3980` | ✅ |
+| 11 | `ContractCurrency=jpy` | `jpy` | ✅ |
+| 11 | `ContractPriceId` が手順 1 の price | `price_1UAsLMLbPC6OVRqMoZ3VSfRR` | ✅（末尾一致・下記）|
+| — | `ContractStartedAt` | `2026-09-02` | ✅ |
+| — | 既存会員非影響 | 総数 66 / free-registered 52・pro 7・light 3・premium 4 / active 60・pending 6 / true 60・空 6 / `MembershipStartedAt` 7 件 / `CancelledAt` 0 件 — **本日 3 回の再送前後で完全一致** | ✅ |
+| — | 実会員に契約価格が混入していないか | 契約価格が入っているのは **テスト用アドレス 1 件のみ** | ✅ |
+
+#### 🔴 未達: `PeriodMonths` が台帳に保存されない
+
+`RewardLedger` には `PeriodMonths` 列が**存在する**（`docs/MEMBERSHIP_DATA_MIGRATION.md` §2.2）が、
+`airtableStore.js` の `LEDGER_FIELDS` に **`PeriodMonths` が無い**。
+そのため **書き込まれず、読み戻しもされない**。
+
+🔴 **影響は完成条件の未達だけではない。** `rewards.js` の継続月数の集計は
+
+```js
+.reduce((sum, e) => sum + (e.periodMonths ?? PERIOD_MONTHS.MONTHLY), 0)
+```
+
+であり、読み戻した行の `periodMonths` が `undefined` になるため **1 か月へ倒れる**。
+
+| 経路 | 台帳に入る `Points` | 集計される月数 | 実際 |
+|---|---|---|---|
+| 月額（Stripe）| 100 | 1 | 1 ✅ 偶然一致 |
+| 四半期（Stripe）| 300 | **1** | 3 🔴 過少 |
+| **年払い（銀行振込）** | 1,200 | **1** | **12 🔴 過少** |
+
+残高（`Points`）は保存されるので正しい。**ずれるのは継続月数＝会員ランク**である。
+銀行振込の年払いは **2026-09-01 から本番で有効**（`MEMBERSHIP_WRITE_ENABLED`）なので、
+次の入金確認から 12 か月分の行が入り、**ランクが 1 か月として数えられる**。
+
+🔴 **依頼範囲外のため未修正**（今回の指示は「read-only で確認して報告」）。
+修正するなら `LEDGER_FIELDS` へ `PERIOD_MONTHS: 'PeriodMonths'` を足し、
+`appendEntry` の書き込みと `readLedger` の読み出しの**両方**に通す必要がある。
+台帳が現状 1 行しかないため、**是正は今なら安価**。
+
+#### 注記（未達ではないが仕様との差）
+
+- `OccurredAt` は列型が `Date (ISO)`（時刻なし）のため **日付までしか保存できない**。
+  手順 9 の「支払い成功**時刻**」は、日付の粒度でのみ満たされる。
+  これは 422 の恒久修正（`toAirtableDate`）の意図した帰結であり、退行ではない。
+- `ContractPriceId` は Netlify CLI が env の値をマスクするため、
+  **末尾 4 文字（`SfRR`）の一致**でのみ突き合わせた。
+  値そのものは Checkout セッションから webhook が写しているので、
+  branch env の price と一致する経路になっている。
+
+#### 未実施の完成条件（read-only では埋められない）
+
+| # | 内容 | 状態 |
+|---|---|---|
+| 1–6 | A 認可（ログイン → Checkout → 買い目の開閉 → 再送で `duplicate`）| 一部のみ実施（4・6 相当は確認済み）|
+| 12 | `/mypage` に残高 100 pt・今月の積み上げ 100 pt | **未確認** |
+| 13–16 | 解約 → `CancelledAt` → 買い目が閉じる → ポイントは残る | **未実施**（`CancelledAt` 0 件）|
+| 17 | 支払い失敗で `RewardLedger` が増えない | **未実施** |
+
+**したがって「17 項目すべてが期待どおり」には到達していない。**
+
 ### 2026-09-03 二重配信の解消（承認済み・Test Mode のみ）
 
 同一 URL を指す送信先が 2 つあり、片方は今週 12 件すべて 400 `invalid_signature` だった。
