@@ -558,6 +558,98 @@ branch deploy は **`4aadb0a8` のまま**である（`57da2619` は deploy-prev
   `base` / `cmd` / `dir` は触っていない。
 - 🔴 `main`（production）の扱いは変えていない。
 
+### 2026-09-03 E2E 実施（#9 / #13–16 完了・#17 のみ承認待ち）
+
+#### 手順0: branch deploy（完了）
+
+| 項目 | 結果 |
+|---|---|
+| branch deploy | **`be4d0178` ready**（2026-09-03 03:36 UTC）|
+| HEAD 一致 | ✅（`git rev-parse HEAD` = `be4d0178`）|
+| 含まれる修正 | `57da2619`（`PeriodMonths` の保存）|
+
+#### #9 ✅ `PeriodMonths` が実データで保存された
+
+Stripe Test Mode でテスト会員に**新しいサブスクを 1 件**作成し、即時請求を発生させた。
+
+| # | 検査 | 結果 |
+|---|---|---|
+| 9 | `Type` | `accrual` ✅ |
+| 9 | `Points` | `100` ✅ |
+| 9 | **`PeriodMonths`** | **`1`** ✅（修正前は空だった）|
+| 9 | `SourceRef` | `in_1UBRZ7LbPC6OVRqM70m6E3mV`（新しい invoice id）✅ |
+| 9 | `OccurredAt` | `2026-09-03`（支払い成功日 JST）✅ |
+
+`RewardLedger` は **1 行 → 2 行**（承認された「追加最大 1 行」ちょうど）。
+
+#### #11 の確定（末尾一致ではなく完全一致）
+
+解約前にサブスクのメタデータを読んだところ
+`ki_price_id = price_1UAsLMLbPC6OVRqMoZ3VSfRR` であり、
+Airtable の `ContractPriceId` と**完全に一致**した。
+（以前は Netlify CLI のマスクにより末尾 4 文字でしか突き合わせできていなかった。）
+
+#### #13 / #15 / #16 ✅ 解約
+
+Checkout 由来（`ki_email` メタデータあり）のサブスク `sub_1UBEQt…` を**即時・返金なし**で解約。
+
+| # | 期待 | 実測 | 判定 |
+|---|---|---|---|
+| 13 | 解約イベントが 200 | `Customers` が更新された＝ webhook が通った | ✅ |
+| 15 | `CancelledAt` に解約日 | **`2026-09-03`** | ✅ |
+| 16 | ポイントは残る | `RewardLedger` **2 行のまま**（削られていない）| ✅ |
+| — | 認可が free へ戻る | `PlanType=free` / `Status=inactive` / `AccessEnabled=空` | ✅ |
+| — | 契約価格は消えない | `ContractPriceYen=3980` / `ContractStartedAt=2026-09-02` のまま | ✅ |
+
+#### #14 ✅（read-only・本番と同じ判定関数）
+
+`tiers.js` の実関数に解約後の実測値を通した。
+
+| 状態 | tier | 印 | 買い目 |
+|---|---|---|---|
+| 解約前 `premium` | premium | — | **開く** |
+| **解約後 `free`（実測）** | free | **見える** | **閉じる** |
+
+#### 既存会員非影響 ✅
+
+| 検査 | 実測 |
+|---|---|
+| `Customers` 総数 | **66**（増減なし）|
+| `PlanType` | free-registered 52 / pro 7 / light 3 / premium 3 / free 1 |
+| `Status` | active 59 / pending 6 / inactive 1 |
+| `MembershipStartedAt` | **7 件**（不変）|
+| `CancelledAt` | 1 件（**テスト会員のみ**）|
+
+premium 4→3・free +1・active 60→59・inactive +1 は、いずれも
+**テスト会員 1 レコードが解約で free に落ちた分**。実会員 65 件は 1 列も動いていない。
+
+#### 🔴 #17 のみ未実施（承認待ち）
+
+`invoice.payment_failed` を起こすには、**支払いに失敗するテストカード**
+（Stripe が公開しているサンドボックス用の番号）を顧客に登録する必要がある。
+運用ルール上、**カード番号の入力は承認なしに行わない**ため、ここで停止した。
+
+- 発生する write: `Customers` の `Status=payment_failed` のみ（1 レコード・1 列）
+- 🔴 `RewardLedger` は**増えないこと**が検査項目そのもの
+- 現在 `RewardLedger` は 2 行
+
+#### `allowed_branches` の復旧 ✅
+
+| 項目 | 実測 | 判定 |
+|---|---|---|
+| `allowed_branches` | `["main"]` | ✅ 変更前と一致 |
+| `repo_branch` / `stop_builds` | `main` / `false` | ✅ |
+| `base` / `cmd` / `dir` | `astro-site` / `npm run build` / `dist` | ✅ |
+
+既に作成済みの branch deploy（`be4d0178`）は**生きたまま**なので、
+Stripe の送信先 URL は引き続き修正済みコードへ届く。
+
+#### 残っている Stripe Test Mode の状態（cleanup は未実施）
+
+- サブスク: `sub_1UBEQt…`（解約済み）/ `sub_1UBRZ7…`（**有効のまま**・今回作成）
+- `RewardLedger` 2 行・`Customers` のテスト会員 1 レコード
+- 🔴 後片付けは指示があるまで行わない
+
 ### 🔴 2026-09-03 手順0（branch deploy 再ビルド）が実行できない — 原因確定
 
 承認を受けて `57da2619` を branch deploy へ再ビルドしようとしたが、**実行できない**。
