@@ -305,7 +305,7 @@
   根拠としては `docs/MEMBERSHIP_DATA_MIGRATION.md` §2.1 / §2.2 の列型が
   `Date (ISO)`（時刻なし）であることと、422 の符号が一致している。
 
-### 2026-09-03 Deploy Preview のビルド失敗（`9b5b2048`）— 原因未確定
+### 2026-09-03 Deploy Preview のビルド失敗（`9b5b2048`）— ✅ **原因確定・恒久修正**
 
 | 項目 | 値 |
 |---|---|
@@ -322,12 +322,49 @@
 - 切り分けのため、ローカルで `npm run test:stripe` を **12 回連続実行 → 0 回失敗**。
   **ローカルでは再現しない**（過去 2 回はいずれも Netlify 側）。
 
-🔴 **「対応済み」と言い切れるのは「現在の HEAD がビルドできること」だけ**である。
-原因が上記の不安定さであれば **未解決で、また起きる**。
-確定させるには失敗ログの「`build.command` failed」より**上の行**が要る。
-
 - 他の deploy-preview の `error` は
   `Canceled build due to no content change`（docs のみの commit）で、**ビルド失敗ではない**。
+
+#### 原因（仕様所有者が提供した失敗ログで確定）
+
+```
+# pass 48 / fail 1
+not ok 2 - src/lib/billing/stripeWebhook.test.mjs
+  failureType: 'uncaughtException'
+  error: 'Unable to deserialize cloned data due to invalid or unsupported version.'
+  stack: #proccessRawBuffer (node:internal/test_runner/runner:358:20)
+```
+
+- **落ちたのは個々のテストではなく「ファイル」**。48 件すべて pass している。
+- `node --test` は**テストファイルを子プロセスで実行し、結果を IPC で受け取る**。
+  親側の `#proccessRawBuffer` が受信データを復号する所で例外になっている。
+- このファイルは webhook ハンドラの `console.log`（`✅ plan granted` /
+  `⚠️ membership store unavailable` / `❌ membership not recorded` …）を**大量に**出す。
+  その生の stdout が IPC のメッセージ境界を壊していた。
+- 発生歴: `4aadb0a8` の branch-deploy（09-02 14:18:57 UTC）/
+  `9b5b2048` の deploy-preview（09-03 05:28:04 UTC）。どちらも再実行で通っていた。
+
+#### 恒久修正
+
+**`--test` を使わず、テストファイルを直接実行する。** 子プロセスも IPC も無くなるので、
+`#proccessRawBuffer` という経路自体が消える。
+
+```diff
+- "test:stripe": "node --experimental-test-module-mocks --test A.test.mjs B.test.mjs"
++ "test:stripe": "node --experimental-test-module-mocks A.test.mjs && node --experimental-test-module-mocks B.test.mjs"
+```
+
+🔴 **ビルドの門番は弱くならない。** 直接実行でも `node:test` が終了コードを立てることを
+実測で確認した（わざと失敗するテストで `--test` 経由・直接実行とも `exit=1`）。
+
+- 再混入防止の静的ガードを `stripeWebhook.test.mjs` に追加
+  （`test:stripe` が `--test` を含まない／`--experimental-test-module-mocks` は残す／
+  2 ファイルが実行対象から外れていない）。
+- 検証: `npm run test:stripe` を **15 回連続実行 → 0 回失敗**。
+  stripe **64 → 65 件**（ガード 1 件追加）。`npm run build` 成功。
+
+🟡 この対処は `test:stripe` だけに入れた。他の suite は `console` 出力が少なく、
+同じ症状は観測されていないため、まとめて変えることはしない。
 
 ### 2026-09-03 恒久修正の成功と冪等性を実測（Test Mode 再送・承認済み）
 

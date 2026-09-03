@@ -1025,3 +1025,38 @@ test('viewFlags は email を含めない（UI へ PII を渡さない）', asyn
   const { view } = viewOf(ALICE);
   assert.equal(Object.prototype.hasOwnProperty.call(view, 'email'), false);
 });
+
+/* ------------------------------------------------------------------
+   ビルドを不安定にしていた原因を塞いだことを固定する
+
+   🔴 `node --test` は**テストファイルを子プロセスで実行し、結果を IPC で受け取る**。
+      このファイルは webhook ハンドラの console 出力（✅/⚠️/❌）を大量に出すため、
+      その生の stdout が IPC のメッセージ境界を壊し、親側の
+      `#proccessRawBuffer` で
+
+        uncaughtException: Unable to deserialize cloned data due to
+                           invalid or unsupported version.
+
+      が出て **48 件 pass でもファイル単位で fail** になっていた
+      （2026-09-02 `4aadb0a8` / 2026-09-03 `9b5b2048` の Netlify ビルド失敗）。
+
+   🔴 対策は **`--test` を使わずファイルを直接実行する**こと。
+      直接実行なら子プロセスも IPC も無いので、この経路自体が消える。
+      失敗時の終了コードは `node:test` が立てるので、ビルドの門番は弱くならない。
+   ------------------------------------------------------------------ */
+
+test('🔴 test:stripe は --test を使わない（IPC 経由の不安定さを持ち込まない）', () => {
+  const pkg = JSON.parse(
+    readFileSync(new URL('../../../package.json', import.meta.url), 'utf8'),
+  );
+  const cmd = pkg.scripts['test:stripe'];
+  assert.ok(cmd, 'test:stripe が無い');
+  assert.equal(
+    / --test(\s|$)/.test(cmd), false,
+    '🔴 --test を使うと Unable to deserialize cloned data が再発する',
+  );
+  assert.match(cmd, /--experimental-test-module-mocks/, 'モジュールモックの flag が要る');
+  for (const f of ['stripeWebhook.test.mjs', 'stripeCheckout.test.mjs']) {
+    assert.ok(cmd.includes(f), `${f} が実行対象から外れている`);
+  }
+});
