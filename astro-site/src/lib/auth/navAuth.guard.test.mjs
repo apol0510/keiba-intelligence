@@ -110,3 +110,35 @@ describe('ナビのログイン表示', () => {
     assert.match(c, /credentials: 'include'/);
   });
 });
+
+/* ------------------------------------------------------------------
+   モバイルメニューは「どこを触っても閉じる」
+
+   🔴 以前はボタンをもう一度押すまで開きっぱなしだった。
+      選ぶものが無くてページ下部へスクロールしたいときも開いたままで、
+      裏の本文だけがスクロールしてしまった（2026-09-03 指摘・iPhone）。
+   ------------------------------------------------------------------ */
+
+test('🔴 モバイルメニューが閉じる契機を減らさない', () => {
+  const layout = read('src/layouts/BaseLayout.astro');
+
+  // 開閉が関数に集約されている（インラインの display トグルへ戻さない）
+  assert.match(layout, /function closeMenu\s*\(/, 'closeMenu が無い');
+  assert.match(layout, /function openMenu\s*\(/, 'openMenu が無い');
+
+  // 1. メニューの外をタップ
+  assert.match(layout, /!navLinks\.contains\(e\.target\)/, '外側タップで閉じていない');
+  // 2. メニュー内のリンク・ボタンを選ぶ
+  assert.match(layout, /closest\(['"]a, button['"]\)/, 'リンク選択で閉じていない');
+  // 3. Esc
+  assert.match(layout, /e\.key === ['"]Escape['"]/, 'Esc で閉じていない');
+  // 4. スクロール
+  assert.match(layout, /addEventListener\(['"]scroll['"]/, 'スクロールで閉じていない');
+  // 5. デスクトップ幅へ戻る
+  assert.match(layout, /min-width: 769px/, '幅が戻ったときに閉じていない');
+
+  // 状態は aria-expanded で持つ（読み上げにも伝わる）
+  assert.match(layout, /aria-expanded/, 'aria-expanded を更新していない');
+  // 閉じたらインラインスタイルを残さない
+  assert.match(layout, /navLinks\.removeAttribute\(['"]style['"]\)/, 'インラインスタイルが残る');
+});

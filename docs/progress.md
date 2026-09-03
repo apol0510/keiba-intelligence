@@ -305,6 +305,88 @@
   根拠としては `docs/MEMBERSHIP_DATA_MIGRATION.md` §2.1 / §2.2 の列型が
   `Date (ISO)`（時刻なし）であることと、422 の符号が一致している。
 
+### 2026-09-03 E2E 残件の整理（維持する／別件に分ける）
+
+#### テスト URL を実機確認できる状態に保つ（#1 / #2 / #5 用）
+
+| 項目 | 値 |
+|---|---|
+| URL | `https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app` |
+| 配信 commit | **`3c1ad41a`**（＝ `main` の先端。branch deploy ready 2026-09-03 09:22:19 UTC）|
+| 載っている修正 | URL による無料/有料分離（`/prediction/*` が 302）・重複登録ブロック（`alreadyRegistered`）を実測で確認済み |
+| Branch deploys スコープの env | `STRIPE_*` / `MEMBERSHIP_WRITE_ENABLED` / `SESSION_SIGNING_SECRET` / `AIRTABLE_*` / `PREVIEW_PAID_KEY` は**そのまま残してある** |
+
+🔴 **`allowed_branches` は `["main"]` に戻してあるため、これ以降このブランチに push しても
+新しい branch deploy は作られない。** 既存の deploy は生き続けるので実機確認はできる。
+コードを更新して確認したくなった場合は、`allowed_branches` の一時追加を**都度承認**のうえ行う。
+
+🔴 **#1 / #2 / #5 はこちらでは実行できない。** テスト会員としてのログインが要り、
+マジックリンクのメールを受け取れるのは仕様所有者だけであるため。
+確認していただく手順:
+
+| # | 手順 | 期待 |
+|---|---|---|
+| 1 | 上記 URL で**無料会員**としてログイン → 予想ページ | **印が見える / 買い目は見えない** |
+| 2 | `/pricing` を開く | ボタンが「このプランを申し込む」（金額 ¥3,980）|
+| 5 | 有料会員でログイン → 予想ページ | **買い目・AI指数・AI結論が開く / 印は出ない**（R-8）。🔴 買い目は `/prediction/*` 側で見る（`/free-prediction/*` では tier を問わず出ない）|
+
+#### 🔴 #6 は正本上 `duplicate:true` の実測が必須 — **未完了のまま残す**
+
+`docs/STRIPE_TESTMODE_E2E.md` 実施手順の 6 行目は
+
+| 6 | Stripe で同じイベントを再送 | 応答 **`duplicate:true`**・Airtable が二重更新されない |
+
+であり、**`duplicate:true` は期待値として明記されている**。よって「二重更新されない」だけでは
+満たしたことにならない。**未完了として残す。**
+
+##### なぜ観測できないのか（調査結果）
+
+2026-09-03 に**同一 deploy 上で同じイベントを 3 回再送**した（08:43 / 08:44 / 08:46 JST）。
+2 回目と 3 回目は**同じ event id** だったが、応答はいずれも `{"received":true}` で
+**一度も `duplicate:true` にならなかった**。
+
+`duplicate:true` を返すのは `hasProcessed(event.id)` が真のときだけで、その実体は
+
+```js
+const { getStore } = await import('@netlify/blobs');
+return getStore('stripe-events');
+```
+
+であり、**import か getStore が失敗すると `eventStore()` は null を返し、
+`hasProcessed` は常に false・`markProcessed` は無言で何もしない**（どちらも try/catch）。
+
+🔴 **`@netlify/blobs` は `astro-site/package.json` の依存に入っていない**
+（`node_modules` には netlify-cli 等の推移的依存として存在するだけ）。
+デプロイ後の関数バンドルで解決できていない可能性が高い。
+
+- **データは壊れていない。** 二重反映が起きない根拠は下流の冪等性で、
+  実測でも確認済み: `applyPlan` は同じ値を書く / `saveContractPrice` は `ALREADY` で上書きしない /
+  `appendEntry` は invoice id の冪等キーで `ALREADY`（台帳は 1 行のままだった）。
+- 🔴 ただし**イベント単位の重複防止（`markProcessed`）は効いていない疑いが強い**。
+  これは #6 が通らない理由そのものであり、**別課題として立てる**（下記 R-2）。
+
+#### 🔴 #17 は正本から除外しない — **未完了のまま維持**
+
+`invoice.payment_failed` が発火する経路（更新請求の失敗）を再現するには
+Stripe Test Clock が要り、**新しい顧客の作成**を伴う。承認範囲外のため未実施のまま。
+**「仕様上不要」として正本から落とさない。**
+
+#### E2E 残件（この 4 件が閉じるまで「17 項目すべて」は満たさない）
+
+| # | 状態 | 誰が |
+|---|---|---|
+| 1 / 2 / 5 | 未実施 | **仕様所有者**（テスト URL で実機確認）|
+| 6 | 未完了（`duplicate:true` 未観測）| R-2 の調査が先 |
+| 17 | 未達 | Test Clock の可否判断が先 |
+
+#### E2E とは別に扱うもの（残件に数えない）
+
+| ID | 内容 | 状態 |
+|---|---|---|
+| **R-1** | Test Mode の後片付け（テストレコード削除 / Branch deploys スコープの env 削除 / webhook 送信先削除）| 未着手。🔴 **#1/#2/#5 の実機確認が終わるまで実施しない**（消すと確認できなくなる）|
+| **R-2** | `@netlify/blobs` が依存に無く、`stripe-events` ストアが機能していない疑い | 未着手。#6 の前提 |
+| **R-3** | 有料会員が `/free-prediction/*` に来たときの導線（「買い目は予想ページへ」）| 未着手。仕様所有者の判断待ち |
+
 ### 2026-09-03 PR #82 を merge ＋ 本番反映（仕様所有者承認）— 🔴 **E2E は未完了のまま**
 
 🔴 **この merge は「Test Mode E2E が完了したから」ではない。**
@@ -1919,6 +2001,19 @@ E2E をここから先へ進めるには、**Stripe への外部 write が必要
 ---
 
 ## Open Questions
+
+0.1 🔴 **`@netlify/blobs` が `astro-site/package.json` の依存に無く、
+   `stripe-webhook.js` の `stripe-events` ストアが機能していない疑い（R-2・2026-09-03）。**
+
+   `hasProcessed` / `markProcessed` は `import('@netlify/blobs')` の失敗を try/catch で
+   飲み込むため、**壊れていても静かに「重複なし」として通る**。
+   同一 deploy で同じ event id を 3 回再送しても `duplicate:true` が一度も出なかった。
+
+   - データ破壊は起きていない（下流の冪等性で二重反映は防がれている。実測済み）
+   - ただし Test Mode E2E #6 の期待値 `duplicate:true` が満たせない
+   - 確認方法: 依存に `@netlify/blobs` を加える／関数ログで `eventStore()` の失敗を見る
+
+
 
 0. ~~**会員継続制度の未確定事項 TBD-1〜TBD-8**~~（2026-09-01 **確定**。`MEMBERSHIP_REWARDS.md` §7.1）。
    ~~**法務確認 L-1〜L-9**~~（保守ライン内に設計を収めたため**確認待ちは解消**。§8）。
