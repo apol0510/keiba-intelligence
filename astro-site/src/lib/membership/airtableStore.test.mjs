@@ -20,7 +20,9 @@ import {
   errorCodeFrom,
 } from './airtableStore.js';
 import { STORE_RESULT } from './store.js';
-import { ENTRY_TYPE } from './rewards.js';
+import {
+  ENTRY_TYPE, isValidEntry, tenureMonthsFromLedger, buildPaidPeriodEntry,
+} from './rewards.js';
 import { createContractPrice } from './priceLock.js';
 
 const CONTRACT = createContractPrice({
@@ -315,4 +317,117 @@ test('🔴 typecast を使わない', () => {
     .replace(/^\s*\/\/.*$/gm, '')
     .replace(/^\s*\*.*$/gm, '');
   assert.equal(/typecast/.test(src), false, '🔴 typecast で押し込んでいる');
+});
+
+/* ------------------------------------------------------------------
+   期間の長さ（月数）を台帳に保存する
+
+   🔴 保存しないと `tenureMonthsFromLedger` が
+      `(e.periodMonths ?? PERIOD_MONTHS.MONTHLY)` で 1 か月へ倒れ、
+      年払い（1,200 pt）が 1 か月として数えられて**ランクが過少になる**。
+      残高は正しいので、ずれるのは継続月数だけ（2026-09-03 に未保存を発見）。
+   ------------------------------------------------------------------ */
+
+/** 台帳へ 1 行書いて、POST された fields を返す。 */
+async function postedLedgerFields(entry) {
+  const f = stubFetch(async (url, init) => {
+    if (init.method === 'POST') return { status: 200, body: { records: [{ id: 'new' }] } };
+    return { status: 200, body: { records: [] } };
+  });
+  await store(f).appendEntry('a@example.com', entry);
+  const posts = f.writes();
+  return posts.length ? posts[0].body.records[0].fields : null;
+}
+
+test('🔴 年払い（12 か月）の PeriodMonths が台帳に入る', async () => {
+  const fields = await postedLedgerFields({
+    entryId: 'e-annual', type: ENTRY_TYPE.ACCRUAL, points: 1200,
+    occurredAtMs: Date.parse('2026-09-02T13:42:36.000Z'), periodMonths: 12, ref: 'term_1',
+  });
+  assert.equal(fields[LEDGER_FIELDS.PERIOD_MONTHS], 12);
+  assert.equal(fields[LEDGER_FIELDS.POINTS], 1200);
+});
+
+test('月額（1 か月）の PeriodMonths が台帳に入る', async () => {
+  const fields = await postedLedgerFields({
+    entryId: 'e-monthly', type: ENTRY_TYPE.ACCRUAL, points: 100,
+    occurredAtMs: 1, periodMonths: 1, ref: 'in_1',
+  });
+  assert.equal(fields[LEDGER_FIELDS.PERIOD_MONTHS], 1);
+});
+
+test('🔴 月数が判定できない行は PeriodMonths を書かない（既定値 1 で埋めない）', async () => {
+  for (const periodMonths of [undefined, null, 0, -3, 1.5, '12']) {
+    const fields = await postedLedgerFields({
+      entryId: `e-${String(periodMonths)}`, type: ENTRY_TYPE.ACCRUAL, points: 100,
+      occurredAtMs: 1, periodMonths,
+    });
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(fields, LEDGER_FIELDS.PERIOD_MONTHS), false,
+      `🔴 ${String(periodMonths)} を月数として書いている`,
+    );
+  }
+});
+
+test('🔴 readLedger が PeriodMonths を読み戻す', async () => {
+  const f = stubFetch(async () => ({
+    status: 200,
+    body: {
+      records: [{
+        id: 'rec1',
+        fields: {
+          [LEDGER_FIELDS.ENTRY_ID]: 'e-annual',
+          [LEDGER_FIELDS.TYPE]: ENTRY_TYPE.ACCRUAL,
+          [LEDGER_FIELDS.POINTS]: 1200,
+          [LEDGER_FIELDS.PERIOD_MONTHS]: 12,
+          [LEDGER_FIELDS.OCCURRED_AT]: '2026-09-02',
+          [LEDGER_FIELDS.SOURCE_REF]: 'term_1',
+        },
+      }],
+    },
+  }));
+  const r = await store(f).readLedger('a@example.com');
+  assert.equal(r.status, STORE_RESULT.APPLIED);
+  assert.equal(r.entries[0].periodMonths, 12);
+});
+
+test('列が無い旧行は periodMonths を作らない（従来どおり 1 か月として数える）', async () => {
+  const f = stubFetch(async () => ({
+    status: 200,
+    body: {
+      records: [{
+        id: 'rec1',
+        fields: {
+          [LEDGER_FIELDS.ENTRY_ID]: 'e-old',
+          [LEDGER_FIELDS.TYPE]: ENTRY_TYPE.ACCRUAL,
+          [LEDGER_FIELDS.POINTS]: 100,
+          [LEDGER_FIELDS.OCCURRED_AT]: '2026-09-02',
+        },
+      }],
+    },
+  }));
+  const r = await store(f).readLedger('a@example.com');
+  assert.equal(r.entries[0].periodMonths, undefined);
+  assert.equal(isValidEntry(r.entries[0]), true, '旧行を壊れた行として捨てない');
+  assert.equal(tenureMonthsFromLedger(r.entries), 1);
+});
+
+test('🔴 往復: 年払いを書いて読み戻すと 12 か月として数えられる', async () => {
+  const entry = buildPaidPeriodEntry({
+    email: 'a@example.com', invoiceRef: 'in_annual',
+    periodMonths: 12, occurredAtMs: Date.parse('2026-09-02T13:42:36.000Z'),
+  });
+  assert.equal(entry.periodMonths, 12);
+
+  // 1. 書く
+  const written = await postedLedgerFields(entry);
+
+  // 2. Airtable が返す形に組み直して読む
+  const f = stubFetch(async () => ({ status: 200, body: { records: [{ id: 'rec1', fields: written }] } }));
+  const r = await store(f).readLedger('a@example.com');
+
+  // 3. 12 か月として集計される（未保存だと 1 に倒れていた）
+  assert.equal(tenureMonthsFromLedger(r.entries), 12);
+  // 残高は未保存でも正しかった（ずれるのは月数だけ）ことも固定する
+  assert.equal(r.entries[0].points, 1200);
 });

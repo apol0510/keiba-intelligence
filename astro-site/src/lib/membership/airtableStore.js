@@ -38,6 +38,15 @@ export const LEDGER_FIELDS = Object.freeze({
   EMAIL: 'Email',
   TYPE: 'Type',
   POINTS: 'Points',
+  /**
+   * 🔴 その付与が**何か月ぶんか**（月額=1 / 四半期=3 / 年払い=12）。
+   *    保存しないと `rewards.js` の `tenureMonthsFromLedger` が
+   *    `(e.periodMonths ?? PERIOD_MONTHS.MONTHLY)` で **1 か月へ倒れ**、
+   *    年払い（1,200 pt）が 1 か月として数えられて**会員ランクが過少になる**
+   *    （2026-09-03 に未保存を発見）。残高（`Points`）は正しいので、
+   *    ずれるのは**継続月数＝ランク**だけである。
+   */
+  PERIOD_MONTHS: 'PeriodMonths',
   OCCURRED_AT: 'OccurredAt',
   SOURCE_REF: 'SourceRef',
 });
@@ -224,6 +233,9 @@ export function createAirtableMembershipStore({
             entryId: f[LEDGER_FIELDS.ENTRY_ID],
             type: f[LEDGER_FIELDS.TYPE],
             points: f[LEDGER_FIELDS.POINTS],
+            // 🔴 そのまま渡す（壊れた値は `isValidEntry` が弾く）。
+            //    列が無い旧行は undefined のままにして、従来どおり 1 か月として数える
+            periodMonths: f[LEDGER_FIELDS.PERIOD_MONTHS],
             occurredAtMs: Number.isFinite(at) ? at : NaN,
             ref: f[LEDGER_FIELDS.SOURCE_REF] || null,
           };
@@ -259,6 +271,11 @@ export function createAirtableMembershipStore({
                 [LEDGER_FIELDS.TYPE]: entry.type,
                 [LEDGER_FIELDS.POINTS]: entry.points,
                 [LEDGER_FIELDS.OCCURRED_AT]: toAirtableDate(entry.occurredAtMs),
+                // 🔴 月数は**判定できたときだけ**入れる。既定値（1）で埋めない
+                //    （`buildPaidPeriodEntry` は判定できなければエントリ自体を作らない）
+                ...(Number.isInteger(entry.periodMonths) && entry.periodMonths > 0
+                  ? { [LEDGER_FIELDS.PERIOD_MONTHS]: entry.periodMonths }
+                  : {}),
                 ...(entry.ref ? { [LEDGER_FIELDS.SOURCE_REF]: entry.ref } : {}),
               },
             }],

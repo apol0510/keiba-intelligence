@@ -416,10 +416,37 @@ Production deploy / merge / E2E の後片付け（テストレコード削除）
 銀行振込の年払いは **2026-09-01 から本番で有効**（`MEMBERSHIP_WRITE_ENABLED`）なので、
 次の入金確認から 12 か月分の行が入り、**ランクが 1 か月として数えられる**。
 
-🔴 **依頼範囲外のため未修正**（今回の指示は「read-only で確認して報告」）。
-修正するなら `LEDGER_FIELDS` へ `PERIOD_MONTHS: 'PeriodMonths'` を足し、
-`appendEntry` の書き込みと `readLedger` の読み出しの**両方**に通す必要がある。
-台帳が現状 1 行しかないため、**是正は今なら安価**。
+#### ✅ 是正（2026-09-03・仕様所有者の指示）
+
+`LEDGER_FIELDS` へ `PERIOD_MONTHS: 'PeriodMonths'` を追加し、**書き込みと読み出しの両方**に通した。
+
+| 箇所 | 変更 |
+|---|---|
+| `LEDGER_FIELDS` | `PERIOD_MONTHS: 'PeriodMonths'` を追加（列は `MEMBERSHIP_DATA_MIGRATION.md` §2.2 に既定義）|
+| `appendEntry` | 月数が**正の整数のときだけ**書く。🔴 **既定値 1 で埋めない**（`SourceRef` と同じ条件付き）|
+| `readLedger` | `periodMonths` を読み戻す。**そのまま渡す**（壊れた値は `isValidEntry` が弾く）|
+
+- 🔴 **旧行（列が空）との後方互換を維持**: `undefined` のままにするので、
+  従来どおり `?? PERIOD_MONTHS.MONTHLY` で 1 か月として数えられる。
+  既存の 1 行（月額 100 pt）の集計結果は変わらない。
+- 🔴 `rewards.js` の `?? MONTHLY` フォールバックは**変えていない**（旧行の互換がそこに依存しているため）。
+
+テスト **189 → 195 件**（`airtableStore.test.mjs` に 6 件追加）:
+
+| 追加したテスト | 固定する不変条件 |
+|---|---|
+| 年払い（12 か月）の `PeriodMonths` が台帳に入る | 12 と 1,200 pt が両方入る |
+| 月額（1 か月）の `PeriodMonths` が台帳に入る | 1 が入る |
+| 月数が判定できない行は書かない | `undefined` / `null` / `0` / `-3` / `1.5` / `'12'` のいずれでも**列を作らない** |
+| `readLedger` が `PeriodMonths` を読み戻す | 12 が返る |
+| 列が無い旧行は `periodMonths` を作らない | 捨てずに 1 か月として数える |
+| 🔴 **往復**: 年払いを書いて読み戻す | `tenureMonthsFromLedger` が **12**（未保存だと 1 に倒れていた）|
+
+**結果**: membership 195 / stripe 64 / auth 134 / billing 61 / ai-auth 11 / narrative 90 —
+すべて fail 0。`npm run build` 成功（exit 0）。
+
+🔴 **本番 Airtable の既存 1 行は書き換えていない**（追加 write なし）。
+その行は月額 1 か月ぶんで、旧行として 1 か月と数えられるため**値は正しいまま**である。
 
 #### 注記（未達ではないが仕様との差）
 
