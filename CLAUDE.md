@@ -584,6 +584,26 @@ KMA_ADMIN_TOKEN=（KMA の ADMIN_API_TOKEN と同一値）
 
 ---
 
+## 🔀 Git マージ規約 🔀
+
+### 🔴 PR は **承認後に squash merge** する
+
+- **必ず squash merge**（`gh pr merge <N> --squash`）。
+  merge commit（`--merge`）も rebase merge（`--rebase`）も**使わない**。
+- merge は**仕様所有者の承認後**にのみ行う（高リスク境界。`main` は production branch であり、
+  merge した時点で本番デプロイが走る）。
+- `main` へ直接 push しない。変更は必ず branch → PR を経由する。
+
+🔴 **squash によって branch の commit SHA は `main` に残らない。**
+`docs/progress.md` などが branch の SHA を参照していても、**それは squash を回避する理由にならない**
+（2026-09-03 に PR #82 でこの判断を誤り、merge commit を使ってしまった）。
+SHA が消えて困る情報は、**文書側に本文として書く**こと。
+
+🔴 squash merge されたブランチは `git branch --merged` で merged と判定されない。
+**PR の状態を根拠に判断する**（本書「📅 最終更新情報」下の記録も参照）。
+
+---
+
 ## 📝 コミットメッセージ規約 📝
 
 ### 絵文字プレフィックス
