@@ -545,6 +545,67 @@ branch deploy は **`4aadb0a8` のまま**である（`57da2619` は deploy-prev
   **月額 1 か月ぶんで値としては正しい**（旧行として 1 か月と数えられる）。
   遡って埋めるかどうかは別途判断。
 
+### 🔴 2026-09-03 手順0（branch deploy 再ビルド）が実行できない — 原因確定
+
+承認を受けて `57da2619` を branch deploy へ再ビルドしようとしたが、**実行できない**。
+サイトの build 設定が原因で、**このブランチには branch deploy が作られない**。
+
+#### 原因（`netlify api getSite` の実測・read-only）
+
+```
+allowed_branches: ["main"]
+repo_branch:      "main"
+stop_builds:      false
+```
+
+**branch deploy の対象が `main` だけに絞られている。**
+そのため `test/stripe-testmode-e2e-2026-09-01` は、push しても
+**deploy-preview しか作られず、branch deploy は作られない**。
+
+| context | 最新 commit | 時刻 |
+|---|---|---|
+| branch-deploy | **`4aadb0a8`** | 2026-09-02 14:24 UTC（**これ以降 1 件も無い**）|
+| deploy-preview | `57da2619` | 2026-09-03 03:05 UTC（ready）|
+
+直近 100 デプロイを見ても、`4aadb0a8` より新しい branch-deploy は **1 件も存在しない**。
+`4aadb0a8`（14:24）の直後から止まっているため、**その頃に設定が `["main"]` へ絞られた**
+と考えられる（誰がいつ変えたかは API からは分からないので断定しない）。
+
+#### なぜ迂回できないか
+
+| 案 | 可否 |
+|---|---|
+| 既存の build hook を使う | 🔴 その hook は **`main` 用**。誤って **production build** を起こす危険がある |
+| `createSiteBuild` を叩く | 🔴 既定ブランチ（`main`）を建てる＝**Production deploy**。禁止されている |
+| deploy-preview（`57da2619` ready）を使う | 🔴 Stripe の送信先 URL は **branch deploy の URL**。
+  preview を使うには **Stripe の設定変更**が必要で、禁止されている |
+| ブランチに実変更を push | 🔴 `allowed_branches: ["main"]` のままでは、何を push しても branch deploy は作られない |
+
+**したがって手順0 には `allowed_branches` の変更（Netlify のビルド設定変更）が要る。**
+これは承認された「再ビルド」の範囲を超え、しかも
+**意図的に絞られた設定を元へ戻す**ことになるため、**独断で変更せず停止した**。
+
+#### 影響
+
+- 現在の branch deploy URL は **`4aadb0a8` を配信し続けている**（URL は生きており Stripe の配信も通る）。
+  ただし **`PeriodMonths` 修正（`57da2619`）は載っていない**。
+- **完成条件 #9 はこの状態では満たせない**。新しい支払いを起こしても `PeriodMonths` は空のままになる。
+- 本番（`main` / production）には影響しない。修正は branch に commit 済みで、
+  main へ merge すれば production には載る（**merge は未承認・未実施**）。
+
+#### 承認が要る選択
+
+1. `allowed_branches` に `test/stripe-testmode-e2e-2026-09-01` を**一時的に追加**して
+   branch deploy を作り直し、E2E 後に `["main"]` へ戻す
+2. Stripe の送信先 URL を deploy-preview（`deploy-preview-82--…`）へ向け替える
+   （🔴 Stripe 設定変更。現在は禁止）
+3. #9 の実測を諦め、**#9 は単体テスト（往復テスト）での担保にとどめる**
+
+#### 既存 1 行の遡及更新
+
+🔴 **行わない**（仕様所有者の指示・2026-09-03）。
+その行は月額 1 か月ぶんで、旧行として 1 か月と数えられるため**値は正しい**。
+
 ### 2026-09-03 二重配信の解消（承認済み・Test Mode のみ）
 
 同一 URL を指す送信先が 2 つあり、片方は今週 12 件すべて 400 `invalid_signature` だった。
