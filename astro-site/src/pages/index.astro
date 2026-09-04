@@ -316,8 +316,12 @@ const totals = combinedTotals(archiveNankan, archiveJra);
       min-height: 600px;
       display: flex;
       align-items: center;
-      background:
-        linear-gradient(180deg, rgba(15, 23, 42, 0.50) 0%, rgba(15, 23, 42, 0.20) 55%, rgba(15, 23, 42, 0.10) 100%);
+      // 🔴 かつて背景画像の上に敷いていた暗いオーバーレイの残骸だった。
+      //    画像はこの上の .hero-keyvisual に分離されたため、この節では
+      //    半透明の紺が明るいページに重なって「中間グレー」になり、
+      //    明るい文字も暗い文字も読めない帯になっていた（2026-09-04 報告）。
+      //    ページ全体（統計カード・小見出し）と同じ明るい背景に揃える。
+      background: linear-gradient(180deg, #eef2f8 0%, #f8fafc 100%);
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -332,7 +336,9 @@ const totals = combinedTotals(archiveNankan, archiveJra);
       font-size: 3rem;
       margin-bottom: var(--spacing-lg);
       font-weight: 800;
-      background: linear-gradient(135deg, #e0f2fe 0%, #60a5fa 100%);
+      // 🔴 #e0f2fe→#60a5fa は暗い背景用。明るい背景では 1.5:1 前後しか出ない。
+      //    /login の見出しと同じ濃い青系にそろえる（9.22:1 / 4.60:1）。
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
