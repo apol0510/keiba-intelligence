@@ -188,11 +188,15 @@ const { masked = false, bettingLines = [] } = Astro.props;
   }
 
   .ai-betting-toggle {
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(239, 68, 68, 0.15));
-    border: 1px solid rgba(251, 191, 36, 0.4);
+    /* AI 判断 / 詳細: 紫 → 桃。開いた状態と同じ系統にそろえる。
+       旧: 金→赤の暖色同系＋薄い金文字で 1.5:1 前後しか出ていなかった。 */
+    background: var(--grad-conclusion-btn);
+    background-size: 180% 180%;
+    background-position: 0% 0%;
+    border: none;
     border-radius: 20px;
     padding: 8px 18px;
-    color: #fbbf24;
+    color: var(--btn-ink); /* 7.17 / 7.15 */
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
@@ -204,13 +208,15 @@ const { masked = false, bettingLines = [] } = Astro.props;
   }
 
   .ai-betting-toggle:hover {
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.25), rgba(239, 68, 68, 0.25));
+    background-position: 100% 100%;
+    filter: brightness(1.1);
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+    box-shadow: 0 2px 8px rgba(109, 40, 217, 0.35);
   }
 
+  /* AI 判断 / 詳細: 紫 → 桃（旧 #fbbf24→#f59e0b は同系色） */
   .ai-betting-toggle.open {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    background: var(--grad-conclusion-btn);
     color: white;
     border-color: transparent;
   }
@@ -387,13 +393,14 @@ const { masked = false, bettingLines = [] } = Astro.props;
   }
 
   .ai-betting-masked-cta.primary {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: var(--grad-nav-btn); /* 主要 CTA: 青 → 紫（旧 #3b82f6→#2563eb は同系色） */
     color: #fff;
     box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
   }
 
+  /* 登録 / 強い行動: 桃 → 橙（旧 #fbbf24→#f59e0b は同系色） */
   .ai-betting-masked-cta.secondary {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    background: var(--grad-action-btn);
     color: #1e293b;
     box-shadow: 0 4px 14px rgba(251, 191, 36, 0.35);
   }

@@ -501,7 +501,9 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     margin-bottom: 20px;
   }
 
-  .pr-hero-lead b { color: var(--secondary-start); }
+  /* 🔴 --secondary-start(#f97316) は白地で 2.94:1 しかなく強調文字として読めない。
+     オレンジの性格は保ったまま読める濃さへ（5.20:1）。 */
+  .pr-hero-lead b { color: #c2410c; }
 
   .pr-hero-actions {
     display: flex;
@@ -521,21 +523,25 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   }
 
+  /* 主要 CTA: 青 → 紫（--primary-gradient は青→青の同系色） */
   .pr-btn-primary {
-    background: var(--primary-gradient);
-    color: var(--text-inverse);
+    background: var(--grad-nav-btn);
+    color: var(--btn-ink);
     box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
   }
 
-  .pr-btn-primary:hover { transform: translateY(-1px); color: var(--text-inverse); }
+  .pr-btn-primary:hover { transform: translateY(-1px); color: var(--btn-ink); }
 
+  /* 控えめな補助操作: スレート → 藍（単色にしない） */
   .pr-btn-ghost {
-    background: var(--bg-secondary);
-    border-color: var(--primary-start);
-    color: var(--primary-start);
+    background: var(--grad-tool-btn);
+    background-size: 180% 180%;
+    background-position: 0% 0%;
+    border-color: transparent;
+    color: var(--btn-ink); /* 14.27 / 13.64 */
   }
 
-  .pr-btn-ghost:hover { background: var(--bg-muted); color: var(--primary-start); }
+  .pr-btn-ghost:hover { background-position: 100% 100%; filter: brightness(1.12); color: var(--btn-ink); }
 
   .pr-btn-disabled {
     background: var(--bg-muted);
@@ -574,26 +580,64 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     border-bottom: 1px solid var(--border-color);
   }
 
+  /* 🔴 見出し行の下地。もとは --bg-muted(#f1f5f9) の灰色。
+     いちど #e0f2fe→#ede9fe まで薄く色を入れたが、ページ背景
+     (--bg-primary #f5f7fb) と近すぎて**まだ灰色に見える**と指摘された。
+     そこでフッターの無料会員登録ボタンと同じ --grad-nav-btn
+     （#38bdf8 → #a78bfa）をそのまま使う。淡さで迷わないうえ、
+     サイト内で色の意味も揃う。文字は同じく濃色インク。 */
   .pr-matrix thead th {
-    background: var(--bg-muted);
+    background: var(--grad-nav-btn); /* #38bdf8 → #a78bfa（フッターCTAと同色） */
     font-weight: 800;
-    color: var(--text-primary);
+    color: var(--btn-ink); /* 8.84 / 6.96 */
     line-height: 1.35;
   }
 
+  /* 🔴 ¥0 は --text-tertiary(#718096) で 3.5:1 しかなく読みにくかった */
   .pr-matrix thead th small {
-    font-weight: 600;
-    color: var(--text-tertiary);
+    font-weight: 700;
+    /* 🔴 opacity を下げると紫側で 4.04:1 まで落ちるため不透明のまま。
+       階層は文字サイズと太さで付ける。 */
+    color: var(--btn-ink); /* 8.84 / 6.96 */
     font-size: 0.72rem;
   }
 
   .pr-m-label { text-align: left !important; font-weight: 600; }
 
-  .pr-matrix .ok { color: var(--success); font-weight: 800; }
+  /* 🔴 ○ が細くて沈んでいたので、太さと大きさを上げてクッキリさせる */
+  .pr-matrix .ok { color: var(--success); font-weight: 900; font-size: 1.05rem; }
   .pr-matrix .no { color: var(--text-tertiary); }
 
-  .pr-matrix .pr-m-paid { background: rgba(249, 115, 22, 0.06); }
-  .pr-matrix thead .pr-m-paid { background: rgba(249, 115, 22, 0.14); }
+  /* プレミアム列。🔴 単色オレンジ（rgba(249,115,22,…)）をやめ、プランの帯と
+     同じ 橙→藤 でそろえる。淡すぎて沈んでいたので、見出しは帯と同じべた塗り、
+     本文は同じ 2 色をはっきり敷き、左右にアクセント線を通して列ごと際立たせる。 */
+  .pr-matrix .pr-m-paid {
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.42) 0%, rgba(192, 132, 252, 0.42) 100%);
+    border-left: 3px solid #a855f7;
+    border-right: 3px solid #a855f7;
+  }
+
+  .pr-matrix thead .pr-m-paid {
+    background: linear-gradient(135deg, #f97316 0%, #a855f7 100%);
+    color: var(--btn-ink); /* 6.75 / 4.78 */
+    border-top: 3px solid #a855f7;
+  }
+
+  .pr-matrix thead .pr-m-paid small {
+    color: var(--btn-ink);
+    opacity: 0.85;
+  }
+
+  .pr-matrix tbody tr:last-child .pr-m-paid {
+    border-bottom: 3px solid #a855f7;
+  }
+
+  /* プレミアム列の ○ は他の列より強く。淡い下地の上で 6.1:1 以上 */
+  .pr-matrix td.pr-m-paid.ok {
+    color: #5b21b6; /* 濃い下地でも 5.9:1 以上 */
+    font-weight: 900;
+    font-size: 1.1rem;
+  }
 
   .pr-matrix tbody tr:last-child td { border-bottom: none; }
 
@@ -631,10 +675,13 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
   }
 
   .pr-plan.is-recommended {
-    border-color: var(--secondary-start);
+    border-color: #c084fc;
     box-shadow: var(--shadow-lg);
   }
 
+  /* 🔴 --secondary-gradient は 橙→橙 の同系色で、白文字とのコントラストが
+     2.26〜2.80:1 しかなかった。トップの有料プランの帯と同じ 橙→藤 にそろえ、
+     文字は濃色にする（8.37 / 7.17）。 */
   .pr-plan-ribbon {
     position: absolute;
     top: -12px;
@@ -642,12 +689,13 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     transform: translateX(-50%);
     padding: 4px 16px;
     border-radius: var(--radius-pill);
-    background: var(--secondary-gradient);
-    color: var(--text-inverse);
+    background: linear-gradient(135deg, #fb923c 0%, #c084fc 100%);
+    color: var(--btn-ink);
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     white-space: nowrap;
+    box-shadow: 0 3px 12px rgba(192, 132, 252, 0.35);
   }
 
   .pr-plan-name {
@@ -677,11 +725,17 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     margin-right: 8px;
   }
 
+  /* 金額は単色をやめ、ヘッダー/フッターのロゴと同じ 青→紫 のグラデーションで塗る。
+     background-clip が効かない環境では color がそのまま残る（6.70:1）。 */
   .pr-price-amount {
     font-family: var(--font-num);
     font-size: 2.2rem;
     font-weight: 800;
-    color: var(--primary-start, #d8433a);
+    color: #1d4ed8;
+    background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .pr-price-unit {
@@ -864,16 +918,17 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
   /* 購入手続きのメール確認 */
   /* 🔴 購入の CTA は「行動」の 2 色グラデーション（--grad-action / 桃→橙）。
      単色は使わない（global.scss の 2026-08-31 のトークン方針に合わせる）。 */
+  /* 購入 / 強い行動: 桃 → 橙（白文字が AA を満たす濃いストップへ） */
   .pr-btn-action {
-    background: var(--grad-action);
-    color: var(--text-inverse);
+    background: var(--grad-action-btn);
+    color: var(--btn-ink);
     box-shadow: 0 6px 18px rgba(236, 72, 153, 0.3);
   }
 
   .pr-btn-action:hover {
     transform: translateY(-2px);
-    color: var(--text-inverse);
-    box-shadow: 0 10px 24px rgba(249, 115, 22, 0.36);
+    color: var(--btn-ink);
+    box-shadow: 0 10px 24px rgba(244, 114, 182, 0.4);
   }
 
   .pr-plan-cta {
@@ -902,7 +957,7 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     color: var(--text-tertiary);
   }
 
-  .pr-step-sep { color: var(--secondary-start); }
+  .pr-step-sep { color: #c2410c; }
 
   .pr-purchase-auth {
     position: relative;

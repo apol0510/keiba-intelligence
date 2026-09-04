@@ -379,21 +379,23 @@ const venueViews = venues.map((venue: any, venueIndex: number) => {
     color: var(--primary-start);
   }
 
-  .rdb-race-tab.is-main {
-    background: #fff7e0;
-    color: #8a6a00;
-    box-shadow: inset 0 0 0 1px #f0d68a;
-  }
+  /* 🔴 メインレースのタブに見た目の差を付けない（2026-09-05 指示）。
+     もとは金色（#fff7e0 / #8a6a00 / #f0d68a）、次に淡い 空→藤 ＋ 藤のリングに
+     したが、いずれも他のタブと違って見えるため撤去した。
+     `is-main` クラスはマークアップ側に残っているが、色は他のタブと同じ。
+     🔴 ここに再びメイン専用の配色を足さないこと。 */
 
   /* 🔴 現在位置は 青→紫 のグラデーション（2026-08-31） */
   .rdb-race-tab.is-active {
-    background: var(--grad-nav);
-    color: var(--text-inverse);
+    /* 白文字が AA を満たす濃いストップへ（青→紫は維持） */
+    background: var(--grad-nav-btn);
+    color: var(--btn-ink);
     border-color: transparent;
     box-shadow: 0 3px 12px rgba(124, 106, 246, 0.35);
   }
 
-  .rdb-race-tab.is-active i { color: rgba(255, 255, 255, 0.85); }
+  /* 🔴 選択中の地は明るい 空→藤 になったので、白のままだと R が読めない */
+  .rdb-race-tab.is-active i { color: var(--btn-ink); opacity: 0.75; }
 
   .rdb-head {
     margin-bottom: 18px;
@@ -471,14 +473,15 @@ const venueViews = venues.map((venue: any, venueIndex: number) => {
     margin: 0 0 18px;
   }
 
+  /* 主要 CTA: 青 → 紫（--primary-gradient は青→青の同系色） */
   .rdb-empty-link {
     display: inline-block;
     padding: 10px 24px;
     border-radius: var(--radius-pill);
-    background: var(--primary-gradient);
-    color: var(--text-inverse);
+    background: var(--grad-nav-btn);
+    color: var(--btn-ink);
     font-weight: 700;
   }
 
-  .rdb-empty-link:hover { color: var(--text-inverse); }
+  .rdb-empty-link:hover { color: var(--btn-ink); }
 </style>
