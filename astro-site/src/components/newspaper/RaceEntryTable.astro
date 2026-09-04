@@ -652,7 +652,7 @@ const colCount = 3 // 枠 / 馬番 / 馬名
 
   /* 表示の切り替え（AI指数順）は道具なのでスレート */
   .ret-tool.is-on {
-    background: var(--tool-gradient);
+    background: var(--grad-tool-btn);
     border-color: var(--tool-start);
     color: #fff;
   }
@@ -857,7 +857,7 @@ const colCount = 3 // 枠 / 馬番 / 馬名
   .rpl-hold-tag {
     padding: 2px 8px;
     border-radius: 999px;
-    background: var(--tool-gradient);
+    background: var(--grad-tool-btn);
     color: #fff;
     font-size: 0.7rem;
     font-weight: 800;
@@ -903,10 +903,10 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     border-radius: var(--radius-pill);
     /* 控えめな補助操作: スレート → 藍（単色にしない） */
     border: none;
-    background: var(--tool-gradient);
+    background: var(--grad-tool-btn);
     background-size: 180% 180%;
     background-position: 0% 0%;
-    color: #ffffff; /* 10.35 / 7.95 */
+    color: var(--btn-ink); /* 14.27 / 13.64 */
     font-size: 0.7rem;
     font-weight: 800;
     transition: all 120ms ease;
@@ -915,12 +915,12 @@ const colCount = 3 // 枠 / 馬番 / 馬名
   .ret-row:hover .more-btn {
     background-position: 100% 100%;
     filter: brightness(1.15);
-    color: #ffffff;
+    color: var(--btn-ink);
   }
 
   .more-caret { display: inline-block; transition: transform 150ms ease; }
   .ret-row.is-open .more-caret { transform: rotate(180deg); }
-  .ret-row.is-open .more-btn { background: var(--primary-start); border-color: var(--primary-start); color: var(--text-inverse); }
+  .ret-row.is-open .more-btn { background: var(--grad-tool-btn); background-position: 100% 100%; border-color: transparent; color: var(--btn-ink); }
 
   .ret-detail > td {
     padding: 0 !important;

@@ -42,7 +42,9 @@ const totals = combinedTotals(archiveNankan, archiveJra);
   </section>
 
   <!-- ヒーローセクション -->
-  <section class="hero gradient-bg-animated">
+  <!-- 🔴 gradient-bg-animated は付けない。global の同名クラスと specificity が並び、
+       読み込み順で青→橙のアニメーション背景に上書きされていた（2026-09-04） -->
+  <section class="hero">
     <div class="container">
       <div class="hero-content">
         <h1 class="hero-title fade-in">
@@ -316,12 +318,12 @@ const totals = combinedTotals(archiveNankan, archiveJra);
       min-height: 600px;
       display: flex;
       align-items: center;
-      // 🔴 かつて背景画像の上に敷いていた暗いオーバーレイの残骸だった。
-      //    画像はこの上の .hero-keyvisual に分離されたため、この節では
-      //    半透明の紺が明るいページに重なって「中間グレー」になり、
-      //    明るい文字も暗い文字も読めない帯になっていた（2026-09-04 報告）。
-      //    ページ全体（統計カード・小見出し）と同じ明るい背景に揃える。
-      background: linear-gradient(180deg, #eef2f8 0%, #f8fafc 100%);
+      // 🔴 グレーにしない。かつて背景画像の上に敷いていた暗いオーバーレイの残骸で
+      //    「中間グレーの帯」になっていた（2026-09-04 報告）。画像はこの上の
+      //    .hero-keyvisual に分離済み。
+      //    フッターのロゴ（#60a5fa→#a78bfa）と同じ 青→藤 の系統を、
+      //    ごく淡くして敷く。明るく、文字は濃色で読める。
+      background: linear-gradient(180deg, #e0f2fe 0%, #f5f3ff 55%, #ffffff 100%);
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -336,9 +338,10 @@ const totals = combinedTotals(archiveNankan, archiveJra);
       font-size: 3rem;
       margin-bottom: var(--spacing-lg);
       font-weight: 800;
-      // 🔴 #e0f2fe→#60a5fa は暗い背景用。明るい背景では 1.5:1 前後しか出ない。
-      //    /login の見出しと同じ濃い青系にそろえる（9.22:1 / 4.60:1）。
-      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      // 🔴 #e0f2fe→#60a5fa は暗い背景用で、明るい背景では 1.0〜2.2:1 しか出ない。
+      //    フッターのロゴと同じ 青→藤 の系統で、淡い背景でも読める濃さにする
+      //    （6.11:1 / 6.48:1）。
+      background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -622,11 +625,8 @@ const totals = combinedTotals(archiveNankan, archiveJra);
     }
 
     @media (max-width: 640px) {
-      .hero {
-        background-image:
-          linear-gradient(180deg, rgba(15, 23, 42, 0.50) 0%, rgba(15, 23, 42, 0.20) 55%, rgba(15, 23, 42, 0.10) 100%);
-        background-position: center;
-      }
+      // 🔴 ここに暗いオーバーレイの上書きが残っており、モバイルだけ
+      //    グレーの帯になっていた（2026-09-04 報告）。背景は上の指定に任せる。
 
       .hero-title {
         font-size: 2rem;

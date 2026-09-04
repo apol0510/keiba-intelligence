@@ -773,33 +773,33 @@ const expiresLabel = ent.expiresAtMs
   /* 主要 CTA: 青 → 紫（--primary-gradient は青→青の同系色） */
   .mp-btn-primary {
     background: var(--grad-nav-btn);
-    color: var(--text-inverse);
+    color: var(--btn-ink);
     box-shadow: 0 4px 14px rgba(37, 99, 235, 0.26);
   }
 
-  .mp-btn-primary:hover { transform: translateY(-1px); color: var(--text-inverse); }
+  .mp-btn-primary:hover { transform: translateY(-1px); color: var(--btn-ink); }
 
   /* 控えめな補助操作: スレート → 藍（単色にしない） */
   .mp-btn-ghost {
-    background: var(--tool-gradient);
+    background: var(--grad-tool-btn);
     background-size: 180% 180%;
     background-position: 0% 0%;
     border-color: transparent;
-    color: #ffffff; /* 10.35 / 7.95 */
+    color: var(--btn-ink); /* 14.27 / 13.64 */
   }
 
-  .mp-btn-ghost:hover { background-position: 100% 100%; filter: brightness(1.12); color: #ffffff; }
+  .mp-btn-ghost:hover { background-position: 100% 100%; filter: brightness(1.12); color: var(--btn-ink); }
 
   .mp-btn-quiet {
-    background: var(--tool-gradient);
+    background: var(--grad-tool-btn);
     background-size: 180% 180%;
     background-position: 0% 0%;
-    color: #ffffff;
+    color: var(--btn-ink);
     border-color: transparent;
     opacity: 0.85;
   }
 
-  .mp-btn-quiet:hover { background-position: 100% 100%; filter: brightness(1.12); color: #ffffff; }
+  .mp-btn-quiet:hover { background-position: 100% 100%; filter: brightness(1.12); color: var(--btn-ink); }
 
   .mp-logout { text-align: center; margin-top: 32px; }
 </style>

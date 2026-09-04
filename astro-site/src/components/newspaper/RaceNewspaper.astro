@@ -346,7 +346,7 @@ const bettingPlan = showBetting && validBetting.length
     border-radius: var(--radius-pill);
     font-weight: 800;
     font-size: 0.95rem;
-    color: var(--text-inverse);
+    color: var(--btn-ink);
     /* 主要 CTA: 青 → 紫（白文字が AA を満たす濃いストップへ） */
     background: var(--grad-nav-btn);
     box-shadow: 0 4px 14px rgba(124, 106, 246, 0.32);
@@ -356,7 +356,7 @@ const bettingPlan = showBetting && validBetting.length
   /* 🔴 ここにあった --secondary-gradient（橙→橙の同系色）の指定は、
      下の 桃→橙 で上書きされる死にルールだったため削除した（2026-09-04）。 */
 
-  .up-btn:hover { transform: translateY(-1px); color: var(--text-inverse); }
+  .up-btn:hover { transform: translateY(-1px); color: var(--btn-ink); }
 
   .up-sub {
     display: inline-block;

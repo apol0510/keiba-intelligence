@@ -51,31 +51,39 @@
   --grad-action: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
 
   /*
-   * 🔴 押せる UI（ボタン / CTA）専用の濃いストップ（2026-09-04）
+   * 🔴 押せる UI（ボタン / CTA）の配色（2026-09-04 確定）
    *
-   *    上の 5 本は「面」に置く前提の明るさで、**白文字だと AA 4.5:1 に届かない**
-   *    （実測: grad-nav 3.68 / grad-outlook 2.43 / grad-conclusion 3.53 /
-   *      grad-action 2.80）。ボタンの文字は 15〜16px で「大きい文字」の
-   *      3:1 緩和も使えないため、そのままでは読めない。
+   *    仕様所有者が気に入っている 3 か所を基準にした:
+   *      - ヘッダーの「KEIBA Intelligence」（2 色のグラデーション文字）
+   *      - フッターの「KEIBA Intelligence」（#60a5fa → #a78bfa）
+   *      - フッターの無料会員登録ボタン（#38bdf8 → #a78bfa ＋ 濃色文字）
+   *      - 右下のチャットボタン
    *
-   *    🔴 **色体系は増やさない。** 同じ 2 色の組み合わせのまま、深いストップに
-   *      置き換えただけ（青→紫 / シアン→藍 / 紫→桃 / 桃→橙）。
-   *      スレート→藍は元から白文字 7.95:1 以上なので `--tool-gradient` を再利用する。
+   *    そこで **明るい 2 色 ＋ 濃色文字** に統一する。
+   *    🔴 暗く沈んだ色・グレー・同系色の濃淡は使わない。
+   *    🔴 文字は常に `--btn-ink`（フッター CTA と同じ濃色）。白文字にしない。
    *
-   *    白文字のコントラスト（両端・実測）:
-   *      --grad-nav-btn        5.17 / 5.70
-   *      --grad-outlook-btn    5.36 / 6.29
-   *      --grad-conclusion-btn 7.10 / 4.60
-   *      --grad-action-btn     4.60 / 5.18
-   *      --tool-gradient      10.35 / 7.95
+   *    濃色文字のコントラスト（両端・実測。すべて AAA 7:1 級）:
+   *      --grad-nav-btn        8.84 / 6.96
+   *      --grad-outlook-btn   10.48 / 7.45
+   *      --grad-conclusion-btn 7.17 / 7.15
+   *      --grad-action-btn     7.15 / 11.34
+   *      --grad-tool-btn      14.27 / 13.64
    *
    *    🔴 単色・同系色の濃淡へ戻さないこと。hover も 2 色を保ったまま
    *      background-position / brightness / shadow で変化させる。
    */
-  --grad-nav-btn: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-  --grad-outlook-btn: linear-gradient(135deg, #0e7490 0%, #4f46e5 100%);
-  --grad-conclusion-btn: linear-gradient(135deg, #6d28d9 0%, #db2777 100%);
-  --grad-action-btn: linear-gradient(135deg, #db2777 0%, #c2410c 100%);
+  --btn-ink: #0b1020;
+  /* 主要 CTA: 空 → 藤（フッターの無料会員登録ボタンと同じ） */
+  --grad-nav-btn: linear-gradient(135deg, #38bdf8 0%, #a78bfa 100%);
+  /* 情報を見る / 探索: シアン → 青 */
+  --grad-outlook-btn: linear-gradient(135deg, #22d3ee 0%, #60a5fa 100%);
+  /* AI 判断 / 詳細: 藤 → 桃 */
+  --grad-conclusion-btn: linear-gradient(135deg, #c084fc 0%, #f472b6 100%);
+  /* 購入 / 登録 / 強い行動: 桃 → 琥珀 */
+  --grad-action-btn: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+  /* 控えめな補助操作: 淡い空 → 淡い藤（主張しないが単色にもグレーにもしない） */
+  --grad-tool-btn: linear-gradient(135deg, #bae6fd 0%, #ddd6fe 100%);
 
   /* 道具・分類カラー: スレート → 藍（単色に見せない・主張はしない） */
   --tool-start: #334155;
@@ -334,7 +342,7 @@ a {
 // 主要 CTA: 青 → 紫
 .btn-primary {
   background: var(--grad-nav-btn);
-  color: #ffffff; // 5.17 / 5.70
+  color: var(--btn-ink); // 8.84 / 6.96
 
   &:hover {
     filter: brightness(1.08);
@@ -345,7 +353,7 @@ a {
 // （的中実績を見る・最新開催を見る・一覧へ戻る 等）
 .btn-secondary {
   background: var(--grad-outlook-btn);
-  color: #ffffff; // 5.36 / 6.29
+  color: var(--btn-ink); // 10.48 / 7.45
 
   &:hover {
     filter: brightness(1.08);
@@ -363,14 +371,14 @@ a {
 .btn-gold {
   background: var(--grad-action-btn);
   border: none;
-  color: #ffffff; // 4.60 / 5.18
+  color: var(--btn-ink); // 7.15 / 11.34
   font-weight: 700;
-  box-shadow: 0 4px 15px rgba(194, 65, 12, 0.32);
+  box-shadow: 0 4px 15px rgba(244, 114, 182, 0.38);
 
   &:hover {
     transform: translateY(-2px);
     filter: brightness(1.08);
-    box-shadow: 0 10px 25px rgba(194, 65, 12, 0.45);
+    box-shadow: 0 10px 25px rgba(244, 114, 182, 0.5);
   }
 }
 
@@ -378,14 +386,14 @@ a {
 .btn-red {
   background: var(--grad-nav-btn);
   border: none;
-  color: #ffffff; // 5.17 / 5.70
+  color: var(--btn-ink); // 8.84 / 6.96
   font-weight: 700;
-  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.32);
+  box-shadow: 0 4px 15px rgba(56, 189, 248, 0.38);
 
   &:hover {
     transform: translateY(-2px);
     filter: brightness(1.08);
-    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.45);
+    box-shadow: 0 10px 25px rgba(56, 189, 248, 0.5);
   }
 }
 
@@ -393,14 +401,14 @@ a {
 .btn-green {
   background: var(--grad-outlook-btn);
   border: none;
-  color: #ffffff; // 5.36 / 6.29
+  color: var(--btn-ink); // 10.48 / 7.45
   font-weight: 700;
-  box-shadow: 0 4px 15px rgba(14, 116, 144, 0.32);
+  box-shadow: 0 4px 15px rgba(34, 211, 238, 0.38);
 
   &:hover {
     transform: translateY(-2px);
     filter: brightness(1.08);
-    box-shadow: 0 10px 25px rgba(14, 116, 144, 0.45);
+    box-shadow: 0 10px 25px rgba(34, 211, 238, 0.5);
   }
 }
 

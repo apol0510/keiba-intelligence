@@ -524,22 +524,22 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
   /* 主要 CTA: 青 → 紫（--primary-gradient は青→青の同系色） */
   .pr-btn-primary {
     background: var(--grad-nav-btn);
-    color: var(--text-inverse);
+    color: var(--btn-ink);
     box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
   }
 
-  .pr-btn-primary:hover { transform: translateY(-1px); color: var(--text-inverse); }
+  .pr-btn-primary:hover { transform: translateY(-1px); color: var(--btn-ink); }
 
   /* 控えめな補助操作: スレート → 藍（単色にしない） */
   .pr-btn-ghost {
-    background: var(--tool-gradient);
+    background: var(--grad-tool-btn);
     background-size: 180% 180%;
     background-position: 0% 0%;
     border-color: transparent;
-    color: #ffffff; /* 10.35 / 7.95 */
+    color: var(--btn-ink); /* 14.27 / 13.64 */
   }
 
-  .pr-btn-ghost:hover { background-position: 100% 100%; filter: brightness(1.12); color: #ffffff; }
+  .pr-btn-ghost:hover { background-position: 100% 100%; filter: brightness(1.12); color: var(--btn-ink); }
 
   .pr-btn-disabled {
     background: var(--bg-muted);
@@ -871,13 +871,13 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
   /* 購入 / 強い行動: 桃 → 橙（白文字が AA を満たす濃いストップへ） */
   .pr-btn-action {
     background: var(--grad-action-btn);
-    color: var(--text-inverse);
+    color: var(--btn-ink);
     box-shadow: 0 6px 18px rgba(236, 72, 153, 0.3);
   }
 
   .pr-btn-action:hover {
     transform: translateY(-2px);
-    color: var(--text-inverse);
+    color: var(--btn-ink);
     box-shadow: 0 10px 24px rgba(249, 115, 22, 0.36);
   }
 

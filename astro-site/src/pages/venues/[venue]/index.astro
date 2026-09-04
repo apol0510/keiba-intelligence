@@ -555,10 +555,10 @@ const pageDescription = venueData.length > 0
     display: inline-block;
     padding: var(--spacing-md) var(--spacing-xl);
     /* 控えめな補助操作: スレート → 藍（単色にしない） */
-    background: var(--tool-gradient);
+    background: var(--grad-tool-btn);
     background-size: 180% 180%;
     background-position: 0% 0%;
-    color: #ffffff; /* 10.35 / 7.95 */
+    color: var(--btn-ink); /* 14.27 / 13.64 */
     text-decoration: none;
     border-radius: var(--radius-md);
     border: none;
@@ -567,7 +567,7 @@ const pageDescription = venueData.length > 0
 
     &:hover {
       background-position: 100% 100%;
-      filter: brightness(1.12);
+      filter: brightness(1.06);
       transform: translateY(-2px);
     }
   }
