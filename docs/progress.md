@@ -1137,6 +1137,102 @@ Stripe Test Mode の送信先は **`test/stripe-testmode-e2e-2026-09-01` の bra
 
 🔴 **未実施の高リスク操作**: main merge / Production deploy / Stripe 設定変更 / Test Mode の cleanup。
 
+### 2026-09-04 #6 は FAIL → 真因を確定（v1 Lambda で `connectLambda` を呼んでいなかった）
+
+#### 実測（仕様所有者が実施）
+
+| # | 内容 | 実施 | HTTP | 応答 |
+|---|---|---|---|---|
+| 1 | `customer.subscription.deleted`（同一 `event.id`）| 2026-09-04 10:10:48 JST | **200** | `{"received":true}` |
+| 2 | 同上・再送 | 10:12:15 JST | **200** | `{"received":true}` |
+
+🔴 **2 回目も `duplicate:true` にならず ＝ #6 は FAIL。merge しない。**
+
+#### Netlify Function logs は取得できなかった
+
+- `netlify logs:function stripe-webhook` は**ライブストリームのみ**で、45 秒待っても 0 行。
+  過去ログの replay は無い。
+- `netlify api --list` に **function log 取得の method は存在しない**
+  （`searchSiteFunctions` / `updateSiteBuildLog` / `uploadDeployFunction` のみ）。
+- 🔴 Netlify env から token を取り出して独自に叩く方法は取らなかった
+  （`CLAUDE.md`「Immediate stop conditions」の「secret・token・認証値が出力される可能性」）。
+
+**そこでログではなく `@netlify/blobs@10.5.0` の実ソースから確定させた。**
+
+#### 真因（実装ソースで確定）
+
+`stripe-webhook.js` は **v1（Lambda 互換）関数**である。
+
+- `export async function handler(event)` / `event.httpMethod` / `{ statusCode, body }` を返す
+
+v1 では **Blobs の環境が `process.env` に入らない**。`siteID` / `token` は
+**`event.blobs`（base64）と `x-nf-site-id` / `x-nf-deploy-id` ヘッダー**で渡ってくる。
+これを環境へ展開するのが `connectLambda(event)`（`dist/main.js` の `lambda_compat.ts`）。
+
+呼んでいなかったため、次の順で必ず失敗していた。
+
+| 段 | 実装 | 結果 |
+|---|---|---|
+| 1 | `getEnvironmentContext()` が `globalThis.netlifyBlobsContext` / `NETLIFY_BLOBS_CONTEXT` を見る | どちらも無いので **`{}`** |
+| 2 | `getStore('stripe-events')` → `getClientOptions({}, undefined)` | `siteID` / `token` が undefined |
+| 3 | `if (!siteID || !token) throw new MissingBlobsEnvironmentError(["siteID","token"])` | **throw** |
+| 4 | 旧実装の引数なし `catch {}` | **握りつぶし → `null`** |
+| 5 | `hasProcessed()` | **常に `false`（毎回「初回」扱い）** |
+
+🔴 これで「3 回再送しても `duplicate:true` が出ない」が完全に説明できる。
+
+**なお `getStore` が文字列引数で throw する点は、前 commit の想定（`get`/`set` で落ちる）とは異なる。**
+`getClientOptions` は `Store` を作る前に呼ばれるため、**落ちるのは `getStore` の中**である。
+
+#### 恒久修正
+
+```js
+async function eventStore(event) {
+  const { getStore, connectLambda } = await import('@netlify/blobs');
+  if (event?.blobs && typeof connectLambda === 'function') connectLambda(event);
+  return getStore('stripe-events');
+}
+```
+
+`event` を `hasProcessed(event, id)` / `markProcessed(event, id)` へ渡す。
+`event.blobs` が無い環境（単体テスト等）では `connectLambda` を呼ばない。
+
+#### 🔴 単体テストが見逃した理由と、その恒久対策
+
+mock は環境を要求しないので、`connectLambda` が無くても緑だった。
+**mock を本番と同じ条件に変えた。**
+
+- `post()` が**本番同型の Lambda イベント**（`event.blobs` ＋ `x-nf-*` ヘッダー）を送る
+- mock の `getStore` は `connectLambda` 未呼び出しなら **`MissingBlobsEnvironmentError` を投げる**
+
+これで**既存の冪等性テストが実効ガードになる**。
+実際に `connectLambda` を外すと **4 件が fail** することを確認した（mutation 検証）。
+
+| 外したときに落ちるテスト |
+|---|
+| 🔴 冪等: 同じ `event.id` を二度処理しない |
+| 🔴 同じ invoice の `payment_succeeded` を再送しても二重処理しない |
+| 🔴 membership 失敗のイベントは processed にしない |
+| 🔴 フラグ未設定（やることが無い）は失敗にしない |
+
+静的ガードにも `connectLambda` の**呼び出し順**・`event` の受け渡し・
+テストが本番同型イベントを送っていることを追加（4 → **6 件**）。
+
+#### 併せて直したもの（本修正が必要にしたもの）
+
+`membershipCopy.guard.test.mjs` が `'await markProcessed(stripeEvent.id);'` を
+**文字列でハードコード**しており、シグネチャ変更で落ちた。
+検査したいのは「**失敗判定より後に記録すること**」であって引数の形ではないため、
+`'await markProcessed('` を探す形に変えた（意図は不変）。
+
+#### テスト結果
+
+| コマンド | 結果 |
+|---|---|
+| `npm run test:stripe` | ✅ **71 pass / 0 fail**（webhook 48・checkout 17・ガード 6）|
+| `npm run build` | ✅ **exit 0**・全 **14 スイート fail 0** |
+
+
 
 ## Final Goal
 
