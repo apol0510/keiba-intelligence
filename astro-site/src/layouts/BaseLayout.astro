@@ -334,8 +334,9 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
     .nav-links .nav-logout button:hover,
     .nav-dropdown-trigger:hover {
       color: var(--text-inverse);
-      border-color: var(--primary-start);
-      background: var(--primary-gradient);
+      border-color: transparent;
+      /* 主要 CTA: 青 → 紫（--primary-gradient は青→青の同系色） */
+      background: var(--grad-nav-btn);
       box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
       transform: translateY(-1px);
     }

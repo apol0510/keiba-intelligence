@@ -150,11 +150,14 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
   }
 
   .ai-comment-toggle {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
-    border: 1px solid rgba(59, 130, 246, 0.4);
+    /* AI 判断 / 詳細: 紫 → 桃。旧は淡い青紫の地に薄い青文字で 1.6:1 前後だった。 */
+    background: var(--grad-conclusion-btn);
+    background-size: 180% 180%;
+    background-position: 0% 0%;
+    border: none;
     border-radius: 20px;
     padding: 8px 18px;
-    color: #60a5fa;
+    color: #ffffff; /* 7.10 / 4.60 */
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
@@ -166,14 +169,16 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
   }
 
   .ai-comment-toggle:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(139, 92, 246, 0.25));
+    background-position: 100% 100%;
+    filter: brightness(1.1);
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 2px 8px rgba(109, 40, 217, 0.35);
   }
 
   .ai-comment-toggle.open {
-    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-    color: white;
+    background: var(--grad-conclusion-btn);
+    background-position: 100% 100%;
+    color: #ffffff;
     border-color: transparent;
   }
 
@@ -327,16 +332,18 @@ const label = type === 'prediction' ? 'AI予想解説' : 'AI振り返り';
     transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
   }
 
+  /* 主要 CTA: 青 → 紫（旧 #3b82f6→#2563eb は青の同系色の濃淡） */
   :global(.ai-comment-masked-cta.primary) {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: #fff;
+    background: var(--grad-nav-btn);
+    color: #ffffff; /* 5.17 / 5.70 */
     box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
   }
 
+  /* 登録 / 強い行動: 桃 → 橙（旧 #fbbf24→#f59e0b は黄の同系色の濃淡） */
   :global(.ai-comment-masked-cta.secondary) {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    color: #1e293b;
-    box-shadow: 0 4px 14px rgba(251, 191, 36, 0.35);
+    background: var(--grad-action-btn);
+    color: #ffffff; /* 4.60 / 5.18 */
+    box-shadow: 0 4px 14px rgba(194, 65, 12, 0.35);
   }
 
   :global(.ai-comment-masked-cta:hover) {

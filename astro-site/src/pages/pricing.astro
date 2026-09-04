@@ -521,21 +521,25 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   }
 
+  /* 主要 CTA: 青 → 紫（--primary-gradient は青→青の同系色） */
   .pr-btn-primary {
-    background: var(--primary-gradient);
+    background: var(--grad-nav-btn);
     color: var(--text-inverse);
     box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
   }
 
   .pr-btn-primary:hover { transform: translateY(-1px); color: var(--text-inverse); }
 
+  /* 控えめな補助操作: スレート → 藍（単色にしない） */
   .pr-btn-ghost {
-    background: var(--bg-secondary);
-    border-color: var(--primary-start);
-    color: var(--primary-start);
+    background: var(--tool-gradient);
+    background-size: 180% 180%;
+    background-position: 0% 0%;
+    border-color: transparent;
+    color: #ffffff; /* 10.35 / 7.95 */
   }
 
-  .pr-btn-ghost:hover { background: var(--bg-muted); color: var(--primary-start); }
+  .pr-btn-ghost:hover { background-position: 100% 100%; filter: brightness(1.12); color: #ffffff; }
 
   .pr-btn-disabled {
     background: var(--bg-muted);
@@ -864,8 +868,9 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
   /* 購入手続きのメール確認 */
   /* 🔴 購入の CTA は「行動」の 2 色グラデーション（--grad-action / 桃→橙）。
      単色は使わない（global.scss の 2026-08-31 のトークン方針に合わせる）。 */
+  /* 購入 / 強い行動: 桃 → 橙（白文字が AA を満たす濃いストップへ） */
   .pr-btn-action {
-    background: var(--grad-action);
+    background: var(--grad-action-btn);
     color: var(--text-inverse);
     box-shadow: 0 6px 18px rgba(236, 72, 153, 0.3);
   }

@@ -158,14 +158,15 @@ const nextStep = !view?.showMarks
     font-size: 0.85rem;
     font-weight: 800;
     color: var(--text-inverse);
-    background: var(--grad-nav);
+    /* 主要 CTA: 青 → 紫（白文字が AA を満たす濃いストップへ） */
+    background: var(--grad-nav-btn);
     box-shadow: 0 3px 12px rgba(37, 99, 235, 0.28);
     white-space: nowrap;
   }
 
   /* 買い目を受け取る導線は 桃→橙（買い目パネル・有料導線と同じ） */
   .tone-paid .tr-cta {
-    background: var(--grad-action);
+    background: var(--grad-action-btn);
     box-shadow: 0 3px 12px rgba(240, 94, 86, 0.3);
   }
 

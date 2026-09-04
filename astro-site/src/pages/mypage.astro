@@ -770,25 +770,36 @@ const expiresLabel = ent.expiresAtMs
     transition: transform var(--transition-fast);
   }
 
+  /* 主要 CTA: 青 → 紫（--primary-gradient は青→青の同系色） */
   .mp-btn-primary {
-    background: var(--primary-gradient);
+    background: var(--grad-nav-btn);
     color: var(--text-inverse);
     box-shadow: 0 4px 14px rgba(37, 99, 235, 0.26);
   }
 
   .mp-btn-primary:hover { transform: translateY(-1px); color: var(--text-inverse); }
 
+  /* 控えめな補助操作: スレート → 藍（単色にしない） */
   .mp-btn-ghost {
-    background: var(--bg-secondary);
-    border-color: var(--primary-start);
-    color: var(--primary-start);
+    background: var(--tool-gradient);
+    background-size: 180% 180%;
+    background-position: 0% 0%;
+    border-color: transparent;
+    color: #ffffff; /* 10.35 / 7.95 */
   }
 
+  .mp-btn-ghost:hover { background-position: 100% 100%; filter: brightness(1.12); color: #ffffff; }
+
   .mp-btn-quiet {
-    background: var(--bg-muted);
-    color: var(--text-secondary);
-    border-color: var(--border-color);
+    background: var(--tool-gradient);
+    background-size: 180% 180%;
+    background-position: 0% 0%;
+    color: #ffffff;
+    border-color: transparent;
+    opacity: 0.85;
   }
+
+  .mp-btn-quiet:hover { background-position: 100% 100%; filter: brightness(1.12); color: #ffffff; }
 
   .mp-logout { text-align: center; margin-top: 32px; }
 </style>

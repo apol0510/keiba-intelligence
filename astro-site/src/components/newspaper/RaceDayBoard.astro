@@ -387,7 +387,8 @@ const venueViews = venues.map((venue: any, venueIndex: number) => {
 
   /* 🔴 現在位置は 青→紫 のグラデーション（2026-08-31） */
   .rdb-race-tab.is-active {
-    background: var(--grad-nav);
+    /* 白文字が AA を満たす濃いストップへ（青→紫は維持） */
+    background: var(--grad-nav-btn);
     color: var(--text-inverse);
     border-color: transparent;
     box-shadow: 0 3px 12px rgba(124, 106, 246, 0.35);
@@ -471,11 +472,12 @@ const venueViews = venues.map((venue: any, venueIndex: number) => {
     margin: 0 0 18px;
   }
 
+  /* 主要 CTA: 青 → 紫（--primary-gradient は青→青の同系色） */
   .rdb-empty-link {
     display: inline-block;
     padding: 10px 24px;
     border-radius: var(--radius-pill);
-    background: var(--primary-gradient);
+    background: var(--grad-nav-btn);
     color: var(--text-inverse);
     font-weight: 700;
   }

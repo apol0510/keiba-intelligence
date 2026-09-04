@@ -659,7 +659,8 @@ const colCount = 3 // 枠 / 馬番 / 馬名
 
   /* 買い目の抽出は「買う」につながる操作なので 桃→橙 */
   .ret-tool[data-tool="plan"].is-on {
-    background: var(--grad-action);
+    /* 白文字が AA を満たす濃いストップへ（桃→橙は維持） */
+    background: var(--grad-action-btn);
     border-color: transparent;
   }
 
@@ -900,18 +901,21 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     gap: 3px;
     padding: 5px 10px;
     border-radius: var(--radius-pill);
-    border: 1px solid var(--border-color);
-    background: var(--bg-secondary);
-    color: var(--primary-start);
+    /* 控えめな補助操作: スレート → 藍（単色にしない） */
+    border: none;
+    background: var(--tool-gradient);
+    background-size: 180% 180%;
+    background-position: 0% 0%;
+    color: #ffffff; /* 10.35 / 7.95 */
     font-size: 0.7rem;
     font-weight: 800;
     transition: all 120ms ease;
   }
 
   .ret-row:hover .more-btn {
-    background: var(--primary-start);
-    border-color: var(--primary-start);
-    color: var(--text-inverse);
+    background-position: 100% 100%;
+    filter: brightness(1.15);
+    color: #ffffff;
   }
 
   .more-caret { display: inline-block; transition: transform 150ms ease; }

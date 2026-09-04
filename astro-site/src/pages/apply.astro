@@ -336,7 +336,8 @@ const yearlyYen = new Intl.NumberFormat('ja-JP').format(BANK_YEARLY_PRICE_YEN);
       width: 100%;
       padding: var(--spacing-md);
       font-weight: 700;
-      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      /* 主要 CTA: 青 → 紫（白文字が AA を満たす濃いストップへ） */
+      background: var(--grad-nav-btn);
       color: white;
       border: none;
       border-radius: var(--radius-md);
@@ -345,7 +346,9 @@ const yearlyYen = new Intl.NumberFormat('ja-JP').format(BANK_YEARLY_PRICE_YEN);
     }
 
     .btn-select:hover {
-      background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+      background: var(--grad-nav-btn);
+      background-position: 100% 100%;
+      filter: brightness(1.08);
       transform: translateY(-2px);
     }
 
@@ -504,8 +507,9 @@ const yearlyYen = new Intl.NumberFormat('ja-JP').format(BANK_YEARLY_PRICE_YEN);
       padding: var(--spacing-lg);
       font-size: 1.1rem;
       font-weight: 700;
-      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-      color: #1e293b;
+      /* 申込 / 強い行動: 桃 → 橙（旧 #fbbf24→#f59e0b は同系色の濃淡） */
+      background: var(--grad-action-btn);
+      color: #ffffff; /* 4.60 / 5.18 */
       border: none;
       border-radius: var(--radius-md);
       cursor: pointer;

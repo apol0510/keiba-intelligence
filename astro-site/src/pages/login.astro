@@ -132,10 +132,11 @@ export const prerender = true;
     .btn-primary {
       width: 100%;
       padding: 16px;
-      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+      // 主要 CTA: 青 → 紫（旧 #1e40af→#3b82f6 は同系色の濃淡）
+      background: var(--grad-nav-btn);
       border: none;
       border-radius: 8px;
-      color: white;
+      color: #ffffff; // 5.17 / 5.70
       font-size: 16px;
       font-weight: 600;
       cursor: pointer;
