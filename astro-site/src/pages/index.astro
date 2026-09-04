@@ -255,7 +255,10 @@ const totals = combinedTotals(archiveNankan, archiveJra);
         </div>
 
         <div class="tier-card card featured">
-          <div class="badge badge-warning">買い目つき</div>
+          <div class="tier-ribbon">
+            <span class="tier-ribbon-label">AI指数と馬単の買い目</span>
+            <span class="tier-ribbon-badge">PRO</span>
+          </div>
           <div class="tier-name">有料プラン</div>
           <div class="tier-cost">月額</div>
           <ul class="tier-list">
@@ -672,8 +675,45 @@ const totals = combinedTotals(archiveNankan, archiveJra);
     }
 
     .tier-card.featured {
-      border-color: var(--secondary-start);
+      border-color: #c084fc;
       box-shadow: var(--shadow-lg);
+    }
+
+    /* 有料プランの帯。
+       🔴 以前は状態表示用の .badge-warning（単色オレンジ）を流用しており、
+          白文字とのコントラストが 2.6:1 しかなく、色も単色だった。
+          状態色は変えずに、この帯だけ専用クラスにして 橙→藤 の 2 色にする。
+       🔴 帯が横に長いので、左に内容・右に PRO バッジを置いて間を持たせる。 */
+    .tier-ribbon {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--spacing-sm);
+      padding: 8px 10px 8px 14px;
+      border-radius: var(--radius-md);
+      margin-bottom: var(--spacing-sm);
+      background: linear-gradient(135deg, #fb923c 0%, #c084fc 100%);
+      box-shadow: 0 3px 12px rgba(192, 132, 252, 0.35);
+    }
+
+    .tier-ribbon-label {
+      font-size: 0.9rem;
+      font-weight: 800;
+      line-height: 1.3;
+      text-align: left;
+      color: var(--btn-ink); /* 8.37 / 7.17 */
+    }
+
+    /* 右端のバッジ。帯の上でも読めるよう、白い錠剤に濃色文字を置く（17.24:1） */
+    .tier-ribbon-badge {
+      flex-shrink: 0;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--btn-ink);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
     }
 
     .tier-name {
