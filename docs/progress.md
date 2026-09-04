@@ -1232,6 +1232,49 @@ mock は環境を要求しないので、`connectLambda` が無くても緑だ�
 | `npm run test:stripe` | ✅ **71 pass / 0 fail**（webhook 48・checkout 17・ガード 6）|
 | `npm run build` | ✅ **exit 0**・全 **14 スイート fail 0** |
 
+#### branch deploy（承認済み・`allowed_branches` の一時追加 → 復旧）
+
+| 項目 | 変更前 | 変更中 | 戻した先 |
+|---|---|---|---|
+| `allowed_branches` | `["main"]` | `["main","test/stripe-testmode-e2e-2026-09-01"]` | ✅ **`["main"]`** |
+
+| 検査 | 結果 |
+|---|---|
+| branch deploy | ✅ **`d13bb188` ready**（2026-09-04 01:20 UTC・`deploy_time` 386s・`error_message: null`）|
+| HEAD 一致 | ✅ `origin/test/stripe-testmode-e2e-2026-09-01` = `commit_ref` = `d13bb188` |
+| 疎通 | ✅ 署名なし POST → **400 `invalid_signature`**（書き込み前に fail-closed）|
+| 設定復旧 | ✅ **18 項目すべて変更前と完全一致**（`allowed_branches` / `repo_branch` / `stop_builds` / `base` / `cmd` / `dir` / `functions_dir` / `skip_prs` / `package_path` / `build_filter` / `skip_automatic_builds` / `private_logs` / `untrusted_flow` / `public_repo` / `provider` / `repo_url` / `repo_path` / `base_rel_dir`）|
+| 復旧後の URL 生存 | ✅ `GET /` → **200**（既存 deploy は削除されない）|
+
+### 2026-09-04 #6 実測 — ✅ **PASS**（仕様所有者が実施）
+
+修正済み branch deploy（`d13bb188`）に対し、**同一 `event.id` を再送**した。
+
+| 検査 | 結果 | 判定 |
+|---|---|---|
+| 2 回目の応答 | **HTTP 200 / `{"received":true,"duplicate":true}`** | ✅ |
+| `RewardLedger`（テスト会員）| **2 行のまま**（9/2・9/3 のみ。**9/4 の追加なし**）| ✅ |
+| `Customers`（同）| **1 レコードのみ** / `inactive` / `CancelledAt=2026-09-03` | ✅ |
+
+Airtable は **read-only で確認**（追加更新なし）。
+
+🔴 **修正前との対比**
+
+| | 修正前（`f84431de`）| 修正後（`d13bb188`）|
+|---|---|---|
+| 1 回目 | 200 `{"received":true}` | 200 `{"received":true}` |
+| 2 回目（同一 `event.id`）| 200 `{"received":true}` ❌ | **200 `{"received":true,"duplicate":true}`** ✅ |
+
+これで `docs/STRIPE_TESTMODE_E2E.md` の **#6 は PASS**。
+🔴 ただし #1 / #2 / #5（未実施）と **#17（未達）** は変わっていないため、
+「17 項目すべてが期待どおり」という **Live Mode へ進む条件は依然として満たしていない**。
+
+#### 🔴 Test Mode cleanup は未実施（承認境界で停止）
+
+外部サービスの設定変更・削除を含むため実行していない。対象と rollback は
+`CLAUDE.md`「High-risk approval boundary」に従い、承認を得るまで着手しない。
+
+
 
 
 ## Final Goal
