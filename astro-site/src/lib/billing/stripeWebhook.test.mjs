@@ -59,7 +59,23 @@ const db = {
   },
 };
 
-const blobs = { store: new Map(), broken: false };
+const blobs = { store: new Map(), broken: false, connected: false };
+
+/**
+ * 🔴 **本番と同じ形の Lambda イベントを送る。**
+ *
+ * この関数は v1（Lambda 互換）なので、Blobs の環境は `process.env` ではなく
+ * `event.blobs`（base64）と `x-nf-*` ヘッダーで渡ってくる。テストがこれを
+ * 送らないと `connectLambda` を呼ばない実装でも緑になり、**本番だけ壊れる**
+ * （2026-09-04 の Test Mode 再送で実際に `duplicate:true` が出なかった）。
+ */
+const LAMBDA_BLOBS = Buffer.from(
+  JSON.stringify({ url: 'https://blobs.example.invalid', token: 'test-blobs-token' }),
+).toString('base64');
+const LAMBDA_BLOBS_HEADERS = {
+  'x-nf-site-id': 'site_test',
+  'x-nf-deploy-id': 'deploy_test',
+};
 
 /** 指定 email に対して行われた更新だけを取り出す。 */
 function updatesFor(email) {
@@ -111,8 +127,22 @@ before(() => {
 
   mock.module('@netlify/blobs', {
     namedExports: {
+      // 本物と同じ前提: event.blobs と x-nf-* から環境を組み立てる
+      connectLambda(event) {
+        if (!event?.blobs) throw new Error('missing blobs payload');
+        blobs.connected = true;
+      },
       getStore() {
         if (blobs.broken) throw new Error('blobs unavailable');
+        // 🔴 本番と同じ条件。connectLambda を呼んでいなければ環境が無い
+        if (!blobs.connected) {
+          const e = new Error(
+            'The environment has not been configured to use Netlify Blobs. '
+            + 'To use it manually, supply the following properties when creating a store: siteID, token',
+          );
+          e.name = 'MissingBlobsEnvironmentError';
+          throw e;
+        }
         return {
           async get(k) { return blobs.store.get(k) ?? null; },
           async set(k, v) { blobs.store.set(k, v); },
@@ -150,6 +180,7 @@ beforeEach(() => {
   db.reset();
   blobs.store.clear();
   blobs.broken = false;
+  blobs.connected = false;
   process.env[  'STRIPE_SECRET_KEY'] = SECRET_KEY;
   process.env['STRIPE_WEBHOOK_SECRET'] = WEBHOOK_SECRET;
   // 🔴 既定は「未設定」。ambient に true が入っていても結果を変えない
@@ -191,9 +222,13 @@ async function post(evt, { secret, signature, method = 'POST', raw } = {}) {
   const { payload, header } = signed(evt, secret || WEBHOOK_SECRET);
   return handler({
     httpMethod: method,
-    headers: { 'stripe-signature': signature === undefined ? header : signature },
+    headers: {
+      ...LAMBDA_BLOBS_HEADERS,
+      'stripe-signature': signature === undefined ? header : signature,
+    },
     body: raw === undefined ? payload : raw,
     isBase64Encoded: false,
+    blobs: LAMBDA_BLOBS,
   });
 }
 

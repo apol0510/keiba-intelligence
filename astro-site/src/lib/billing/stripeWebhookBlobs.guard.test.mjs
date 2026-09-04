@@ -54,7 +54,7 @@ describe('stripe-webhook の冪等性（Blobs）', () => {
     // 🔴 検査対象は Blobs の 3 関数だけに絞る。
     //    ファイル内の他の `catch {}` は詳細を漏らさないための意図的な設計で、
     //    いずれも console.warn / console.error を伴っている（黙っていない）。
-    const from = src.indexOf('async function eventStore()');
+    const from = src.indexOf('async function eventStore(event)');
     const to = src.indexOf('/** email から顧客レコードを引く。 */');
     assert.ok(from > -1 && to > from, '🔴 Blobs 区間の目印が見つからない');
     const blobsSection = src.slice(from, to);
@@ -72,6 +72,38 @@ describe('stripe-webhook の冪等性（Blobs）', () => {
     assert.match(src, /logBlobsFailure\('get', err\)/);
     assert.match(src, /logBlobsFailure\('set', err\)/);
     assert.match(src, /console\.error\(/);
+  });
+
+  test('🔴 v1（Lambda 互換）なので connectLambda で Blobs 環境をつなぐ', () => {
+    // 🔴 v1 関数では Blobs の環境が process.env に入らない。
+    //    event.blobs / x-nf-* から connectLambda で展開しないと、getStore は
+    //    getClientOptions の中で MissingBlobsEnvironmentError を投げる。
+    //    2026-09-04 の Test Mode 再送で、これが duplicate:true にならない原因だった。
+    assert.match(src, /export async function handler\(event\)/, 'v1（Lambda 互換）の署名が前提');
+    assert.match(src, /const \{ getStore, connectLambda \} = await import\('@netlify\/blobs'\)/);
+    assert.match(src, /connectLambda\(event\)/);
+
+    // getStore より前に connectLambda を呼ぶ
+    const connect = src.indexOf('connectLambda(event);');
+    const get = src.indexOf("getStore('stripe-events')");
+    assert.ok(connect > -1 && get > connect, '🔴 getStore より後に connectLambda を呼んでいる');
+
+    // event が 3 関数すべてへ渡っている
+    assert.match(src, /async function eventStore\(event\)/);
+    assert.match(src, /async function hasProcessed\(event, eventId\)/);
+    assert.match(src, /async function markProcessed\(event, eventId\)/);
+    assert.match(src, /await hasProcessed\(event, stripeEvent\.id\)/);
+    assert.match(src, /await markProcessed\(event, stripeEvent\.id\)/);
+  });
+
+  test('🔴 単体テストが本番と同じ形の Lambda イベントを送る', () => {
+    // 🔴 mock が環境なしで動くと、connectLambda を消しても緑になる
+    const t = read('src/lib/billing/stripeWebhook.test.mjs');
+    assert.match(t, /blobs: LAMBDA_BLOBS/, '🔴 テストが event.blobs を送っていない');
+    assert.match(t, /'x-nf-site-id'/);
+    assert.match(t, /connectLambda\(event\)/, '🔴 mock が connectLambda を持たない');
+    assert.match(t, /MissingBlobsEnvironmentError/,
+      '🔴 mock が「環境が無ければ投げる」本番条件を再現していない');
   });
 
   test('🔴 store をキャッシュしない（壊れた状態を検出できなくなる）', () => {

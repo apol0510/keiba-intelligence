@@ -91,13 +91,27 @@ function logBlobsFailure(where, err) {
 }
 
 /**
+ * 🔴 **この関数は v1（Lambda 互換）なので `connectLambda(event)` が要る。**
+ *
+ *    v1 では Blobs の環境が `process.env` に入らない。`siteID` / `token` は
+ *    **リクエストの `event.blobs`（base64）と `x-nf-site-id` / `x-nf-deploy-id`
+ *    ヘッダー**で渡ってくる。`connectLambda(event)` がそれを環境へ展開する。
+ *
+ *    呼ばないと `getEnvironmentContext()` が `{}` を返し、`getStore()` は
+ *    `getClientOptions` の中で **`MissingBlobsEnvironmentError(["siteID","token"])`**
+ *    を投げる。旧実装はこれを引数なしの `catch {}` で握りつぶしていたため、
+ *    `hasProcessed()` が常に `false` を返し、**再送しても `duplicate:true` に
+ *    ならなかった**（2026-09-04 の Test Mode 再送 2 回で実測。両方 `{"received":true}`）。
+ *
  * 🔴 **ストアをキャッシュしない。** 一度成功した store を使い回すと、
  *    あとから Blobs が壊れた状態を検出できなくなる（テストの broken 状態も再現できない）。
  *    `import()` はモジュールキャッシュが効くので、毎回呼んでも実質的な負荷は無い。
  */
-async function eventStore() {
+async function eventStore(event) {
   try {
-    const { getStore } = await import('@netlify/blobs');
+    const { getStore, connectLambda } = await import('@netlify/blobs');
+    // `event.blobs` が無い環境（単体テスト等）では何もしない。
+    if (event?.blobs && typeof connectLambda === 'function') connectLambda(event);
     return getStore('stripe-events');
   } catch (err) {
     logBlobsFailure('getStore', err);
@@ -105,9 +119,9 @@ async function eventStore() {
   }
 }
 
-async function hasProcessed(eventId) {
+async function hasProcessed(event, eventId) {
   try {
-    const store = await eventStore();
+    const store = await eventStore(event);
     if (!store) return false;
     return !!(await store.get(eventId));
   } catch (err) {
@@ -116,9 +130,9 @@ async function hasProcessed(eventId) {
   }
 }
 
-async function markProcessed(eventId) {
+async function markProcessed(event, eventId) {
   try {
-    const store = await eventStore();
+    const store = await eventStore(event);
     if (!store) return;
     await store.set(eventId, new Date().toISOString());
   } catch (err) {
@@ -492,7 +506,7 @@ export async function handler(event) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'invalid_signature' }) };
   }
 
-  if (await hasProcessed(stripeEvent.id)) {
+  if (await hasProcessed(event, stripeEvent.id)) {
     console.log('ℹ️ stripe-webhook: duplicate event ignored:', stripeEvent.type);
     return { statusCode: 200, headers, body: JSON.stringify({ received: true, duplicate: true }) };
   }
@@ -650,7 +664,7 @@ export async function handler(event) {
   }
 
   // 🔴 成功したあとに記録する（失敗したイベントを握りつぶさないため）
-  await markProcessed(stripeEvent.id);
+  await markProcessed(event, stripeEvent.id);
 
   // 🔴 保留（SKIPPED）の理由も返す。ダッシュボードだけで切り分けられるように
   return {
