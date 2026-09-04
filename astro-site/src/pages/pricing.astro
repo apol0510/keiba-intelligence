@@ -587,17 +587,18 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
      （#38bdf8 → #a78bfa）をそのまま使う。淡さで迷わないうえ、
      サイト内で色の意味も揃う。文字は同じく濃色インク。 */
   .pr-matrix thead th {
-    background: var(--grad-nav-btn);
+    background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
     font-weight: 800;
-    color: var(--btn-ink); /* 8.84 / 6.96 */
+    color: #ffffff; /* 6.70 / 5.70 */
     line-height: 1.35;
   }
 
   /* 🔴 ¥0 は --text-tertiary(#718096) で 3.5:1 しかなく読みにくかった */
   .pr-matrix thead th small {
     font-weight: 700;
-    color: var(--btn-ink);
-    opacity: 0.8;
+    /* 🔴 opacity を下げると紫側で 4.04:1 まで落ちるため不透明のまま。
+       階層は文字サイズと太さで付ける。 */
+    color: #ffffff; /* 6.70 / 5.70 */
     font-size: 0.72rem;
   }
 
