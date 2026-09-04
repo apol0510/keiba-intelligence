@@ -557,7 +557,9 @@ describe('ランク・リワードを認可に使わない', () => {
     const tail = src.slice(src.indexOf('membershipResults.includes'));
     assert.match(tail.slice(0, 600), /statusCode: 500/,
       '🔴 membership 失敗時に 500 を返していない');
-    const markIdx = src.indexOf('await markProcessed(stripeEvent.id);');
+    // 🔴 シグネチャに依存しない（v1 Lambda 対応で `markProcessed(event, id)` になった）。
+    //    検査したいのは「失敗判定より後に記録すること」であって引数の形ではない。
+    const markIdx = src.indexOf('await markProcessed(');
     const failIdx = src.indexOf('membershipResults.includes(MEMBERSHIP_RESULT.FAILED)');
     assert.ok(failIdx > 0 && failIdx < markIdx,
       '🔴 失敗判定より前に markProcessed している（再送が duplicate で無視される）');

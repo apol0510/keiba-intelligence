@@ -1027,6 +1027,256 @@ stop_builds:      false
 - 🔴 **本番（Live Mode）の送信先には触れていない。** env（`STRIPE_WEBHOOK_SECRET`）も未変更。
 - 判断の記録: `docs/decisions.md`「2026-09-03 — Test Mode の重複 webhook 送信先を無効化する」
 
+### 2026-09-03 R-2 冪等性の切り分け — `@netlify/blobs` を正規依存化 ＋ 失敗の可視化
+
+- **症状**: Test Mode で同一 `event.id` を再送しても、応答が `duplicate:true` にならない
+  （E2E #6 が 🟡 のまま。二重更新が無いことだけは確認済み）。
+- 🔴 **原因は未確定。断定を訂正した。**
+  当初「`@netlify/blobs` が `dependencies` に無いのでバンドルで解決できない」と報告したが、
+  これは**成立しない**。`@netlify/blobs` は `@astrojs/netlify`（本番 `dependencies`）の
+  推移的依存として `node_modules` に載っており（10.5.0・非 dev）、
+  `netlify.toml` の `node_bundler = "esbuild"` は `external_node_modules`
+  （`airtable` / `@sendgrid/mail` / `stripe`）以外を**バンドルに取り込む**。
+- **確定しているのはこれだけ**: `eventStore()` / `hasProcessed()` / `markProcessed()` が
+  引数なしの `catch {}` で失敗を握りつぶしていたため、
+  - `hasProcessed` は常に `false` を返す（＝毎回「初回」扱い）
+  - `markProcessed` は無言で何もしない
+
+  となり、**応答にもログにも痕跡が残らず、次の 2 つを切り分けられなかった**。
+
+  | 想定 | 実際に出るエラー |
+  |---|---|
+  | Blobs の環境が関数に渡っていない | `MissingBlobsEnvironmentError` |
+  | バンドルに載っていない | `ERR_MODULE_NOT_FOUND` 等 |
+
+- **単体テストが緑だった理由**: `stripeWebhook.test.mjs` は `@netlify/blobs` を
+  `mock.module` で差し替えるため、**依存が無くてもテストは通る**。本番だけ壊れる型の欠陥。
+
+#### 実施した修正
+
+1. `@netlify/blobs@^10.5.0` を `astro-site/package.json` の `dependencies` へ**明示**。
+   推移的依存に頼ると上流の都合で黙って消える。
+   lockfile はルートの `dependencies` 1 行だけを追加（**差分は 2 ファイル 2 行・削除 0**）。
+   🔴 `npm install --package-lock-only` は `netlify-cli` 配下の optional/peer エントリを
+   **475 行削除**する正規化を起こしたため、**差し戻して手で最小差分にした**。
+2. `logBlobsFailure(where, err)` を追加し、`getStore` / `get` / `set` の 3 経路すべてで
+   `console.error` に**種別と文言だけ**を 1 行出す（🔴 値・トークン・顧客情報は出さない）。
+3. 🔴 **store をキャッシュしない**（意図的）。一度成功した store を使い回すと、
+   あとから Blobs が壊れても検出できず、テストの broken 状態も再現できなくなる。
+4. 静的ガード `src/lib/billing/stripeWebhookBlobs.guard.test.mjs`（4 件）を追加し
+   `test:stripe` に接続。固定するのは
+   「直接依存であること」「package.json と lockfile がずれないこと」
+   「Blobs 区間に引数なしの `catch {}` を置かないこと」「store をキャッシュしないこと」
+   「記録は処理成功後（`hasProcessed` → `markProcessed` の順）であること」。
+   🔴 ガードは `node --test` を**使わない**。既存ガード
+   「`test:stripe` は `--test` を使わない」（IPC の `Unable to deserialize cloned data` 対策・`c1ae2b8f`）
+   に従い、ファイルを直接実行する。
+
+#### 範囲外として手を付けなかったもの
+
+- `stripe-webhook.js` の他の 5 箇所の引数なし `catch {}`（258 / 284 / 440 / 489 / 631 行）は
+  **いずれも `console.warn` / `console.error` を伴っており黙っていない**。
+  エラー詳細を応答へ返さないための意図的な設計なので、そのままにした。
+  静的ガードも Blobs 区間だけに限定している。
+
+#### テスト結果
+
+| コマンド | 結果 |
+|---|---|
+| `npm run test:stripe` | ✅ webhook 48 / checkout 17 / **新規ガード 4** = 69 pass・0 fail |
+| `npm run build` | ✅ 成功（全テスト → `astro build` → `prune:function-data` まで完走）|
+
+lint / typecheck: **スクリプト未定義のため実行不可**（従来どおり）。
+
+#### branch deploy（承認済み・`allowed_branches` の一時追加）
+
+Stripe Test Mode の送信先は **`test/stripe-testmode-e2e-2026-09-01` の branch deploy URL**
+（`https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app`）である。
+🔴 **Stripe の送信先 URL は変更しない**方針のため、修正を**このブランチへ cherry-pick** した
+（新規ブランチ名で branch deploy を作ると URL が変わり、Stripe から届かない）。
+
+| 項目 | 変更前 | 変更中 | 戻した先 |
+|---|---|---|---|
+| `allowed_branches` | `["main"]` | `["main","test/stripe-testmode-e2e-2026-09-01"]` | ✅ **`["main"]`** |
+
+- 変更前の設定は scratchpad の `site-before.json` に保存。
+- 変更したのは `allowed_branches` **1 項目のみ**。復旧後に
+  `repo_branch` / `stop_builds` / `base` / `cmd` / `dir` / `functions_dir` /
+  `skip_prs` / `package_path` / `build_filter` / `skip_automatic_builds` が
+  **変更前と完全一致**することを read-only で確認した。
+- 🔴 `main`（production）の扱いは変えていない。
+
+| 検査 | 結果 |
+|---|---|
+| branch deploy | ✅ **`f84431de` ready**（2026-09-03 14:17 UTC・`deploy_time` 53s・`error_message: null`）|
+| HEAD 一致 | ✅ `git rev-parse test/stripe-testmode-e2e-2026-09-01` = `f84431de` = `commit_ref` |
+| エンドポイント疎通 | ✅ 署名なし POST → **400 `invalid_signature`**（書き込み前に fail-closed）|
+| `allowed_branches` 復旧後も URL 生存 | ✅ `GET /` → **200**（既存 deploy は削除されない）|
+
+#### 🔴 実測（#6）は未実施 — 手段が無く停止
+
+| 項目 | 状態 |
+|---|---|
+| 同一 `event.id` の再送 → 2 回目 `duplicate:true` | 🔴 **未実施** |
+| Airtable / `RewardLedger` に追加更新なし | 🔴 **未実施** |
+
+理由: ローカルに **Stripe CLI が無く**、`STRIPE_SECRET_KEY`（Test）/ `STRIPE_WEBHOOK_SECRET` /
+`AIRTABLE_API_KEY` の**いずれも未設定**。署名なしの POST は 400 で弾かれるため、
+再送を成立させられない。
+
+🔴 Netlify の env から値を取り出す方法は取らなかった。
+`CLAUDE.md`「Immediate stop conditions」の
+**「secret・token・認証値が出力される可能性」**に該当するため、独断で実行しない。
+
+#### Draft PR
+
+| 項目 | 値 |
+|---|---|
+| PR | **#95**（Draft・base `main`・`MERGEABLE`）|
+| branch | `fix/blobs-dependency-idempotency-2026-09-03`（`origin/main` `e8cdad36` を merge 済み）|
+
+🔴 **未実施の高リスク操作**: main merge / Production deploy / Stripe 設定変更 / Test Mode の cleanup。
+
+### 2026-09-04 #6 は FAIL → 真因を確定（v1 Lambda で `connectLambda` を呼んでいなかった）
+
+#### 実測（仕様所有者が実施）
+
+| # | 内容 | 実施 | HTTP | 応答 |
+|---|---|---|---|---|
+| 1 | `customer.subscription.deleted`（同一 `event.id`）| 2026-09-04 10:10:48 JST | **200** | `{"received":true}` |
+| 2 | 同上・再送 | 10:12:15 JST | **200** | `{"received":true}` |
+
+🔴 **2 回目も `duplicate:true` にならず ＝ #6 は FAIL。merge しない。**
+
+#### Netlify Function logs は取得できなかった
+
+- `netlify logs:function stripe-webhook` は**ライブストリームのみ**で、45 秒待っても 0 行。
+  過去ログの replay は無い。
+- `netlify api --list` に **function log 取得の method は存在しない**
+  （`searchSiteFunctions` / `updateSiteBuildLog` / `uploadDeployFunction` のみ）。
+- 🔴 Netlify env から token を取り出して独自に叩く方法は取らなかった
+  （`CLAUDE.md`「Immediate stop conditions」の「secret・token・認証値が出力される可能性」）。
+
+**そこでログではなく `@netlify/blobs@10.5.0` の実ソースから確定させた。**
+
+#### 真因（実装ソースで確定）
+
+`stripe-webhook.js` は **v1（Lambda 互換）関数**である。
+
+- `export async function handler(event)` / `event.httpMethod` / `{ statusCode, body }` を返す
+
+v1 では **Blobs の環境が `process.env` に入らない**。`siteID` / `token` は
+**`event.blobs`（base64）と `x-nf-site-id` / `x-nf-deploy-id` ヘッダー**で渡ってくる。
+これを環境へ展開するのが `connectLambda(event)`（`dist/main.js` の `lambda_compat.ts`）。
+
+呼んでいなかったため、次の順で必ず失敗していた。
+
+| 段 | 実装 | 結果 |
+|---|---|---|
+| 1 | `getEnvironmentContext()` が `globalThis.netlifyBlobsContext` / `NETLIFY_BLOBS_CONTEXT` を見る | どちらも無いので **`{}`** |
+| 2 | `getStore('stripe-events')` → `getClientOptions({}, undefined)` | `siteID` / `token` が undefined |
+| 3 | `if (!siteID || !token) throw new MissingBlobsEnvironmentError(["siteID","token"])` | **throw** |
+| 4 | 旧実装の引数なし `catch {}` | **握りつぶし → `null`** |
+| 5 | `hasProcessed()` | **常に `false`（毎回「初回」扱い）** |
+
+🔴 これで「3 回再送しても `duplicate:true` が出ない」が完全に説明できる。
+
+**なお `getStore` が文字列引数で throw する点は、前 commit の想定（`get`/`set` で落ちる）とは異なる。**
+`getClientOptions` は `Store` を作る前に呼ばれるため、**落ちるのは `getStore` の中**である。
+
+#### 恒久修正
+
+```js
+async function eventStore(event) {
+  const { getStore, connectLambda } = await import('@netlify/blobs');
+  if (event?.blobs && typeof connectLambda === 'function') connectLambda(event);
+  return getStore('stripe-events');
+}
+```
+
+`event` を `hasProcessed(event, id)` / `markProcessed(event, id)` へ渡す。
+`event.blobs` が無い環境（単体テスト等）では `connectLambda` を呼ばない。
+
+#### 🔴 単体テストが見逃した理由と、その恒久対策
+
+mock は環境を要求しないので、`connectLambda` が無くても緑だった。
+**mock を本番と同じ条件に変えた。**
+
+- `post()` が**本番同型の Lambda イベント**（`event.blobs` ＋ `x-nf-*` ヘッダー）を送る
+- mock の `getStore` は `connectLambda` 未呼び出しなら **`MissingBlobsEnvironmentError` を投げる**
+
+これで**既存の冪等性テストが実効ガードになる**。
+実際に `connectLambda` を外すと **4 件が fail** することを確認した（mutation 検証）。
+
+| 外したときに落ちるテスト |
+|---|
+| 🔴 冪等: 同じ `event.id` を二度処理しない |
+| 🔴 同じ invoice の `payment_succeeded` を再送しても二重処理しない |
+| 🔴 membership 失敗のイベントは processed にしない |
+| 🔴 フラグ未設定（やることが無い）は失敗にしない |
+
+静的ガードにも `connectLambda` の**呼び出し順**・`event` の受け渡し・
+テストが本番同型イベントを送っていることを追加（4 → **6 件**）。
+
+#### 併せて直したもの（本修正が必要にしたもの）
+
+`membershipCopy.guard.test.mjs` が `'await markProcessed(stripeEvent.id);'` を
+**文字列でハードコード**しており、シグネチャ変更で落ちた。
+検査したいのは「**失敗判定より後に記録すること**」であって引数の形ではないため、
+`'await markProcessed('` を探す形に変えた（意図は不変）。
+
+#### テスト結果
+
+| コマンド | 結果 |
+|---|---|
+| `npm run test:stripe` | ✅ **71 pass / 0 fail**（webhook 48・checkout 17・ガード 6）|
+| `npm run build` | ✅ **exit 0**・全 **14 スイート fail 0** |
+
+#### branch deploy（承認済み・`allowed_branches` の一時追加 → 復旧）
+
+| 項目 | 変更前 | 変更中 | 戻した先 |
+|---|---|---|---|
+| `allowed_branches` | `["main"]` | `["main","test/stripe-testmode-e2e-2026-09-01"]` | ✅ **`["main"]`** |
+
+| 検査 | 結果 |
+|---|---|
+| branch deploy | ✅ **`d13bb188` ready**（2026-09-04 01:20 UTC・`deploy_time` 386s・`error_message: null`）|
+| HEAD 一致 | ✅ `origin/test/stripe-testmode-e2e-2026-09-01` = `commit_ref` = `d13bb188` |
+| 疎通 | ✅ 署名なし POST → **400 `invalid_signature`**（書き込み前に fail-closed）|
+| 設定復旧 | ✅ **18 項目すべて変更前と完全一致**（`allowed_branches` / `repo_branch` / `stop_builds` / `base` / `cmd` / `dir` / `functions_dir` / `skip_prs` / `package_path` / `build_filter` / `skip_automatic_builds` / `private_logs` / `untrusted_flow` / `public_repo` / `provider` / `repo_url` / `repo_path` / `base_rel_dir`）|
+| 復旧後の URL 生存 | ✅ `GET /` → **200**（既存 deploy は削除されない）|
+
+### 2026-09-04 #6 実測 — ✅ **PASS**（仕様所有者が実施）
+
+修正済み branch deploy（`d13bb188`）に対し、**同一 `event.id` を再送**した。
+
+| 検査 | 結果 | 判定 |
+|---|---|---|
+| 2 回目の応答 | **HTTP 200 / `{"received":true,"duplicate":true}`** | ✅ |
+| `RewardLedger`（テスト会員）| **2 行のまま**（9/2・9/3 のみ。**9/4 の追加なし**）| ✅ |
+| `Customers`（同）| **1 レコードのみ** / `inactive` / `CancelledAt=2026-09-03` | ✅ |
+
+Airtable は **read-only で確認**（追加更新なし）。
+
+🔴 **修正前との対比**
+
+| | 修正前（`f84431de`）| 修正後（`d13bb188`）|
+|---|---|---|
+| 1 回目 | 200 `{"received":true}` | 200 `{"received":true}` |
+| 2 回目（同一 `event.id`）| 200 `{"received":true}` ❌ | **200 `{"received":true,"duplicate":true}`** ✅ |
+
+これで `docs/STRIPE_TESTMODE_E2E.md` の **#6 は PASS**。
+🔴 ただし #1 / #2 / #5（未実施）と **#17（未達）** は変わっていないため、
+「17 項目すべてが期待どおり」という **Live Mode へ進む条件は依然として満たしていない**。
+
+#### 🔴 Test Mode cleanup は未実施（承認境界で停止）
+
+外部サービスの設定変更・削除を含むため実行していない。対象と rollback は
+`CLAUDE.md`「High-risk approval boundary」に従い、承認を得るまで着手しない。
+
+
+
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
