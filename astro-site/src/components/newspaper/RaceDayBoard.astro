@@ -379,16 +379,11 @@ const venueViews = venues.map((venue: any, venueIndex: number) => {
     color: var(--primary-start);
   }
 
-  /* 🔴 メインレースだけ金色（#fff7e0 / #8a6a00 / #f0d68a）で配色から外れていた。
-     選択中のタブと同じ 空→藤 の系統にそろえる。選択中は同じ色の「濃い版」を
-     べた塗りするので、淡い版＋藤のリングにして区別を残す。 */
-  .rdb-race-tab.is-main {
-    background: var(--grad-tool-btn);
-    color: var(--btn-ink); /* 14.27 / 13.64 */
-    box-shadow: inset 0 0 0 1px #a78bfa;
-  }
-
-  .rdb-race-tab.is-main i { color: var(--btn-ink); opacity: 0.7; }
+  /* 🔴 メインレースのタブに見た目の差を付けない（2026-09-05 指示）。
+     もとは金色（#fff7e0 / #8a6a00 / #f0d68a）、次に淡い 空→藤 ＋ 藤のリングに
+     したが、いずれも他のタブと違って見えるため撤去した。
+     `is-main` クラスはマークアップ側に残っているが、色は他のタブと同じ。
+     🔴 ここに再びメイン専用の配色を足さないこと。 */
 
   /* 🔴 現在位置は 青→紫 のグラデーション（2026-08-31） */
   .rdb-race-tab.is-active {
