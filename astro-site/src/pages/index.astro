@@ -318,11 +318,15 @@ const totals = combinedTotals(archiveNankan, archiveJra);
       min-height: 600px;
       display: flex;
       align-items: center;
-      // 🔴 グレーにしない。かつて背景画像の上に敷いていた暗いオーバーレイの残骸で
-      //    「中間グレーの帯」になっていた（2026-09-04 報告）。画像はこの上の
-      //    .hero-keyvisual に分離済み。
-      //    フッターのロゴ（#60a5fa→#a78bfa）と同じ 青→藤 の系統を、
-      //    ごく淡くして敷く。明るく、文字は濃色で読める。
+      /* 🔴 グレーにしない。かつて背景画像の上に敷いていた暗いオーバーレイの残骸で
+         「中間グレーの帯」になっていた（2026-09-04 報告）。画像はこの上の
+         .hero-keyvisual に分離済み。
+         フッターのロゴ（#60a5fa→#a78bfa）と同じ 青→藤 の系統を、ごく淡くして敷く。
+         🔴 このブロックは plain CSS。スラッシュ2つはコメントにならず、
+            直後の宣言までまとめて無効化される
+            （2026-09-04 に実際に background が消え、下の
+             gradient-bg-animated が透けて青→橙になっていた）。
+            コメントはスラッシュ＋アスタリスクの形だけを使うこと。 */
       background: linear-gradient(180deg, #e0f2fe 0%, #f5f3ff 55%, #ffffff 100%);
       background-size: cover;
       background-position: center;
@@ -338,9 +342,9 @@ const totals = combinedTotals(archiveNankan, archiveJra);
       font-size: 3rem;
       margin-bottom: var(--spacing-lg);
       font-weight: 800;
-      // 🔴 #e0f2fe→#60a5fa は暗い背景用で、明るい背景では 1.0〜2.2:1 しか出ない。
-      //    フッターのロゴと同じ 青→藤 の系統で、淡い背景でも読める濃さにする
-      //    （6.11:1 / 6.48:1）。
+      /* 🔴 #e0f2fe→#60a5fa は暗い背景用で、明るい背景では 1.0〜2.2:1 しか出ない。
+         フッターのロゴと同じ 青→藤 の系統で、淡い背景でも読める濃さにする
+         （6.11:1 / 6.48:1）。 */
       background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -625,8 +629,8 @@ const totals = combinedTotals(archiveNankan, archiveJra);
     }
 
     @media (max-width: 640px) {
-      // 🔴 ここに暗いオーバーレイの上書きが残っており、モバイルだけ
-      //    グレーの帯になっていた（2026-09-04 報告）。背景は上の指定に任せる。
+      /* 🔴 ここに暗いオーバーレイの上書きが残っており、モバイルだけグレーの帯に
+         なっていた（2026-09-04 報告）。背景は上の .hero の指定に任せる。 */
 
       .hero-title {
         font-size: 2rem;
