@@ -310,6 +310,9 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
       align-items: center;
     }
 
+    /* ナビ項目の基本形。白のピルは背景（白いヘッダー）に埋もれていたので、
+       控えめな 淡空→淡藤（--grad-tool-btn）を敷いて枠を外す。
+       文字は濃色インクで 14.27 / 13.64。 */
     .nav-links a,
     .nav-links .nav-logout button,
     .nav-dropdown-trigger {
@@ -319,26 +322,60 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
       white-space: nowrap;
       flex-shrink: 0;
       padding: var(--spacing-xs) var(--spacing-md);
-      color: var(--text-primary);
-      font-weight: 600;
+      color: var(--btn-ink);
+      font-weight: 700;
       font-size: 0.95rem;
       letter-spacing: 0.02em;
-      border: 1px solid var(--border-color);
+      border: 1px solid transparent;
       border-radius: var(--radius-pill);
-      background: #ffffff;
+      background: var(--grad-tool-btn);
+      background-size: 180% 180%;
+      background-position: 0% 0%;
       box-shadow: var(--shadow-sm);
       transition: all var(--transition-base);
     }
 
+    /* hover は同じ 空→藤 の濃い版へ。単色に戻さない。 */
     .nav-links a:hover,
     .nav-links .nav-logout button:hover,
     .nav-dropdown-trigger:hover {
-      color: var(--text-inverse);
+      color: var(--btn-ink); /* 8.84 / 6.96 */
       border-color: transparent;
-      /* 主要 CTA: 青 → 紫（--primary-gradient は青→青の同系色） */
       background: var(--grad-nav-btn);
-      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
+      background-position: 100% 100%;
+      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.35);
       transform: translateY(-1px);
+    }
+
+    /* 🔴 行動の強さで色を分ける。
+       無料登録 = 登録/強い行動 → 桃→琥珀
+       ログイン / マイページ = 主要 CTA → 空→藤 */
+    .nav-links a[href="/register"] {
+      background: var(--grad-action-btn);
+      color: var(--btn-ink); /* 7.15 / 11.34 */
+      box-shadow: 0 3px 12px rgba(244, 114, 182, 0.35);
+    }
+
+    .nav-links a[href="/login"],
+    .nav-links a[href="/mypage"] {
+      background: var(--grad-nav-btn);
+      color: var(--btn-ink); /* 8.84 / 6.96 */
+      box-shadow: 0 3px 12px rgba(56, 189, 248, 0.35);
+    }
+
+    .nav-links a[href="/register"]:hover,
+    .nav-links a[href="/login"]:hover,
+    .nav-links a[href="/mypage"]:hover {
+      background-position: 100% 100%;
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+
+    /* register は hover でも 桃→琥珀 のまま（上の共通 hover に負けないよう再指定） */
+    .nav-links a[href="/register"]:hover {
+      background: var(--grad-action-btn);
+      background-position: 100% 100%;
+      box-shadow: 0 6px 18px rgba(244, 114, 182, 0.45);
     }
 
     /* ログアウトはフォーム送信だが、見た目はほかのナビ項目にそろえる */
@@ -390,18 +427,26 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
       transform: translateY(0);
     }
 
+    /* 🔴 ドロップダウンの中身はナビ項目の「ピル」ではない。
+       .nav-links a の下地・枠・影を明示的に打ち消す（継いでしまうため）。 */
     .nav-dropdown-menu a {
       display: block;
       padding: var(--spacing-xs) var(--spacing-md);
-      color: var(--text-secondary);
-      font-weight: 500;
+      color: var(--text-primary);
+      font-weight: 600;
       transition: all var(--transition-fast);
       white-space: nowrap;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
     }
 
     .nav-dropdown-menu a:hover {
-      background: rgba(59, 130, 246, 0.1);
-      color: var(--primary-end);
+      background: var(--grad-tool-btn);
+      color: var(--btn-ink); /* 14.27 / 13.64 */
+      transform: none;
+      box-shadow: none;
     }
 
     .mobile-menu-btn {
