@@ -603,31 +603,31 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
      同じ 橙→藤 でそろえる。淡すぎて沈んでいたので、見出しは帯と同じべた塗り、
      本文は同じ 2 色をはっきり敷き、左右にアクセント線を通して列ごと際立たせる。 */
   .pr-matrix .pr-m-paid {
-    background: linear-gradient(135deg, rgba(251, 146, 60, 0.20) 0%, rgba(192, 132, 252, 0.20) 100%);
-    border-left: 2px solid #c084fc;
-    border-right: 2px solid #c084fc;
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.42) 0%, rgba(192, 132, 252, 0.42) 100%);
+    border-left: 3px solid #a855f7;
+    border-right: 3px solid #a855f7;
   }
 
   .pr-matrix thead .pr-m-paid {
-    background: linear-gradient(135deg, #fb923c 0%, #c084fc 100%);
-    color: var(--btn-ink); /* 8.37 / 7.17 */
-    border-top: 2px solid #c084fc;
+    background: linear-gradient(135deg, #f97316 0%, #a855f7 100%);
+    color: var(--btn-ink); /* 6.75 / 4.78 */
+    border-top: 3px solid #a855f7;
   }
 
   .pr-matrix thead .pr-m-paid small {
     color: var(--btn-ink);
-    opacity: 0.75;
+    opacity: 0.85;
   }
 
   .pr-matrix tbody tr:last-child .pr-m-paid {
-    border-bottom: 2px solid #c084fc;
+    border-bottom: 3px solid #a855f7;
   }
 
   /* プレミアム列の ○ は他の列より強く。淡い下地の上で 6.1:1 以上 */
   .pr-matrix td.pr-m-paid.ok {
-    color: #6d28d9;
+    color: #5b21b6; /* 濃い下地でも 5.9:1 以上 */
     font-weight: 900;
-    font-size: 1.05rem;
+    font-size: 1.1rem;
   }
 
   .pr-matrix tbody tr:last-child td { border-bottom: none; }
