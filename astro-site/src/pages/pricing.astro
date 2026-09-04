@@ -501,7 +501,9 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     margin-bottom: 20px;
   }
 
-  .pr-hero-lead b { color: var(--secondary-start); }
+  /* 🔴 --secondary-start(#f97316) は白地で 2.94:1 しかなく強調文字として読めない。
+     オレンジの性格は保ったまま読める濃さへ（5.20:1）。 */
+  .pr-hero-lead b { color: #c2410c; }
 
   .pr-hero-actions {
     display: flex;
@@ -596,8 +598,15 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
   .pr-matrix .ok { color: var(--success); font-weight: 800; }
   .pr-matrix .no { color: var(--text-tertiary); }
 
-  .pr-matrix .pr-m-paid { background: rgba(249, 115, 22, 0.06); }
-  .pr-matrix thead .pr-m-paid { background: rgba(249, 115, 22, 0.14); }
+  /* プレミアム列の下地。🔴 単色オレンジ（rgba(249,115,22,…)）をやめ、
+     プランの帯と同じ 橙→藤 の 2 色をごく淡く敷く。文字は従来どおり濃色。 */
+  .pr-matrix .pr-m-paid {
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.10) 0%, rgba(192, 132, 252, 0.10) 100%);
+  }
+
+  .pr-matrix thead .pr-m-paid {
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.24) 0%, rgba(192, 132, 252, 0.24) 100%);
+  }
 
   .pr-matrix tbody tr:last-child td { border-bottom: none; }
 
@@ -888,7 +897,7 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
   .pr-btn-action:hover {
     transform: translateY(-2px);
     color: var(--btn-ink);
-    box-shadow: 0 10px 24px rgba(249, 115, 22, 0.36);
+    box-shadow: 0 10px 24px rgba(244, 114, 182, 0.4);
   }
 
   .pr-plan-cta {
@@ -917,7 +926,7 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     color: var(--text-tertiary);
   }
 
-  .pr-step-sep { color: var(--secondary-start); }
+  .pr-step-sep { color: #c2410c; }
 
   .pr-purchase-auth {
     position: relative;
