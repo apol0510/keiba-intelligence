@@ -665,7 +665,8 @@ const colCount = 3 // 枠 / 馬番 / 馬名
   }
 
   .ret-tool[data-tool="plan"]:hover {
-    border-color: var(--secondary-start);
+    /* .is-on の 桃→琥珀 に合わせる（橙のままだと配色から浮く） */
+    border-color: #f472b6;
   }
 
   .ret-tool-icon { font-size: 0.9rem; line-height: 1; }

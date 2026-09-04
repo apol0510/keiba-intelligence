@@ -635,10 +635,13 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
   }
 
   .pr-plan.is-recommended {
-    border-color: var(--secondary-start);
+    border-color: #c084fc;
     box-shadow: var(--shadow-lg);
   }
 
+  /* 🔴 --secondary-gradient は 橙→橙 の同系色で、白文字とのコントラストが
+     2.26〜2.80:1 しかなかった。トップの有料プランの帯と同じ 橙→藤 にそろえ、
+     文字は濃色にする（8.37 / 7.17）。 */
   .pr-plan-ribbon {
     position: absolute;
     top: -12px;
@@ -646,12 +649,13 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     transform: translateX(-50%);
     padding: 4px 16px;
     border-radius: var(--radius-pill);
-    background: var(--secondary-gradient);
-    color: var(--text-inverse);
+    background: linear-gradient(135deg, #fb923c 0%, #c084fc 100%);
+    color: var(--btn-ink);
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     white-space: nowrap;
+    box-shadow: 0 3px 12px rgba(192, 132, 252, 0.35);
   }
 
   .pr-plan-name {
@@ -681,11 +685,17 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     margin-right: 8px;
   }
 
+  /* 金額は単色をやめ、ヘッダー/フッターのロゴと同じ 青→紫 のグラデーションで塗る。
+     background-clip が効かない環境では color がそのまま残る（6.70:1）。 */
   .pr-price-amount {
     font-family: var(--font-num);
     font-size: 2.2rem;
     font-weight: 800;
-    color: var(--primary-start, #d8433a);
+    color: #1d4ed8;
+    background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .pr-price-unit {
