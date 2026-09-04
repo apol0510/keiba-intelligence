@@ -173,10 +173,13 @@ export const prerender = true;
       font-size: 14px;
       line-height: 1.5;
 
+      // 🔴 明るい背景（.login-card は #f5f7fb〜#eef2f8）の上に置く。
+      //    以前は #86efac（green-300）＝ダークテーマ用の色で、本文 1.21:1 /
+      //    枠線 1.17:1 しかなく読めなかった（2026-09-04 報告・実測）。
       &.success {
-        background: rgba(34, 197, 94, 0.1);
-        border: 1px solid rgba(34, 197, 94, 0.3);
-        color: #86efac;
+        background: #dcfce7; // green-100
+        border: 1px solid #16a34a; // green-600（枠線 3.00:1）
+        color: #14532d; // green-900（本文 8.30:1・WCAG AAA）
       }
 
       &.error {
