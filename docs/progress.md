@@ -1344,6 +1344,88 @@ Test Mode の branch deploy では #6 が PASS 済み。
 
 
 
+### 2026-09-05 押せる UI の配色を統一（PR #97 を squash merge ＋ 本番反映）
+
+| 項目 | 値 |
+|---|---|
+| PR | **#97**（Draft 解除 → **squash merge**）|
+| `main` 先端 | **`88b7b88a`** |
+| merged at | 2026-09-04 15:43:18 UTC |
+| 本番デプロイ | ✅ **production ready**（published 15:44:23 UTC・`deploy_time` 62s・`error_message: null`）|
+| 変更規模 | **25 files / +502 −269**（データ自動取込を除く）|
+
+#### きっかけ
+
+`/login` の送信成功メッセージが読めないという指摘。原因は
+**明るい背景のページにダークテーマ用の配色が残っていたこと**で、
+同じ欠陥がサイト全体にあった。
+
+#### 確定した方針（2026-09-05・仕様所有者）
+
+- 押せる UI は **単色・同系色の濃淡を使わず、明確に異なる 2 色のグラデーション**にする
+- 気に入っている 3 か所を基準にする:
+  ヘッダー/フッターの「KEIBA Intelligence」・フッターの無料会員登録ボタン・チャットボタン
+- **明るい配色 ＋ 濃色文字**（白文字にしない）
+- 意味色（枠色・印色・chart 色・`badge-*`・`disabled`）は変更しない
+
+#### 確定した配色（`global.scss` のトークン）
+
+| トークン | 配色 | 濃色文字のコントラスト |
+|---|---|---|
+| `--btn-ink` | `#0b1020` | — |
+| `--grad-nav-btn`（主要 CTA）| 空 → 藤 → ほんのり桃 `#38bdf8 → #a78bfa 60% → #f9a8d4` | 8.84 / 6.96 / 10.44 |
+| `--grad-outlook-btn`（探索）| シアン → 青 → ほんのり藤 `#22d3ee → #60a5fa 55% → #c4b5fd` | 10.48 / 7.45 / 10.26 |
+| `--grad-conclusion-btn`（AI 判断）| 藤 → 桃 `#c084fc → #f472b6` | 7.17 / 7.15 |
+| `--grad-action-btn`（購入/登録）| 桃 → 琥珀 `#f472b6 → #fbbf24` | 7.15 / 11.34 |
+| `--grad-tool-btn`（控えめ補助）| 淡空 → 淡藤 → 淡桃 `#bae6fd → #ddd6fe 60% → #fbcfe8` | 14.27 / 13.64 / 13.70 |
+
+🔴 **hover は単色に戻さない。** 2 色を保ったまま `background-position` /
+`brightness` / `shadow` で変化させる。
+
+#### 途中で見つかった 3 つの真因（いずれも記録に値する）
+
+1. 🔴 **plain CSS に `//` コメントを書いて宣言を無効化していた**
+   `index.astro` の `<style>` は `lang="scss"` ではない。CSS にスラッシュ 2 つの
+   コメントは無いため、**そこから次のセミコロンまでが 1 つの不正な宣言**として
+   捨てられ、直後の `background` ごと消えていた。ヒーローが青→橙のままだったのは
+   これが原因（specificity の問題ではなかった）。コメントの入れ子（`/* */` の中に
+   `/* */`）も同様に壊れる。
+2. 🔴 **`.hero` に背景画像の残骸オーバーレイが残っていた**
+   `rgba(15,23,42,0.50→0.10)` が白いページに重なり「中間グレーの帯」を作っていた。
+   明度が中間なので明るい文字も暗い文字も読めない。`@media (max-width: 640px)` に
+   **別途もう 1 か所**あり、モバイルだけ直らない原因になっていた。
+3. 🔴 **淡い色はページ背景（`--bg-primary #f5f7fb`）と近く「灰色」に見える**
+   `#e0f2fe → #ede9fe` まで色を入れても灰色に見えると指摘された。
+   淡さで刻むと判別できないため、**既存トークンをそのまま使う**方が早い。
+
+#### 既存ガードの更新（本修正が必要にしたもの）
+
+`entitlementRoutes.test.mjs` / `purchaseIntent.test.mjs` が
+`var(--grad-nav)` / `var(--grad-action)` を文字列で固定していたため、
+`-btn` 変種を許容する形にした。**役割分担の検査意図は変えていない。**
+新トークンも「2 色であること」を検査対象に追加した。
+
+#### 本番での実測（read-only）
+
+| 検査 | 結果 |
+|---|---|
+| `/` `/pricing` `/login/` `/register` `/free-prediction/nankan` `/mypage` `/archive/nankan/` | **200** ✅ |
+| guest → `/prediction/nankan` | **302 → `/free-prediction/nankan`** ✅ 認可は不変 |
+| `POST /.netlify/functions/stripe-webhook`（署名なし）| **503 `not_configured`** ✅ fail-closed |
+| 配信 CSS のトークン | 6 つすべて確認 ✅ |
+| ヒーロー背景 | `linear-gradient(180deg,#e0f2fe,#f5f3ff 55%,#fff)` ✅ |
+| 旧オーバーレイ `rgba(15,23,42` | **残存 0** ✅ |
+
+🔴 **auth / entitlement / Stripe / API / 表示条件は変更していない。**
+rollback は通常の revert PR（履歴改変はしない）。
+
+#### 🔴 未実施（承認境界）
+
+- **Test Mode cleanup**（対象と rollback は 2026-09-04 の節のとおり）
+- **Live Mode 設定**（production スコープへの `STRIPE_*` 設定 ＝ secret 変更）
+- Live Mode の条件（`docs/STRIPE_TESTMODE_E2E.md` の 17 項目）は
+  **#1 / #2 / #5 未実施・#17 未達**のため依然として未達。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
