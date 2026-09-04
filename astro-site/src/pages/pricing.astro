@@ -580,16 +580,20 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     border-bottom: 1px solid var(--border-color);
   }
 
+  /* 🔴 見出し行の下地は灰色（--bg-muted #f1f5f9）だった。
+     ヒーローやフッターのロゴと同じ 空→藤 の明るい 2 色にそろえる。
+     見出し文字は 14.22 / 13.74 で従来より落ちない。 */
   .pr-matrix thead th {
-    background: var(--bg-muted);
+    background: linear-gradient(135deg, #e0f2fe 0%, #ede9fe 100%);
     font-weight: 800;
     color: var(--text-primary);
     line-height: 1.35;
   }
 
+  /* 🔴 ¥0 は --text-tertiary(#718096) で 3.50:1 しかなく読みにくかった（6.60:1 へ） */
   .pr-matrix thead th small {
     font-weight: 600;
-    color: var(--text-tertiary);
+    color: #475569;
     font-size: 0.72rem;
   }
 
