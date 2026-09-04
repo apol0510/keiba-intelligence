@@ -1274,6 +1274,73 @@ Airtable は **read-only で確認**（追加更新なし）。
 外部サービスの設定変更・削除を含むため実行していない。対象と rollback は
 `CLAUDE.md`「High-risk approval boundary」に従い、承認を得るまで着手しない。
 
+### 2026-09-04 PR #95 を squash merge ＋ 本番反映（仕様所有者承認）
+
+| 項目 | 値 |
+|---|---|
+| PR | **#95**（Draft 解除 → **squash merge**）|
+| merge 方式 | ✅ **squash merge**（`CLAUDE.md`「🔀 Git マージ規約 🔀」どおり。PR #82 の誤りを繰り返していない）|
+| `main` 先端 | **`bc1e5e6a`** 🔒 Stripe webhook の冪等性を修正: v1 Lambda 関数で connectLambda を呼ぶ (#95) |
+| merged at | 2026-09-04 06:52:34 UTC |
+| 本番デプロイ | ✅ **`bc1e5e6a` production ready**（published 06:58:36 UTC・`deploy_time` 357s・`error_message: null`）|
+
+🔴 squash により branch の commit SHA（`350a2c45` / `726eb7d1` 等）は `main` に残らない。
+**内容は本書の本文に書いてあるので、SHA を辿る必要はない。**
+
+#### merge 前の最終検証
+
+| 検査 | 結果 |
+|---|---|
+| 追随方法 | **通常 merge のみ**（専用 worktree・detached HEAD）。rebase / reset / force / cherry-pick 不使用 |
+| merge conflict | なし（`origin/main` の 3 commits はデータ自動取込のみ）|
+| ahead / behind | **behind=0 / ahead=7** |
+| `npm ci`（新規 worktree）| ✅ exit 0 ＝ package.json と lockfile の整合を証明 |
+| `npm run test:stripe` | ✅ 71 pass / 0 fail |
+| `npm run build` | ✅ exit 0・全 14 スイート fail 0 |
+| secret / PII | ✅ 追加行に検出なし |
+| CI | ✅ PASS（deploy-preview ready）|
+| PR 全体 | 7 files / +475 / −16 |
+
+#### 本番での実測（read-only）
+
+🔴 POST は **独自ドメインへ直接**送った（`netlify.app` は 301 で GET に変換されるため使わない）。
+
+| 検査 | 結果 | 判定 |
+|---|---|---|
+| `GET /.netlify/functions/stripe-webhook` | **405** `method_not_allowed` | ✅ |
+| `POST`（署名なし）| **503** `not_configured` | ✅ fail-closed |
+| guest → `/prediction/nankan` | **302 → `/free-prediction/nankan`** | ✅ |
+| guest → `/prediction/jra` | **302 → `/free-prediction/jra`** | ✅ |
+| `/free-prediction/{nankan,jra}` | **200** | ✅ |
+| `/register` / `/pricing` / `/mypage` | **200** | ✅ |
+| `/login` | **301 → `/login/`**（末尾スラッシュ正規化）| ✅ |
+
+🔴 **本番の 503 `not_configured` は正常。** `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` が
+**production スコープに未設定**であることを意味する（Live Mode 未設定＝現状の意図どおり）。
+この分岐は本 PR で**一切触れていない**ので、今回の変更による退行ではない。
+
+**したがって、この修正が本番で実際に効くのは Live Mode を設定してからである。**
+Test Mode の branch deploy では #6 が PASS 済み。
+
+#### 会員影響
+
+- 変更したのは `stripe-webhook.js` の **Blobs 冪等性まわりのみ**。
+  **認可・entitlement の仕様は変更していない**（`applyPlan` / `resolveEntitlement` /
+  tier 判定に差分なし）。
+- 本番の 503 fail-closed により、**署名検証なしの書き込みは起きない**。
+
+#### rollback
+
+問題があれば **通常の revert PR** で戻す。🔴 履歴改変（force / reset / rebase）は行わない。
+
+#### 🔴 未実施（承認境界）
+
+- **Test Mode cleanup**（対象と rollback は前節のとおり。外部サービスの設定変更・削除を含む）
+- **Live Mode 設定**（production スコープへの `STRIPE_*` 設定 ＝ secret 変更）
+- Live Mode へ進む条件（`docs/STRIPE_TESTMODE_E2E.md` の 17 項目すべて）は
+  **#1 / #2 / #5 未実施・#17 未達**のため**依然として満たしていない**。
+
+
 
 
 
