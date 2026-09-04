@@ -595,17 +595,39 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
 
   .pr-m-label { text-align: left !important; font-weight: 600; }
 
-  .pr-matrix .ok { color: var(--success); font-weight: 800; }
+  /* 🔴 ○ が細くて沈んでいたので、太さと大きさを上げてクッキリさせる */
+  .pr-matrix .ok { color: var(--success); font-weight: 900; font-size: 1.05rem; }
   .pr-matrix .no { color: var(--text-tertiary); }
 
-  /* プレミアム列の下地。🔴 単色オレンジ（rgba(249,115,22,…)）をやめ、
-     プランの帯と同じ 橙→藤 の 2 色をごく淡く敷く。文字は従来どおり濃色。 */
+  /* プレミアム列。🔴 単色オレンジ（rgba(249,115,22,…)）をやめ、プランの帯と
+     同じ 橙→藤 でそろえる。淡すぎて沈んでいたので、見出しは帯と同じべた塗り、
+     本文は同じ 2 色をはっきり敷き、左右にアクセント線を通して列ごと際立たせる。 */
   .pr-matrix .pr-m-paid {
-    background: linear-gradient(135deg, rgba(251, 146, 60, 0.10) 0%, rgba(192, 132, 252, 0.10) 100%);
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.20) 0%, rgba(192, 132, 252, 0.20) 100%);
+    border-left: 2px solid #c084fc;
+    border-right: 2px solid #c084fc;
   }
 
   .pr-matrix thead .pr-m-paid {
-    background: linear-gradient(135deg, rgba(251, 146, 60, 0.24) 0%, rgba(192, 132, 252, 0.24) 100%);
+    background: linear-gradient(135deg, #fb923c 0%, #c084fc 100%);
+    color: var(--btn-ink); /* 8.37 / 7.17 */
+    border-top: 2px solid #c084fc;
+  }
+
+  .pr-matrix thead .pr-m-paid small {
+    color: var(--btn-ink);
+    opacity: 0.75;
+  }
+
+  .pr-matrix tbody tr:last-child .pr-m-paid {
+    border-bottom: 2px solid #c084fc;
+  }
+
+  /* プレミアム列の ○ は他の列より強く。淡い下地の上で 6.1:1 以上 */
+  .pr-matrix td.pr-m-paid.ok {
+    color: #6d28d9;
+    font-weight: 900;
+    font-size: 1.05rem;
   }
 
   .pr-matrix tbody tr:last-child td { border-bottom: none; }
