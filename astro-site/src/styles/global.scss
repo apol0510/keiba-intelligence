@@ -74,16 +74,17 @@
    *      background-position / brightness / shadow で変化させる。
    */
   --btn-ink: #0b1020;
-  /* 主要 CTA: 空 → 藤（フッターの無料会員登録ボタンと同じ） */
-  --grad-nav-btn: linear-gradient(135deg, #38bdf8 0%, #a78bfa 100%);
-  /* 情報を見る / 探索: シアン → 青 */
-  --grad-outlook-btn: linear-gradient(135deg, #22d3ee 0%, #60a5fa 100%);
+  /* 主要 CTA: 空 → 藤 → ほんのり桃（2026-09-05 に桃を少し足した）
+     フッターの無料会員登録ボタンの 空→藤 が基準。終端の桃は 10.44:1 */
+  --grad-nav-btn: linear-gradient(135deg, #38bdf8 0%, #a78bfa 60%, #f9a8d4 100%);
+  /* 情報を見る / 探索: シアン → 青 → ほんのり藤 */
+  --grad-outlook-btn: linear-gradient(135deg, #22d3ee 0%, #60a5fa 55%, #c4b5fd 100%);
   /* AI 判断 / 詳細: 藤 → 桃 */
   --grad-conclusion-btn: linear-gradient(135deg, #c084fc 0%, #f472b6 100%);
   /* 購入 / 登録 / 強い行動: 桃 → 琥珀 */
   --grad-action-btn: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
-  /* 控えめな補助操作: 淡い空 → 淡い藤（主張しないが単色にもグレーにもしない） */
-  --grad-tool-btn: linear-gradient(135deg, #bae6fd 0%, #ddd6fe 100%);
+  /* 控えめな補助操作: 淡い空 → 淡い藤 → ほんのり淡桃 */
+  --grad-tool-btn: linear-gradient(135deg, #bae6fd 0%, #ddd6fe 60%, #fbcfe8 100%);
 
   /* 道具・分類カラー: スレート → 藍（単色に見せない・主張はしない） */
   --tool-start: #334155;

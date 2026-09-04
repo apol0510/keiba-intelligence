@@ -347,36 +347,9 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
       transform: translateY(-1px);
     }
 
-    /* 🔴 行動の強さで色を分ける。
-       無料登録 = 登録/強い行動 → 桃→琥珀
-       ログイン / マイページ = 主要 CTA → 空→藤 */
-    .nav-links a[href="/register"] {
-      background: var(--grad-action-btn);
-      color: var(--btn-ink); /* 7.15 / 11.34 */
-      box-shadow: 0 3px 12px rgba(244, 114, 182, 0.35);
-    }
-
-    .nav-links a[href="/login"],
-    .nav-links a[href="/mypage"] {
-      background: var(--grad-nav-btn);
-      color: var(--btn-ink); /* 8.84 / 6.96 */
-      box-shadow: 0 3px 12px rgba(56, 189, 248, 0.35);
-    }
-
-    .nav-links a[href="/register"]:hover,
-    .nav-links a[href="/login"]:hover,
-    .nav-links a[href="/mypage"]:hover {
-      background-position: 100% 100%;
-      filter: brightness(1.06);
-      transform: translateY(-1px);
-    }
-
-    /* register は hover でも 桃→琥珀 のまま（上の共通 hover に負けないよう再指定） */
-    .nav-links a[href="/register"]:hover {
-      background: var(--grad-action-btn);
-      background-position: 100% 100%;
-      box-shadow: 0 6px 18px rgba(244, 114, 182, 0.45);
-    }
+    /* 🔴 ナビ項目は行動の強さで色を分けない（2026-09-05 指示）。
+       無料登録・ログイン・マイページも上の基本形と同じ見た目にする。
+       ここに href 単位の配色を足さないこと。 */
 
     /* ログアウトはフォーム送信だが、見た目はほかのナビ項目にそろえる */
     .nav-logout { display: inline-flex; margin: 0; }
