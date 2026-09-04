@@ -580,20 +580,24 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     border-bottom: 1px solid var(--border-color);
   }
 
-  /* 🔴 見出し行の下地は灰色（--bg-muted #f1f5f9）だった。
-     ヒーローやフッターのロゴと同じ 空→藤 の明るい 2 色にそろえる。
-     見出し文字は 14.22 / 13.74 で従来より落ちない。 */
+  /* 🔴 見出し行の下地。もとは --bg-muted(#f1f5f9) の灰色。
+     いちど #e0f2fe→#ede9fe まで薄く色を入れたが、ページ背景
+     (--bg-primary #f5f7fb) と近すぎて**まだ灰色に見える**と指摘された。
+     そこでフッターの無料会員登録ボタンと同じ --grad-nav-btn
+     （#38bdf8 → #a78bfa）をそのまま使う。淡さで迷わないうえ、
+     サイト内で色の意味も揃う。文字は同じく濃色インク。 */
   .pr-matrix thead th {
-    background: linear-gradient(135deg, #e0f2fe 0%, #ede9fe 100%);
+    background: var(--grad-nav-btn);
     font-weight: 800;
-    color: var(--text-primary);
+    color: var(--btn-ink); /* 8.84 / 6.96 */
     line-height: 1.35;
   }
 
-  /* 🔴 ¥0 は --text-tertiary(#718096) で 3.50:1 しかなく読みにくかった（6.60:1 へ） */
+  /* 🔴 ¥0 は --text-tertiary(#718096) で 3.5:1 しかなく読みにくかった */
   .pr-matrix thead th small {
-    font-weight: 600;
-    color: #475569;
+    font-weight: 700;
+    color: var(--btn-ink);
+    opacity: 0.8;
     font-size: 0.72rem;
   }
 
