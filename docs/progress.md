@@ -1741,6 +1741,67 @@ mutation 検証: ガードを外すと **上位 2 件が fail** することを�
   発生していない見込みだが**未確認**）。
 - Test Clock は進めていない。Stripe への追加操作なし。
 
+### 2026-09-05 #17 再測定の準備 — 修正版 branch deploy を用意（**実測は未実施**）
+
+#### 本番の同種誤付与（仕様所有者が Airtable を read-only 確認）
+
+`RewardLedger` **全 4 行はテスト系のみ・実会員 0 件**。本番の会員に影響は出ていない。
+誤付与の 1 行は **証跡として保持**（削除しない）。
+
+#### 修正版 branch deploy
+
+| 項目 | 値 |
+|---|---|
+| branch deploy | ✅ **`c3760d7e` ready**（`deploy_time` 53s・`error_message: null`）|
+| HEAD 一致 | ✅ `origin/test/stripe-testmode-e2e-2026-09-01` = `commit_ref` |
+| 中身 | `origin/main`（`bb0cf3a2`）のコード ＋ **PR #99 の ¥0 付与ガード** |
+| 疎通 | ✅ 署名なし POST → **400 `invalid_signature`** ／ `GET /` **200** |
+| main 追随の確認 | ✅ 配信 CSS に PR #97 の `--grad-nav-btn`（3 ストップ）を確認 |
+| `allowed_branches` | ✅ **`["main"]` へ復旧**（18 項目すべて変更前と一致）|
+
+🔴 `origin/main` との merge で **`docs/progress.md` に conflict** が出たため、
+**conflict を解決せずに merge を中止**し、`astro-site/` 配下のみ取り込む方式に切り替えた。
+このブランチは再測定専用で、記録の正本は PR #98 / #99 側にある。
+
+#### 🔴 実測の前提（未確認）
+
+「¥0 請求 → `RewardLedger` 不増」を**意味のある検査にするには
+`MEMBERSHIP_WRITE_ENABLED=true` が Branch deploys で有効である必要がある**。
+
+```js
+if (!isWriteEnabled(process.env)) {
+  note('reward accrual', 'skipped', 'write_disabled');
+  return MEMBERSHIP_RESULT.SKIPPED;   // ← フラグ off だと理由が別で「増えない」
+}
+```
+
+フラグが off だと**修正の有無に関係なく増えない**ため、ガードを検証したことにならない。
+2026-09-01 に設定した記録はあるが、現状は未確認（env は変更しない）。
+
+#### 再測定シナリオ（🔴 **現 Test Clock は進めない。新規に作る**）
+
+| # | 操作 | 期待 |
+|---|---|---|
+| 1 | 新規 Test Clock（現在時刻）| — |
+| 2 | 新規 Customer（`email` はテスト会員と同じ）＋ **成功用カード `4242…`** を既定に | — |
+| 3 | Subscription 作成：`price_1UAsLM…` / `trial_period_days: 1` / `metadata: { ki_plan, ki_email }` | トライアル開始で **¥0 の `invoice.payment_succeeded`** |
+| **A** | `RewardLedger` 行数 | 🔴 **増えない（4 行のまま）** ← 今回の修正の検証 |
+| 4 | 支払い方法を **失敗用 `4000 0000 0000 0341`** へ差し替え | — |
+| 5 | Test Clock を **trial 終了直後まで 1 回だけ**進める | 更新請求が失敗 → `invoice.payment_failed` |
+| **B** | `Customers` `Status` | **`payment_failed`** |
+| **C** | 同 `PlanType` / `AccessEnabled` | **不変** |
+| **D** | `RewardLedger` | 🔴 **4 行のまま** |
+
+🔴 手順 2 で成功用カードを使うのは、トライアル開始時の **¥0 請求だけ**を先に起こすため（¥0 なので課金は発生しない）。
+🔴 手順 5 より先へ進めない（`unpaid`/`canceled` へ進むと free へ降格し C が壊れる）。
+
+A〜D がすべて期待どおりなら **#17 は PASS**。
+
+#### 🔴 未実施
+
+- 上記シナリオの実行（Stripe への write。資格情報が無く、こちらからは実行できない）
+- 誤付与 1 行の削除（**PASS 後の cleanup 承認境界**）
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
