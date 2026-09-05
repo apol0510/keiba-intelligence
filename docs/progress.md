@@ -1609,6 +1609,52 @@ price と account（`acct_1U9EyPLbPC6OVRqM`）が従来の Test Mode E2E と同�
 
 🔴 追加 write・本番操作は行っていない。
 
+### 2026-09-05 #17 — webhook 配信 **200 / `{"received":true}`** を確認
+
+`evt_1UCCvpLbPC6OVRqMLSTIZm7Z`（`invoice.payment_failed`）の配信結果を
+仕様所有者が Stripe の配信ログで確認。**HTTP 200 / `{"received":true}`**。
+
+#### この 200 から言えること
+
+| 事実 | 根拠 |
+|---|---|
+| **署名検証を通った** | 通らなければ **400 `invalid_signature`** で終わる |
+| **初回配信として処理された** | 応答に `duplicate` が**無い**。処理済みなら `{"received":true,"duplicate":true}` |
+| **ハンドラが例外で落ちていない** | 落ちれば 500 `handler_failed` |
+| **`payment_failed` の分岐に入った** | email が解決できなければ warn して break するが、それでも 200。ただし本イベントは `parent.subscription_details.metadata.ki_email` を持つので**解決している** |
+| **処理済みとして記録された** | 200 を返した後に `markProcessed()` が走る。R-2 の `connectLambda` 修正が入っているので Blobs に記録され、**再送すれば `duplicate:true` になる**はず |
+
+#### 🔴 200 は「Airtable に書けた」ことを意味しない
+
+`applyPlan()` は **顧客レコードが見つからなければ `console.warn` して `false` を返すだけ**で、
+ハンドラはそのまま 200 を返す。
+
+```js
+const record = await findCustomer(email);
+if (!record) {
+  console.warn('⚠️ stripe-webhook: customer record not found (skipped)');
+  return false;   // ← 200 のまま
+}
+```
+
+したがって **`Status=payment_failed` になったかは Airtable を見るまで確定しない**。
+（`0510apolon+test4@gmail.com` のレコードは 2026-09-04 時点で存在が確認されているので、
+更新されている可能性が高い。）
+
+#### 残っている確認（read-only。Stripe 側の操作は不要）
+
+| # | 対象 | 期待 |
+|---|---|---|
+| 1 | `Customers`（テスト会員）`Status` | **`payment_failed`** |
+| 2 | 同 `PlanType` | **不変**（`payment_failed` の分岐は渡さない）|
+| 3 | 同 `AccessEnabled` | **不変**（同上）|
+| 4 | `RewardLedger` 行数 | **2 行のまま**（`payment_failed` は store を触らない）|
+| 5 | 実会員レコード | **変更なし** |
+| 6 | entitlement | テスト会員でログインして `/prediction/nankan` が**開いたまま**（アクセスは止まらない）|
+
+🔴 Test Clock はこれ以上進めない（`unpaid`/`canceled` へ進むと free へ降格する）。
+🔴 追加 write・本番操作は行っていない。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
