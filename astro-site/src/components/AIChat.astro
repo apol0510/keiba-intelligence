@@ -67,7 +67,7 @@
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    background: var(--grad-nav-btn);
     border: none;
     color: white;
     cursor: pointer;
@@ -130,7 +130,7 @@
   }
 
   .ai-badge {
-    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    background: var(--grad-nav-btn);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -222,7 +222,7 @@
     display: inline-block;
     margin-top: 8px;
     padding: 6px 12px;
-    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    background: var(--grad-nav-btn);
     color: white !important;
     border-radius: 6px;
     text-decoration: none;
@@ -266,36 +266,30 @@
     border: none;
   }
 
-  .followup-btn.yes {
-    background: rgba(16, 185, 129, 0.15);
-    border: 1px solid rgba(16, 185, 129, 0.4);
-    color: #34d399;
-  }
-
-  .followup-btn.yes:hover {
-    background: rgba(16, 185, 129, 0.25);
-  }
-
-  .followup-btn.no {
-    background: rgba(251, 191, 36, 0.15);
-    border: 1px solid rgba(251, 191, 36, 0.4);
-    color: #fbbf24;
-  }
-
-  .followup-btn.no:hover {
-    background: rgba(251, 191, 36, 0.25);
+  /* 🔴 yes / no / contact は「押せる補助操作」。いずれも単色の半透明地に
+     同系の薄い文字で 1.5:1 前後しか出ていなかった。
+     状態表示ではないので、控えめな補助操作の スレート → 藍 にそろえる。 */
+  .followup-btn.yes,
+  .followup-btn.no,
+  .followup-btn.contact {
+    background: var(--grad-tool-btn);
+    background-size: 180% 180%;
+    background-position: 0% 0%;
+    border: none;
+    color: var(--btn-ink); /* 14.27 / 13.64 */
   }
 
   .followup-btn.contact {
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    color: #f87171;
     text-decoration: none;
     display: inline-block;
   }
 
+  .followup-btn.yes:hover,
+  .followup-btn.no:hover,
   .followup-btn.contact:hover {
-    background: rgba(239, 68, 68, 0.2);
+    background-position: 100% 100%;
+    filter: brightness(1.15);
+    color: var(--btn-ink);
   }
 
   /* ページリンクボタン */
@@ -306,13 +300,16 @@
     margin-top: 10px;
   }
 
+  /* 情報を見る / 探索: シアン → 藍（旧は単色の半透明＋薄い青文字） */
   .page-link-btn {
     display: inline-block;
     padding: 5px 10px;
-    background: rgba(59, 130, 246, 0.1);
-    border: 1px solid rgba(59, 130, 246, 0.3);
+    background: var(--grad-outlook-btn);
+    background-size: 180% 180%;
+    background-position: 0% 0%;
+    border: none;
     border-radius: 6px;
-    color: #60a5fa;
+    color: var(--btn-ink); /* 10.48 / 7.45 */
     text-decoration: none;
     font-size: 0.75rem;
     font-weight: 600;
@@ -320,7 +317,8 @@
   }
 
   .page-link-btn:hover {
-    background: rgba(59, 130, 246, 0.2);
+    background-position: 100% 100%;
+    filter: brightness(1.1);
     border-color: rgba(59, 130, 246, 0.5);
   }
 
@@ -347,12 +345,15 @@
     display: none;
   }
 
+  /* 情報を見る / 探索: シアン → 藍（旧は単色の半透明＋薄い青文字） */
   .quick-btn {
     padding: 5px 10px;
-    background: rgba(59, 130, 246, 0.1);
-    border: 1px solid rgba(59, 130, 246, 0.3);
+    background: var(--grad-outlook-btn);
+    background-size: 180% 180%;
+    background-position: 0% 0%;
+    border: none;
     border-radius: 16px;
-    color: #60a5fa;
+    color: var(--btn-ink); /* 10.48 / 7.45 */
     font-size: 0.75rem;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -360,7 +361,8 @@
   }
 
   .quick-btn:hover {
-    background: rgba(59, 130, 246, 0.2);
+    background-position: 100% 100%;
+    filter: brightness(1.1);
     border-color: rgba(59, 130, 246, 0.5);
   }
 
@@ -425,7 +427,7 @@
     width: 40px;
     height: 40px;
     border-radius: var(--radius-md);
-    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    background: var(--grad-nav-btn);
     border: none;
     color: white;
     cursor: pointer;

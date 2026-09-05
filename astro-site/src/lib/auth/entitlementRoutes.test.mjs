@@ -159,6 +159,15 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
     '--grad-nav': ['#3b82f6', '#8b5cf6'],
     '--grad-conclusion': ['#7c3aed', '#ec4899'],
     '--grad-action': ['#ec4899', '#f97316'],
+    // 🔴 押せる UI の配色（2026-09-04 確定）。
+    //    仕様所有者が気に入っているフッターの無料会員登録ボタン
+    //    （#38bdf8 → #a78bfa ＋ 濃色文字）を基準に、明るい 2 色でそろえた。
+    //    暗く沈んだ色・グレー・同系色の濃淡は使わない。
+    '--grad-nav-btn': ['#38bdf8', '#a78bfa'],
+    '--grad-outlook-btn': ['#22d3ee', '#60a5fa'],
+    '--grad-conclusion-btn': ['#c084fc', '#f472b6'],
+    '--grad-action-btn': ['#f472b6', '#fbbf24'],
+    '--grad-tool-btn': ['#bae6fd', '#ddd6fe'],
   };
   // 道具（スレート）も単色に見せない
   const tool = tokens.match(/--tool-start: (#\w+);[\s\S]*?--tool-end: (#\w+);/);
@@ -198,13 +207,13 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
   // 買い目（行動）はオレンジ
   assert.match(
     lastRule(table, '.ret-tool[data-tool="plan"].is-on'),
-    /background: var\(--grad-action\)/,
+    /background: var\(--grad-action(-btn)?\)/,
     '買い目ボタンが 桃→橙 のグラデーションでない',
   );
   assert.match(lastRule(table, '.rpl-type'), /background: var\(--grad-action\)/, '馬単バッジが 桃→橙 でない');
   assert.match(lastRule(table, '.rpl-fig b'), /background: var\(--grad-action\)/, '点数・金額が 桃→橙 でない');
   // 道具（並べ替え）はスレート
-  assert.match(lastRule(table, '.ret-tool.is-on'), /background: var\(--tool-gradient\)/, '並べ替えがスレートでない');
+  assert.match(lastRule(table, '.ret-tool.is-on'), /background: var\(--(tool-gradient|grad-tool-btn)\)/, '並べ替えが 2 色でない');
   // 🔴 買い目まわりにブルーが戻っていない
   for (const sel of ['.rpl-type', '.rpl-fig b', '.ret-tool.is-on']) {
     refute(/--primary-start/, lastRule(table, sel), `${sel} にブルーが戻っている`);
@@ -215,7 +224,7 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
   const paper = read('src/components/newspaper/RaceNewspaper.astro');
   assert.match(lastRule(paper, '.rp-outlook-tag'), /background: var\(--grad-outlook\)/, 'レース展望のタグがグラデーションでない');
   assert.match(lastRule(paper, '.rp-outlook'), /background: var\(--outlook-bg\)/, 'レース展望の下地がグラデーションでない');
-  assert.match(lastRule(paper, '.rp-rno'), /background: var\(--grad-nav\)/, 'レース番号がグラデーションでない');
+  assert.match(lastRule(paper, '.rp-rno'), /background: var\(--grad-nav(-btn)?\)/, 'レース番号がグラデーションでない');
   refute(/background: var\(--text-primary\)/, lastRule(paper, '.rp-rno'), 'レース番号が黒に戻っている');
 
   // 🔴 枠色（competition rule）は触らない。2 枠は黒のまま
@@ -226,22 +235,22 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
   const chat = read('src/components/AIChat.astro');
   assert.match(
     chat,
-    /linear-gradient\(135deg, #3b82f6, #8b5cf6\)/,
-    'チャットボタンの配色が変わっている（--grad-nav と揃わなくなる）',
+    /background: var\(--grad-nav-btn\)/,
+    'チャットボタンの配色が変わっている（--grad-nav 系と揃わなくなる）',
   );
 
   // 🔴 導線ボタンは単色にしない（2026-08-31）
-  assert.match(lastRule(paper, '.up-btn'), /background: var\(--grad-nav\)/, '無料登録の導線が単色になっている');
+  assert.match(lastRule(paper, '.up-btn'), /background: var\(--grad-nav(-btn)?\)/, '無料登録の導線が単色になっている');
   assert.match(
     lastRule(paper, '.rp-upsell-paid .up-btn'),
-    /background: var\(--grad-action\)/,
+    /background: var\(--grad-action(-btn)?\)/,
     '有料プランの導線が 桃→橙 でない',
   );
   refute(/background: var\(--primary-gradient\)/, lastRule(paper, '.up-btn'), '導線に旧グラデーションが戻っている');
 
   const ribbon = read('src/components/newspaper/TierRibbon.astro');
-  assert.match(lastRule(ribbon, '.tr-cta'), /background: var\(--grad-nav\)/, '帯の導線が単色になっている');
-  assert.match(lastRule(ribbon, '.tone-paid .tr-cta'), /background: var\(--grad-action\)/, '買い目の導線が 桃→橙 でない');
+  assert.match(lastRule(ribbon, '.tr-cta'), /background: var\(--grad-nav(-btn)?\)/, '帯の導線が単色になっている');
+  assert.match(lastRule(ribbon, '.tone-paid .tr-cta'), /background: var\(--grad-action(-btn)?\)/, '買い目の導線が 桃→橙 でない');
   refute(/background: var\(--text-primary\)/, lastRule(ribbon, '.tr-badge'), '帯のバッジが黒に戻っている');
 
   const layout = read('src/layouts/BaseLayout.astro');
@@ -256,10 +265,10 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
 
   // 会場の分類ラベルはスレート（ブルーはレースタブの選択中に譲る）
   const board = read('src/components/newspaper/RaceDayBoard.astro');
-  assert.match(lastRule(board, '.rdb-cat'), /background: var\(--tool-gradient\)/, '会場バッジがスレートでない');
+  assert.match(lastRule(board, '.rdb-cat'), /background: var\(--(tool-gradient|grad-tool-btn)\)/, '会場バッジが 2 色でない');
   assert.match(
     lastRule(board, '.rdb-race-tab.is-active'),
-    /background: var\(--grad-nav\)/,
+    /background: var\(--grad-nav(-btn)?\)/,
     '選択中のレースタブが 青→紫 のグラデーションでない',
   );
 });

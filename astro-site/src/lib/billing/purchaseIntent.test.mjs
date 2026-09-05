@@ -223,7 +223,9 @@ describe('認証・認可の契約を変えていない', () => {
     assert.ok(/class="pr-btn pr-btn-action pr-plan-cta"/.test(src), '申し込み CTA が pr-btn-action でない');
     assert.ok(/class="pr-btn pr-btn-action pr-purchase-submit"/.test(src), '送信ボタンが pr-btn-action でない');
     const rule = src.slice(src.indexOf('.pr-btn-action {'), src.indexOf('.pr-btn-action:hover'));
-    assert.ok(rule.includes('var(--grad-action)'), '🔴 --grad-action を使っていない');
+    // 🔴 押せる UI は濃いストップの --grad-action-btn を使う（2026-09-04）。
+    //    色の組み合わせ（桃→橙）は同じで、白文字が AA を満たす明るさにしただけ。
+    assert.ok(/var\(--grad-action(-btn)?\)/.test(rule), '🔴 桃→橙 のグラデーションを使っていない');
     assert.ok(!/background:\s*(#|var\(--primary-start\)|var\(--secondary-start\))/.test(rule),
       '🔴 単色背景になっている');
   });

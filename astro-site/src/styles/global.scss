@@ -50,6 +50,42 @@
   --grad-conclusion: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
   --grad-action: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
 
+  /*
+   * 🔴 押せる UI（ボタン / CTA）の配色（2026-09-04 確定）
+   *
+   *    仕様所有者が気に入っている 3 か所を基準にした:
+   *      - ヘッダーの「KEIBA Intelligence」（2 色のグラデーション文字）
+   *      - フッターの「KEIBA Intelligence」（#60a5fa → #a78bfa）
+   *      - フッターの無料会員登録ボタン（#38bdf8 → #a78bfa ＋ 濃色文字）
+   *      - 右下のチャットボタン
+   *
+   *    そこで **明るい 2 色 ＋ 濃色文字** に統一する。
+   *    🔴 暗く沈んだ色・グレー・同系色の濃淡は使わない。
+   *    🔴 文字は常に `--btn-ink`（フッター CTA と同じ濃色）。白文字にしない。
+   *
+   *    濃色文字のコントラスト（両端・実測。すべて AAA 7:1 級）:
+   *      --grad-nav-btn        8.84 / 6.96
+   *      --grad-outlook-btn   10.48 / 7.45
+   *      --grad-conclusion-btn 7.17 / 7.15
+   *      --grad-action-btn     7.15 / 11.34
+   *      --grad-tool-btn      14.27 / 13.64
+   *
+   *    🔴 単色・同系色の濃淡へ戻さないこと。hover も 2 色を保ったまま
+   *      background-position / brightness / shadow で変化させる。
+   */
+  --btn-ink: #0b1020;
+  /* 主要 CTA: 空 → 藤 → ほんのり桃（2026-09-05 に桃を少し足した）
+     フッターの無料会員登録ボタンの 空→藤 が基準。終端の桃は 10.44:1 */
+  --grad-nav-btn: linear-gradient(135deg, #38bdf8 0%, #a78bfa 60%, #f9a8d4 100%);
+  /* 情報を見る / 探索: シアン → 青 → ほんのり藤 */
+  --grad-outlook-btn: linear-gradient(135deg, #22d3ee 0%, #60a5fa 55%, #c4b5fd 100%);
+  /* AI 判断 / 詳細: 藤 → 桃 */
+  --grad-conclusion-btn: linear-gradient(135deg, #c084fc 0%, #f472b6 100%);
+  /* 購入 / 登録 / 強い行動: 桃 → 琥珀 */
+  --grad-action-btn: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+  /* 控えめな補助操作: 淡い空 → 淡い藤 → ほんのり淡桃 */
+  --grad-tool-btn: linear-gradient(135deg, #bae6fd 0%, #ddd6fe 60%, #fbcfe8 100%);
+
   /* 道具・分類カラー: スレート → 藍（単色に見せない・主張はしない） */
   --tool-start: #334155;
   --tool-end: #3f4d8a;
@@ -289,10 +325,14 @@ a {
   text-align: center;
   cursor: pointer;
   transition: all var(--transition-base);
+  // 🔴 hover で単色へ戻さないための土台。塗りを広げておき、位置をずらして変化させる
+  background-size: 180% 180%;
+  background-position: 0% 0%;
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
+    background-position: 100% 100%;
   }
 
   &:active {
@@ -300,102 +340,82 @@ a {
   }
 }
 
+// 主要 CTA: 青 → 紫
 .btn-primary {
-  background: var(--primary-gradient);
-  color: white;
+  background: var(--grad-nav-btn);
+  color: var(--btn-ink); // 8.84 / 6.96
 
   &:hover {
-    filter: brightness(1.1);
+    filter: brightness(1.08);
   }
 }
 
+// 情報を見る / 探索: シアン → 藍
+// （的中実績を見る・最新開催を見る・一覧へ戻る 等）
 .btn-secondary {
-  background: var(--secondary-gradient);
-  color: white;
+  background: var(--grad-outlook-btn);
+  color: var(--btn-ink); // 10.48 / 7.45
 
   &:hover {
-    filter: brightness(1.1);
+    filter: brightness(1.08);
   }
 }
 
+// 🔴 .btn-gold / .btn-red / .btn-green は元は「暗い背景に置くガラス風」で、
+//    明るい背景では 1.1〜1.4:1 しか出ず読めなかった。いったん不透明な同系色の
+//    塗りにしたが、**同系色の濃淡は不可**という方針（2026-09-04 確定）に従い、
+//    2 色グラデーションへ統一する。
+//    🔴 クラス名の red / green / gold は**もう色を表さない**。役割で読むこと。
+//    使用箇所: index.astro のヒーロー CTA・about.astro の CTA。
+
+// 登録 / 強い行動: 桃 → 橙（旧 gold）
 .btn-gold {
-  background: linear-gradient(135deg,
-    rgba(251, 191, 36, 0.3) 0%,
-    rgba(245, 158, 11, 0.3) 100%);
-  backdrop-filter: blur(10px) saturate(180%);
-  -webkit-backdrop-filter: blur(10px) saturate(180%);
-  border: 2px solid rgba(251, 191, 36, 0.5);
-  color: #fbbf24;
+  background: var(--grad-action-btn);
+  border: none;
+  color: var(--btn-ink); // 7.15 / 11.34
   font-weight: 700;
-  box-shadow:
-    0 4px 15px rgba(251, 191, 36, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 15px rgba(244, 114, 182, 0.38);
 
   &:hover {
     transform: translateY(-2px);
-    background: linear-gradient(135deg,
-      rgba(253, 224, 71, 0.4) 0%,
-      rgba(251, 191, 36, 0.4) 100%);
-    border-color: rgba(251, 191, 36, 0.8);
-    color: #fde047;
-    box-shadow:
-      0 10px 25px rgba(251, 191, 36, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    filter: brightness(1.08);
+    box-shadow: 0 10px 25px rgba(244, 114, 182, 0.5);
   }
 }
 
+// 主要 CTA: 青 → 紫（旧 red・「南関の予想を見る」）
 .btn-red {
-  background: linear-gradient(135deg,
-    rgba(239, 68, 68, 0.3) 0%,
-    rgba(220, 38, 38, 0.3) 100%);
-  backdrop-filter: blur(10px) saturate(180%);
-  -webkit-backdrop-filter: blur(10px) saturate(180%);
-  border: 2px solid rgba(239, 68, 68, 0.5);
-  color: #ef4444;
+  background: var(--grad-nav-btn);
+  border: none;
+  color: var(--btn-ink); // 8.84 / 6.96
   font-weight: 700;
-  box-shadow:
-    0 4px 15px rgba(239, 68, 68, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 15px rgba(56, 189, 248, 0.38);
 
   &:hover {
     transform: translateY(-2px);
-    background: linear-gradient(135deg,
-      rgba(248, 113, 113, 0.4) 0%,
-      rgba(239, 68, 68, 0.4) 100%);
-    border-color: rgba(239, 68, 68, 0.8);
-    color: #f87171;
-    box-shadow:
-      0 10px 25px rgba(239, 68, 68, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    filter: brightness(1.08);
+    box-shadow: 0 10px 25px rgba(56, 189, 248, 0.5);
   }
 }
 
+// 情報を見る / 探索: シアン → 藍（旧 green・「中央の予想を見る」）
 .btn-green {
-  background: linear-gradient(135deg,
-    rgba(34, 197, 94, 0.3) 0%,
-    rgba(22, 163, 74, 0.3) 100%);
-  backdrop-filter: blur(10px) saturate(180%);
-  -webkit-backdrop-filter: blur(10px) saturate(180%);
-  border: 2px solid rgba(34, 197, 94, 0.5);
-  color: #22c55e;
+  background: var(--grad-outlook-btn);
+  border: none;
+  color: var(--btn-ink); // 10.48 / 7.45
   font-weight: 700;
-  box-shadow:
-    0 4px 15px rgba(34, 197, 94, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 15px rgba(34, 211, 238, 0.38);
 
   &:hover {
     transform: translateY(-2px);
-    background: linear-gradient(135deg,
-      rgba(74, 222, 128, 0.4) 0%,
-      rgba(34, 197, 94, 0.4) 100%);
-    border-color: rgba(34, 197, 94, 0.8);
-    color: #4ade80;
-    box-shadow:
-      0 10px 25px rgba(34, 197, 94, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    filter: brightness(1.08);
+    box-shadow: 0 10px 25px rgba(34, 211, 238, 0.5);
   }
 }
 
+// 🔴 .btn-success / .btn-danger は **どこからも使われていない**（0 箇所）。
+//    かつ success / danger は状態を表す意味色で、今回の統一対象から外れる。
+//    使うときは 2 色グラデーションの方針を確認すること。
 .btn-success {
   background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
   color: #1e293b;

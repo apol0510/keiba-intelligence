@@ -373,6 +373,17 @@ export function emailFromInvoice(invoice) {
   return typeof fallback === 'string' && fallback.trim() ? fallback.trim() : null;
 }
 
+/**
+ * 実際に支払われた金額（`amount_paid`）。読めなければ null。
+ *
+ * 🔴 **`total` / `amount_due` で代用しない。** トライアルや全額割引では
+ *    請求書が「支払い済み」になるが、**支払いは発生していない**。
+ */
+export function amountPaidFromInvoice(invoice) {
+  const v = invoice?.amount_paid;
+  return Number.isFinite(v) ? v : null;
+}
+
 /** 旧形（`price.recurring` が展開済み）のときだけ月数を返す。 */
 export function periodMonthsFromInvoice(invoice) {
   const ref = priceRefFromInvoice(invoice);
@@ -410,6 +421,23 @@ async function recordPaidPeriod(email, invoice, stripe) {
   try {
     const invoiceRef = typeof invoice?.id === 'string' ? invoice.id : null;
     if (!invoiceRef) return MEMBERSHIP_RESULT.SKIPPED;
+
+    // 🔴 付与するのは「**お支払いが成功した期間**」だけ（利用規約 / §7.7）。
+    //    トライアル開始時や全額割引の **¥0 請求**でも Stripe は
+    //    `invoice.payment_succeeded` を出す。金額を見ないと、
+    //    **1 円も払っていない期間に 100 pt が付いてしまう**
+    //    （2026-09-05 の Test Clock 実測で実際に 1 行増えた）。
+    //    🔴 `total` / `amount_due` ではなく **実際に支払われた `amount_paid`** を見る。
+    const amountPaid = amountPaidFromInvoice(invoice);
+    if (amountPaid == null) {
+      // 🔴 前提が欠けたら付与しない（§7.7「前提が 1 つでも欠けたら保留」）
+      console.warn('⚠️ stripe-webhook:', note('reward accrual', 'held', 'amount_paid_missing'));
+      return MEMBERSHIP_RESULT.SKIPPED;
+    }
+    if (amountPaid <= 0) {
+      console.log('ℹ️ stripe-webhook:', note('reward accrual', 'skipped', 'zero_amount_invoice'));
+      return MEMBERSHIP_RESULT.SKIPPED;
+    }
 
     const ref = priceRefFromInvoice(invoice);
     let recurring = ref?.recurring || null;

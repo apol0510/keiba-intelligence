@@ -346,18 +346,17 @@ const bettingPlan = showBetting && validBetting.length
     border-radius: var(--radius-pill);
     font-weight: 800;
     font-size: 0.95rem;
-    color: var(--text-inverse);
-    background: var(--grad-nav);
+    color: var(--btn-ink);
+    /* 主要 CTA: 青 → 紫（白文字が AA を満たす濃いストップへ） */
+    background: var(--grad-nav-btn);
     box-shadow: 0 4px 14px rgba(124, 106, 246, 0.32);
     transition: transform var(--transition-fast);
   }
 
-  .rp-upsell-paid .up-btn {
-    background: var(--secondary-gradient);
-    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.3);
-  }
+  /* 🔴 ここにあった --secondary-gradient（橙→橙の同系色）の指定は、
+     下の 桃→橙 で上書きされる死にルールだったため削除した（2026-09-04）。 */
 
-  .up-btn:hover { transform: translateY(-1px); color: var(--text-inverse); }
+  .up-btn:hover { transform: translateY(-1px); color: var(--btn-ink); }
 
   .up-sub {
     display: inline-block;
@@ -369,7 +368,7 @@ const bettingPlan = showBetting && validBetting.length
 
   /* 有料プランの導線だけボタンを 桃→橙 にする */
   .rp-upsell-paid .up-btn {
-    background: var(--grad-action);
+    background: var(--grad-action-btn);
     box-shadow: 0 4px 14px rgba(240, 94, 86, 0.32);
   }
 
