@@ -1496,6 +1496,60 @@ URL: `https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.ap
 🔴 この branch deploy は `d13bb188` を配信しており、**2026-09-05 の配色統一（PR #97）は載っていない**。
 #1/#2/#5 は印・買い目の**出し分け**の確認なので、配色の差は判定に影響しない。
 
+### 2026-09-05 #17 — 仕様所有者が Stripe Sandbox で再現。🔴 **検証は未完了**
+
+仕様所有者から「Stripe **Sandbox** で `0510apolon+test4@gmail.com` の
+トライアル終了 → ¥3,980 決済失敗 → `past_due` / リトライ まで再現済み」との報告。
+
+#### 🔴 read-only では確認できなかった（手段が無い）
+
+| 確認したかったこと | 必要なもの | 状態 |
+|---|---|---|
+| `invoice.payment_failed` が webhook で 200 | Stripe の配信ログ | 🔴 **不可**（`STRIPE_SECRET_KEY` 未設定・Stripe CLI 無し）|
+| `Customers` の `Status` / `PlanType` / `AccessEnabled` | Airtable の read | 🔴 **不可**（`AIRTABLE_API_KEY` 未設定）|
+| `RewardLedger` の行数 | 同上 | 🔴 **不可** |
+| テスト会員の entitlement（買い目の開閉）| そのアカウントのセッション | 🔴 **不可**（ログインできない）|
+
+実施した read-only:
+
+| 検査 | 結果 |
+|---|---|
+| `netlify logs:function stripe-webhook`（45 秒）| **0 行**。ライブ配信のみで**過去ログの replay が無い**（2026-09-04 と同じ）|
+| branch deploy の webhook | 署名なし POST → **400 `invalid_signature`**（＝ Stripe env は効いている）|
+| guest の `/prediction/nankan` | **302 → `/free-prediction/nankan`**（guest の認可は正常）|
+| `/free-prediction/nankan` `/pricing` | **200** |
+
+#### 🔴 先に確かめるべき論点：Sandbox と Test Mode は別
+
+Stripe の **Sandbox は Test Mode とは別の環境**で、**API キーも webhook エンドポイントも独立**している。
+branch deploy の `STRIPE_WEBHOOK_SECRET`（Branch deploys スコープ）は
+**Test Mode の送信先 `KI Test Webhook`** のものである。
+
+したがって、Sandbox 側に
+
+`https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app/.netlify/functions/stripe-webhook`
+
+を指す送信先が**無い**か、**あっても署名シークレットが Branch deploys の値と異なる**場合、
+
+- 配信そのものが起きていない、または
+- 配信されても **400 `invalid_signature`** で弾かれ、**Airtable は一切変化していない**
+
+のどちらかになる。この場合 `Status` は元のまま（`inactive`）で、**#17 は依然として未達**。
+🔴 **「Sandbox で再現できた」ことと「webhook が届いて Airtable が変わった」ことは別**であり、
+後者は確認できていない。
+
+#### 次に必要な情報（read-only）
+
+| 出どころ | 欲しいもの |
+|---|---|
+| Stripe（Sandbox）| 当該 endpoint の**有無**と URL / `invoice.payment_failed` の**配信結果（HTTP status）** / event id と時刻 |
+| Airtable（テスト会員）| `Status` / `PlanType` / `AccessEnabled` / `RewardLedger` の行数 |
+| 実機 | テスト会員でログインした状態の `/prediction/nankan`（買い目が開くか） |
+
+上記のいずれかを共有いただくか、read-only トークンをいただければ、こちらで確認して本節を更新する。
+
+🔴 追加 write・本番操作は一切行っていない。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
