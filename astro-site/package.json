@@ -38,7 +38,7 @@
     "membership:check": "node scripts/membershipMigration.mjs --check",
     "membership:dry-run": "node scripts/membershipMigration.mjs --dry-run",
     "test:digest": "node --test src/lib/digest/digest.test.mjs",
-    "test:raceday": "node --test src/lib/prediction/raceDayContract.test.mjs",
+    "test:raceday": "node --test src/lib/prediction/raceDayContract.test.mjs src/lib/prediction/raceDayDate.test.mjs",
     "generate:digest": "node scripts/generateDailyDigest.mjs",
     "test:unsubscribe": "node --test src/lib/unsubscribe/unsubscribe.test.mjs"
   },
