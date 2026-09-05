@@ -269,12 +269,15 @@ const paymentFailed = (email, id) =>
 
 const PAID_AT_SEC = Math.floor(Date.parse('2026-08-15T00:00:00Z') / 1000);
 
+// 🔴 `amount_paid` は既定で実払いあり。本物の invoice は必ず持っている。
+//    ¥0（トライアル・全額割引）を試すときは overrides で 0 を渡す。
 const paymentSucceeded = (email, id, invoiceId = 'in_test_1', overrides = {}) =>
   makeEvent('invoice.payment_succeeded', {
     id: invoiceId,
     subscription_details: { metadata: { ki_email: email } },
     lines: { data: [{ price: { recurring: { interval: 'month', interval_count: 1 } } }] },
     status_transitions: { paid_at: PAID_AT_SEC },
+    amount_paid: 3980,
     ...overrides,
   }, id);
 
@@ -522,6 +525,59 @@ test('🔴 payment_succeeded は認可を変えない（付与だけを行う）
   assert.equal(updatesFor(ALICE).length, beforeCount, '支払い成功で認可を書き換えている');
   assert.equal(viewOf(ALICE).tier, beforeView.tier);
   assert.equal(viewOf(ALICE).view.showBetting, beforeView.view.showBetting);
+});
+
+/* ------------------------------------------------------------------
+   🔴 付与するのは「お支払いが成功した期間」だけ（利用規約 / §7.7）
+
+   トライアル開始時や全額割引の **¥0 請求**でも Stripe は
+   `invoice.payment_succeeded` を出す。金額を見ないと 1 円も払っていない
+   期間に 100 pt が付く（2026-09-05 の Test Clock 実測で実際に 1 行増えた）。
+
+   検証の仕組み: `MEMBERSHIP_WRITE_ENABLED=true` かつ Airtable の資格情報が
+   無い状態にすると、**付与しようとすれば store が使えず FAILED → 500**、
+   **付与しなければ store に触れないので 200** になる。
+   これで「store へ行ったかどうか」を応答だけで判定できる。
+   ------------------------------------------------------------------ */
+
+test('🔴 ¥0 の請求（トライアル・全額割引）では付与しない', async () => {
+  await withWriteFlag('true', async () => {
+    const res = await post(
+      paymentSucceeded(ALICE, 'evt_zero_amount', 'in_zero', { amount_paid: 0 }),
+    );
+    assert.equal(res.statusCode, 200,
+      '🔴 ¥0 の請求で付与しようとしている（1 円も払っていない期間に 100pt が付く）');
+    assert.equal(JSON.parse(res.body).error, undefined);
+  });
+});
+
+test('🔴 amount_paid が読めなければ付与しない（推測で埋めない）', async () => {
+  await withWriteFlag('true', async () => {
+    const evt = paymentSucceeded(ALICE, 'evt_no_amount', 'in_no_amount');
+    delete evt.data.object.amount_paid;
+    const res = await post(evt);
+    assert.equal(res.statusCode, 200, '🔴 前提が欠けているのに付与しようとしている');
+  });
+});
+
+test('🔴 実払いのある請求では従来どおり付与へ進む（ガードが効きすぎていない）', async () => {
+  await withWriteFlag('true', async () => {
+    const res = await post(paymentSucceeded(ALICE, 'evt_real_pay', 'in_real'));
+    // store が使えないので FAILED → 500。 **付与しようとした**ことの証拠
+    assert.equal(res.statusCode, 500,
+      '🔴 実払いのある請求で付与に進んでいない（ガードが効きすぎている）');
+    assert.equal(JSON.parse(res.body).error, 'membership_not_recorded');
+  });
+});
+
+test('🔴 amountPaidFromInvoice は total / amount_due で代用しない', async () => {
+  const { amountPaidFromInvoice } = await import('../../../netlify/functions/stripe-webhook.js');
+  assert.equal(amountPaidFromInvoice({ amount_paid: 3980 }), 3980);
+  assert.equal(amountPaidFromInvoice({ amount_paid: 0 }), 0);
+  // 🔴 total / amount_due があっても amount_paid が無ければ null（推測しない）
+  assert.equal(amountPaidFromInvoice({ total: 3980, amount_due: 3980 }), null);
+  assert.equal(amountPaidFromInvoice({}), null);
+  assert.equal(amountPaidFromInvoice(null), null);
 });
 
 /* ------------------------------------------------------------------
