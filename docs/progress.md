@@ -1550,6 +1550,65 @@ branch deploy の `STRIPE_WEBHOOK_SECRET`（Branch deploys スコープ）は
 
 🔴 追加 write・本番操作は一切行っていない。
 
+### 2026-09-05 #17 — `invoice.payment_failed` の実イベントを受領して照合（read-only）
+
+仕様所有者から実イベントの JSON を受領し、`stripe-webhook.js` の契約と突き合わせた。
+
+| 項目 | 値 |
+|---|---|
+| event id | `evt_1UCCvpLbPC6OVRqMLSTIZm7Z` |
+| type | **`invoice.payment_failed`** |
+| created | 2026-09-05 06:18:28 UTC（15:18 JST）|
+| invoice | `in_1UCCqtLbPC6OVRqMZ361cD2e` / `amount_due` **3980** `jpy` |
+| subscription | `sub_1UCCk8LbPC6OVRqMDVO7qhOv` / customer `cus_VCar1zVD6J9chN` |
+| test clock | `clock_1UCBARLbPC6OVRqME93sxVzj` |
+
+#### ✅ payload から確定したこと
+
+| 検査 | 結果 |
+|---|---|
+| **`invoice.payment_failed` が生成された** | ✅ **2026-09-03 の障害は解消**。「Stripe はこの経路で出さない」は**初回請求の話**で、更新請求なら出る |
+| `billing_reason` | **`subscription_cycle`** ＝ **更新請求**。設計どおり（初回ではない）|
+| `livemode` | **`false`** ＝ 本番ではない |
+| email の解決（`emailFromInvoice`）| ✅ `parent.subscription_details.metadata.ki_email` = テスト会員 → **第 1 分岐で解決**。`customer_email` も同値でフォールバックも効く ＝ **handler は skip しない** |
+| `metadata.ki_plan` | `premium`（`payment_failed` では未使用だが `subscription.updated` 用に正しい）|
+| price | **`price_1UAsLMLbPC6OVRqMoZ3VSfRR`** — 2026-09-03 の記録と**完全一致** |
+
+🔴 **前回提起した「Sandbox は Test Mode と別環境」の懸念は解消。**
+price と account（`acct_1U9EyPLbPC6OVRqM`）が従来の Test Mode E2E と同一なので、
+**送信先 `KI Test Webhook` が購読している環境と同じ**である。
+
+#### 🔴 この JSON だけでは判定できないこと
+
+| 項目 | 理由 |
+|---|---|
+| webhook が **200 で配信されたか** | `pending_webhooks: 0` は「配信完了」と「購読する送信先が無い」の**両方と整合**する。成否は示さない |
+| `Customers` の `Status` / `PlanType` / `AccessEnabled` | Airtable を読めない |
+| `RewardLedger` の行数 | 同上 |
+
+#### 🟡 新たに判明した注意点（dunning）
+
+`status: "open"` / `auto_advance: true` / `attempt_count: 1` /
+`next_payment_attempt: 2026-09-08 00:47 UTC`（clock 時刻）。
+
+**リトライが予約されている。** Test Clock をさらに進めると `unpaid` / `canceled` へ進み、
+`customer.subscription.updated` の分岐で **free へ降格**する（`PlanType`/`AccessEnabled` が変わる）。
+🔴 **これ以上 clock を進めないこと。** 進めなければ発火しない。
+
+#### 残っている確認（read-only・これだけ）
+
+| # | 出どころ | 欲しいもの |
+|---|---|---|
+| 1 | Stripe の Webhook 配信ログ | `evt_1UCCvpLbPC6OVRqMLSTIZm7Z` の**配信結果（HTTP status）**|
+| 2 | Airtable `Customers`（テスト会員）| `Status` / `PlanType` / `AccessEnabled` |
+| 3 | Airtable `RewardLedger` | 行数（**2 行のまま**が期待）|
+
+1 が **200** なら、コード上 `applyPlan(email, { status: 'payment_failed' })` **だけ**が走るので、
+2 は `Status=payment_failed` かつ `PlanType`/`AccessEnabled` 不変、3 は増加なしになるはず。
+1 が 400 / 未配信なら 2・3 は**変化していない**はずで、原因は送信先側にある。
+
+🔴 追加 write・本番操作は行っていない。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
