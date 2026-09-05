@@ -1785,13 +1785,13 @@ env は変更していない。
 | 1 | 新規 Test Clock（現在時刻）| — |
 | 2 | 新規 Customer（`email` はテスト会員と同じ）＋ **成功用カード `4242…`** を既定に | — |
 | 3 | Subscription 作成：`price_1UAsLM…` / `trial_period_days: 1` / `metadata: { ki_plan, ki_email }` | トライアル開始で **¥0 の `invoice.payment_succeeded`** |
-| **A** | `RewardLedger` 行数 | 🔴 **増えない（4 行のまま）** ← 今回の修正の検証 |
+| **A** | `RewardLedger`（🔴 **テスト会員の行だけ**）| 🔴 **実施前から増えない** ＋ 今回の **¥0 invoice ID を `SourceRef` に持つ行が存在しない** ← 今回の修正の検証 |
 | 4 | 支払い方法を **失敗用 `4000 0000 0000 0341`** へ差し替え | — |
 | 5-① | Test Clock を **trial 終了直後**まで進める | 更新請求が**作られる**（`status: open`）|
 | 5-② | 🔴 **さらに約 1 時間後まで**進める | 請求書の finalize と自動決済が走り、**失敗** → `invoice.payment_failed` |
 | **B** | `Customers` `Status` | **`payment_failed`** |
 | **C** | 同 `PlanType` / `AccessEnabled` | **不変** |
-| **D** | `RewardLedger` | 🔴 **4 行のまま** |
+| **D** | `RewardLedger`（🔴 **テスト会員の行だけ**）| 🔴 **実施前から増えない** ＋ 更新請求の invoice ID を `SourceRef` に持つ行も**存在しない** |
 
 🔴 手順 2 で成功用カードを使うのは、トライアル開始時の **¥0 請求だけ**を先に起こすため（¥0 なので課金は発生しない）。
 
@@ -1801,6 +1801,26 @@ trial 終了直後は請求書が作られるだけで `auto_advance` の finali
 
 🔴 5-② より先へ進めない（dunning が `unpaid`/`canceled` まで進むと free へ降格し C が壊れる）。
 🔴 **旧 Test Clock（`clock_1UCBAR…`）には触らない。**
+
+#### 🔴 A / D の判定は「テスト会員の行」で数える（2026-09-05 修正）
+
+台帳全体の行数で見ると、**別のテストメールの行が混ざって偽陽性・偽陰性になる**。
+`RewardLedger` は会員ごとに `Email` を持ち、**小文字へ正規化**して保存される
+（`airtableStore.js` の `normEmail` / 参照時も `LOWER({Email}) = …`）。
+
+したがって判定は次の 2 点で行う。
+
+| 判定 | 見方 |
+|---|---|
+| 行数 | `LOWER({Email}) = "0510apolon+test4@gmail.com"` の行だけを**実施前後で比較**し、**増加なし** |
+| 混入の有無 | 同じ絞り込みの中に、今回の **¥0 invoice の ID を `SourceRef` に持つ行が無い**こと |
+
+🔴 **別表記のテストメール（`+test5` など、プラスタグ違い）の行を混ぜない。**
+大文字小文字は保存時に潰れるが、**プラスタグは別アドレス**として扱われる。
+
+参考: `SourceRef` には invoice id がそのまま入る（`buildPaidPeriodEntry` の
+`periodRef = invoiceRef`）。冪等キー `EntryId` も同じ invoice 由来なので、
+**同じ invoice で 2 行できることはない**（＝ 1 行でも出れば付与された証拠）。
 
 A〜D がすべて期待どおりなら **#17 は PASS**。
 
