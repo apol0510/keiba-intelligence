@@ -31,6 +31,7 @@ import {
 } from '../../lib/prediction/loadRaceDay.js';
 import { isMainRace } from '../../utils/mainRaceBetting.js';
 import { verifiedRaceDay } from '../../lib/prediction/raceDayContract.js';
+import { formatRaceDate } from '../../lib/prediction/raceDayDate.js';
 
 interface Props {
   day: { category: string; date: string | null; venues: any[]; error: string | null };
@@ -62,14 +63,7 @@ function bettingLinesOf(race: any): string[] {
   return [];
 }
 
-function formatDate(d: string | null) {
-  if (!d) return '';
-  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return d;
-  const days = ['日', '月', '火', '水', '木', '金', '土'];
-  const w = days[new Date(`${d}T00:00:00+09:00`).getDay()] || '';
-  return `${Number(m[2])}月${Number(m[3])}日(${w})`;
-}
+const formatDate = formatRaceDate;
 
 const categoryLabel = category === 'jra' ? '中央競馬' : '南関東';
 
