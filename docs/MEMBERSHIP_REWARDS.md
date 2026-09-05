@@ -289,6 +289,7 @@
 
 | 前提 | 正本 | 欠けたときの挙動 |
 |---|---|---|
+| **実際に支払われた金額** | Stripe の **`invoice.amount_paid`** | 🔴 **`total` / `amount_due` で代用しない。付与しない**。🔴 **`amount_paid <= 0` なら付与しない** — トライアル開始時や全額割引の **¥0 請求**でも Stripe は `invoice.payment_succeeded` を出すため（2026-09-05 の Test Clock 実測で 100 pt が誤って付いた）|
 | 請求期間の長さ | Stripe の `price.recurring`（`interval` × `interval_count`）| 🔴 **月額へ丸めない。付与しない**（`day` / `week` / 未知の値も同様）。🔴 **`interval_count` が欠けていても 1 で補わない**（実際が四半期・半年払いだった場合に過少なまま確定するため）|
 | 支払い成功の時刻 | Stripe の `status_transitions.paid_at` | 🔴 **受信時刻（`Date.now()`）で代用しない。付与しない** |
 

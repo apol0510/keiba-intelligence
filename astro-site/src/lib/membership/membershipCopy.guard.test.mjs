@@ -499,6 +499,19 @@ describe('ランク・リワードを認可に使わない', () => {
     assert.match(wh, /membershipNotes\.length = 0;/);
   });
 
+  /**
+   * 関数本体を「次のトップレベル宣言まで」切り出す。
+   * 🔴 固定幅の slice(0, N) にしない。関数に行が増えると検査対象から外れ、
+   *    ガードが黙って効かなくなる（2026-09-05 に実際に起きた）。
+   */
+  const fnBody = (src, name) => {
+    const i = src.indexOf(name);
+    if (i < 0) return '';
+    const rest = src.slice(i + name.length);
+    const end = rest.search(/\n(?:export )?(?:async )?function |\n\/\* -{3,}/);
+    return rest.slice(0, end < 0 ? rest.length : end);
+  };
+
   test('🔴 付与の前提が欠けたら付与しない（月額へ丸めない・受信時刻で代用しない）', () => {
     const wh = read('netlify/functions/stripe-webhook.js');
 
@@ -523,12 +536,23 @@ describe('ランク・リワードを認可に使わない', () => {
     assert.equal(paidAt.slice(0, 500).includes('Date.now()'), false,
       '🔴 受信時刻で支払い時刻を代用している');
 
-    // 付与本体: どちらかが欠けたら保留（SKIPPED を返して付与しない）
-    const record = wh.slice(wh.indexOf('async function recordPaidPeriod('));
-    assert.match(record.slice(0, 1800), /periodMonths == null[\s\S]*?return MEMBERSHIP_RESULT\.SKIPPED;/);
-    assert.match(record.slice(0, 1800), /occurredAtMs == null[\s\S]*?return MEMBERSHIP_RESULT\.SKIPPED;/);
-    assert.equal(record.slice(0, 1800).includes('Date.now()'), false,
+    // 付与本体: 前提が欠けたら保留（SKIPPED を返して付与しない）
+    const record = fnBody(wh, 'async function recordPaidPeriod(');
+    assert.match(record, /periodMonths == null[\s\S]*?return MEMBERSHIP_RESULT\.SKIPPED;/);
+    assert.match(record, /occurredAtMs == null[\s\S]*?return MEMBERSHIP_RESULT\.SKIPPED;/);
+    // 🔴 ¥0 の請求（トライアル・全額割引）では付与しない
+    assert.match(record, /amountPaid == null[\s\S]*?return MEMBERSHIP_RESULT\.SKIPPED;/,
+      '🔴 amount_paid が読めないのに付与しようとしている');
+    assert.match(record, /amountPaid <= 0[\s\S]*?return MEMBERSHIP_RESULT\.SKIPPED;/,
+      '🔴 ¥0 の請求で付与している（1 円も払っていない期間に 100pt が付く）');
+    assert.equal(record.includes('Date.now()'), false,
       '🔴 付与日時に受信時刻を使っている');
+
+    // 🔴 total / amount_due で代用しない
+    const amount = fnBody(wh, 'export function amountPaidFromInvoice(');
+    assert.match(amount, /invoice\?\.amount_paid/);
+    assert.equal(/total|amount_due/.test(amount), false,
+      '🔴 total / amount_due で支払い額を代用している');
   });
 
   test('🔴 継続月数は支払い済み期間から数える（TBD-9 / TBD-10）', () => {
@@ -543,13 +567,13 @@ describe('ランク・リワードを認可に使わない', () => {
     const src = read('netlify/functions/stripe-webhook.js');
     // フラグ無しでは実行されない
     for (const fn of ['recordContractPrice', 'recordCancellation', 'recordPaidPeriod']) {
-      const body = src.slice(src.indexOf(`async function ${fn}(`));
+      const body = fnBody(src, `async function ${fn}(`);
       // フラグが無ければ何もしない
       // フラグ無しは SKIPPED（理由を残してから返す形も許す）
       assert.match(body.slice(0, 400), /if \(!isWriteEnabled\(process\.env\)\)[\s\S]{0,120}?return MEMBERSHIP_RESULT\.SKIPPED;/,
         `${fn} の先頭でフラグを確認していない`);
       // 🔴 例外でハンドラを巻き添えにしないが、**成功扱いにもしない**
-      assert.match(body.slice(0, 2200), /catch \{[\s\S]*?return MEMBERSHIP_RESULT\.FAILED;/,
+      assert.match(body, /catch \{[\s\S]*?return MEMBERSHIP_RESULT\.FAILED;/,
         `${fn} が失敗を FAILED として報告していない（握りつぶすと再送で復旧できない）`);
     }
 
