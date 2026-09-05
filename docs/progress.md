@@ -1426,6 +1426,76 @@ rollback は通常の revert PR（履歴改変はしない）。
 - Live Mode の条件（`docs/STRIPE_TESTMODE_E2E.md` の 17 項目）は
   **#1 / #2 / #5 未実施・#17 未達**のため依然として未達。
 
+### 2026-09-05 #17 の再現手順を設計（read-only 調査。**write は未実施**）
+
+2026-09-03 の実施で「Stripe がこの経路では `invoice.payment_failed` を出さない」ことが
+確定している（サブスクの**初回**請求が失敗すると、Stripe は請求書を `failed_invoice` として
+取り消し、サブスクを作らずに終える）。**更新（2 回目以降）の請求を失敗させる**必要がある。
+
+#### コードを読んで確定した前提（read-only）
+
+| 検査 | 結果 |
+|---|---|
+| `invoice.payment_failed` の処理 | `applyPlan(email, { status: 'payment_failed' })` **のみ**。`planType` / `accessEnabled` は渡さない ＝ **触らない** |
+| 宛先 email の解決（`emailFromInvoice`）| `invoice.parent.subscription_details.metadata.ki_email` → `invoice.subscription_details.metadata.ki_email` → `invoice.customer_email` の順。**どれも無ければ skip** |
+| リワード | `invoice.payment_failed` では membership store を**一切触らない**（付与は `invoice.payment_succeeded` 駆動）|
+| `customer.subscription.updated(past_due)` | `ACTIVE_STATUSES`(active/trialing) にも `canceled/unpaid/incomplete_expired` にも当たらず **`else` で無視**（Airtable 書き込みなし）→ **アクセスは止まらない** |
+| 🔴 注意 | dunning が進んで `unpaid` / `canceled` になると **free へ降格する**。**trial 終了直後より先へ時計を進めないこと** |
+
+#### 設計した再現手順（Test Clock・**未実施**）
+
+初回請求を成功させない形にして、`RewardLedger` が増えないことを素直に検査できるようにする。
+
+1. **Test Clock** を作成（現在時刻で固定）
+2. その clock に紐づく **新しいテスト Customer** を作成（`email` はテスト会員と同じ）
+3. 失敗用の支払い方法 `pm_card_chargeCustomerFail`（`4000 0000 0000 0341`）を attach し既定にする
+4. **Subscription** を作成
+   - `price` = Branch deploys スコープの `STRIPE_PRICE_PREMIUM`
+   - `trial_period_days: 1`
+   - 🔴 `metadata: { ki_plan: 'premium', ki_email: <テスト会員の email> }`
+     （これが無いと `emailFromInvoice` が null を返し **skip される**）
+5. **Test Clock を trial 終了直後まで進める**（それ以上進めない）
+   → 更新請求が作られて失敗 → **`invoice.payment_failed`** が `KI Test Webhook` へ届く
+
+#### 期待結果（実施後に埋める）
+
+| 検査 | 期待 |
+|---|---|
+| Stripe の webhook ログ | `invoice.payment_failed` が **200** |
+| `Customers`（テスト会員）| `Status` = **`payment_failed`** |
+| 同上 | `PlanType` / `AccessEnabled` が **実施前と完全に一致**（触らない契約）|
+| `RewardLedger` | **行数が変わらない**（2 行のまま）|
+| 予想ページ | アクセスが止まっていない |
+
+#### 実施前に確認済み（read-only）
+
+| 検査 | 結果 |
+|---|---|
+| branch deploy `d13bb188` | ✅ ready・`GET /` 200 |
+| webhook の設定 | ✅ 署名なし POST → **400 `invalid_signature`**（＝ `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` が Branch deploys に効いている）|
+| `/login/` `/pricing` `/free-prediction/nankan` `/mypage` | ✅ 200 |
+| guest → `/prediction/nankan` | ✅ 302 → `/free-prediction/nankan` |
+
+🔴 `MEMBERSHIP_WRITE_ENABLED` は **不要**（`invoice.payment_failed` は membership store を触らない）。
+env は変更しない。
+
+#### 🔴 承認境界（ここで停止）
+
+手順 1〜5 はすべて **Stripe Test Mode への write**。未実施。
+必要な承認・影響・rollback は本セッションの報告に記載した。
+
+#### #1 / #2 / #5 の準備（仕様所有者の実機操作待ち）
+
+| # | 画面 | 期待 |
+|---|---|---|
+| 1 | branch deploy の `/login/` でテスト用アドレスの**無料会員**としてログイン → `/free-prediction/nankan` | **印が見える / 買い目は見えない** |
+| 2 | `/pricing` | ボタンが「このプランを申し込む」・金額 **¥3,980** |
+| 5 | （課金後）`/prediction/nankan` | **買い目・AI指数・AI結論が開く / 印は出ない**（R-8）|
+
+URL: `https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app`
+🔴 この branch deploy は `d13bb188` を配信しており、**2026-09-05 の配色統一（PR #97）は載っていない**。
+#1/#2/#5 は印・買い目の**出し分け**の確認なので、配色の差は判定に影響しない。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
