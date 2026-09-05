@@ -1763,39 +1763,57 @@ mutation 検証: ガードを外すと **上位 2 件が fail** することを�
 **conflict を解決せずに merge を中止**し、`astro-site/` 配下のみ取り込む方式に切り替えた。
 このブランチは再測定専用で、記録の正本は PR #98 / #99 側にある。
 
-#### 🔴 実測の前提（未確認）
+#### 実測の前提 — ✅ 確認済み
 
-「¥0 請求 → `RewardLedger` 不増」を**意味のある検査にするには
-`MEMBERSHIP_WRITE_ENABLED=true` が Branch deploys で有効である必要がある**。
+「¥0 請求 → `RewardLedger` 不増」を意味のある検査にするには
+`MEMBERSHIP_WRITE_ENABLED=true` が Branch deploys で有効である必要がある。
+off だと**修正の有無に関係なく `write_disabled` で SKIPPED になり**、
+ガードを検証したことにならない。
 
-```js
-if (!isWriteEnabled(process.env)) {
-  note('reward accrual', 'skipped', 'write_disabled');
-  return MEMBERSHIP_RESULT.SKIPPED;   // ← フラグ off だと理由が別で「増えない」
-}
-```
+| 検査 | 結果 |
+|---|---|
+| `MEMBERSHIP_WRITE_ENABLED`（Branch deploys）| ✅ **`true`**（2026-09-05 read-only 実測）|
 
-フラグが off だと**修正の有無に関係なく増えない**ため、ガードを検証したことにならない。
-2026-09-01 に設定した記録はあるが、現状は未確認（env は変更しない）。
+🔴 この変数は非 secret のため、仕様所有者の承認のもと**この 1 変数だけ**を読んだ。
+env は変更していない。
 
 #### 再測定シナリオ（🔴 **現 Test Clock は進めない。新規に作る**）
 
 | # | 操作 | 期待 |
 |---|---|---|
+| 0 | Stripe の**アクティブな送信先**が `https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app/.netlify/functions/stripe-webhook` を向いていることを確認 | 修正版 `c3760d7e` が応答する URL |
 | 1 | 新規 Test Clock（現在時刻）| — |
 | 2 | 新規 Customer（`email` はテスト会員と同じ）＋ **成功用カード `4242…`** を既定に | — |
 | 3 | Subscription 作成：`price_1UAsLM…` / `trial_period_days: 1` / `metadata: { ki_plan, ki_email }` | トライアル開始で **¥0 の `invoice.payment_succeeded`** |
 | **A** | `RewardLedger` 行数 | 🔴 **増えない（4 行のまま）** ← 今回の修正の検証 |
 | 4 | 支払い方法を **失敗用 `4000 0000 0000 0341`** へ差し替え | — |
-| 5 | Test Clock を **trial 終了直後まで 1 回だけ**進める | 更新請求が失敗 → `invoice.payment_failed` |
+| 5-① | Test Clock を **trial 終了直後**まで進める | 更新請求が**作られる**（`status: open`）|
+| 5-② | 🔴 **さらに約 1 時間後まで**進める | 請求書の finalize と自動決済が走り、**失敗** → `invoice.payment_failed` |
 | **B** | `Customers` `Status` | **`payment_failed`** |
 | **C** | 同 `PlanType` / `AccessEnabled` | **不変** |
 | **D** | `RewardLedger` | 🔴 **4 行のまま** |
 
 🔴 手順 2 で成功用カードを使うのは、トライアル開始時の **¥0 請求だけ**を先に起こすため（¥0 なので課金は発生しない）。
-🔴 手順 5 より先へ進めない（`unpaid`/`canceled` へ進むと free へ降格し C が壊れる）。
+
+🔴 **5 を 2 段階に分けるのが要点**（2026-09-05 に手順を修正）。
+trial 終了直後は請求書が作られるだけで `auto_advance` の finalize・自動決済がまだ走らず、
+`invoice.payment_failed` が出ない。**約 1 時間ぶん進めて初めて発火する**。
+
+🔴 5-② より先へ進めない（dunning が `unpaid`/`canceled` まで進むと free へ降格し C が壊れる）。
+🔴 **旧 Test Clock（`clock_1UCBAR…`）には触らない。**
 
 A〜D がすべて期待どおりなら **#17 は PASS**。
+
+#### 配信先の確認（read-only）
+
+| 検査 | 結果 |
+|---|---|
+| このブランチの **最新** branch-deploy | ✅ **`c3760d7e`**（2026-09-05 07:45:44 UTC・ready）。これより新しいものは無い |
+| URL = git の HEAD | ✅ `origin/test/stripe-testmode-e2e-2026-09-01` = `c3760d7e` |
+| URL の応答 | ✅ 署名なし POST → **400 `invalid_signature`**（＝ 関数が動き Stripe env も効いている）|
+
+🔴 **Stripe 側の送信先設定そのものは確認できない**（Stripe の資格情報が無いため）。
+「アクティブな送信先がこの URL を向いているか」は仕様所有者が Stripe 側で確認する。
 
 #### 🔴 未実施
 
