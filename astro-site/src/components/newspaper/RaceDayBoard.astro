@@ -65,6 +65,15 @@ function bettingLinesOf(race: any): string[] {
 
 const formatDate = formatRaceDate;
 
+/**
+ * 有料表示か（＝買い目が見える tier か）。
+ *
+ * 🔴 **新しい判定を作らない。** `view.showBetting` は
+ *    `canSeeBetting(tier)`（`tierAtLeast(tier, LIGHT)`）の結果がそのまま渡ってくる、
+ *    既存の entitlement の判定である。ここで tier 名を直接見比べないこと。
+ */
+const isPaidView = !!view?.showBetting;
+
 const categoryLabel = category === 'jra' ? '中央競馬' : '南関東';
 
 /**
@@ -106,9 +115,16 @@ const venueViews = venues.map((venue: any, venueIndex: number) => {
         <span class="rdb-cat">{categoryLabel}</span>
         <strong>{formatDate(day?.date)}</strong>
       </div>
-      <p class="rdb-lead">
-        全レースの馬柱・過去走・AI短評・展開予想を<b>無料で公開</b>しています。
-      </p>
+      {/*
+        🔴 有料表示ではこのリード文を **描画しない**（要素ごと出さない）。
+           「無料で公開しています」は有料会員に対して意味を成さないため。
+           🔴 代替文言も出さない。無料会員・guest の表示は現状維持。
+      */}
+      {!isPaidView && (
+        <p class="rdb-lead">
+          全レースの馬柱・過去走・AI短評・展開予想を<b>無料で公開</b>しています。
+        </p>
+      )}
       {dropped.length > 0 && (
         <p class="rdb-dropped">
           データの整合性を確認できなかったレースが {dropped.length} 件あり、表示していません。

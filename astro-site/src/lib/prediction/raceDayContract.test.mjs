@@ -240,6 +240,75 @@ test('BaseLayout: ナビの実寸を --nav-height へ反映している', () => 
   assert.match(css, /--nav-height:/, 'トークンの既定値が無い');
 });
 
+/* ------------------------------------------------------------------
+   有料表示ではリード文（rdb-lead）を描画しない（2026-09-06）
+
+   「全レースの馬柱・過去走・AI短評・展開予想を無料で公開しています。」は
+   有料会員に対して意味を成さないため、**要素ごと出さない**。
+   🔴 代替文言も出さない。無料会員・guest の表示は現状維持。
+
+   🔴 `.astro` は node:test から import できない（ERR_UNKNOWN_FILE_EXTENSION）ため、
+      ソースの構造を静的に固定する。
+   ------------------------------------------------------------------ */
+
+test('🔴 有料表示ではリード文を描画しない（要素ごと出さない）', () => {
+  const src = read('src/components/newspaper/RaceDayBoard.astro');
+
+  // リード文は条件付きレンダリングの中にある
+  assert.match(
+    src,
+    /\{!isPaidView && \([\s\S]{0,200}?class="rdb-lead"/,
+    '🔴 リード文が無条件に描画されている（有料会員にも「無料で公開」と出る）',
+  );
+
+  // 🔴 代替文言を出さない（三項演算子で else 側に何かを描画していない）
+  const lead = src.slice(src.indexOf('isPaidView &&'), src.indexOf('rdb-dropped'));
+  assert.equal(/:\s*\(/.test(lead), false, '🔴 有料表示に代替文言を出している');
+  assert.equal(lead.includes('rdb-lead-paid'), false, '🔴 有料用のリード文を足している');
+
+  // 無料 / guest 向けの文面は変えない
+  assert.match(src, /全レースの馬柱・過去走・AI短評・展開予想を<b>無料で公開<\/b>しています。/,
+    '🔴 無料・guest 向けの文面が変わっている');
+});
+
+test('🔴 有料判定は既存の view.showBetting を使う（新しい判定を作らない）', () => {
+  const src = read('src/components/newspaper/RaceDayBoard.astro');
+
+  assert.match(src, /const isPaidView = !!view\?\.showBetting;/,
+    '🔴 既存の entitlement（view.showBetting）以外で有料を判定している');
+
+  // 🔴 tier 名を直接見比べる判定を持ち込まない（entitlement の一本化を崩さない）
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  for (const bad of ["=== 'premium'", "=== 'light'", "=== 'pro'", 'includes(\'premium\')']) {
+    assert.equal(code.includes(bad), false, `🔴 tier を直接比較している（${bad}）`);
+  }
+
+  // 🔴 印 / AI指数 / 買い目の出し分けには手を入れていない。
+  //    Props の型宣言に showMarks があるのは従来どおり。ここで見るのは **使用**。
+  assert.equal(/view\s*[?]?\.\s*showMarks/.test(code), false,
+    '🔴 RaceDayBoard が showMarks を独自に扱い始めている（出し分けは下位に委ねる）');
+  // 買い目も同様に、この階層で分岐させない（有料判定に使う showBetting は除く）
+  assert.equal(/view\s*[?]?\.\s*showBetting/g.test(code)
+    && (code.match(/view\s*[?]?\.\s*showBetting/g) || []).length > 1, false,
+    '🔴 showBetting を isPaidView 以外の場所でも見ている');
+});
+
+test('🔴 中央・南関の 4 経路すべてが同じ RaceDayBoard に view を渡す', () => {
+  // 共有コンポーネントなので、どれか 1 経路だけ直しても意味が無い
+  const pages = [
+    'src/pages/free-prediction/nankan/index.astro',
+    'src/pages/free-prediction/jra/index.astro',
+    'src/pages/prediction/nankan/index.astro',
+    'src/pages/prediction/jra/index.astro',
+  ];
+  for (const page of pages) {
+    const src = read(page);
+    assert.match(src, /import RaceDayBoard from/, `${page}: RaceDayBoard を使っていない`);
+    assert.match(src, /<RaceDayBoard[^>]*view=\{view\}/,
+      `${page}: view を渡していない（有料判定が効かない）`);
+  }
+});
+
 test('RaceDayBoard: 描画前に契約検証を通している（fail-closed）', () => {
   const src = read('src/components/newspaper/RaceDayBoard.astro');
   assert.match(src, /verifiedRaceDay\(/, '契約検証を通していない');
