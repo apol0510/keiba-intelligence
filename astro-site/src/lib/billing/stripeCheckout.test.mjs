@@ -66,6 +66,17 @@ before(() => {
   });
 });
 
+/**
+ * `STRIPE_PORTAL_RETURN_URL` の fixture。
+ *
+ * 🔴 **本番 URL を書かない。** Netlify の Secret Scanning は
+ *    「production env の値」と「リポジトリ内の文字列」の一致を検出する。
+ *    値が秘密かどうかは問わない。本番 URL を書くと、その env を production に
+ *    設定した瞬間にビルドが `exit code 2` で落ちる（2026-09-06 に発生）。
+ *    🔴 `SECRETS_SCAN_OMIT_*` で回避しない。**非本番の fixture を使う**方を守る。
+ */
+const PORTAL_RETURN_URL_FIXTURE = 'https://portal-return.invalid/mypage';
+
 beforeEach(() => {
   calls.checkout = []; calls.customers = []; calls.portal = [];
   behavior.checkoutUrl = 'https://checkout.stripe.test/s/1';
@@ -74,7 +85,7 @@ beforeEach(() => {
   behavior.throwOn = null;
   process.env['STRIPE_SECRET_KEY'] = SECRET_KEY;
   process.env['STRIPE_PRICE_PREMIUM'] = PRICE_ID;
-  process.env['STRIPE_PORTAL_RETURN_URL'] = 'https://keiba-intelligence.jp/mypage';
+  process.env['STRIPE_PORTAL_RETURN_URL'] = PORTAL_RETURN_URL_FIXTURE;
 });
 
 function cookieFor(email, tier = TIER.FREE, secret = SESSION_SECRET) {
@@ -257,7 +268,7 @@ test('E2E: 有料会員はポータル URL を受け取れる（解約導線）'
   // 🔴 顧客はセッションの email で引く（クライアント申告を使わない）
   assert.deepEqual(calls.customers[0], { email: ALICE, limit: 1 });
   assert.equal(calls.portal[0].customer, 'cus_alice');
-  assert.equal(calls.portal[0].return_url, 'https://keiba-intelligence.jp/mypage');
+  assert.equal(calls.portal[0].return_url, PORTAL_RETURN_URL_FIXTURE);
 });
 
 test('🔴 Stripe 顧客が無ければ 404（他人の顧客を開かせない）', async () => {

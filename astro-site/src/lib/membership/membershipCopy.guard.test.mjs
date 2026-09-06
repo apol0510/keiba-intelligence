@@ -527,6 +527,33 @@ describe('ランク・リワードを認可に使わない', () => {
     }
   });
 
+  test('🔴 テストの fixture に production env の値を書かない', () => {
+    // 🔴 Netlify の Secret Scanning は「production env の値」と
+    //    「リポジトリ内の文字列」の一致を検出する。値が秘密かどうかは問わない。
+    //    2026-09-06 に STRIPE_PORTAL_RETURN_URL の本番 URL がテスト 3 か所と
+    //    一致し、production ビルドが exit code 2 で 3 回落ちた。
+    //    🔴 SECRETS_SCAN_OMIT_* で回避しない。非本番の fixture を使う方を守る。
+    const files = [
+      'src/lib/billing/purchaseIntent.test.mjs',
+      'src/lib/billing/stripeCheckout.test.mjs',
+      'src/lib/billing/stripeWebhook.test.mjs',
+      'src/lib/membership/membershipE2E.test.mjs',
+    ];
+    // 🔴 検査したい文字列は STRIPE_PORTAL_RETURN_URL の値そのもの。
+    //    **このガード自身にベタ書きすると、それ自体が Secret Scanning に
+    //    検出される**（2026-09-06 に実際に気づいた）。組み立てて持つ。
+    //    素の origin（CORS の許可元）は実装の定数で env ではないため対象にしない。
+    const PROD_ORIGIN = ['https://keiba', 'intelligence.jp'].join('-');
+    const PROD_ENV_VALUES = [`${PROD_ORIGIN}/mypage`];
+    for (const f of files) {
+      const src = read(f);
+      for (const v of PROD_ENV_VALUES) {
+        assert.equal(src.includes(v), false,
+          `🔴 ${f} に production env の値がある: ${v}（.invalid 等の非本番 fixture を使う）`);
+      }
+    }
+  });
+
   test('🔴 secrets scanning を無効化していない', () => {
     // 🔴 正本（2026-09-02）: SECRETS_SCAN_OMIT_* で検査を回避しない。
     //    実値を書かない方を守る。
