@@ -305,6 +305,90 @@
   根拠としては `docs/MEMBERSHIP_DATA_MIGRATION.md` §2.1 / §2.2 の列型が
   `Date (ISO)`（時刻なし）であることと、422 の符号が一致している。
 
+### 2026-09-03 E2E 残件の整理（維持する／別件に分ける）
+
+#### テスト URL を実機確認できる状態に保つ（#1 / #2 / #5 用）
+
+| 項目 | 値 |
+|---|---|
+| URL | `https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app` |
+| 配信 commit | **`3c1ad41a`**（＝ `main` の先端。branch deploy ready 2026-09-03 09:22:19 UTC）|
+| 載っている修正 | URL による無料/有料分離（`/prediction/*` が 302）・重複登録ブロック（`alreadyRegistered`）を実測で確認済み |
+| Branch deploys スコープの env | `STRIPE_*` / `MEMBERSHIP_WRITE_ENABLED` / `SESSION_SIGNING_SECRET` / `AIRTABLE_*` / `PREVIEW_PAID_KEY` は**そのまま残してある** |
+
+🔴 **`allowed_branches` は `["main"]` に戻してあるため、これ以降このブランチに push しても
+新しい branch deploy は作られない。** 既存の deploy は生き続けるので実機確認はできる。
+コードを更新して確認したくなった場合は、`allowed_branches` の一時追加を**都度承認**のうえ行う。
+
+🔴 **#1 / #2 / #5 はこちらでは実行できない。** テスト会員としてのログインが要り、
+マジックリンクのメールを受け取れるのは仕様所有者だけであるため。
+確認していただく手順:
+
+| # | 手順 | 期待 |
+|---|---|---|
+| 1 | 上記 URL で**無料会員**としてログイン → 予想ページ | **印が見える / 買い目は見えない** |
+| 2 | `/pricing` を開く | ボタンが「このプランを申し込む」（金額 ¥3,980）|
+| 5 | 有料会員でログイン → 予想ページ | **買い目・AI指数・AI結論が開く / 印は出ない**（R-8）。🔴 買い目は `/prediction/*` 側で見る（`/free-prediction/*` では tier を問わず出ない）|
+
+#### 🔴 #6 は正本上 `duplicate:true` の実測が必須 — **未完了のまま残す**
+
+`docs/STRIPE_TESTMODE_E2E.md` 実施手順の 6 行目は
+
+| 6 | Stripe で同じイベントを再送 | 応答 **`duplicate:true`**・Airtable が二重更新されない |
+
+であり、**`duplicate:true` は期待値として明記されている**。よって「二重更新されない」だけでは
+満たしたことにならない。**未完了として残す。**
+
+##### なぜ観測できないのか（調査結果）
+
+2026-09-03 に**同一 deploy 上で同じイベントを 3 回再送**した（08:43 / 08:44 / 08:46 JST）。
+2 回目と 3 回目は**同じ event id** だったが、応答はいずれも `{"received":true}` で
+**一度も `duplicate:true` にならなかった**。
+
+`duplicate:true` を返すのは `hasProcessed(event.id)` が真のときだけで、その実体は
+
+```js
+const { getStore } = await import('@netlify/blobs');
+return getStore('stripe-events');
+```
+
+であり、**import か getStore が失敗すると `eventStore()` は null を返し、
+`hasProcessed` は常に false・`markProcessed` は無言で何もしない**（どちらも try/catch）。
+
+🔴 **`@netlify/blobs` は `astro-site/package.json` の依存に入っていない**
+（`node_modules` には netlify-cli 等の推移的依存として存在するだけ）。
+デプロイ後の関数バンドルで解決できていない可能性が高い。
+
+- **データは壊れていない。** 二重反映が起きない根拠は下流の冪等性で、
+  実測でも確認済み: `applyPlan` は同じ値を書く / `saveContractPrice` は `ALREADY` で上書きしない /
+  `appendEntry` は invoice id の冪等キーで `ALREADY`（台帳は 1 行のままだった）。
+- 🔴 ただし**イベント単位の重複防止（`markProcessed`）は効いていない疑いが強い**。
+  これは #6 が通らない理由そのものであり、**別課題として立てる**（下記 R-2）。
+
+#### 🔴 #17 は正本から除外しない — **未完了のまま維持**
+
+`invoice.payment_failed` が発火する経路（更新請求の失敗）を再現するには
+Stripe Test Clock が要り、**新しい顧客の作成**を伴う。承認範囲外のため未実施のまま。
+**「仕様上不要」として正本から落とさない。**
+
+#### E2E 残件（この 4 件が閉じるまで「17 項目すべて」は満たさない）
+
+| # | 状態 | 誰が |
+|---|---|---|
+| 1 / 2 / 5 | 未実施 | **仕様所有者**（テスト URL で実機確認）|
+| 6 | ~~未完了~~ → ✅ **PASS**（2026-09-04・R-2 の `connectLambda` 修正後に `duplicate:true` を実測）| — |
+| 17 | ~~未達~~ → ✅ **PASS**（2026-09-05・Test Clock ＋ ¥0 付与ガードの修正後に実測）| — |
+
+🔴 2026-09-05 時点の残件は **#1 / #2 / #5 の 3 件のみ**。
+
+#### E2E とは別に扱うもの（残件に数えない）
+
+| ID | 内容 | 状態 |
+|---|---|---|
+| **R-1** | Test Mode の後片付け（テストレコード削除 / Branch deploys スコープの env 削除 / webhook 送信先削除）| 未着手。🔴 **#1/#2/#5 の実機確認が終わるまで実施しない**（消すと確認できなくなる）|
+| **R-2** | `@netlify/blobs` が依存に無く、`stripe-events` ストアが機能していない疑い | 未着手。#6 の前提 |
+| **R-3** | 有料会員が `/free-prediction/*` に来たときの導線（「買い目は予想ページへ」）| 未着手。仕様所有者の判断待ち |
+
 ### 2026-09-03 PR #82 を merge ＋ 本番反映（仕様所有者承認）— 🔴 **E2E は未完了のまま**
 
 🔴 **この merge は「Test Mode E2E が完了したから」ではない。**
@@ -1006,6 +1090,808 @@ stop_builds:      false
 
 lint / typecheck: **スクリプト未定義のため実行不可**（従来どおり）。
 
+#### branch deploy（承認済み・`allowed_branches` の一時追加）
+
+Stripe Test Mode の送信先は **`test/stripe-testmode-e2e-2026-09-01` の branch deploy URL**
+（`https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app`）である。
+🔴 **Stripe の送信先 URL は変更しない**方針のため、修正を**このブランチへ cherry-pick** した
+（新規ブランチ名で branch deploy を作ると URL が変わり、Stripe から届かない）。
+
+| 項目 | 変更前 | 変更中 | 戻した先 |
+|---|---|---|---|
+| `allowed_branches` | `["main"]` | `["main","test/stripe-testmode-e2e-2026-09-01"]` | ✅ **`["main"]`** |
+
+- 変更前の設定は scratchpad の `site-before.json` に保存。
+- 変更したのは `allowed_branches` **1 項目のみ**。復旧後に
+  `repo_branch` / `stop_builds` / `base` / `cmd` / `dir` / `functions_dir` /
+  `skip_prs` / `package_path` / `build_filter` / `skip_automatic_builds` が
+  **変更前と完全一致**することを read-only で確認した。
+- 🔴 `main`（production）の扱いは変えていない。
+
+| 検査 | 結果 |
+|---|---|
+| branch deploy | ✅ **`f84431de` ready**（2026-09-03 14:17 UTC・`deploy_time` 53s・`error_message: null`）|
+| HEAD 一致 | ✅ `git rev-parse test/stripe-testmode-e2e-2026-09-01` = `f84431de` = `commit_ref` |
+| エンドポイント疎通 | ✅ 署名なし POST → **400 `invalid_signature`**（書き込み前に fail-closed）|
+| `allowed_branches` 復旧後も URL 生存 | ✅ `GET /` → **200**（既存 deploy は削除されない）|
+
+#### 🔴 実測（#6）は未実施 — 手段が無く停止
+
+| 項目 | 状態 |
+|---|---|
+| 同一 `event.id` の再送 → 2 回目 `duplicate:true` | 🔴 **未実施** |
+| Airtable / `RewardLedger` に追加更新なし | 🔴 **未実施** |
+
+理由: ローカルに **Stripe CLI が無く**、`STRIPE_SECRET_KEY`（Test）/ `STRIPE_WEBHOOK_SECRET` /
+`AIRTABLE_API_KEY` の**いずれも未設定**。署名なしの POST は 400 で弾かれるため、
+再送を成立させられない。
+
+🔴 Netlify の env から値を取り出す方法は取らなかった。
+`CLAUDE.md`「Immediate stop conditions」の
+**「secret・token・認証値が出力される可能性」**に該当するため、独断で実行しない。
+
+#### Draft PR
+
+| 項目 | 値 |
+|---|---|
+| PR | **#95**（Draft・base `main`・`MERGEABLE`）|
+| branch | `fix/blobs-dependency-idempotency-2026-09-03`（`origin/main` `e8cdad36` を merge 済み）|
+
+🔴 **未実施の高リスク操作**: main merge / Production deploy / Stripe 設定変更 / Test Mode の cleanup。
+
+### 2026-09-04 #6 は FAIL → 真因を確定（v1 Lambda で `connectLambda` を呼んでいなかった）
+
+#### 実測（仕様所有者が実施）
+
+| # | 内容 | 実施 | HTTP | 応答 |
+|---|---|---|---|---|
+| 1 | `customer.subscription.deleted`（同一 `event.id`）| 2026-09-04 10:10:48 JST | **200** | `{"received":true}` |
+| 2 | 同上・再送 | 10:12:15 JST | **200** | `{"received":true}` |
+
+🔴 **2 回目も `duplicate:true` にならず ＝ #6 は FAIL。merge しない。**
+
+#### Netlify Function logs は取得できなかった
+
+- `netlify logs:function stripe-webhook` は**ライブストリームのみ**で、45 秒待っても 0 行。
+  過去ログの replay は無い。
+- `netlify api --list` に **function log 取得の method は存在しない**
+  （`searchSiteFunctions` / `updateSiteBuildLog` / `uploadDeployFunction` のみ）。
+- 🔴 Netlify env から token を取り出して独自に叩く方法は取らなかった
+  （`CLAUDE.md`「Immediate stop conditions」の「secret・token・認証値が出力される可能性」）。
+
+**そこでログではなく `@netlify/blobs@10.5.0` の実ソースから確定させた。**
+
+#### 真因（実装ソースで確定）
+
+`stripe-webhook.js` は **v1（Lambda 互換）関数**である。
+
+- `export async function handler(event)` / `event.httpMethod` / `{ statusCode, body }` を返す
+
+v1 では **Blobs の環境が `process.env` に入らない**。`siteID` / `token` は
+**`event.blobs`（base64）と `x-nf-site-id` / `x-nf-deploy-id` ヘッダー**で渡ってくる。
+これを環境へ展開するのが `connectLambda(event)`（`dist/main.js` の `lambda_compat.ts`）。
+
+呼んでいなかったため、次の順で必ず失敗していた。
+
+| 段 | 実装 | 結果 |
+|---|---|---|
+| 1 | `getEnvironmentContext()` が `globalThis.netlifyBlobsContext` / `NETLIFY_BLOBS_CONTEXT` を見る | どちらも無いので **`{}`** |
+| 2 | `getStore('stripe-events')` → `getClientOptions({}, undefined)` | `siteID` / `token` が undefined |
+| 3 | `if (!siteID || !token) throw new MissingBlobsEnvironmentError(["siteID","token"])` | **throw** |
+| 4 | 旧実装の引数なし `catch {}` | **握りつぶし → `null`** |
+| 5 | `hasProcessed()` | **常に `false`（毎回「初回」扱い）** |
+
+🔴 これで「3 回再送しても `duplicate:true` が出ない」が完全に説明できる。
+
+**なお `getStore` が文字列引数で throw する点は、前 commit の想定（`get`/`set` で落ちる）とは異なる。**
+`getClientOptions` は `Store` を作る前に呼ばれるため、**落ちるのは `getStore` の中**である。
+
+#### 恒久修正
+
+```js
+async function eventStore(event) {
+  const { getStore, connectLambda } = await import('@netlify/blobs');
+  if (event?.blobs && typeof connectLambda === 'function') connectLambda(event);
+  return getStore('stripe-events');
+}
+```
+
+`event` を `hasProcessed(event, id)` / `markProcessed(event, id)` へ渡す。
+`event.blobs` が無い環境（単体テスト等）では `connectLambda` を呼ばない。
+
+#### 🔴 単体テストが見逃した理由と、その恒久対策
+
+mock は環境を要求しないので、`connectLambda` が無くても緑だった。
+**mock を本番と同じ条件に変えた。**
+
+- `post()` が**本番同型の Lambda イベント**（`event.blobs` ＋ `x-nf-*` ヘッダー）を送る
+- mock の `getStore` は `connectLambda` 未呼び出しなら **`MissingBlobsEnvironmentError` を投げる**
+
+これで**既存の冪等性テストが実効ガードになる**。
+実際に `connectLambda` を外すと **4 件が fail** することを確認した（mutation 検証）。
+
+| 外したときに落ちるテスト |
+|---|
+| 🔴 冪等: 同じ `event.id` を二度処理しない |
+| 🔴 同じ invoice の `payment_succeeded` を再送しても二重処理しない |
+| 🔴 membership 失敗のイベントは processed にしない |
+| 🔴 フラグ未設定（やることが無い）は失敗にしない |
+
+静的ガードにも `connectLambda` の**呼び出し順**・`event` の受け渡し・
+テストが本番同型イベントを送っていることを追加（4 → **6 件**）。
+
+#### 併せて直したもの（本修正が必要にしたもの）
+
+`membershipCopy.guard.test.mjs` が `'await markProcessed(stripeEvent.id);'` を
+**文字列でハードコード**しており、シグネチャ変更で落ちた。
+検査したいのは「**失敗判定より後に記録すること**」であって引数の形ではないため、
+`'await markProcessed('` を探す形に変えた（意図は不変）。
+
+#### テスト結果
+
+| コマンド | 結果 |
+|---|---|
+| `npm run test:stripe` | ✅ **71 pass / 0 fail**（webhook 48・checkout 17・ガード 6）|
+| `npm run build` | ✅ **exit 0**・全 **14 スイート fail 0** |
+
+#### branch deploy（承認済み・`allowed_branches` の一時追加 → 復旧）
+
+| 項目 | 変更前 | 変更中 | 戻した先 |
+|---|---|---|---|
+| `allowed_branches` | `["main"]` | `["main","test/stripe-testmode-e2e-2026-09-01"]` | ✅ **`["main"]`** |
+
+| 検査 | 結果 |
+|---|---|
+| branch deploy | ✅ **`d13bb188` ready**（2026-09-04 01:20 UTC・`deploy_time` 386s・`error_message: null`）|
+| HEAD 一致 | ✅ `origin/test/stripe-testmode-e2e-2026-09-01` = `commit_ref` = `d13bb188` |
+| 疎通 | ✅ 署名なし POST → **400 `invalid_signature`**（書き込み前に fail-closed）|
+| 設定復旧 | ✅ **18 項目すべて変更前と完全一致**（`allowed_branches` / `repo_branch` / `stop_builds` / `base` / `cmd` / `dir` / `functions_dir` / `skip_prs` / `package_path` / `build_filter` / `skip_automatic_builds` / `private_logs` / `untrusted_flow` / `public_repo` / `provider` / `repo_url` / `repo_path` / `base_rel_dir`）|
+| 復旧後の URL 生存 | ✅ `GET /` → **200**（既存 deploy は削除されない）|
+
+### 2026-09-04 #6 実測 — ✅ **PASS**（仕様所有者が実施）
+
+修正済み branch deploy（`d13bb188`）に対し、**同一 `event.id` を再送**した。
+
+| 検査 | 結果 | 判定 |
+|---|---|---|
+| 2 回目の応答 | **HTTP 200 / `{"received":true,"duplicate":true}`** | ✅ |
+| `RewardLedger`（テスト会員）| **2 行のまま**（9/2・9/3 のみ。**9/4 の追加なし**）| ✅ |
+| `Customers`（同）| **1 レコードのみ** / `inactive` / `CancelledAt=2026-09-03` | ✅ |
+
+Airtable は **read-only で確認**（追加更新なし）。
+
+🔴 **修正前との対比**
+
+| | 修正前（`f84431de`）| 修正後（`d13bb188`）|
+|---|---|---|
+| 1 回目 | 200 `{"received":true}` | 200 `{"received":true}` |
+| 2 回目（同一 `event.id`）| 200 `{"received":true}` ❌ | **200 `{"received":true,"duplicate":true}`** ✅ |
+
+これで `docs/STRIPE_TESTMODE_E2E.md` の **#6 は PASS**。
+🔴 ただし #1 / #2 / #5（未実施）と **#17（未達）** は変わっていないため、
+「17 項目すべてが期待どおり」という **Live Mode へ進む条件は依然として満たしていない**。
+
+#### 🔴 Test Mode cleanup は未実施（承認境界で停止）
+
+外部サービスの設定変更・削除を含むため実行していない。対象と rollback は
+`CLAUDE.md`「High-risk approval boundary」に従い、承認を得るまで着手しない。
+
+### 2026-09-04 PR #95 を squash merge ＋ 本番反映（仕様所有者承認）
+
+| 項目 | 値 |
+|---|---|
+| PR | **#95**（Draft 解除 → **squash merge**）|
+| merge 方式 | ✅ **squash merge**（`CLAUDE.md`「🔀 Git マージ規約 🔀」どおり。PR #82 の誤りを繰り返していない）|
+| `main` 先端 | **`bc1e5e6a`** 🔒 Stripe webhook の冪等性を修正: v1 Lambda 関数で connectLambda を呼ぶ (#95) |
+| merged at | 2026-09-04 06:52:34 UTC |
+| 本番デプロイ | ✅ **`bc1e5e6a` production ready**（published 06:58:36 UTC・`deploy_time` 357s・`error_message: null`）|
+
+🔴 squash により branch の commit SHA（`350a2c45` / `726eb7d1` 等）は `main` に残らない。
+**内容は本書の本文に書いてあるので、SHA を辿る必要はない。**
+
+#### merge 前の最終検証
+
+| 検査 | 結果 |
+|---|---|
+| 追随方法 | **通常 merge のみ**（専用 worktree・detached HEAD）。rebase / reset / force / cherry-pick 不使用 |
+| merge conflict | なし（`origin/main` の 3 commits はデータ自動取込のみ）|
+| ahead / behind | **behind=0 / ahead=7** |
+| `npm ci`（新規 worktree）| ✅ exit 0 ＝ package.json と lockfile の整合を証明 |
+| `npm run test:stripe` | ✅ 71 pass / 0 fail |
+| `npm run build` | ✅ exit 0・全 14 スイート fail 0 |
+| secret / PII | ✅ 追加行に検出なし |
+| CI | ✅ PASS（deploy-preview ready）|
+| PR 全体 | 7 files / +475 / −16 |
+
+#### 本番での実測（read-only）
+
+🔴 POST は **独自ドメインへ直接**送った（`netlify.app` は 301 で GET に変換されるため使わない）。
+
+| 検査 | 結果 | 判定 |
+|---|---|---|
+| `GET /.netlify/functions/stripe-webhook` | **405** `method_not_allowed` | ✅ |
+| `POST`（署名なし）| **503** `not_configured` | ✅ fail-closed |
+| guest → `/prediction/nankan` | **302 → `/free-prediction/nankan`** | ✅ |
+| guest → `/prediction/jra` | **302 → `/free-prediction/jra`** | ✅ |
+| `/free-prediction/{nankan,jra}` | **200** | ✅ |
+| `/register` / `/pricing` / `/mypage` | **200** | ✅ |
+| `/login` | **301 → `/login/`**（末尾スラッシュ正規化）| ✅ |
+
+🔴 **本番の 503 `not_configured` は正常。** `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` が
+**production スコープに未設定**であることを意味する（Live Mode 未設定＝現状の意図どおり）。
+この分岐は本 PR で**一切触れていない**ので、今回の変更による退行ではない。
+
+**したがって、この修正が本番で実際に効くのは Live Mode を設定してからである。**
+Test Mode の branch deploy では #6 が PASS 済み。
+
+#### 会員影響
+
+- 変更したのは `stripe-webhook.js` の **Blobs 冪等性まわりのみ**。
+  **認可・entitlement の仕様は変更していない**（`applyPlan` / `resolveEntitlement` /
+  tier 判定に差分なし）。
+- 本番の 503 fail-closed により、**署名検証なしの書き込みは起きない**。
+
+#### rollback
+
+問題があれば **通常の revert PR** で戻す。🔴 履歴改変（force / reset / rebase）は行わない。
+
+#### 🔴 未実施（承認境界）
+
+- **Test Mode cleanup**（対象と rollback は前節のとおり。外部サービスの設定変更・削除を含む）
+- **Live Mode 設定**（production スコープへの `STRIPE_*` 設定 ＝ secret 変更）
+- Live Mode へ進む条件（`docs/STRIPE_TESTMODE_E2E.md` の 17 項目すべて）は
+  **#1 / #2 / #5 未実施・#17 未達**のため**依然として満たしていない**。
+
+
+
+
+
+### 2026-09-05 押せる UI の配色を統一（PR #97 を squash merge ＋ 本番反映）
+
+| 項目 | 値 |
+|---|---|
+| PR | **#97**（Draft 解除 → **squash merge**）|
+| `main` 先端 | **`88b7b88a`** |
+| merged at | 2026-09-04 15:43:18 UTC |
+| 本番デプロイ | ✅ **production ready**（published 15:44:23 UTC・`deploy_time` 62s・`error_message: null`）|
+| 変更規模 | **25 files / +502 −269**（データ自動取込を除く）|
+
+#### きっかけ
+
+`/login` の送信成功メッセージが読めないという指摘。原因は
+**明るい背景のページにダークテーマ用の配色が残っていたこと**で、
+同じ欠陥がサイト全体にあった。
+
+#### 確定した方針（2026-09-05・仕様所有者）
+
+- 押せる UI は **単色・同系色の濃淡を使わず、明確に異なる 2 色のグラデーション**にする
+- 気に入っている 3 か所を基準にする:
+  ヘッダー/フッターの「KEIBA Intelligence」・フッターの無料会員登録ボタン・チャットボタン
+- **明るい配色 ＋ 濃色文字**（白文字にしない）
+- 意味色（枠色・印色・chart 色・`badge-*`・`disabled`）は変更しない
+
+#### 確定した配色（`global.scss` のトークン）
+
+| トークン | 配色 | 濃色文字のコントラスト |
+|---|---|---|
+| `--btn-ink` | `#0b1020` | — |
+| `--grad-nav-btn`（主要 CTA）| 空 → 藤 → ほんのり桃 `#38bdf8 → #a78bfa 60% → #f9a8d4` | 8.84 / 6.96 / 10.44 |
+| `--grad-outlook-btn`（探索）| シアン → 青 → ほんのり藤 `#22d3ee → #60a5fa 55% → #c4b5fd` | 10.48 / 7.45 / 10.26 |
+| `--grad-conclusion-btn`（AI 判断）| 藤 → 桃 `#c084fc → #f472b6` | 7.17 / 7.15 |
+| `--grad-action-btn`（購入/登録）| 桃 → 琥珀 `#f472b6 → #fbbf24` | 7.15 / 11.34 |
+| `--grad-tool-btn`（控えめ補助）| 淡空 → 淡藤 → 淡桃 `#bae6fd → #ddd6fe 60% → #fbcfe8` | 14.27 / 13.64 / 13.70 |
+
+🔴 **hover は単色に戻さない。** 2 色を保ったまま `background-position` /
+`brightness` / `shadow` で変化させる。
+
+#### 途中で見つかった 3 つの真因（いずれも記録に値する）
+
+1. 🔴 **plain CSS に `//` コメントを書いて宣言を無効化していた**
+   `index.astro` の `<style>` は `lang="scss"` ではない。CSS にスラッシュ 2 つの
+   コメントは無いため、**そこから次のセミコロンまでが 1 つの不正な宣言**として
+   捨てられ、直後の `background` ごと消えていた。ヒーローが青→橙のままだったのは
+   これが原因（specificity の問題ではなかった）。コメントの入れ子（`/* */` の中に
+   `/* */`）も同様に壊れる。
+2. 🔴 **`.hero` に背景画像の残骸オーバーレイが残っていた**
+   `rgba(15,23,42,0.50→0.10)` が白いページに重なり「中間グレーの帯」を作っていた。
+   明度が中間なので明るい文字も暗い文字も読めない。`@media (max-width: 640px)` に
+   **別途もう 1 か所**あり、モバイルだけ直らない原因になっていた。
+3. 🔴 **淡い色はページ背景（`--bg-primary #f5f7fb`）と近く「灰色」に見える**
+   `#e0f2fe → #ede9fe` まで色を入れても灰色に見えると指摘された。
+   淡さで刻むと判別できないため、**既存トークンをそのまま使う**方が早い。
+
+#### 既存ガードの更新（本修正が必要にしたもの）
+
+`entitlementRoutes.test.mjs` / `purchaseIntent.test.mjs` が
+`var(--grad-nav)` / `var(--grad-action)` を文字列で固定していたため、
+`-btn` 変種を許容する形にした。**役割分担の検査意図は変えていない。**
+新トークンも「2 色であること」を検査対象に追加した。
+
+#### 本番での実測（read-only）
+
+| 検査 | 結果 |
+|---|---|
+| `/` `/pricing` `/login/` `/register` `/free-prediction/nankan` `/mypage` `/archive/nankan/` | **200** ✅ |
+| guest → `/prediction/nankan` | **302 → `/free-prediction/nankan`** ✅ 認可は不変 |
+| `POST /.netlify/functions/stripe-webhook`（署名なし）| **503 `not_configured`** ✅ fail-closed |
+| 配信 CSS のトークン | 6 つすべて確認 ✅ |
+| ヒーロー背景 | `linear-gradient(180deg,#e0f2fe,#f5f3ff 55%,#fff)` ✅ |
+| 旧オーバーレイ `rgba(15,23,42` | **残存 0** ✅ |
+
+🔴 **auth / entitlement / Stripe / API / 表示条件は変更していない。**
+rollback は通常の revert PR（履歴改変はしない）。
+
+#### 🔴 未実施（承認境界）
+
+- **Test Mode cleanup**（対象と rollback は 2026-09-04 の節のとおり）
+- **Live Mode 設定**（production スコープへの `STRIPE_*` 設定 ＝ secret 変更）
+- Live Mode の条件（`docs/STRIPE_TESTMODE_E2E.md` の 17 項目）は
+  **#1 / #2 / #5 未実施・#17 未達**のため依然として未達。
+
+### 2026-09-05 #17 の再現手順を設計（read-only 調査。**write は未実施**）
+
+2026-09-03 の実施で「Stripe がこの経路では `invoice.payment_failed` を出さない」ことが
+確定している（サブスクの**初回**請求が失敗すると、Stripe は請求書を `failed_invoice` として
+取り消し、サブスクを作らずに終える）。**更新（2 回目以降）の請求を失敗させる**必要がある。
+
+#### コードを読んで確定した前提（read-only）
+
+| 検査 | 結果 |
+|---|---|
+| `invoice.payment_failed` の処理 | `applyPlan(email, { status: 'payment_failed' })` **のみ**。`planType` / `accessEnabled` は渡さない ＝ **触らない** |
+| 宛先 email の解決（`emailFromInvoice`）| `invoice.parent.subscription_details.metadata.ki_email` → `invoice.subscription_details.metadata.ki_email` → `invoice.customer_email` の順。**どれも無ければ skip** |
+| リワード | `invoice.payment_failed` では membership store を**一切触らない**（付与は `invoice.payment_succeeded` 駆動）|
+| `customer.subscription.updated(past_due)` | `ACTIVE_STATUSES`(active/trialing) にも `canceled/unpaid/incomplete_expired` にも当たらず **`else` で無視**（Airtable 書き込みなし）→ **アクセスは止まらない** |
+| 🔴 注意 | dunning が進んで `unpaid` / `canceled` になると **free へ降格する**。**trial 終了直後より先へ時計を進めないこと** |
+
+#### 設計した再現手順（Test Clock・**未実施**）
+
+初回請求を成功させない形にして、`RewardLedger` が増えないことを素直に検査できるようにする。
+
+1. **Test Clock** を作成（現在時刻で固定）
+2. その clock に紐づく **新しいテスト Customer** を作成（`email` はテスト会員と同じ）
+3. 失敗用の支払い方法 `pm_card_chargeCustomerFail`（`4000 0000 0000 0341`）を attach し既定にする
+4. **Subscription** を作成
+   - `price` = Branch deploys スコープの `STRIPE_PRICE_PREMIUM`
+   - `trial_period_days: 1`
+   - 🔴 `metadata: { ki_plan: 'premium', ki_email: <テスト会員の email> }`
+     （これが無いと `emailFromInvoice` が null を返し **skip される**）
+5. **Test Clock を trial 終了直後まで進める**（それ以上進めない）
+   → 更新請求が作られて失敗 → **`invoice.payment_failed`** が `KI Test Webhook` へ届く
+
+#### 期待結果（実施後に埋める）
+
+| 検査 | 期待 |
+|---|---|
+| Stripe の webhook ログ | `invoice.payment_failed` が **200** |
+| `Customers`（テスト会員）| `Status` = **`payment_failed`** |
+| 同上 | `PlanType` / `AccessEnabled` が **実施前と完全に一致**（触らない契約）|
+| `RewardLedger` | **行数が変わらない**（2 行のまま）|
+| 予想ページ | アクセスが止まっていない |
+
+#### 実施前に確認済み（read-only）
+
+| 検査 | 結果 |
+|---|---|
+| branch deploy `d13bb188` | ✅ ready・`GET /` 200 |
+| webhook の設定 | ✅ 署名なし POST → **400 `invalid_signature`**（＝ `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` が Branch deploys に効いている）|
+| `/login/` `/pricing` `/free-prediction/nankan` `/mypage` | ✅ 200 |
+| guest → `/prediction/nankan` | ✅ 302 → `/free-prediction/nankan` |
+
+🔴 `MEMBERSHIP_WRITE_ENABLED` は **不要**（`invoice.payment_failed` は membership store を触らない）。
+env は変更しない。
+
+#### 🔴 承認境界（ここで停止）
+
+手順 1〜5 はすべて **Stripe Test Mode への write**。未実施。
+必要な承認・影響・rollback は本セッションの報告に記載した。
+
+#### #1 / #2 / #5 の準備（仕様所有者の実機操作待ち）
+
+| # | 画面 | 期待 |
+|---|---|---|
+| 1 | branch deploy の `/login/` でテスト用アドレスの**無料会員**としてログイン → `/free-prediction/nankan` | **印が見える / 買い目は見えない** |
+| 2 | `/pricing` | ボタンが「このプランを申し込む」・金額 **¥3,980** |
+| 5 | （課金後）`/prediction/nankan` | **買い目・AI指数・AI結論が開く / 印は出ない**（R-8）|
+
+URL: `https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app`
+🔴 この branch deploy は `d13bb188` を配信しており、**2026-09-05 の配色統一（PR #97）は載っていない**。
+#1/#2/#5 は印・買い目の**出し分け**の確認なので、配色の差は判定に影響しない。
+
+### 2026-09-05 #17 — 仕様所有者が Stripe Sandbox で再現。🔴 **検証は未完了**
+
+仕様所有者から「Stripe **Sandbox** で `0510apolon+test4@gmail.com` の
+トライアル終了 → ¥3,980 決済失敗 → `past_due` / リトライ まで再現済み」との報告。
+
+#### 🔴 read-only では確認できなかった（手段が無い）
+
+| 確認したかったこと | 必要なもの | 状態 |
+|---|---|---|
+| `invoice.payment_failed` が webhook で 200 | Stripe の配信ログ | 🔴 **不可**（`STRIPE_SECRET_KEY` 未設定・Stripe CLI 無し）|
+| `Customers` の `Status` / `PlanType` / `AccessEnabled` | Airtable の read | 🔴 **不可**（`AIRTABLE_API_KEY` 未設定）|
+| `RewardLedger` の行数 | 同上 | 🔴 **不可** |
+| テスト会員の entitlement（買い目の開閉）| そのアカウントのセッション | 🔴 **不可**（ログインできない）|
+
+実施した read-only:
+
+| 検査 | 結果 |
+|---|---|
+| `netlify logs:function stripe-webhook`（45 秒）| **0 行**。ライブ配信のみで**過去ログの replay が無い**（2026-09-04 と同じ）|
+| branch deploy の webhook | 署名なし POST → **400 `invalid_signature`**（＝ Stripe env は効いている）|
+| guest の `/prediction/nankan` | **302 → `/free-prediction/nankan`**（guest の認可は正常）|
+| `/free-prediction/nankan` `/pricing` | **200** |
+
+#### 🔴 先に確かめるべき論点：Sandbox と Test Mode は別
+
+Stripe の **Sandbox は Test Mode とは別の環境**で、**API キーも webhook エンドポイントも独立**している。
+branch deploy の `STRIPE_WEBHOOK_SECRET`（Branch deploys スコープ）は
+**Test Mode の送信先 `KI Test Webhook`** のものである。
+
+したがって、Sandbox 側に
+
+`https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app/.netlify/functions/stripe-webhook`
+
+を指す送信先が**無い**か、**あっても署名シークレットが Branch deploys の値と異なる**場合、
+
+- 配信そのものが起きていない、または
+- 配信されても **400 `invalid_signature`** で弾かれ、**Airtable は一切変化していない**
+
+のどちらかになる。この場合 `Status` は元のまま（`inactive`）で、**#17 は依然として未達**。
+🔴 **「Sandbox で再現できた」ことと「webhook が届いて Airtable が変わった」ことは別**であり、
+後者は確認できていない。
+
+#### 次に必要な情報（read-only）
+
+| 出どころ | 欲しいもの |
+|---|---|
+| Stripe（Sandbox）| 当該 endpoint の**有無**と URL / `invoice.payment_failed` の**配信結果（HTTP status）** / event id と時刻 |
+| Airtable（テスト会員）| `Status` / `PlanType` / `AccessEnabled` / `RewardLedger` の行数 |
+| 実機 | テスト会員でログインした状態の `/prediction/nankan`（買い目が開くか） |
+
+上記のいずれかを共有いただくか、read-only トークンをいただければ、こちらで確認して本節を更新する。
+
+🔴 追加 write・本番操作は一切行っていない。
+
+### 2026-09-05 #17 — `invoice.payment_failed` の実イベントを受領して照合（read-only）
+
+仕様所有者から実イベントの JSON を受領し、`stripe-webhook.js` の契約と突き合わせた。
+
+| 項目 | 値 |
+|---|---|
+| event id | `evt_1UCCvpLbPC6OVRqMLSTIZm7Z` |
+| type | **`invoice.payment_failed`** |
+| created | 2026-09-05 06:18:28 UTC（15:18 JST）|
+| invoice | `in_1UCCqtLbPC6OVRqMZ361cD2e` / `amount_due` **3980** `jpy` |
+| subscription | `sub_1UCCk8LbPC6OVRqMDVO7qhOv` / customer `cus_VCar1zVD6J9chN` |
+| test clock | `clock_1UCBARLbPC6OVRqME93sxVzj` |
+
+#### ✅ payload から確定したこと
+
+| 検査 | 結果 |
+|---|---|
+| **`invoice.payment_failed` が生成された** | ✅ **2026-09-03 の障害は解消**。「Stripe はこの経路で出さない」は**初回請求の話**で、更新請求なら出る |
+| `billing_reason` | **`subscription_cycle`** ＝ **更新請求**。設計どおり（初回ではない）|
+| `livemode` | **`false`** ＝ 本番ではない |
+| email の解決（`emailFromInvoice`）| ✅ `parent.subscription_details.metadata.ki_email` = テスト会員 → **第 1 分岐で解決**。`customer_email` も同値でフォールバックも効く ＝ **handler は skip しない** |
+| `metadata.ki_plan` | `premium`（`payment_failed` では未使用だが `subscription.updated` 用に正しい）|
+| price | **`price_1UAsLMLbPC6OVRqMoZ3VSfRR`** — 2026-09-03 の記録と**完全一致** |
+
+🔴 **前回提起した「Sandbox は Test Mode と別環境」の懸念は解消。**
+price と account（`acct_1U9EyPLbPC6OVRqM`）が従来の Test Mode E2E と同一なので、
+**送信先 `KI Test Webhook` が購読している環境と同じ**である。
+
+#### 🔴 この JSON だけでは判定できないこと
+
+| 項目 | 理由 |
+|---|---|
+| webhook が **200 で配信されたか** | `pending_webhooks: 0` は「配信完了」と「購読する送信先が無い」の**両方と整合**する。成否は示さない |
+| `Customers` の `Status` / `PlanType` / `AccessEnabled` | Airtable を読めない |
+| `RewardLedger` の行数 | 同上 |
+
+#### 🟡 新たに判明した注意点（dunning）
+
+`status: "open"` / `auto_advance: true` / `attempt_count: 1` /
+`next_payment_attempt: 2026-09-08 00:47 UTC`（clock 時刻）。
+
+**リトライが予約されている。** Test Clock をさらに進めると `unpaid` / `canceled` へ進み、
+`customer.subscription.updated` の分岐で **free へ降格**する（`PlanType`/`AccessEnabled` が変わる）。
+🔴 **これ以上 clock を進めないこと。** 進めなければ発火しない。
+
+#### 残っている確認（read-only・これだけ）
+
+| # | 出どころ | 欲しいもの |
+|---|---|---|
+| 1 | Stripe の Webhook 配信ログ | `evt_1UCCvpLbPC6OVRqMLSTIZm7Z` の**配信結果（HTTP status）**|
+| 2 | Airtable `Customers`（テスト会員）| `Status` / `PlanType` / `AccessEnabled` |
+| 3 | Airtable `RewardLedger` | 行数（**2 行のまま**が期待）|
+
+1 が **200** なら、コード上 `applyPlan(email, { status: 'payment_failed' })` **だけ**が走るので、
+2 は `Status=payment_failed` かつ `PlanType`/`AccessEnabled` 不変、3 は増加なしになるはず。
+1 が 400 / 未配信なら 2・3 は**変化していない**はずで、原因は送信先側にある。
+
+🔴 追加 write・本番操作は行っていない。
+
+### 2026-09-05 #17 — webhook 配信 **200 / `{"received":true}`** を確認
+
+`evt_1UCCvpLbPC6OVRqMLSTIZm7Z`（`invoice.payment_failed`）の配信結果を
+仕様所有者が Stripe の配信ログで確認。**HTTP 200 / `{"received":true}`**。
+
+#### この 200 から言えること
+
+| 事実 | 根拠 |
+|---|---|
+| **署名検証を通った** | 通らなければ **400 `invalid_signature`** で終わる |
+| **初回配信として処理された** | 応答に `duplicate` が**無い**。処理済みなら `{"received":true,"duplicate":true}` |
+| **ハンドラが例外で落ちていない** | 落ちれば 500 `handler_failed` |
+| **`payment_failed` の分岐に入った** | email が解決できなければ warn して break するが、それでも 200。ただし本イベントは `parent.subscription_details.metadata.ki_email` を持つので**解決している** |
+| **処理済みとして記録された** | 200 を返した後に `markProcessed()` が走る。R-2 の `connectLambda` 修正が入っているので Blobs に記録され、**再送すれば `duplicate:true` になる**はず |
+
+#### 🔴 200 は「Airtable に書けた」ことを意味しない
+
+`applyPlan()` は **顧客レコードが見つからなければ `console.warn` して `false` を返すだけ**で、
+ハンドラはそのまま 200 を返す。
+
+```js
+const record = await findCustomer(email);
+if (!record) {
+  console.warn('⚠️ stripe-webhook: customer record not found (skipped)');
+  return false;   // ← 200 のまま
+}
+```
+
+したがって **`Status=payment_failed` になったかは Airtable を見るまで確定しない**。
+（`0510apolon+test4@gmail.com` のレコードは 2026-09-04 時点で存在が確認されているので、
+更新されている可能性が高い。）
+
+#### 残っている確認（read-only。Stripe 側の操作は不要）
+
+| # | 対象 | 期待 |
+|---|---|---|
+| 1 | `Customers`（テスト会員）`Status` | **`payment_failed`** |
+| 2 | 同 `PlanType` | **不変**（`payment_failed` の分岐は渡さない）|
+| 3 | 同 `AccessEnabled` | **不変**（同上）|
+| 4 | `RewardLedger` 行数 | **2 行のまま**（`payment_failed` は store を触らない）|
+| 5 | 実会員レコード | **変更なし** |
+| 6 | entitlement | テスト会員でログインして `/prediction/nankan` が**開いたまま**（アクセスは止まらない）|
+
+🔴 Test Clock はこれ以上進めない（`unpaid`/`canceled` へ進むと free へ降格する）。
+🔴 追加 write・本番操作は行っていない。
+
+### 2026-09-05 #17 実測 — 🔴 **PASS にしない**。¥0 請求で 100pt が付く仕様違反を発見・修正
+
+仕様所有者が Airtable を read-only 実測。
+
+| 検査 | 実測 | 判定 |
+|---|---|---|
+| `Customers`（テスト会員）`Status` | **`payment_failed`** | ✅ 期待どおり |
+| 同 `PlanType` | **`premium`**（不変）| ✅ |
+| 同 `AccessEnabled` | **`true`**（不変）| ✅ |
+| `RewardLedger` | 🔴 **3 行**（期待は 2 行）| 🔴 **不一致** |
+
+追加された 1 行: 2026-09-05 15:06:31 JST / **100 pt** / `SourceRef=in_1UCCk8…`
+＝ **トライアル開始時の ¥0 請求**に対する `invoice.payment_succeeded`。
+
+#### 正本との照合 → **仕様違反で確定**
+
+| 正本 | 記述 |
+|---|---|
+| 利用規約（本番掲載）| 「**お支払いが成功した期間**に対して 1か月あたり100pt を付与します。**お支払いが確認できない期間には付与しません**」 |
+| `MEMBERSHIP_REWARDS.md` §7.7 | 「**支払い成功まで保留する。** 失敗した期間には付与しない・月数も増えない」「**最終的に未払いのまま終了した期間には付与しない**」 |
+| `CLAUDE.md` | 「KIリワードは **Premium の継続だけで積み上がる**」 |
+
+トライアルは **1 円も支払われていない**（`amount_paid: 0`）。
+そこに 100 pt が付くのは上記すべてに反する。**#17 は PASS にしない。**
+
+#### 原因
+
+`recordPaidPeriod()` が確認していた前提は **請求期間の長さ**と**支払い時刻**の 2 つだけで、
+**実際に支払われた金額を一切見ていなかった**。
+
+トライアル開始時や全額割引の ¥0 請求でも Stripe は `invoice.payment_succeeded` を出し、
+`status_transitions.paid_at` も入る。そのため
+
+- `periodMonths` = 1（price は月額）
+- `occurredAtMs` = paid_at あり
+
+の 2 条件が揃い、**100 pt が付与されてしまう**。
+
+#### 恒久修正
+
+`amountPaidFromInvoice()` を追加し、`recordPaidPeriod()` の**先頭付近**（Price 取得より前）で検査する。
+
+| 条件 | 挙動 |
+|---|---|
+| `amount_paid` が読めない | **付与しない**（§7.7「前提が 1 つでも欠けたら保留」）|
+| `amount_paid <= 0` | **付与しない**（トライアル・全額割引）|
+| `amount_paid > 0` | 従来どおり付与へ進む |
+
+🔴 **`total` / `amount_due` で代用しない。** ¥0 請求でもこれらは 3980 になりうる。
+
+#### 回帰テスト（4 件追加・webhook 48 → 52 件）
+
+`MEMBERSHIP_WRITE_ENABLED=true` かつ Airtable 資格情報なしの状態を使い、
+**store へ行ったかどうかを応答だけで判定**する仕組みにした。
+
+| テスト | 期待 |
+|---|---|
+| ¥0 の請求では付与しない | **200**（store に触れない）|
+| `amount_paid` が読めなければ付与しない | **200** |
+| 実払いのある請求では従来どおり付与へ進む | **500 `membership_not_recorded`**（付与しようとした証拠）|
+| `amountPaidFromInvoice` は `total`/`amount_due` で代用しない | 単体で固定 |
+
+mutation 検証: ガードを外すと **上位 2 件が fail** することを確認済み。
+
+#### 併せて直したもの（本修正が必要にした）
+
+`membershipCopy.guard.test.mjs` が関数本体を **`slice(0, 1800)` / `slice(0, 2200)` の固定幅**で
+切り出しており、行が増えた途端に検査対象から外れて **2 件が fail** した。
+🔴 **固定幅だとガードが黙って効かなくなる**ため、
+「次のトップレベル宣言まで」を切り出す `fnBody()` に置き換えた。検査意図は変えていない。
+新しい前提（`amountPaid` の 2 分岐・`total`/`amount_due` 不使用）も静的ガードに追加した。
+
+#### 正本の更新
+
+`MEMBERSHIP_REWARDS.md` §7.7 の「付与の前提」表に
+**「実際に支払われた金額 ＝ `invoice.amount_paid`」**の行を追加した。
+🔴 これは**ルールの変更ではなく明文化**（利用規約が既に定めている内容）。
+
+#### 🔴 未確定・未実施
+
+- **既存の `RewardLedger` の誤付与 1 行の扱い**（テスト会員の 100 pt）。
+  🔴 **削除していない。** Airtable への write は承認境界。
+- 本番に同種の誤付与があるかは未調査（本番は Live Mode 未設定で課金が動いていないため、
+  発生していない見込みだが**未確認**）。
+- Test Clock は進めていない。Stripe への追加操作なし。
+
+### 2026-09-05 #17 再測定の準備 — 修正版 branch deploy を用意（**実測は未実施**）
+
+#### 本番の同種誤付与（仕様所有者が Airtable を read-only 確認）
+
+`RewardLedger` **全 4 行はテスト系のみ・実会員 0 件**。本番の会員に影響は出ていない。
+誤付与の 1 行は **証跡として保持**（削除しない）。
+
+#### 修正版 branch deploy
+
+| 項目 | 値 |
+|---|---|
+| branch deploy | ✅ **`c3760d7e` ready**（`deploy_time` 53s・`error_message: null`）|
+| HEAD 一致 | ✅ `origin/test/stripe-testmode-e2e-2026-09-01` = `commit_ref` |
+| 中身 | `origin/main`（`bb0cf3a2`）のコード ＋ **PR #99 の ¥0 付与ガード** |
+| 疎通 | ✅ 署名なし POST → **400 `invalid_signature`** ／ `GET /` **200** |
+| main 追随の確認 | ✅ 配信 CSS に PR #97 の `--grad-nav-btn`（3 ストップ）を確認 |
+| `allowed_branches` | ✅ **`["main"]` へ復旧**（18 項目すべて変更前と一致）|
+
+🔴 `origin/main` との merge で **`docs/progress.md` に conflict** が出たため、
+**conflict を解決せずに merge を中止**し、`astro-site/` 配下のみ取り込む方式に切り替えた。
+このブランチは再測定専用で、記録の正本は PR #98 / #99 側にある。
+
+#### 実測の前提 — ✅ 確認済み
+
+「¥0 請求 → `RewardLedger` 不増」を意味のある検査にするには
+`MEMBERSHIP_WRITE_ENABLED=true` が Branch deploys で有効である必要がある。
+off だと**修正の有無に関係なく `write_disabled` で SKIPPED になり**、
+ガードを検証したことにならない。
+
+| 検査 | 結果 |
+|---|---|
+| `MEMBERSHIP_WRITE_ENABLED`（Branch deploys）| ✅ **`true`**（2026-09-05 read-only 実測）|
+
+🔴 この変数は非 secret のため、仕様所有者の承認のもと**この 1 変数だけ**を読んだ。
+env は変更していない。
+
+#### 再測定シナリオ（🔴 **現 Test Clock は進めない。新規に作る**）
+
+| # | 操作 | 期待 |
+|---|---|---|
+| 0 | Stripe の**アクティブな送信先**が `https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app/.netlify/functions/stripe-webhook` を向いていることを確認 | 修正版 `c3760d7e` が応答する URL |
+| 1 | 新規 Test Clock（現在時刻）| — |
+| 2 | 新規 Customer（`email` はテスト会員と同じ）＋ **成功用カード `4242…`** を既定に | — |
+| 3 | Subscription 作成：`price_1UAsLM…` / `trial_period_days: 1` / `metadata: { ki_plan, ki_email }` | トライアル開始で **¥0 の `invoice.payment_succeeded`** |
+| **A** | `RewardLedger`（🔴 **テスト会員の行だけ**）| 🔴 **実施前から増えない** ＋ 今回の **¥0 invoice ID を `SourceRef` に持つ行が存在しない** ← 今回の修正の検証 |
+| 4 | 支払い方法を **失敗用 `4000 0000 0000 0341`** へ差し替え | — |
+| 5-① | Test Clock を **trial 終了直後**まで進める | 更新請求が**作られる**（`status: open`）|
+| 5-② | 🔴 **さらに約 1 時間後まで**進める | 請求書の finalize と自動決済が走り、**失敗** → `invoice.payment_failed` |
+| **B** | `Customers` `Status` | **`payment_failed`** |
+| **C** | 同 `PlanType` / `AccessEnabled` | **不変** |
+| **D** | `RewardLedger`（🔴 **テスト会員の行だけ**）| 🔴 **実施前から増えない** ＋ 更新請求の invoice ID を `SourceRef` に持つ行も**存在しない** |
+
+🔴 手順 2 で成功用カードを使うのは、トライアル開始時の **¥0 請求だけ**を先に起こすため（¥0 なので課金は発生しない）。
+
+🔴 **5 を 2 段階に分けるのが要点**（2026-09-05 に手順を修正）。
+trial 終了直後は請求書が作られるだけで `auto_advance` の finalize・自動決済がまだ走らず、
+`invoice.payment_failed` が出ない。**約 1 時間ぶん進めて初めて発火する**。
+
+🔴 5-② より先へ進めない（dunning が `unpaid`/`canceled` まで進むと free へ降格し C が壊れる）。
+🔴 **旧 Test Clock（`clock_1UCBAR…`）には触らない。**
+
+#### 🔴 A / D の判定は「テスト会員の行」で数える（2026-09-05 修正）
+
+台帳全体の行数で見ると、**別のテストメールの行が混ざって偽陽性・偽陰性になる**。
+`RewardLedger` は会員ごとに `Email` を持ち、**小文字へ正規化**して保存される
+（`airtableStore.js` の `normEmail` / 参照時も `LOWER({Email}) = …`）。
+
+したがって判定は次の 2 点で行う。
+
+| 判定 | 見方 |
+|---|---|
+| 行数 | `LOWER({Email}) = "0510apolon+test4@gmail.com"` の行だけを**実施前後で比較**し、**増加なし** |
+| 混入の有無 | 同じ絞り込みの中に、今回の **¥0 invoice の ID を `SourceRef` に持つ行が無い**こと |
+
+🔴 **別表記のテストメール（`+test5` など、プラスタグ違い）の行を混ぜない。**
+大文字小文字は保存時に潰れるが、**プラスタグは別アドレス**として扱われる。
+
+参考: `SourceRef` には invoice id がそのまま入る（`buildPaidPeriodEntry` の
+`periodRef = invoiceRef`）。冪等キー `EntryId` も同じ invoice 由来なので、
+**同じ invoice で 2 行できることはない**（＝ 1 行でも出れば付与された証拠）。
+
+A〜D がすべて期待どおりなら **#17 は PASS**。
+
+#### 配信先の確認（read-only）
+
+| 検査 | 結果 |
+|---|---|
+| このブランチの **最新** branch-deploy | ✅ **`c3760d7e`**（2026-09-05 07:45:44 UTC・ready）。これより新しいものは無い |
+| URL = git の HEAD | ✅ `origin/test/stripe-testmode-e2e-2026-09-01` = `c3760d7e` |
+| URL の応答 | ✅ 署名なし POST → **400 `invalid_signature`**（＝ 関数が動き Stripe env も効いている）|
+
+🔴 **Stripe 側の送信先設定そのものは確認できない**（Stripe の資格情報が無いため）。
+「アクティブな送信先がこの URL を向いているか」は仕様所有者が Stripe 側で確認する。
+
+#### 🔴 未実施
+
+- 上記シナリオの実行（Stripe への write。資格情報が無く、こちらからは実行できない）
+- 誤付与 1 行の削除（**PASS 後の cleanup 承認境界**）
+
+### 2026-09-05 #17 — ✅ **PASS**（修正版 `c3760d7e` で再測定）
+
+仕様所有者が新規シナリオ（新規 Test Clock ＋ 新規 Customer、旧 clock は不使用）で実施し、
+Airtable を read-only 実測した。
+
+| # | 検査 | 実測 | 判定 |
+|---|---|---|---|
+| B | `Customers` `Status` | **`payment_failed`** | ✅ |
+| C | 同 `PlanType` | **`premium`**（不変）| ✅ |
+| C | 同 `AccessEnabled` | **`true`**（不変）| ✅ |
+| A / D | `RewardLedger`（テスト会員の行）| **3 行のまま**（増加なし）| ✅ |
+
+🔴 **A / D が今回の修正の検証そのもの。** 修正前は ¥0 のトライアル請求で
+`invoice.payment_succeeded` が発火し **100 pt が付いていた**（3 行目）。
+修正版では **¥0 請求で付与されず、行が増えない**ことを実測で確認した。
+
+`MEMBERSHIP_WRITE_ENABLED` が Branch deploys で **`true`** であることを事前に
+read-only 実測してあるため、「増えない」が `write_disabled` による偽陽性でないことも担保されている。
+
+#### #17 の判定
+
+| 完成条件 | 判定 |
+|---|---|
+| `Status=payment_failed` のみ | ✅ |
+| **アクセスは止まらない**（`PlanType`/`AccessEnabled` 不変）| ✅ |
+| 🔴 `RewardLedger` が増えない | ✅ |
+
+**#17 = PASS。** 2026-09-03 の「未達」から解消した。
+
+#### 17 項目の現在地（更新）
+
+| 区分 | 状態 |
+|---|---|
+| ✅ PASS | **14 項目**（#3 / #4 / #6〜#16、および今回の **#17**）|
+| 未実施 | **3 項目** — **#1 / #2 / #5**（仕様所有者の実機ログインが必要。メール受信を伴う）|
+| 🔴 未達 | **0 項目** |
+
+🔴 `docs/STRIPE_TESTMODE_E2E.md`「Live Mode へ進む前の確認」は
+**「17 項目すべてが期待どおり」**が条件。**#1 / #2 / #5 が残っているため、
+Live Mode へ進んでよい状態ではない。**
+
+#### 🔴 未実施（承認境界）
+
+| 項目 | 状態 |
+|---|---|
+| **PR #99 の merge** | 🔴 **未実施**。修正は現在 **branch deploy と PR にしか無い**。`main` に入るまで**本番のコードは直っていない**（本番は Live Mode 未設定で課金が動いていないため実害は出ていないが、設定した瞬間に再発する）|
+| **誤付与 1 行の削除** | 🔴 **未実施**（cleanup 承認境界）。テスト会員の 100 pt・`SourceRef=in_1UCCk8…` |
+| Test Mode cleanup 全体（R-1）| 未実施。**#1 / #2 / #5 が終わるまで実施しない**（消すと確認できなくなる）|
+| Live Mode 設定 | 未実施 |
+| 今回の再測定で作った Stripe オブジェクト | Test Clock / Customer / Subscription が残っている。cleanup の対象に加える |
 
 ## Final Goal
 
@@ -1981,6 +2867,19 @@ E2E をここから先へ進めるには、**Stripe への外部 write が必要
 ---
 
 ## Open Questions
+
+0.1 🔴 **`@netlify/blobs` が `astro-site/package.json` の依存に無く、
+   `stripe-webhook.js` の `stripe-events` ストアが機能していない疑い（R-2・2026-09-03）。**
+
+   `hasProcessed` / `markProcessed` は `import('@netlify/blobs')` の失敗を try/catch で
+   飲み込むため、**壊れていても静かに「重複なし」として通る**。
+   同一 deploy で同じ event id を 3 回再送しても `duplicate:true` が一度も出なかった。
+
+   - データ破壊は起きていない（下流の冪等性で二重反映は防がれている。実測済み）
+   - ただし Test Mode E2E #6 の期待値 `duplicate:true` が満たせない
+   - 確認方法: 依存に `@netlify/blobs` を加える／関数ログで `eventStore()` の失敗を見る
+
+
 
 0. ~~**会員継続制度の未確定事項 TBD-1〜TBD-8**~~（2026-09-01 **確定**。`MEMBERSHIP_REWARDS.md` §7.1）。
    ~~**法務確認 L-1〜L-9**~~（保守ライン内に設計を収めたため**確認待ちは解消**。§8）。
