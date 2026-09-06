@@ -1893,6 +1893,108 @@ Live Mode へ進んでよい状態ではない。**
 | Live Mode 設定 | 未実施 |
 | 今回の再測定で作った Stripe オブジェクト | Test Clock / Customer / Subscription が残っている。cleanup の対象に加える |
 
+### 2026-09-06 Stripe Test Mode E2E — ✅ **17/17 PASS**
+
+#### 有料表示のリード文（PR #101）の実測 — 仕様所有者が premium でログインして確認
+
+| ページ | 日付 | `rdb-lead` | 判定 |
+|---|---|---|---|
+| `/prediction/nankan` | **9月4日(金)** | **なし** | ✅ |
+| `/prediction/jra` | **9月6日(日)** | **なし** | ✅ |
+
+無料・guest 側（こちらで read-only 実測）:
+
+| ページ | 日付 | `rdb-lead` | 判定 |
+|---|---|---|---|
+| `/free-prediction/nankan` | **9月4日(金)** | **あり**（従来文言）| ✅ |
+| `/free-prediction/jra` | **9月6日(日)** | **あり**（従来文言）| ✅ |
+
+🔴 曜日は PR #100（`Date.UTC` + `getUTCDay()`）の修正が効いている。
+UTC でビルド・SSR されているのに正しい曜日が出ている ＝ 不具合の条件下での確認になっている。
+
+#### E2E 17 項目 — ✅ **17/17 PASS**
+
+| # | 区分 | 状態 | 確認者・根拠 |
+|---|---|---|---|
+| 1 / 2 / 5 | A 認可 | ✅ PASS | **仕様所有者が実機確認**（2026-09-06 報告）|
+| 3 / 4 | A 認可 | ✅ PASS | 2026-09-02 の Checkout / webhook ログ |
+| 6 | A 認可 | ✅ PASS | 2026-09-04。R-2 の `connectLambda` 修正後に `duplicate:true` を実測 |
+| 7〜12 | B リワード | ✅ PASS | 2026-09-02〜03。台帳 1 行・冪等・契約価格・`/mypage` 残高 |
+| 13〜16 | C 解約 | ✅ PASS | 2026-09-03 |
+| 17 | C 支払い失敗 | ✅ PASS | 2026-09-05。Test Clock ＋ ¥0 付与ガード（PR #99）修正後に実測 |
+
+🔴 **証跡の粒度に差がある。** #6 / #17 は本書に実測値（応答本文・Airtable の各列・台帳行数）を
+残してあるが、**#1 / #2 / #5 は「仕様所有者が実機確認済み」という報告のみ**で、
+画面ごとの観測値は本書に記録されていない。再検証が必要になった場合はこの点に留意する。
+
+`docs/STRIPE_TESTMODE_E2E.md`「Live Mode へ進む前の確認」の条件
+**「17 項目すべてが期待どおり」は満たされた。**
+
+#### この E2E で見つかり、恒久修正した不具合（3 件）
+
+| # | 不具合 | 修正 |
+|---|---|---|
+| 1 | v1 Lambda で `connectLambda` を呼ばず、Blobs の冪等性が常に無効だった | PR #95。`getStore` の前に `connectLambda(event)` |
+| 2 | **¥0 の請求（トライアル）で 100 pt が付与されていた** | PR #99。`amount_paid <= 0` なら付与しない |
+| 3 | 開催日の曜日が UTC ビルドで 1 日ずれていた | PR #100。`Date.UTC` + `getUTCDay()` |
+
+いずれも **回帰テスト ＋ mutation 検証**を伴う。
+
+---
+
+## 🔴 cleanup / Live Mode — 承認境界（未実施）
+
+### A. Test Mode cleanup（R-1）
+
+#### A-1. Airtable（本番ベース）
+
+| 対象 | 内容 | rollback |
+|---|---|---|
+| `RewardLedger` の誤付与 1 行 | `+test4` / **100 pt** / `SourceRef=in_1UCCk8…`（トライアル ¥0 由来）| 🔴 **不可逆**（ゴミ箱期間内のみ復元可）|
+| `RewardLedger` のその他テスト行 | `+test4` の残り 2 行（9/2・9/3 の正当な付与）| 同上 |
+| `Customers` のテスト会員 | `0510apolon+test4@gmail.com`（`PlanType=premium` / `Status=payment_failed`）| 同上 |
+
+🔴 **実会員のレコードは 0 件**（2026-09-05 に read-only 確認済み）。
+
+#### A-2. Stripe Test Mode
+
+| 対象 | 識別子 |
+|---|---|
+| Test Clock | `clock_1UCBAR…`（#17 初回）／ 再測定で作った新規 1 個 |
+| Customer | `cus_VCar1z…` ほか、Test Clock 紐づきの新規 |
+| Subscription | `sub_1UCCk8…`（trial→past_due）／ `sub_1UBRZ7…`（**有効のまま**）／ `sub_1UBEQt…`（解約済み）|
+| PaymentMethod | `pm_1UBRwf…`（`•••• 0341`）／ `•••• 4242` |
+| Webhook 送信先 | `KI Test Webhook`（`we_1UAsSe…`・**アクティブ**）／ `KI Stripe Test E2E`（`we_1UAgTi…`・**無効化済み**）|
+
+🔴 送信先の **削除は不可逆**。署名シークレットが失われ、再作成すると
+`STRIPE_WEBHOOK_SECRET` の再設定（＝ secret 変更）が要る。
+
+#### A-3. Netlify
+
+| 対象 | 内容 | rollback |
+|---|---|---|
+| Branch deploys スコープの env | `STRIPE_*` / `MEMBERSHIP_WRITE_ENABLED` / `SESSION_SIGNING_SECRET` / `AIRTABLE_*` / `PREVIEW_PAID_KEY` | 🔴 **値は再取得不能**。各サービスから再発行が要る |
+| branch deploy | `test-stripe-testmode-e2e-2026-09-01--…`（現在 `3297b5f4`）| 削除は不可逆 |
+| ブランチ | `test/stripe-testmode-e2e-2026-09-01` | commit から復元可 |
+
+### B. Live Mode 設定
+
+| 対象 | 内容 |
+|---|---|
+| production スコープの env | `STRIPE_SECRET_KEY`（`sk_live_…`）/ `STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_PREMIUM` / `STRIPE_PORTAL_RETURN_URL` |
+| Stripe Live Mode | 商品・価格の作成、webhook 送信先の作成（**5 イベント**）、カスタマーポータルの有効化 |
+
+🔴 **secret 変更 ＋ 本番の課金導線を開く操作**。現在の本番は `503 not_configured` で
+fail-closed になっており、設定した瞬間に**実際の課金が可能になる**。
+
+#### 推奨する順序
+
+1. **Live Mode を先に設定**（cleanup すると Test Mode の再検証ができなくなるため）
+2. Live Mode で最小限の疎通を確認
+3. そのうえで **cleanup を一括実施**
+
+🔴 いずれも未実施。承認を待つ。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
