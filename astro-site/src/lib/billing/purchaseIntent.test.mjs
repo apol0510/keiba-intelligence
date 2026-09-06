@@ -47,7 +47,11 @@ describe('🔴 URL を持ち越さない（open redirect を作らない）', ()
     '//evil.example.com',
     '/pricing?resume=premium&x=1',
     'javascript:alert(1)',
-    'https://keiba-intelligence.jp/mypage',
+    // 🔴 「自サイトに見える絶対 URL でも持ち越さない」ことを見る項目。
+    //    本番 URL をそのまま書くと Netlify の Secret Scanning が
+    //    STRIPE_PORTAL_RETURN_URL の値と一致を検出してビルドが落ちる（2026-09-06）。
+    //    意図は保ったまま、非本番の .invalid ドメインを使う。
+    'https://keiba-intelligence.invalid/mypage',
     '../../etc/passwd',
     'premium/../../evil',
   ];
