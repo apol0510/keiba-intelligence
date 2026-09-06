@@ -83,8 +83,8 @@ Stripe Test Mode に、**同一 URL** を指す webhook 送信先が 2 つ存在
 
 | 名前 | ID | リッスン対象 | 今週の配信 |
 |---|---|---|---|
-| `KI Test Webhook` | `we_1UAsSeLbPC6OVRqMXGrVcsGw` | 5 件 | 合計 21 / 失敗 14 |
-| `KI Stripe Test E2E` | `we_1UAgTiLbPC6OVRqMcfol1yoP` | 6 件 | 合計 12 / **失敗 12** |
+| `KI Test Webhook` | `we_1UAsSe…` | 5 件 | 合計 21 / 失敗 14 |
+| `KI Stripe Test E2E` | `we_1UAgTi…` | 6 件 | 合計 12 / **失敗 12** |
 
 送信先 URL はどちらも
 `https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app/.netlify/functions/stripe-webhook`。
