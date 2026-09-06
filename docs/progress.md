@@ -1995,6 +1995,117 @@ fail-closed になっており、設定した瞬間に**実際の課金が可能
 
 🔴 いずれも未実施。承認を待つ。
 
+### 2026-09-06 Live Mode の準備状況を read-only 確認（**write は未実施**）
+
+#### production スコープの env（🔴 値は一切表示していない。有無のみ）
+
+| キー | 状態 |
+|---|---|
+| `STRIPE_SECRET_KEY` | 🔴 **未設定** |
+| `STRIPE_WEBHOOK_SECRET` | 🔴 **未設定** |
+| `STRIPE_PRICE_PREMIUM` | 🔴 **未設定** |
+| `STRIPE_PRICE_LIGHT` | 🔴 **未設定**（ライトは保留プランなので不要）|
+| `STRIPE_PORTAL_RETURN_URL` | 🔴 **未設定** |
+| `SESSION_SIGNING_SECRET` | ✅ 設定あり |
+| `AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` | ✅ 設定あり |
+| `MEMBERSHIP_WRITE_ENABLED` | ✅ 設定あり（値 `true`・非 secret）|
+
+production の変数は全 23 件。**Stripe 関連だけが未設定**。
+
+#### 挙動からの裏づけ（値に触れずに確認できる）
+
+| 検査 | 結果 | 意味 |
+|---|---|---|
+| `POST /.netlify/functions/stripe-webhook` | **503 `not_configured`** | `hasStripeSecret` か `STRIPE_WEBHOOK_SECRET` が欠けている |
+| `/pricing` の CTA | 「**まもなく受付開始**」＋「お申し込みの受付を準備しています」・`pr-btn-disabled` 1 件 | 課金導線は**閉じている** |
+| `/pricing` の「このプランを申し込む」 | **0 件** | 同上 |
+| 表示価格 | ¥5,000（取消線）/ **¥3,980** / ¥39,800 / ¥0 | 表示は `plans.js` 由来で、Stripe 未設定でも出る |
+
+🔴 **本番の課金導線は完全に閉じている（fail-closed）。** 現状で誤課金は起こり得ない。
+
+#### 🔴 確認できなかったもの
+
+| 対象 | 理由 |
+|---|---|
+| Live Mode の **Product / Price** | Live の API キーが無い |
+| Live Mode の **Webhook 送信先** | 同上 |
+| **カスタマーポータル**の有効化状態 | 同上 |
+
+これらは仕様所有者が Stripe Dashboard（**Live Mode に切り替えて**）確認するか、
+**Live の read-only 制限キー**をいただければこちらで確認できる。
+
+#### Live Mode 設定で必要になる作成・変更（見積り）
+
+| 区分 | 対象 | 件数 |
+|---|---|---|
+| Stripe Live | Product（プレミアム）| 1（既存があれば 0）|
+| Stripe Live | Price（¥3,980 / month）| 1（既存があれば 0）|
+| Stripe Live | Webhook 送信先（🔴 **5 イベント**: `checkout.session.completed` / `customer.subscription.updated` / `customer.subscription.deleted` / `invoice.payment_succeeded` / `invoice.payment_failed`）| 1 |
+| Stripe Live | カスタマーポータル（解約・カード変更を許可）| 設定 1 |
+| Netlify | production スコープの env 追加 | **4**（`STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_PREMIUM` / `STRIPE_PORTAL_RETURN_URL`）|
+| Netlify | 再デプロイ（env は**デプロイ時に注入**されるため必須）| 1 |
+
+🔴 `STRIPE_PORTAL_RETURN_URL` は `https://keiba-intelligence.jp/mypage`（本番 URL。`netlify.app` は使わない）。
+
+#### production への影響
+
+- 🔴 **設定した瞬間、本番で実際の課金が可能になる**（現在は 503 で閉じている）
+- `/pricing` の CTA が「まもなく受付開始」から「**このプランを申し込む**」に変わる
+- webhook が 503 から**署名検証つきの受け付け**に変わり、`Customers` / `RewardLedger` への**本番書き込みが始まる**
+  （`MEMBERSHIP_WRITE_ENABLED=true` が production に既に入っているため、**リワード付与も同時に動き出す**）
+
+#### rollback
+
+| 対象 | 戻し方 |
+|---|---|
+| Netlify env 4 件 | 削除 → **再デプロイ**すれば `503 not_configured` に戻り、導線は再び閉じる |
+| Stripe Webhook 送信先 | **無効化**（削除ではなく）。可逆で署名シークレットも保持される |
+| Product / Price | アーカイブ（削除しない）|
+| 🔴 既に発生した課金 | **不可逆**。返金は Stripe 側の個別対応になる |
+
+🔴 いずれも未実施。
+
+---
+
+### 2026-09-06 cleanup 対象の再確認（🔴 **未実施**）
+
+#### A-1. Airtable（本番ベース）— 🔴 対象アドレスを明示
+
+削除対象は次の **テスト用アドレス 4 系統**。`Customers` と `RewardLedger` の**両方**を見る。
+
+| # | アドレス | 備考 |
+|---|---|---|
+| 1 | `0510apolon+1@gmail.com` | |
+| 2 | `0510apolon+test2@gmail.com` | |
+| 3 | `0510apolon+test3@gmail.com` | |
+| 4 | `0510apolon+test4@gmail.com` | E2E の主テスト会員。誤付与 1 行（100 pt / `SourceRef=in_1UCCk8…`）を含む |
+| 5 | **`0510apolon test4@gmail.com`**（🔴 **誤表記・`+` が半角スペース**）| `RewardLedger` に混入。**別アドレスとして残るので取りこぼしやすい** |
+
+🔴 **`0510apolon@gmail.com`（プラスタグ無し）には触らない。**
+これは実会員のアドレスであり、削除対象ではない。
+
+🔴 `RewardLedger` は `Email` を**小文字へ正規化**して保存する（`airtableStore.js` の `normEmail`）。
+大文字小文字は潰れるが、**プラスタグ違い・スペース誤表記は別アドレス**として残る。
+`LOWER({Email})` で 1 件ずつ絞り込み、**全テスト行**を消すこと。
+
+#### A-2. Stripe Test Mode
+
+| 対象 | 識別子 |
+|---|---|
+| Test Clock | `clock_1UCBAR…`（#17 初回）／ 再測定で作った新規 1 個 |
+| Customer | `cus_VCar1z…` ほか Test Clock 紐づき |
+| Subscription | `sub_1UCCk8…` ／ `sub_1UBRZ7…`（**有効のまま**）／ `sub_1UBEQt…`（解約済み）|
+| PaymentMethod | `pm_1UBRwf…`（`•••• 0341`）／ `•••• 4242` |
+| Webhook 送信先 | `KI Test Webhook`（`we_1UAsSe…`・アクティブ）／ `KI Stripe Test E2E`（`we_1UAgTi…`・無効化済み）|
+
+#### A-3. Netlify
+
+Branch deploys スコープの `STRIPE_*` / `MEMBERSHIP_WRITE_ENABLED` ／ branch deploy ／
+ブランチ `test/stripe-testmode-e2e-2026-09-01`。
+
+🔴 **推奨順序は「Live Mode 設定 → 疎通確認 → cleanup 一括」**。
+cleanup を先にすると Test Mode での再検証ができなくなる。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
