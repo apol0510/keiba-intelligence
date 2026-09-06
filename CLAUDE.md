@@ -569,6 +569,12 @@ STRIPE_SECRET_KEY=sk_live_xxxxx
 STRIPE_WEBHOOK_SECRET=whsec_xxxxx
 STRIPE_PRICE_LIGHT=price_xxxxx
 STRIPE_PRICE_PREMIUM=price_xxxxx
+# 🟡 optional。未設定なら実装の fallback（siteOrigin + /mypage）が同じ URL を返す。
+# 🔴 Netlify の Secret Scanning は **env の値とリポジトリ内の文字列の一致**を検出する。
+#    値が秘密かどうかは問わない。設定する場合は、その値が repo 内（テストの fixture 等）に
+#    書かれていないことを確認する。テストの fixture では本番 URL を直接使わず、
+#    `.invalid` 等の非本番 fixture を使うこと。
+#    🔴 SECRETS_SCAN_OMIT_* での回避は禁止（docs/progress.md 2026-09-02 / 2026-09-06）。
 STRIPE_PORTAL_RETURN_URL=https://keiba-intelligence.jp/mypage
 
 # Deploy Preview の有料プレビュー用の合言葉（未設定なら有料プレビューは成立しない）

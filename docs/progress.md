@@ -2106,6 +2106,91 @@ Branch deploys スコープの `STRIPE_*` / `MEMBERSHIP_WRITE_ENABLED` ／ branc
 🔴 **推奨順序は「Live Mode 設定 → 疎通確認 → cleanup 一括」**。
 cleanup を先にすると Test Mode での再検証ができなくなる。
 
+### 2026-09-06 Live Mode を本番反映 — ✅ 完了（3 回のビルド失敗を経て）
+
+#### 🔴 ビルド失敗の原因 — Netlify Secret Scanning
+
+production の Stripe env を設定したあと、production ビルドが **3 回連続で**
+`Failed during stage 'building site': Build script returned non-zero exit code: 2`
+で落ちた。ビルドログで原因が確定した。
+
+```
+Secret env var "STRIPE_PORTAL_RETURN_URL"'s value detected:
+  found value at line 50  in src/lib/billing/purchaseIntent.test.mjs
+  found value at line 77  in src/lib/billing/stripeCheckout.test.mjs
+  found value at line 260 in src/lib/billing/stripeCheckout.test.mjs
+```
+
+**記録すべき事実**
+
+| # | 事実 |
+|---|---|
+| 1 | 🔴 **Netlify の Secret Scanning は「production env の値」と「リポジトリ内の文字列」の一致を検出する。** 値が秘密かどうかは問わない |
+| 2 | 今回は `STRIPE_PORTAL_RETURN_URL` の**本番 URL** が**テスト 3 か所に完全一致**し、ビルドが落ちた |
+| 3 | 🔴 **テストの fixture では本番 URL を直接使わない。** `.invalid` 等の**非本番 fixture** を使う |
+| 4 | 🔴 **`SECRETS_SCAN_OMIT_*` で回避しない**（正本 2026-09-02。PR #104 で `netlify.toml` に対する静的ガードも追加済み）|
+| 5 | `STRIPE_PORTAL_RETURN_URL` は**実装上 optional**。未設定なら既存実装の fallback を使う<br>`process.env[PORTAL_RETURN_URL] \|\| \`${siteBase(event)}/mypage\`` → `resolveSiteOrigin` の `DEFAULT_SITE_ORIGIN`（`https://keiba-intelligence.jp`）に落ちるため**同じ URL になる** |
+
+🔴 **「production に `STRIPE_PORTAL_RETURN_URL` を設定してはいけない」という新仕様は作らない。**
+今回は 5 のとおり未設定でも同じ URL になるため、**設定を外すことで解決した**というだけである。
+
+🔴 branch-deploy スコープの同変数は**値が異なる**（`test-…netlify.app/mypage`）ため
+テストのリテラルと一致せず、branch deploy のビルドは落ちていなかった。
+
+#### 🟡 未対応（新仕様は作らないが、事実として残す）
+
+上記 3 の方針に照らすと、`purchaseIntent.test.mjs` と `stripeCheckout.test.mjs` の
+**3 か所は本番 URL のリテラルのまま**である。現在 production に当該 env が無いので
+ビルドは通るが、**将来この env を production に設定すると同じ失敗が再発する**。
+fixture を `.invalid` 等へ置き換えるかは別タスク（本記録では変更していない）。
+
+#### 経緯（失敗した 3 ビルド）
+
+| deploy | 時刻(UTC) | 結果 |
+|---|---|---|
+| `b9a61eb…` | 07:52 | exit 2 |
+| `b9a61eb…` | 07:56 | exit 2（cache クリアでも同じ）|
+| `7719f38…` | 08:14 | exit 2（PR #104 で docs の実 id を消した後も同じ）|
+
+🔴 途中で「docs に残る実在 Stripe id が原因」と推測して PR #104 を先に出したが、
+**原因ではなかった**。ログを先に求めるべきだった。
+（PR #104 自体は「テスト・ドキュメント」を名乗るガードが docs を検査していなかった
+穴を塞ぐもので、正本上は必要な是正。）
+
+#### ✅ Live Mode の本番反映（read-only 実測）
+
+`STRIPE_PORTAL_RETURN_URL` を production から外して再ビルド → **成功**。
+
+| # | 検査 | 実測 |
+|---|---|---|
+| 1 | deploy | ✅ **ready**・`7719f38…`・`deploy_time` 61s・`error_message: null`（published 2026-09-06 08:44:58 UTC）|
+| 2 | `POST /.netlify/functions/stripe-webhook`（署名なし）| ✅ **400 `invalid_signature`**（従来は 503 `not_configured`）＝ `STRIPE_SECRET_KEY` と `STRIPE_WEBHOOK_SECRET` が**両方効いている** |
+| 3 | `/pricing` | ✅ 「**このプランを申し込む**」1 件 ／「まもなく受付開始」0 件 ／ `pr-btn-disabled` 0 件 ／ 価格 **¥3,980**（取消線 ¥5,000）|
+| 4 | guest → `/prediction/{nankan,jra}` | ✅ **302 → `/free-prediction/*`**（認可は fail-closed のまま）|
+| 5 | Stripe Live の Product / Price / **Webhook 5 イベント** / Customer Portal | ✅ **仕様所有者が GUI で確認済み** |
+
+追加で確認したもの:
+
+| 検査 | 実測 |
+|---|---|
+| `POST /.netlify/functions/stripe-portal`（未ログイン）| **401 `login_required`** ＝ env を外しても fallback で正常動作 |
+| `POST /.netlify/functions/stripe-create-checkout`（未ログイン）| **401 `login_required`** ＝ 認可なしで課金は起きない |
+| `/` `/free-prediction/*` `/register` `/login/` `/mypage` | すべて **200** |
+| 開催日の曜日 | **9月7日(月)**（PR #100 の修正も生きている）|
+
+**異常なし。rollback は実行していない。**
+
+#### 🔴 本番の状態が変わった
+
+- `/pricing` の課金導線が**開いた**（従来は「まもなく受付開始」で閉じていた）
+- webhook が**署名検証つきの受け付け**を開始 ＝ `Customers` / `RewardLedger` への本番書き込みが動く
+- `MEMBERSHIP_WRITE_ENABLED=true` が production にあるため、**リワード付与も同時に動き出した**
+
+#### 🔴 未実施
+
+**Test Mode cleanup**（Airtable のテスト 5 アドレス／Stripe Test のオブジェクト／
+Branch deploys スコープの env／branch deploy／test ブランチ）は**行っていない**。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
