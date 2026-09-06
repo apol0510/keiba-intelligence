@@ -537,8 +537,8 @@ not ok 2 - src/lib/billing/stripeWebhook.test.mjs
 
 | # | イベント | 実施 | HTTP | 応答 |
 |---|---|---|---|---|
-| 1 | `checkout.session.completed`（`evt_1UBEQvLbPC6OVRqMRi625hqM`）| 2026-09-03 08:43:19 JST | **200** | `{"received":true}` |
-| 2 | `invoice.payment_succeeded`（`evt_1UBEQvLbPC6OVRqMDlBiF5Ul`）| 08:44:27 JST | **200** | `{"received":true}` |
+| 1 | `checkout.session.completed`（`evt_1UBEQv…`）| 2026-09-03 08:43:19 JST | **200** | `{"received":true}` |
+| 2 | `invoice.payment_succeeded`（`evt_1UBEQv…`）| 08:44:27 JST | **200** | `{"received":true}` |
 | 3 | `invoice.payment_succeeded`（同上・冪等性確認）| 08:46:45 JST | **200** | `{"received":true}` |
 
 🔴 応答に `membership` の行が**無い**ことが判定条件である。
@@ -597,11 +597,11 @@ Production deploy / merge / E2E の後片付け（テストレコード削除）
 | 9 | `Type=accrual` | `accrual` | ✅ |
 | 9 | `Points=100` | `100` | ✅ |
 | 9 | **`PeriodMonths=1`** | **空（null）** | 🔴 **未達** |
-| 9 | `SourceRef` が `in_…` | `in_1UBEQrLbPC6OVRqMgArtrkzq` | ✅ |
+| 9 | `SourceRef` が `in_…` | `in_1UBEQr…` | ✅ |
 | 9 | `OccurredAt` が支払い成功時刻 | `2026-09-02`（JST の支払い成功日）| ✅（粒度は下記）|
 | 11 | `ContractPriceYen=3980` | `3980` | ✅ |
 | 11 | `ContractCurrency=jpy` | `jpy` | ✅ |
-| 11 | `ContractPriceId` が手順 1 の price | `price_1UAsLMLbPC6OVRqMoZ3VSfRR` | ✅（末尾一致・下記）|
+| 11 | `ContractPriceId` が手順 1 の price | `price_1UAsLM…` | ✅（末尾一致・下記）|
 | — | `ContractStartedAt` | `2026-09-02` | ✅ |
 | — | 既存会員非影響 | 総数 66 / free-registered 52・pro 7・light 3・premium 4 / active 60・pending 6 / true 60・空 6 / `MembershipStartedAt` 7 件 / `CancelledAt` 0 件 — **本日 3 回の再送前後で完全一致** | ✅ |
 | — | 実会員に契約価格が混入していないか | 契約価格が入っているのは **テスト用アドレス 1 件のみ** | ✅ |
@@ -741,7 +741,7 @@ branch deploy は **`4aadb0a8` のまま**である（`57da2619` は deploy-prev
 | `Customers` `Status` | `active` | 手で戻す |
 | `Customers` `AccessEnabled` | `true` | 手で戻す |
 | `Customers` `CancelledAt` | **空** | 空に戻す |
-| `Customers` `ContractPriceYen` / `Currency` / `PriceId` / `ContractStartedAt` | `3980` / `jpy` / `price_1UAsLMLbPC6OVRqMoZ3VSfRR` / `2026-09-02` | 触られない（上書きしない）|
+| `Customers` `ContractPriceYen` / `Currency` / `PriceId` / `ContractStartedAt` | `3980` / `jpy` / `price_1UAsLM…` / `2026-09-02` | 触られない（上書きしない）|
 | `Customers` `MembershipStartedAt` | 空 | 触られない |
 | `RewardLedger` | 1 行（`rec3CBnoBgkapPsdf`）| 追加された行を削除（既存 1 行は残す）|
 | Stripe（Test Mode）| — | 作ったサブスクをキャンセル |
@@ -791,7 +791,7 @@ Stripe Test Mode でテスト会員に**新しいサブスクを 1 件**作成�
 | 9 | `Type` | `accrual` ✅ |
 | 9 | `Points` | `100` ✅ |
 | 9 | **`PeriodMonths`** | **`1`** ✅（修正前は空だった）|
-| 9 | `SourceRef` | `in_1UBRZ7LbPC6OVRqM70m6E3mV`（新しい invoice id）✅ |
+| 9 | `SourceRef` | `in_1UBRZ7…`（新しい invoice id）✅ |
 | 9 | `OccurredAt` | `2026-09-03`（支払い成功日 JST）✅ |
 
 `RewardLedger` は **1 行 → 2 行**（承認された「追加最大 1 行」ちょうど）。
@@ -799,7 +799,7 @@ Stripe Test Mode でテスト会員に**新しいサブスクを 1 件**作成�
 #### #11 の確定（末尾一致ではなく完全一致）
 
 解約前にサブスクのメタデータを読んだところ
-`ki_price_id = price_1UAsLMLbPC6OVRqMoZ3VSfRR` であり、
+`ki_price_id = price_1UAsLM…` であり、
 Airtable の `ContractPriceId` と**完全に一致**した。
 （以前は Netlify CLI のマスクにより末尾 4 文字でしか突き合わせできていなかった。）
 
@@ -1014,7 +1014,7 @@ stop_builds:      false
 ### 2026-09-03 二重配信の解消（承認済み・Test Mode のみ）
 
 同一 URL を指す送信先が 2 つあり、片方は今週 12 件すべて 400 `invalid_signature` だった。
-**`KI Stripe Test E2E`（`we_1UAgTiLbPC6OVRqMcfol1yoP`）を無効化**して解消した。
+**`KI Stripe Test E2E`（`we_1UAgTi…`）を無効化**して解消した。
 
 | 送信先 | 変更前 | 変更後 |
 |---|---|---|
@@ -1558,12 +1558,12 @@ branch deploy の `STRIPE_WEBHOOK_SECRET`（Branch deploys スコープ）は
 
 | 項目 | 値 |
 |---|---|
-| event id | `evt_1UCCvpLbPC6OVRqMLSTIZm7Z` |
+| event id | `evt_1UCCvp…` |
 | type | **`invoice.payment_failed`** |
 | created | 2026-09-05 06:18:28 UTC（15:18 JST）|
-| invoice | `in_1UCCqtLbPC6OVRqMZ361cD2e` / `amount_due` **3980** `jpy` |
-| subscription | `sub_1UCCk8LbPC6OVRqMDVO7qhOv` / customer `cus_VCar1zVD6J9chN` |
-| test clock | `clock_1UCBARLbPC6OVRqME93sxVzj` |
+| invoice | `in_1UCCqt…` / `amount_due` **3980** `jpy` |
+| subscription | `sub_1UCCk8…` / customer `cus_VCar1z…` |
+| test clock | `clock_1UCBAR…` |
 
 #### ✅ payload から確定したこと
 
@@ -1574,10 +1574,10 @@ branch deploy の `STRIPE_WEBHOOK_SECRET`（Branch deploys スコープ）は
 | `livemode` | **`false`** ＝ 本番ではない |
 | email の解決（`emailFromInvoice`）| ✅ `parent.subscription_details.metadata.ki_email` = テスト会員 → **第 1 分岐で解決**。`customer_email` も同値でフォールバックも効く ＝ **handler は skip しない** |
 | `metadata.ki_plan` | `premium`（`payment_failed` では未使用だが `subscription.updated` 用に正しい）|
-| price | **`price_1UAsLMLbPC6OVRqMoZ3VSfRR`** — 2026-09-03 の記録と**完全一致** |
+| price | **`price_1UAsLM…`** — 2026-09-03 の記録と**完全一致** |
 
 🔴 **前回提起した「Sandbox は Test Mode と別環境」の懸念は解消。**
-price と account（`acct_1U9EyPLbPC6OVRqM`）が従来の Test Mode E2E と同一なので、
+price と account（`acct_1U9EyP…`）が従来の Test Mode E2E と同一なので、
 **送信先 `KI Test Webhook` が購読している環境と同じ**である。
 
 #### 🔴 この JSON だけでは判定できないこと
@@ -1601,7 +1601,7 @@ price と account（`acct_1U9EyPLbPC6OVRqM`）が従来の Test Mode E2E と同�
 
 | # | 出どころ | 欲しいもの |
 |---|---|---|
-| 1 | Stripe の Webhook 配信ログ | `evt_1UCCvpLbPC6OVRqMLSTIZm7Z` の**配信結果（HTTP status）**|
+| 1 | Stripe の Webhook 配信ログ | `evt_1UCCvp…` の**配信結果（HTTP status）**|
 | 2 | Airtable `Customers`（テスト会員）| `Status` / `PlanType` / `AccessEnabled` |
 | 3 | Airtable `RewardLedger` | 行数（**2 行のまま**が期待）|
 
@@ -1613,7 +1613,7 @@ price と account（`acct_1U9EyPLbPC6OVRqM`）が従来の Test Mode E2E と同�
 
 ### 2026-09-05 #17 — webhook 配信 **200 / `{"received":true}`** を確認
 
-`evt_1UCCvpLbPC6OVRqMLSTIZm7Z`（`invoice.payment_failed`）の配信結果を
+`evt_1UCCvp…`（`invoice.payment_failed`）の配信結果を
 仕様所有者が Stripe の配信ログで確認。**HTTP 200 / `{"received":true}`**。
 
 #### この 200 から言えること

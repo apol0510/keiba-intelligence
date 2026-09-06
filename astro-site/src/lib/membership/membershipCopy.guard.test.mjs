@@ -472,20 +472,67 @@ describe('ランク・リワードを認可に使わない', () => {
       '🔴 支払い成功で認可を書き換えている（付与だけを行うこと）');
   });
 
+  /**
+   * 実在しそうな Stripe id の形。
+   *
+   * 🔴 Netlify の secrets scanning は **env の値をリポジトリ内から探す**。
+   *    `STRIPE_PRICE_PREMIUM` の実値を貼るとビルドが
+   *    `Build script returned non-zero exit code: 2` で落ちる（2026-09-02）。
+   *
+   * 🔴 `SECRETS_SCAN_OMIT_*` で検査を無効化しない。**実値を書かない方**を守る。
+   *
+   * 判定は「接頭辞 + `_` + 英数 14 文字以上」。
+   * 短縮表記（`price_1UAsLM…`）や fixture 名（`price_FIXTURE_not_a_real_id`）は
+   * 14 文字連続の英数にならないので当たらない。
+   */
+  const REALISH_STRIPE_ID = /\b(price|prod|cus|sub|in|cs|acct|evt|pi|pm|whsec|il|si|txr|clock|we|seti|ch|re|tok)_[A-Za-z0-9]{14,}\b/;
+
   test('🔴 テスト・ドキュメントに実在の Stripe id を書かない', () => {
-    // Netlify の secrets scanning は env の値をリポジトリ内から探す。
-    // STRIPE_PRICE_PREMIUM の実値をテストへ貼るとビルドが落ちる（2026-09-02）。
+    // 🔴 docs も対象。2026-09-06 まで検査から漏れており、
+    //    docs/progress.md に実 id が 19 箇所残っていた。
     const files = [
       'src/lib/billing/stripeWebhook.test.mjs',
       'src/lib/billing/stripeCheckout.test.mjs',
       'src/lib/membership/membershipE2E.test.mjs',
     ];
-    // 実 id は「英数 14 文字以上」が続く形。fixture 用の名前は許す
-    const realish = /\b(price|prod|cus|sub|in|cs|acct)_[A-Za-z0-9]{14,}\b/;
-    for (const f of files) {
+    const docs = ['docs/progress.md', 'docs/decisions.md', 'docs/STRIPE_TESTMODE_E2E.md',
+                  'docs/MEMBERSHIP_REWARDS.md', 'docs/spec.md', 'CLAUDE.md'];
+
+    for (const f of [...files, ...docs.map((d) => `../${d}`)]) {
       const src = read(f);
-      const hit = src.match(realish);
+      const hit = src.match(REALISH_STRIPE_ID);
       assert.equal(hit, null, `🔴 ${f} に実在の Stripe id らしき値がある: ${hit && hit[0]}`);
+    }
+  });
+
+  test('🔴 短縮表記・fixture 名を誤検知しない（監査の可読性を保つ）', () => {
+    // 実 id を消すときは短縮表記に置き換える。これが弾かれると記録が書けなくなる
+    const allowed = [
+      'price_1UAsLM…', 'cus_VCar1z…', 'sub_1UCCk8…', 'evt_1UCCvp…', 'in_1UCCqt…',
+      'clock_1UCBAR…', 'we_1UAsSe…', 'acct_1U9EyP…', 'pm_1UBRwf…',
+      'price_FIXTURE_not_a_real_id', 'prod_x', 'cus_test_1', 'sub_test_1', 'in_test_1',
+      'price_test_premium', 'cs_test_1',
+    ];
+    for (const v of allowed) {
+      assert.equal(REALISH_STRIPE_ID.test(v), false, `🔴 短縮表記/fixture を誤検知した: ${v}`);
+    }
+
+    // 逆に、実 id の形は必ず捕まえる（ガードが緩んでいないこと）
+    const caught = [
+      'price_1UAsLMLbPC6OVRqMoZ3VSfRR', 'cus_VCar1zVD6J9chN', 'sub_1UCCk8LbPC6OVRqMDVO7qhOv',
+      'evt_1UCCvpLbPC6OVRqMLSTIZm7Z', 'we_1UAgTiLbPC6OVRqMcfol1yoP', 'clock_1UCBARLbPC6OVRqME93sxVzj',
+    ];
+    for (const v of caught) {
+      assert.equal(REALISH_STRIPE_ID.test(v), true, `🔴 実 id を見逃した: ${v}`);
+    }
+  });
+
+  test('🔴 secrets scanning を無効化していない', () => {
+    // 🔴 正本（2026-09-02）: SECRETS_SCAN_OMIT_* で検査を回避しない。
+    //    実値を書かない方を守る。
+    const toml = read('netlify.toml');
+    for (const bad of ['SECRETS_SCAN_ENABLED', 'SECRETS_SCAN_OMIT_KEYS', 'SECRETS_SCAN_OMIT_PATHS']) {
+      assert.equal(toml.includes(bad), false, `🔴 netlify.toml で ${bad} を使って検査を回避している`);
     }
   });
 
