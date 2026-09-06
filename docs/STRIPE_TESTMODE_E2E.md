@@ -217,10 +217,22 @@ E2E 後に **Deploy Preview スコープの env とテスト行を削除**する
 
 🔴 **Airtable が本番と同じベースなので、テストで作ったものは必ず消す。**
 
-1. **Airtable**
-   - `RewardLedger` の **テスト会員の行**を削除（`Email` がテスト用アドレスのもの）
-   - `Customers` の **テスト会員レコード**を削除
-   - 🔴 既存の実会員（63 件）には触れない
+1. **Airtable**（`Customers` と `RewardLedger` の**両方**を見る）
+
+   🔴 削除対象は次の**テスト用アドレス**。プラスタグ違いは**別アドレス**なので 1 件ずつ絞り込む。
+
+   | # | アドレス | 備考 |
+   |---|---|---|
+   | 1 | `0510apolon+1@gmail.com` | |
+   | 2 | `0510apolon+test2@gmail.com` | |
+   | 3 | `0510apolon+test3@gmail.com` | |
+   | 4 | `0510apolon+test4@gmail.com` | E2E の主テスト会員 |
+   | 5 | **`0510apolon test4@gmail.com`** | 🔴 **誤表記（`+` が半角スペース）**。`RewardLedger` に混入しており**取りこぼしやすい** |
+
+   - 🔴 **`0510apolon@gmail.com`（プラスタグ無し）には触らない。** 実会員である。
+   - 🔴 既存の実会員には触れない。
+   - `RewardLedger` は `Email` を**小文字へ正規化**して保存する（`airtableStore.js` の `normEmail`）。
+     大文字小文字は潰れるが、**プラスタグ違い・スペース誤表記は別アドレスとして残る**。
 2. **Netlify**
    - **Branch deploys** スコープの `STRIPE_SECRET_KEY` / `STRIPE_PRICE_PREMIUM` /
      `STRIPE_WEBHOOK_SECRET` / `STRIPE_PORTAL_RETURN_URL` / `MEMBERSHIP_WRITE_ENABLED` を削除
