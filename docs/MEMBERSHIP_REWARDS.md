@@ -366,13 +366,14 @@ UI に数値として出すものではない**。UI に出してよいのは従
 
 #### カタログは `published`（2026-09-07・M11 確定後）
 
+🟢 **`RewardRedemptions` は production に作成済み**（2026-09-07・§4.2）。
+交換の受け皿は用意できている。残るのは **PR merge（本番反映）** だけ。
+
 TBD-12 が確定し（§7.9）、申込時に会員本人から住所を取って `RewardRedemptions` へ
 snapshot として残す構造になったため、`status: "published"` にした。
 
-🔴 **本番反映の前に、production Airtable へ `RewardRedemptions` テーブルを作ること**
-（`docs/MEMBERSHIP_DATA_MIGRATION.md` §4.2）。
-テーブルが無い間、交換 API は **503 `redemption_not_ready`** を返して fail-closed になり、
-**ポイントは減らない**（キューへ積めてから台帳を引くため。§7.9）。
+（`RewardRedemptions` が無い間は、交換 API が **503 `redemption_not_ready`** を返して
+fail-closed になり、**ポイントは減らない**。§7.9。2026-09-07 に作成済み。）
 
 ### 7.9 TBD-12 発送先住所 ＝ **申込時に本人から取得し、発送レコードへ残す**（2026-09-07 確定）
 
@@ -560,8 +561,9 @@ S-1〜S-4 はコード側の静的ガードとテストで固定してある。
 - [x] 交換処理の実装（サーバー側の再検証・他会員分離・冪等性）をテストで固定した
 - [x] カタログを `published` にした
 - [ ] 景品の**仕入れの実行**（まとめ仕入れ → 小分け・ラッピングの体制・**仕様所有者**）
-- [ ] `RewardRedemptions` の **production スキーマ作成**（🔴 **高リスク境界・承認必要**。
-      `docs/MEMBERSHIP_DATA_MIGRATION.md` §4.2。**本番反映より先に行う**）
+- [x] **`RewardRedemptions` の production スキーマ作成**（2026-09-07・仕様所有者が実施。
+      13 列・`Status` 4 選択肢・0 行を `membership:check` で read-only 実測。
+      `docs/MEMBERSHIP_DATA_MIGRATION.md` §4.2）
 - [ ] TBD-13（包装資材費と景品価額 `valueYen`）の確定（§7.8）
 
 ### 制度が「稼働している」と言える条件（将来）

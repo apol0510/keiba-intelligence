@@ -3,11 +3,11 @@
 > 本書は `docs/MEMBERSHIP_REWARDS.md` の下位文書。
 > 作成日: 2026-09-01 / 最終更新: 2026-09-07
 >
-> **現在地（2026-09-07 更新）**: 手順 1〜7（`Customers` の列・`RewardLedger`・
-> 読み書きの有効化）は**本番で実施済み**。
-> 🔴 **残るのは `RewardRedemptions` の作成だけ**（§4.2・**未実施・承認必要**）。
-> テーブルが無い間、交換 API は 503 `redemption_not_ready` で fail-closed になり、
-> **ポイントは減らない**。
+> **現在地（2026-09-07 更新 2）**: **スキーマ移行はすべて完了**。
+> 手順 1〜7（`Customers` の列・`RewardLedger`・読み書きの有効化）に加えて、
+> **`RewardRedemptions` も production に作成済み**（§4.2・仕様所有者が実施）。
+> `npm run membership:check` で **13 列・`Status` 4 選択肢・0 行**を read-only 実測して確認した。
+> 🔴 残るのは **PR merge / 本番反映**（production deploy）だけ。
 >
 > 参考（実施済みの詳細）: 仕様所有者の承認を得て、**手順 1〜7 まで本番で実施済み**
 > （列・テーブル作成／backfill 7 件／`MEMBERSHIP_READ_ENABLED` →
@@ -299,13 +299,23 @@ TBD-9 / TBD-10 は 2026-09-01 に確定し（`MEMBERSHIP_REWARDS.md` §7.6 / §7
    （Netlify の env はデプロイ時に注入されるため、設定だけでは反映されない）。
 7. Stripe のテストイベントで 1 件だけ流し、台帳が 1 行だけ増えることを確認する。
 
-### 4.2 `RewardRedemptions` の作成（🔴 **未実施・承認必要**）
+### 4.2 `RewardRedemptions` の作成（✅ **2026-09-07 実施済み**）
 
-景品交換を本番で受けるために必要な**唯一の残りスキーマ作業**である。
+景品交換を本番で受けるために必要な最後のスキーマ作業だった。**仕様所有者が実施済み**。
 
-🔴 **本番反映（PR merge）より先に、この手順を終えること。**
-テーブルが無い状態でも**壊れはしない**（交換 API が 503 `redemption_not_ready` を返し、
-**ポイントは減らない**）が、会員には「準備中」としか出せない。
+#### 実施結果（`npm run membership:check` で read-only 実測）
+
+| 検査 | 結果 |
+|---|---|
+| テーブル | ✅ **存在（0 行）** |
+| 列（13） | ✅ `RedemptionId` / `Email` / `ItemId` / `ItemName` / `Kind` / `CostPoints` / `MilestoneMonths` / `Status` / `RequestedAt` / `ShippedAt` / `RecipientName` / `PostalCode` / `Address` |
+| `Status` の選択肢 | ✅ `requested` / `approved` / `shipped` / `cancelled` |
+| 日付列 | ✅ ISO |
+| 既存テーブルへの影響 | ✅ `Customers` の 6 列・`RewardLedger` の 8 列は**不変** |
+
+🔴 **本番での交換テストはまだ行っていない**（実会員への write を伴うため）。
+
+#### 実施した手順（記録）
 
 | # | 操作 | 備考 |
 |---|---|---|
@@ -313,7 +323,7 @@ TBD-9 / TBD-10 は 2026-09-01 に確定し（`MEMBERSHIP_REWARDS.md` §7.6 / §7
 | 2 | `Status` を Single select にし、選択肢へ `requested` / `approved` / `shipped` / `cancelled` を入れる | 🔴 選択肢が無いと書き込みが 422 になる |
 | 3 | `RequestedAt` / `ShippedAt` を **`Date (ISO)`** にする | 時刻つきにすると 422（§2.1 と同じ）|
 | 4 | `npm run membership:check` | **`RewardRedemptions` の節が ✅ 存在**・列・`Status` の選択肢がそろっているかを確認 |
-| 5 | 交換を 1 件だけ実施し、1 行が **`approved`** まで進むことを確認 | 🔴 **本番 write**。承認範囲を確認してから。`requested` で止まっていたら**減算が失敗している**（発送しないこと）|
+| 5 | 交換を 1 件だけ実施し、1 行が **`approved`** まで進むことを確認 | 🔴 **本番 write。未実施**。承認範囲を確認してから。`requested` で止まっていたら**減算が失敗している**（発送しないこと）|
 
 🟢 **env の追加は不要。** `MEMBERSHIP_READ_ENABLED` / `MEMBERSHIP_WRITE_ENABLED` は
 2026-09-01 から production で有効であり、同じフラグで本テーブルも読み書きする。

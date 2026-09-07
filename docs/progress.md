@@ -2544,10 +2544,51 @@ merge 実績だけの後追い docs PR は作らない（次の実質的な更�
 
 | # | 残件 | 理由 |
 |---|---|---|
-| 1 | **`RewardRedemptions` の production 作成**（§4.2）| production schema write。**merge より先に行う** |
+| 1 | **`RewardRedemptions` の production 作成**（§4.2）| → **2026-09-07 実施済み**（次節）|
 | 2 | **PR #110 の merge / 本番反映** | production deploy |
 
 production env / Airtable / Stripe / 本番 write には**一切触れていない**。
+
+### 2026-09-07 `RewardRedemptions` を production に作成（仕様所有者が実施・Claude が read-only 検証）
+
+#### 経緯
+
+Claude は **production Airtable の資格情報を持っておらず**、
+`netlify env:get` での取得も auto mode の classifier にブロックされた。
+🔴 **回避は試みていない。** 作成手順を用意したうえで停止し、仕様所有者が実施した。
+
+#### 実測（`npm run membership:check`・read-only）
+
+| 検査 | 結果 |
+|---|---|
+| `RewardRedemptions` | ✅ **存在（0 行）** |
+| 列（13）| ✅ `RedemptionId` / `Email` / `ItemId` / `ItemName` / `Kind` / `CostPoints` / `MilestoneMonths` / `Status` / `RequestedAt` / `ShippedAt` / `RecipientName` / `PostalCode` / `Address` |
+| `Status` の選択肢 | ✅ `requested` / `approved` / `shipped` / `cancelled` |
+| 日付列 | ✅ ISO |
+| `Customers` の 6 列 | ✅ すべて「済」（**不変**）|
+| `RewardLedger` | ✅ 存在・必要な列がそろっている |
+
+**判定元は Metadata API**（`schema.bases:read`）。仕様所有者の報告と一致した。
+
+#### 🟡 併せて観測した本番の状態（read-only・書き込みなし）
+
+Live Mode 開始後に実データが動き始めている。
+
+| 項目 | 2026-09-01 時点 | **今回** |
+|---|---|---|
+| `Customers` 総数 | 63 | **73** |
+| 有料会員（backfill 対象）| 11 | **12**（設定済み 7 / `CreatedAt` あり 9 / 🔴 起点不明 **3**）|
+| `RewardLedger` | 0 行 | **1 行** |
+
+- `RewardLedger` の 1 行は、Live Mode 後の付与が動いた結果とみられる。
+  🔴 **中身は確認していない**（read-only の件数のみ）。
+- 起点不明 3 件は 2026-09-01 と同数で、**推測補完していない**方針のまま。
+- 🔴 これらは**本タスクの成果ではなく観測**である。会員データへの書き込みは一切していない。
+
+#### 🔴 まだ行っていないこと
+
+- **本番での交換テスト**（実会員への write を伴うため）
+- **PR #110 の merge / 本番反映**
 
 ## Final Goal
 
@@ -2598,16 +2639,9 @@ production env / Airtable / Stripe / 本番 write には**一切触れていな�
 **工程の現在地（2026-09-07 更新 2）**: **M0〜M12 の工程はすべて完了**。
 カタログは **`published`**、交換処理・住所の取得と保存・冪等性まで実装済み。
 
-🔴 **本番掲載の前に残っている 2 件**（どちらも承認境界）:
+✅ **`RewardRedemptions` は 2026-09-07 に production 作成済み**（仕様所有者が実施・下記節で実測確認）。
 
-| # | 残件 | 区分 |
-|---|---|---|
-| 1 | **`RewardRedemptions` の production 作成**（`MEMBERSHIP_DATA_MIGRATION.md` §4.2）| production schema write |
-| 2 | **PR #110 の merge / 本番反映** | production deploy |
-
-🔴 **順序を守ること: 1 →  2。** テーブルが無いまま merge しても壊れはしないが
-（交換 API が 503 `redemption_not_ready` で fail-closed・**ポイントは減らない**）、
-会員には「準備中」としか出せない。
+🔴 **残る承認境界は 1 件だけ**: **PR #110 の merge / 本番反映**（production deploy）。
 
 仕様所有者の確定待ちで残るのは **景品の仕入れの実行** と
 **TBD-13（包装資材費・景品価額 `valueYen`）** だけである。
