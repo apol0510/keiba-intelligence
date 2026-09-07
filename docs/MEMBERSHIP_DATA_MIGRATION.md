@@ -1,15 +1,17 @@
 # 会員継続制度の永続化 — 移行手順と rollback
 
 > 本書は `docs/MEMBERSHIP_REWARDS.md` の下位文書。
-> 作成日: 2026-09-01 / 最終更新: 2026-09-01
+> 作成日: 2026-09-01 / 最終更新: 2026-09-07
 >
-> **現在地（2026-09-01）**: 仕様所有者の承認を得て、**手順 1〜5（列・テーブル作成／backfill／
-> `MEMBERSHIP_READ_ENABLED`）まで本番で実施済み**。詳細は §2.9、実測結果は
-> `docs/progress.md`「スキーマ移行と READ 有効化」節が正本。
+> **現在地（2026-09-07）**: 仕様所有者の承認を得て、**手順 1〜7 まで本番で実施済み**
+> （列・テーブル作成／backfill 7 件／`MEMBERSHIP_READ_ENABLED` →
+> `MEMBERSHIP_WRITE_ENABLED`（2026-09-01 13:28 UTC・`4cbd03f3`）／
+> Stripe テストイベントでの実データ確認）。詳細は §2.9、実測結果は
+> `docs/progress.md`「スキーマ移行と READ 有効化」「✅ WRITE 有効化」節が正本。
 >
-> 🔴 **`MEMBERSHIP_WRITE_ENABLED=true` は未実施**（承認待ちで停止中）。
+> 🔴 移行は完了しているが、**本書の承認境界は解除されない**。
 > Airtable の本番スキーマ変更・本番 write は `CLAUDE.md`「High-risk approval boundary」に該当し、
-> **各段階ごとに仕様所有者の承認が必要**である。承認なく次の段階へ進めない。
+> **今後の変更も段階ごとに仕様所有者の承認が必要**である。承認なく次の段階へ進めない。
 
 ---
 
@@ -219,10 +221,12 @@ redemption : redemption:<email>:<交換ID>
 | 3. 動作確認（`membership:check`）| ✅ **実施済み** |
 | 4. backfill | ✅ **7 件実施**（逆算で根拠が取れた分のみ。残り 4 件は空欄）|
 | 5. `MEMBERSHIP_READ_ENABLED=true` | ✅ **実施済み**（再デプロイ済み）|
-| 6. `MEMBERSHIP_WRITE_ENABLED=true` | 🔴 **未実施（承認待ちで停止中）** |
-| 7. Stripe テストイベントでの 1 件確認 | 🔴 未実施（手順 6 の後）|
+| 6. `MEMBERSHIP_WRITE_ENABLED=true` | ✅ **実施済み**（2026-09-01 13:28 UTC・デプロイ `4cbd03f3` ready。有効化だけでは会員データは変化せず、Customers 63 件・`RewardLedger` 0 行のままであることを実測）|
+| 7. Stripe テストイベントでの 1 件確認 | ✅ **実施済み**（2026-09-03・E2E #9。`Type=accrual` / `Points=100` / `PeriodMonths=1` / `SourceRef=in_1UBRZ7…` が実データで保存され、`RewardLedger` 1 行 → 2 行）|
 
-実測結果は `docs/progress.md`「スキーマ移行と READ 有効化」節が正本。
+実測結果は `docs/progress.md`「スキーマ移行と READ 有効化」「✅ WRITE 有効化」節が正本。
+🔴 上表は **§4 の移行手順（手順 1〜7）に対する実施状況**であり、
+表内の見出し番号は §4 の手順番号と対応する。
 
 🔴 **PAT には `schema.bases:read` / `schema.bases:write` が必要**である
 （当初の PAT には無く 403 になった）。`membership:check` は schema が読めるときは
@@ -236,19 +240,23 @@ Metadata API を優先する（列を作った直後は全レコードが空で�
 | 新規テーブル作成 | production schema migration | ✅ **実施済み**（同上） |
 | 既存会員レコードへの backfill | 本番 write | ✅ **7 件のみ実施**（同上。残り 4 件は空欄） |
 | `MEMBERSHIP_READ_ENABLED` の有効化 | 本番 env 変更 | ✅ **実施済み**（同上） |
-| `MEMBERSHIP_WRITE_ENABLED` の有効化 | 本番 env 変更 | 🔴 **未実行**（承認必要・停止中） |
+| `MEMBERSHIP_WRITE_ENABLED` の有効化 | 本番 env 変更 | ✅ **実施済み**（2026-09-01 13:28 UTC・承認済み） |
 
 🔴 **2026-09-01 更新**: TBD-1〜TBD-8 は **確定した**（`MEMBERSHIP_REWARDS.md` §7.1）。
 制度の数値はコードの定数として実装済みで、**環境変数の設定も不要**である。
-したがって残る前提条件は次の 2 つだけになった。
+したがって残る前提条件は当時、次の 2 つだけになっていた。
 
 1. **列・テーブルの作成**（本書。承認必要）
 2. **継続月数の起点（TBD-9）と支払い失敗時の扱い（TBD-10）の確定**
    — どちらも「`MembershipStartedAt` に何を書くか」「いつ月数を止めるか」という
    **保存の話**なので、本移行と同時に決めるのが自然である。
 
+🔴 **2026-09-07 更新**: 上記 1・2 は **どちらも完了した**。
+TBD-9 / TBD-10 は 2026-09-01 に確定し（`MEMBERSHIP_REWARDS.md` §7.6 / §7.7）、
+列・テーブルの作成から `MEMBERSHIP_WRITE_ENABLED` の有効化までは同日に本番で実施済み（§2.9）。
+
 景品の品目（TBD-3b / TBD-4b）と発送先住所（TBD-12）は、**交換の実運用を始めるとき**に必要になる。
-台帳の作成そのものはそれを待たずに進められる。
+台帳の作成そのものはそれを待たずに進められる（**進めた結果が §2.9**）。
 
 ## 4. 移行手順（承認後に実施する順序）
 

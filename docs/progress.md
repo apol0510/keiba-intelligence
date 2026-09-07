@@ -2307,6 +2307,45 @@ cleanup により **Test Mode の E2E 環境は再現できない状態**にな�
 再度 Test Mode で検証する必要が生じた場合は、**環境の作り直し**（Stripe Test のキー再発行・
 env 再設定・`allowed_branches` の一時変更・branch deploy の再作成）から始めることになる。
 
+### 2026-09-07 Membership Phase の進捗表・完成条件を確定実績へ同期（docs-only）
+
+`main`（`07e2b380`）の正本を読み直し、**すでに確定・実施済みの事実と矛盾したまま
+「未確定 / 未実施」で残っていた記述**だけを直した。🔴 **仕様は変更していない。**
+コード・テスト・env・本番設定には一切触れていない。
+
+#### 直した矛盾
+
+| # | 場所 | 直す前 | 直した後（根拠） |
+|---|---|---|---|
+| 1 | 本書 工程表 **M12** | 「**未実施**（高リスク境界・承認必要）」 | **完了**（本書「スキーマ移行と READ 有効化」＝列 6 追加・`RewardLedger` 作成・backfill 7 件・`MEMBERSHIP_READ_ENABLED`／「✅ WRITE 有効化」＝2026-09-01 13:28 UTC・`4cbd03f3`）|
+| 2 | 本書「実装した内容（2026-09-01）」 | 「Airtable アダプタは未実装」 | 第3弾で `airtableStore.js` 実装（本書「Airtable アダプタ・移行ツール・E2E」。同節の「最新 main の取り込み」でも訂正済みと記録されていたが、この表には反映されていなかった）|
+| 3 | 同上 | `priceLock.js`「再加入時は『未確定』を返す」 | 第2弾の TBD-8 確定により `resolveReentryPrice` / `REENTRY_GRACE_DAYS`=90 日を実装済み |
+| 4 | `MEMBERSHIP_REWARDS.md` §10 完成条件 | `[ ] TBD-9 / TBD-10 / TBD-12 の確定` | **TBD-9 / TBD-10 は `[x]`**（§7.6 / §7.7）。**TBD-12 だけを未チェックで分離** |
+| 5 | 同 §10 | `[ ] Airtable スキーマ移行の承認・実行` | `[x]`（2026-09-01 本番実施）|
+| 6 | 同 §10 | `[ ] PR merge / 本番反映` | `[x]`（PR #83 → `6aa5a7c1`・production ready）|
+| 7 | 同 §3 / §3.1 / §3.2 | 「数値は未確定」「再加入価格は未確定」「昇格月数は未確定」 | いずれも §7.1 で **2026-09-01 に確定済み**（TBD-2 / TBD-8）。同一文書内の自己矛盾だった |
+| 8 | 同 §4 / §6.1 / §9 | 未確定リストに **TBD-9 / TBD-10** が残存 | §7.5 の正本（TBD-9 / TBD-10 は確定）に合わせ、未確定を **TBD-3b / TBD-4b / TBD-12** に統一 |
+| 9 | `MEMBERSHIP_DATA_MIGRATION.md` 冒頭 / §2.9 / §3 | 「`MEMBERSHIP_WRITE_ENABLED=true` は未実施（承認待ちで停止中）」/ 手順 6・7 が 🔴 | 手順 **1〜7 すべて実施済み**（手順 6＝2026-09-01 13:28 UTC、手順 7＝2026-09-03 E2E #9 で `Type=accrual` / `Points=100` / `PeriodMonths=1` を実データで確認）|
+
+#### 🔴 直していないもの（意図的）
+
+| 対象 | 理由 |
+|---|---|
+| **M9**（景品の品目 TBD-3b / TBD-4b）・**M11**（TBD-12） | **本当に未着手**。仕様所有者の確定待ちであり、状態は正しい |
+| `decisions.md`「本番に残る前提は Airtable のスキーマ移行だけになった」 | **2026-09-01 時点の ADR の Consequences**（判断時点の記録）。進捗表ではないため書き換えない |
+| 「High-risk Operations Not Yet Executed」節 | 2026-07-20 タスクの記録であり、**本タスクで実行しなかったもの**を書く節。Membership Phase の進捗表ではない |
+| `MEMBERSHIP_DATA_MIGRATION.md` の承認境界 | 移行は完了したが、**本番 schema 変更・本番 write の承認境界は解除しない**。文言をその趣旨へ改めただけ |
+| UI に出してよい値の範囲 | TBD-9 / TBD-10 は**内部の判定ルール**であり、確定しても UI に数値として出すものではない。§4 にその旨を明記し、**表示できる訴求は増やしていない** |
+
+#### 検証
+
+| 検査 | 結果 |
+|---|---|
+| `npm run validate:archive` | ✅ 南関・中央とも正常 |
+| `npm run test:membership` | ✅ **198 / 198**（fail 0）|
+| `npm run build` | ✅ **exit 0**（組み込みテスト 90 / 150 / 11 / 61 / 52 / 17 / 6 / 198 / 12 / 30 すべて fail 0）|
+| 変更ファイル | `docs/progress.md` / `docs/MEMBERSHIP_REWARDS.md` / `docs/MEMBERSHIP_DATA_MIGRATION.md` の **3 件のみ**（コード・env・本番設定は不変）|
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
@@ -2351,7 +2390,15 @@ env 再設定・`allowed_branches` の一時変更・branch deploy の再作成�
 | M9 | 景品の品目の選定（TBD-3b / TBD-4b） | **未着手**（仕様所有者） |
 | M10 | **TBD-9 / TBD-10 の確定と実装** | **完了**（2026-09-01・`MEMBERSHIP_REWARDS.md` §7.6 / §7.7）|
 | M11 | TBD-12（発送先住所）の確定 | **未着手**（交換の実運用を始める前） |
-| M12 | Airtable スキーマ移行・read/write 有効化 | **未実施**（高リスク境界・承認必要）|
+| M12 | Airtable スキーマ移行・read/write 有効化 | **完了**（2026-09-01。列 6 追加・`RewardLedger` 作成・backfill 7 件・`MEMBERSHIP_READ_ENABLED` → `MEMBERSHIP_WRITE_ENABLED`（13:28 UTC・`4cbd03f3`）。本書「スキーマ移行と READ 有効化」「✅ WRITE 有効化」節）|
+
+**工程の現在地（2026-09-07）**: 残るのは **M9（景品の品目 TBD-3b / TBD-4b）** と
+**M11（TBD-12 発送先住所）** の 2 件のみで、**どちらも仕様所有者の確定待ち**である。
+M0〜M8 / M10 / M12 は完了。
+`MEMBERSHIP_READ_ENABLED` / `MEMBERSHIP_WRITE_ENABLED` は **production で有効**
+（2026-09-06 の read-only 実測でも `MEMBERSHIP_WRITE_ENABLED` = 設定ありを確認。
+2026-09-07 の Test Mode cleanup で削除したのは **Branch deploys スコープ**の 5 件であり、
+production の env は 26 件・不変）。
 
 ### 実装した内容（2026-09-01）
 
@@ -2360,8 +2407,8 @@ env 再設定・`allowed_branches` の一時変更・branch deploy の再作成�
 | 制度 | `src/lib/membership/ranks.js`（4 ランク・閾値未設定なら判定しない） |
 | 制度 | `src/lib/membership/rewards.js`（台帳集計・冪等キー・残高不足の交換を作らない） |
 | 制度 | `src/lib/membership/catalog.js` ＋ `src/data/membership/rewardCatalog.json`（データ駆動・既定は draft/空） |
-| 制度 | `src/lib/membership/priceLock.js`（契約時価格の保持。再加入時は「未確定」を返す） |
-| 制度 | `src/lib/membership/store.js`（既定 disabled の fail-closed。Airtable アダプタは未実装） |
+| 制度 | `src/lib/membership/priceLock.js`（契約時価格の保持。再加入時は当時「未確定」を返した → **第2弾で TBD-8 確定**により `resolveReentryPrice` / `REENTRY_GRACE_DAYS`=90 日を実装） |
+| 制度 | `src/lib/membership/store.js`（既定 disabled の fail-closed。Airtable アダプタは当時未実装 → **第3弾で `src/lib/membership/airtableStore.js` を実装**し、`MEMBERSHIP_READ_ENABLED` / `MEMBERSHIP_WRITE_ENABLED` の段階的有効化に接続） |
 | 表示 | `src/lib/membership/membershipView.js`（未確定は `pending`。認可フラグを作らない） |
 | UI | `src/pages/pricing.astro` に柱2「続けるほど、会員価値が積み上がる」＋ FAQ 2 件 |
 | UI | `src/pages/mypage.astro` に「KI 会員クラブ」ブロック（10 項目・未確定は「準備中」） |
