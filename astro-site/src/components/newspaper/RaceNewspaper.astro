@@ -23,8 +23,9 @@
 import RaceEntryTable from './RaceEntryTable.astro';
 import PaceMap from './PaceMap.astro';
 import { buildRaceNarrativeBundle, normalizePastRaces } from '../../utils/raceNarrative.js';
-import { sortByHorseNumber } from '../../utils/attentionMarks.js';
+import { assignFreeMarks, sortByHorseNumber } from '../../utils/attentionMarks.js';
 import { buildBettingPlan } from '../../utils/bettingPlan.js';
+import { markPolicyFor } from '../../utils/attentionMarkPolicy.js';
 
 interface Props {
   race: any;
@@ -96,6 +97,22 @@ const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => ty
 const bettingPlan = showBetting && validBetting.length
   ? buildBettingPlan(validBetting, { isMain: !!isMain, betType, fieldSize: allHorses.length })
   : null;
+
+/**
+ * 無料会員に **実際に描画する印**のポリシー（R-3・2026-09-07 改訂）。
+ *
+ * 🔴 ここでしか判定できない。買い目の生データを持つのはこのコンポーネントだけで、
+ *    `RaceEntryTable` には買い目を渡していない（渡してはいけない）。
+ * 🔴 外へ出すのは 'full' | 'noDown' の判定結果だけ。
+ *    買い目そのものは props にも HTML にも載せない。
+ * 印を描画するのは無料会員（`showMarks && !showBetting`）だけなので、そのときだけ判定する。
+ */
+const markPolicy = showMarks && !showBetting
+  ? markPolicyFor(
+      assignFreeMarks(orderedHorses, { pastRacesOf: pastOf, raceInfo }),
+      validBetting,
+    )
+  : 'full';
 ---
 
 <section class="racepaper" data-race-number={raceInfo?.raceNumber} data-tier={view?.tier}>
@@ -149,6 +166,7 @@ const bettingPlan = showBetting && validBetting.length
     raceKey={`r${raceInfo?.venue ?? ''}${raceInfo?.raceNumber ?? ''}`}
     raceInfo={raceInfo}
     bettingPlan={bettingPlan}
+    markPolicy={markPolicy}
     narrativeOf={(h: any) => bundle.horses.get(h?.horseNumber) || null}
     featuresOf={resolveFeatures}
     pastRacesOf={pastOf}
