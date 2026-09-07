@@ -11,6 +11,8 @@
  *      印の多さは指数が一致した結果であって、順位から足したものではない。
  *   4. **データが無い軸は使わない**（捏造しない）。軸が減れば印も減る。
  *   5. △ は買い目の相手（5〜6 頭）より広く保つ。
+ *      🔴 **生成側で担保できない少頭数がある**（8 頭立て等）。実際に無料へ出す印の
+ *      漏洩検証は `attentionMarkPolicy.test.mjs`（表示側）が持つ。ここは生成仕様だけを固定する。
  *   6. **必ず空欄を残す**。
  *   7. ランダム・時刻に依存しない（決定論的）。
  *   8. 画面の並びは常に馬番昇順。
@@ -112,36 +114,12 @@ test('downPerAxis: 4 で固定（軸の本数でも頭数でも変えない）',
   assert.equal(downPerAxis(0), 0);
 });
 
-test('🔴 △ の集合が買い目の相手の集合と一致しない（漏洩防止）', () => {
-  const day = loadNankanRaceDay(ROOT);
-  if (day.error && !day.venues.length) return;
-  const past = (h) => normalizePastRaces(racesResolverFor('nankan')(h));
-  let checked = 0;
-  const leaks = [];
-  for (const venue of day.venues) {
-    for (const race of racesOf(venue)) {
-      const horses = race?.horses || [];
-      if (horses.length < 8) continue;
-      const lines = race?.bettingLines?.umatan || [];
-      const partners = new Set();
-      for (const line of lines) {
-        const rhs = String(line).split('-')[1];
-        if (!rhs) continue;
-        for (const p of rhs.replace(/\(.*/, '').split('.')) {
-          if (p.trim()) partners.add(Number(p.trim()));
-        }
-      }
-      if (!partners.size) continue;
-      checked += 1;
-      const m = assignFreeMarks(horses, { pastRacesOf: past, raceInfo: race.raceInfo || {} });
-      const down = new Set([...m.entries()].filter(([, s]) => s.includes('△')).map(([k]) => k));
-      const same = down.size === partners.size && [...partners].every((p) => down.has(p));
-      if (same) leaks.push(`${race.raceInfo.raceNumber}R: △ が買い目の相手と完全一致`);
-    }
-  }
-  assert.ok(checked > 0, '買い目を持つレースが 0');
-  assert.deepEqual(leaks, [], leaks.join(' / '));
-});
+/*
+ * 🔴 「△ の集合が買い目の相手と一致しない」検証は **表示側へ移した**（2026-09-07）。
+ *    生成側（`assignFreeMarks`）は少頭数で一致を避けられないため、ここで固定すると
+ *    生成ロジックに買い目を持ち込むことになる。実際に無料へ出す印での検証は
+ *    `attentionMarkPolicy.test.mjs` が持つ。正本: docs/RENEWAL_2026_08.md §2 R-3。
+ */
 
 /* ---------- 2. 🔴 1 頭だけを特別扱いしない（今回の失敗の再発防止） ---------- */
 
@@ -312,8 +290,15 @@ test('実データ: 印が最も重い馬は ◎ を持つ（新聞と同じ重�
       if (horses.length < 8) continue;
       const info = race.raceInfo || {};
       const m = assignFreeMarks(horses, { pastRacesOf: past, raceInfo: info });
-      const best = [...m.entries()].sort((a, b) => weigh(b[1]) - weigh(a[1]))[0];
-      assert.ok(best[1].includes('◎'), `${info.raceNumber}R: 印が最も重い馬に ◎ が無い（${best[1]}）`);
+      // 最重量が同点になることがある（例: '◎◎◎△△' と '○○○○▲' はどちらも 14）。
+      // 並べ替えの先頭 1 頭だけを見ると同点の片方を取りこぼすので、同率最高を全部見る。
+      const weighed = [...m.entries()].map(([n, s]) => [n, s, weigh(s)]);
+      const top = Math.max(...weighed.map(([, , w]) => w));
+      const heaviest = weighed.filter(([, , w]) => w === top);
+      assert.ok(
+        heaviest.some(([, s]) => s.includes('◎')),
+        `${info.raceNumber}R: 印が最も重い馬に ◎ が無い（${heaviest.map(([, s]) => s).join(' / ')}）`,
+      );
       checked += 1;
     }
   }

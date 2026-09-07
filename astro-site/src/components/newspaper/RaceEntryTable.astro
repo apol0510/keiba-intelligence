@@ -29,6 +29,7 @@
 
 import HorseDetailPanel from './HorseDetailPanel.astro';
 import { assignFreeMarks } from '../../utils/attentionMarks.js';
+import { applyMarkPolicy } from '../../utils/attentionMarkPolicy.js';
 
 /** 印の記号 → CSS クラス（新聞と同じく ◎ を最も目立たせる）。 */
 const MARK_CLASS: Record<string, string> = { '◎': 'd', '○': 'c', '▲': 'f', '△': 't' };
@@ -40,6 +41,12 @@ interface Props {
   raceInfo?: any;
   /** 🔴 展開済みの買い目。**有料 tier のときだけ**渡すこと（free には渡さない）。 */
   bettingPlan?: any;
+  /**
+   * 🔴 無料会員に実際に出す印のポリシー（R-3・2026-09-07 改訂）。
+   *    'noDown' のレースは △ を描画しない（◎○▲ はそのまま出す）。
+   *    判定は `RaceNewspaper` が行う。**買い目はこのコンポーネントへ渡さない。**
+   */
+  markPolicy?: 'full' | 'noDown';
   view: { showMarks?: boolean; showBetting?: boolean; tier?: string };
   raceKey: string;
   narrativeOf: (horse: any) => any;
@@ -50,6 +57,7 @@ interface Props {
 
 const {
   horses = [], view, raceKey, raceInfo = null, bettingPlan = null,
+  markPolicy = 'full',
   narrativeOf, featuresOf, pastRacesOf, statsOf,
 } = Astro.props;
 
@@ -126,7 +134,8 @@ const rows = horses.map((h: any) => {
     number: h?.horseNumber ?? null,
     name: h?.horseName || '—',
     // 🔴 印は無料会員のみ。複数を重複付与した文字列（例: '◎△' / '○▲△' / ''）
-    freeMark: freeMarks.get(h?.horseNumber) || '',
+    //    markPolicy が 'noDown' のレースは △ を落として描画する（R-3・2026-09-07 改訂）。
+    freeMark: applyMarkPolicy(freeMarks.get(h?.horseNumber) || '', markPolicy),
     // 🔴 AI指数の実数値は有料 tier のみ。無料はここで null にし HTML に値を出さない
     pt: showRanked && typeof h?.pt === 'number' && Number.isFinite(h.pt) ? h.pt : null,
     age: h?.age || null,
