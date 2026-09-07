@@ -2247,9 +2247,65 @@ preflight で「branch deploy は 2 件」と報告したが、**1 ページ目�
 🟡 E2E URL が 404 になったため、**Stripe Test の webhook 送信先 2 件は現在 404 を返す**。
 Test Mode なので実害は無いが、送信先の削除または無効化で解消する。
 
-#### 現在地
+#### 現在地（2026-09-07 時点の記録。**その後 completed。下の節を見ること**）
 
-**Test Mode cleanup は Netlify / Git のみ完了。Stripe Test と Airtable が残っており、全体は未完了。**
+Netlify / Git のみ完了。Stripe Test と Airtable が残っていた。
+→ **2026-09-07 に仕様所有者が残りを実施し、全工程 completed**（次節）。
+
+### 2026-09-07 Test Mode cleanup — ✅ **全工程 completed**
+
+前節の残り（Stripe Test / Airtable）を**仕様所有者が実施**し、全工程が終わった。
+
+#### 工程と実施者
+
+| # | 工程 | 実施者 | 状態 |
+|---|---|---|---|
+| 1 | Netlify: Branch deploys の E2E 専用 env **5 件**削除 | Claude | ✅ 完了（検証済み・総数 26 → 21）|
+| 2 | Netlify: 対象ブランチの branch deploy **37 件**削除 | Claude | ✅ 完了（残存 0・全 1,395 件を走査して確認）|
+| 3 | Git: ブランチ `test/stripe-testmode-e2e-2026-09-01` 削除（local + remote）| Claude | ✅ 完了 |
+| 4 | **Stripe Test**: E2E サブスク停止 → Customer / Test Clock / Webhook 送信先 2 件 | **仕様所有者** | ✅ **完了（報告）** |
+| 5 | **Airtable**: テスト **9 レコード**削除（`Customers` / `RewardLedger`）| **仕様所有者** | ✅ **完了（報告）** |
+
+🔴 **証跡の粒度に差がある。**
+工程 1〜3 は本書に実測値（件数・走査総数・HTTP 応答）を残してある。
+工程 4 / 5 は **仕様所有者の実施報告のみ**で、削除した record ID・件数の内訳・
+Stripe オブジェクトの最終状態は本書に記録されていない。
+これは Claude 側が Airtable / Stripe Test の資格情報を持たず、read-only の検証も
+できなかったため。**再検証が必要になった場合はこの点に留意する。**
+
+#### 対象外として残したもの（報告）
+
+| 対象 | 状態 |
+|---|---|
+| プラスタグ無しの素のアドレス（`0510apolon@…`）| ✅ **残存**（削除していない）|
+| 本番の実会員レコード | ✅ **残存**（削除していない）|
+| Branch deploys の共用 env 4 件<br>（`SESSION_SIGNING_SECRET` / `AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` / `PREVIEW_PAID_KEY`）| ✅ **残存**（Claude が確認済み。他のブランチデプロイに効くため）|
+| 同ブランチの **deploy-preview 48 件** | ✅ **残存**（cleanup 対象外。Claude が確認済み）|
+| production / Live Mode（Product / Price / Webhook / env）| ✅ **未変更** |
+
+#### 検証（Claude が read-only で実測できた範囲）
+
+| 対象 | 結果 |
+|---|---|
+| E2E 固定 URL | ✅ **404**（配信不能）|
+| 本番 webhook（Live・署名なし POST）| ✅ **400 `invalid_signature`** |
+| `/pricing` | ✅ 「このプランを申し込む」1 件 |
+| guest → `/prediction/{nankan,jra}` | ✅ **302**（fail-closed）|
+| production env | ✅ 26 件・不変（`STRIPE_*` 3 件）|
+| `allowed_branches` | ✅ `["main"]` |
+
+🔴 **Airtable の残存件数・Stripe Test の最終状態は Claude 側で検証していない**（資格情報なし）。
+
+#### Test Mode 環境について
+
+cleanup により **Test Mode の E2E 環境は再現できない状態**になった。
+
+- 固定 URL（branch deploy）は削除済み
+- Branch deploys の Stripe env は削除済み（🔴 **値は再取得不能**。再開するには各サービスから再発行が要る）
+- ブランチは削除済み（内容は `main` にある）
+
+再度 Test Mode で検証する必要が生じた場合は、**環境の作り直し**（Stripe Test のキー再発行・
+env 再設定・`allowed_branches` の一時変更・branch deploy の再作成）から始めることになる。
 
 ## Final Goal
 
