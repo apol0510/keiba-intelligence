@@ -554,6 +554,8 @@ S-1〜S-4 はコード側の静的ガードとテストで固定してある。
       `MEMBERSHIP_WRITE_ENABLED` まで有効化。`docs/MEMBERSHIP_DATA_MIGRATION.md` §2.9 /
       `docs/progress.md`「スキーマ移行と READ 有効化」「✅ WRITE 有効化」）
 - [x] PR merge / 本番反映（2026-09-01・PR #83 を squash merge → `6aa5a7c1`・production ready）
+- [x] **M9 / M11 の本番反映**（2026-09-07・PR #110 を squash merge → `85164a91`・production ready。
+      merge 後に read-only で `/mypage`・交換 API・guest fail-closed を確認）
 - [x] **景品の品目の決定**（2026-09-07・仕様所有者）→ §7.8（米 / コーヒーの2択）
 - [x] 品目を `rewardCatalog.json` のデータとして実装し、
       「会員が選べる」「自動割当にしない」「ランクで必要ポイントを変えない」をテストで固定した
