@@ -392,10 +392,11 @@ describe('🔴 住所は発送時点の snapshot として残る', () => {
     assert.equal(recs[1].shipping.address, moved.shipping.address);
   });
 
-  test('レコードは requested で作られる（運用者が shipped へ進める）', async () => {
+  test('減算まで通れば approved（＝発送してよい状態）になる', async () => {
     const store = storeWith({ points: 700 });
-    await call(store, baseInput('rice-300g-600'));
-    assert.equal(store.snapshot().redemptions[ME][0].status, REDEMPTION_STATUS.REQUESTED);
+    const res = await call(store, baseInput('rice-300g-600'));
+    assert.equal(res.body.redemptionStatus, REDEMPTION_STATUS.APPROVED);
+    assert.equal(store.snapshot().redemptions[ME][0].status, REDEMPTION_STATUS.APPROVED);
   });
 
   test('buildRedemptionRecord は住所が欠けていれば作らない', () => {
@@ -412,5 +413,120 @@ describe('🔴 住所は発送時点の snapshot として残る', () => {
     const id = buildRedemptionId({ email: ME, itemId: 'rice-300g-600', requestId: REQ });
     assert.equal(id, `${ME}:rice-300g-600:${REQ}`);
     assert.equal(buildRedemptionId({ email: ME, itemId: 'rice-300g-600', requestId: 'bad' }), null);
+  });
+});
+
+/* ================================================================
+   🔴 片側成功からの回復（2026-09-07 の指摘）
+   ================================================================ */
+
+/** 台帳への書き込みだけを失敗させる store。 */
+function ledgerFailing(store) {
+  return Object.freeze({
+    ...store,
+    async appendEntry() {
+      return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'write_failed:500', writes: 0 });
+    },
+  });
+}
+
+describe('🔴 キューだけ成功して減算が失敗しても回復する', () => {
+  test('再送で減算が 1 回だけ成立し、approved になる', async () => {
+    const store = storeWith({ points: 700 });
+
+    // 1 回目: キューは積めたが台帳が落ちる
+    const first = await call(ledgerFailing(store), baseInput('rice-300g-600'));
+    assert.equal(first.statusCode, 503);
+
+    let snap = store.snapshot();
+    assert.equal(snap.redemptions[ME].length, 1, 'キューには積まれている');
+    assert.equal(snap.redemptions[ME][0].status, REDEMPTION_STATUS.REQUESTED,
+      '🔴 減算前なのに approved になっている');
+    assert.equal(snap.ledgers[ME].filter((e) => e.type === 'redemption').length, 0,
+      'ポイントだけ減っている');
+
+    // 2 回目（同じ requestId）: 減算が回復して approved になる
+    const second = await call(store, baseInput('rice-300g-600'));
+    assert.equal(second.statusCode, 200);
+    assert.equal(second.body.redemptionStatus, REDEMPTION_STATUS.APPROVED);
+
+    snap = store.snapshot();
+    assert.equal(snap.redemptions[ME].length, 1, '交換行が増えている');
+    const deductions = snap.ledgers[ME].filter((e) => e.type === 'redemption');
+    assert.equal(deductions.length, 1, '🔴 減算が 1 回だけ成立していない');
+    assert.equal(deductions[0].points, -600);
+  });
+
+  test('🔴 減算が失敗している間、その申込は発送対象（approved）にならない', async () => {
+    const store = storeWith({ points: 700 });
+    const failing = ledgerFailing(store);
+
+    await call(failing, baseInput('rice-300g-600'));
+    await call(failing, baseInput('rice-300g-600'));
+    await call(failing, baseInput('rice-300g-600'));
+
+    const recs = store.snapshot().redemptions[ME];
+    assert.equal(recs.length, 1, '再送のたびに交換行が増えている');
+    assert.equal(recs[0].status, REDEMPTION_STATUS.REQUESTED,
+      '🔴 引けていない申込が発送対象になっている');
+  });
+
+  test('🔴 既に減算済みの再送では二重に引かない', async () => {
+    const store = storeWith({ points: 700 });
+
+    await call(store, baseInput('rice-300g-600'));      // 正常に完了（approved）
+    await call(store, baseInput('rice-300g-600'));      // 再送
+    await call(store, baseInput('rice-300g-600'));      // さらに再送
+
+    const deductions = store.snapshot().ledgers[ME].filter((e) => e.type === 'redemption');
+    assert.equal(deductions.length, 1, '🔴 二重減算が起きた');
+    assert.equal(store.snapshot().redemptions[ME].length, 1);
+  });
+
+  test('approved / shipped の再送は何も書かない', async () => {
+    const store = storeWith({ points: 700 });
+    await call(store, baseInput('rice-300g-600'));
+
+    // 運用者が発送済みにした状態を模す
+    await store.updateRedemptionStatus(ME, `${ME}:rice-300g-600:${REQ}`, REDEMPTION_STATUS.SHIPPED);
+    const before = store.writeCount();
+
+    const res = await call(store, baseInput('rice-300g-600'));
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.status, 'already');
+    assert.equal(res.body.redemptionStatus, REDEMPTION_STATUS.SHIPPED);
+    assert.equal(store.writeCount(), before, '🔴 shipped の申込に書き込みが走った');
+  });
+
+  test('回復時に残高が足りなくなっていたら approved にしない', async () => {
+    const store = storeWith({ points: 700 });
+
+    // キューだけ積まれた状態を作る
+    await call(ledgerFailing(store), baseInput('rice-300g-600'));
+
+    // その間に別の交換で残高を使い切る
+    await call(store, baseInput('coffee-50g-600', 'req-99999999-0009'));
+
+    const res = await call(store, baseInput('rice-300g-600'));
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.body.error, REDEEM_ERROR.INSUFFICIENT_POINTS);
+
+    const stuck = store.snapshot().redemptions[ME].find((r) => r.redemptionId.endsWith(REQ));
+    assert.equal(stuck.status, REDEMPTION_STATUS.REQUESTED,
+      '🔴 引けていないのに発送対象になっている');
+  });
+
+  test('記念品は 0pt のまま approved になる（台帳を触らない）', async () => {
+    const store = storeWith({ points: 1200 });
+    const res = await call(store, baseInput('rice-300g-m12'));
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.costPoints, 0);
+    assert.equal(res.body.redemptionStatus, REDEMPTION_STATUS.APPROVED);
+
+    const snap = store.snapshot();
+    assert.equal(snap.redemptions[ME][0].status, REDEMPTION_STATUS.APPROVED);
+    assert.equal(snap.ledgers[ME].filter((e) => e.type === 'redemption').length, 0,
+      '記念品でポイントが引かれている');
   });
 });

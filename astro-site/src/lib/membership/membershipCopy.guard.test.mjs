@@ -207,13 +207,35 @@ describe('未確定の数値を出さない（TBD-1〜TBD-8）', () => {
     }
   });
 
-  test('🔴 G-27: 交換は「発送キュー → 台帳」の順で書く', () => {
+  test('🔴 G-27: 交換は「キュー → 減算 → approved」の順で書く', () => {
     const src = read(join(LIB_DIR, 'redeemHandler.js'));
-    const queue = src.indexOf('store.appendRedemption(');
-    const ledger = src.indexOf('store.appendEntry(');
-    assert.ok(queue > 0 && ledger > 0, '交換の書き込みが見つからない');
-    assert.ok(queue < ledger,
+    const queue = src.indexOf('// ---- 1. 発送キューへ');
+    const settle = src.indexOf('// ---- 2. 通常交換だけポイントを引く');
+    const approve = src.indexOf('// ---- 3. 減算が成立したときだけ');
+
+    assert.ok(queue > 0 && settle > 0 && approve > 0, '交換の 3 段階が見つからない');
+    assert.ok(queue < settle,
       '🔴 台帳を先に引くと、キューへ積めなかったときポイントだけ減る');
+    assert.ok(settle < approve,
+      '🔴 減算より先に approved にすると、引けていない申込が発送対象になる');
+  });
+
+  test('🔴 G-29: requested は発送対象にしない（terminal に入れない）', () => {
+    const src = read(join(LIB_DIR, 'redeemHandler.js'));
+    const terminal = src.slice(src.indexOf('const TERMINAL'), src.indexOf('const TERMINAL') + 260);
+    assert.ok(terminal.includes('APPROVED') && terminal.includes('SHIPPED') && terminal.includes('CANCELLED'),
+      'terminal な状態が欠けている');
+    assert.equal(terminal.includes('REQUESTED'), false,
+      '🔴 requested を terminal にすると、減算が失敗した申込が回復されない');
+  });
+
+  test('🔴 G-30: 減算は既存エントリを確認してから行う（二重減算を作らない）', () => {
+    const src = read(join(LIB_DIR, 'redeemHandler.js'));
+    const settle = src.slice(src.indexOf('async function settlePoints'));
+    const check = settle.indexOf('e.entryId === wanted');
+    const append = settle.indexOf('store.appendEntry(');
+    assert.ok(check > 0 && append > 0, '減算の冪等チェックが無い');
+    assert.ok(check < append, '🔴 既存エントリを見ずに引くと二重減算になる');
   });
 
   test('🔴 G-28: クライアントが送る email / ポイントを使っていない', () => {

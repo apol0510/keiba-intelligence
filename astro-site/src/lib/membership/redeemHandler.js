@@ -8,13 +8,24 @@
  *    必要ポイントは公開中のカタログから引き直し、残高は台帳から数え直す。
  *
  * 🔴 **書く順序を変えないこと。**
- *    1. `RewardRedemptions`（発送キュー）へ積む
- *    2. 成功したときだけ台帳からポイントを引く
+ *    1. `RewardRedemptions` へ `requested`（＝**申込予約**）を積む
+ *    2. 台帳からポイントを引く（冪等）
+ *    3. **減算が成立したときだけ** `approved` へ進める
  *    逆にすると、キューへの書き込みが失敗したとき
  *    **ポイントだけ減って景品が届かない**状態になる。
  *
- * 🔴 冪等: `requestId` が同じなら 2 回目以降は **何も書かない**。
- *    二重クリック・再送で二重減算・二重発送依頼にならない。
+ * 🔴 **`requested` はまだ発送してよい状態ではない。**
+ *    運用者が発送するのは **`approved` だけ**（`docs/MEMBERSHIP_REWARDS.md` §7.9）。
+ *    2 が失敗すると `requested` のまま残る。これは
+ *    「申込は受けたがポイントを引けていない」という**回復待ち**の状態である。
+ *
+ * 🔴 冪等 ＋ **回復**:
+ *    同じ `requestId` の再送では、
+ *      - `approved` / `shipped` / `cancelled` → 何もせず `already`
+ *      - `requested` → **台帳の減算が入っているか確認し、無ければ引き直す**。
+ *        成立したら `approved` へ進める。
+ *    ここで無条件に `already` を返すと、**減算が永久に再試行されない**
+ *    （2026-09-07 に仕様所有者が指摘。片側成功が回復不能だった）。
  *
  * 🔴 Netlify Function から切り離してあるのは、**I/O 抜きでテストできるようにする**ため。
  */
@@ -22,14 +33,47 @@
 import { createCatalog } from './catalog.js';
 import {
   summarizeRewards, resolveTenureMonths, readAccrualConfig, buildRedemptionEntry,
+  buildEntryId, ENTRY_TYPE,
 } from './rewards.js';
 import { STORE_RESULT } from './store.js';
 import {
-  REDEEM_ERROR, isValidRequestId, normalizeShippingAddress, validateRedemption,
+  REDEEM_ERROR, REDEMPTION_STATUS, isValidRequestId, normalizeShippingAddress, validateRedemption,
   buildRedemptionId, buildRedemptionRecord, claimedMilestones, latestShippingAddress,
 } from './redemption.js';
 
 const json = (statusCode, payload) => Object.freeze({ statusCode, body: payload });
+
+/** これ以上進めない（＝再送しても何もしない）状態。 */
+const TERMINAL = Object.freeze([
+  REDEMPTION_STATUS.APPROVED, REDEMPTION_STATUS.SHIPPED, REDEMPTION_STATUS.CANCELLED,
+]);
+
+/** その申込に対応する台帳エントリの id。存在すれば**減算済み**。 */
+function redemptionEntryId(email, redemptionId) {
+  return buildEntryId({ type: ENTRY_TYPE.REDEMPTION, email, ref: redemptionId });
+}
+
+/**
+ * ポイント減算を**冪等に**成立させる。
+ * @returns {'done'|'insufficient'|'unavailable'}
+ */
+async function settlePoints({ store, email, redemptionId, costPoints, summary, ledger, nowMs }) {
+  if (costPoints <= 0) return 'done'; // 記念品はポイントを消費しない
+
+  const wanted = redemptionEntryId(email, redemptionId);
+  // 既に引かれているなら何もしない（二重減算を作らない）
+  if (wanted && Array.isArray(ledger) && ledger.some((e) => e.entryId === wanted)) return 'done';
+
+  const entry = buildRedemptionEntry({
+    summary, costPoints, email, redemptionId, occurredAtMs: nowMs,
+  });
+  if (!entry) return 'insufficient';
+
+  const applied = await store.appendEntry(email, entry);
+  if (applied.status === STORE_RESULT.UNAVAILABLE) return 'unavailable';
+  // APPLIED / ALREADY のどちらも「減算が成立している」
+  return 'done';
+}
 
 /**
  * 交換申込を処理する。
@@ -74,20 +118,6 @@ export async function handleRedeem({
   }
   const records = redemptionsRes.records;
 
-  // ---- 🔴 冪等の短絡は「残高を見る前」に置く ----
-  //    先に残高を見ると、1 回目で引かれたあとの 2 回目が
-  //    `insufficient_points` になり、成功した申込が失敗として返ってしまう。
-  const earlyId = buildRedemptionId({ email, itemId: input.itemId, requestId });
-  const done = earlyId ? records.find((r) => r.redemptionId === earlyId) : null;
-  if (done) {
-    return json(200, {
-      status: 'already',
-      redemptionId: done.redemptionId,
-      itemName: done.itemName || null,
-      costPoints: done.costPoints ?? null,
-    });
-  }
-
   const summary = summarizeRewards({
     entries: ledger,
     accrual: readAccrualConfig(config),
@@ -102,6 +132,49 @@ export async function handleRedeem({
     nowMs,
   });
   const months = tenure.status === 'ready' ? tenure.months : null;
+
+  // ---- 同じ申込の再送: 状態を見て「完了」か「回復」かを決める ----
+  //  🔴 ここで無条件に `already` を返すと、キューだけ作れて減算が失敗した申込が
+  //     永久に回復しない（＝交換行だけ残る）。
+  const existingId = buildRedemptionId({ email, itemId: input.itemId, requestId });
+  const existing = existingId ? records.find((r) => r.redemptionId === existingId) : null;
+
+  if (existing) {
+    if (TERMINAL.includes(existing.status)) {
+      return json(200, {
+        status: 'already',
+        redemptionId: existing.redemptionId,
+        itemName: existing.itemName || null,
+        costPoints: existing.costPoints ?? null,
+        redemptionStatus: existing.status,
+      });
+    }
+
+    // `requested` のまま = 減算が済んでいない可能性がある。引き直して回復させる。
+    const cost = Number.isInteger(existing.costPoints) && existing.costPoints > 0
+      ? existing.costPoints : 0;
+    const settled = await settlePoints({
+      store, email, redemptionId: existing.redemptionId, costPoints: cost, summary, ledger, nowMs,
+    });
+    if (settled === 'unavailable') return json(503, { error: 'redemption_not_ready' });
+    if (settled === 'insufficient') {
+      // 🔴 `approved` にしない。発送対象にならないまま残す。
+      return json(400, { error: REDEEM_ERROR.INSUFFICIENT_POINTS });
+    }
+
+    const promoted = await store.updateRedemptionStatus(
+      email, existing.redemptionId, REDEMPTION_STATUS.APPROVED);
+    if (promoted.status === STORE_RESULT.UNAVAILABLE) {
+      return json(503, { error: 'redemption_not_ready' });
+    }
+    return json(200, {
+      status: 'already',
+      redemptionId: existing.redemptionId,
+      itemName: existing.itemName || null,
+      costPoints: cost,
+      redemptionStatus: REDEMPTION_STATUS.APPROVED,
+    });
+  }
 
   // ---- カタログ側の実体で検証（クライアントの申告は使わない）----
   const check = validateRedemption({
@@ -129,36 +202,37 @@ export async function handleRedeem({
   });
   if (!record) return json(400, { error: REDEEM_ERROR.INVALID_ADDRESS });
 
-  // ---- 1. 発送キューへ積む（ここが失敗したらポイントは引かない）----
+  // ---- 1. 発送キューへ `requested`（申込予約）を積む ----
+  //     🔴 ここが失敗したらポイントは引かない。
   const queued = await store.appendRedemption(email, record);
   if (queued.status === STORE_RESULT.UNAVAILABLE) {
     return json(503, { error: 'redemption_not_ready' });
   }
 
   // ---- 2. 通常交換だけポイントを引く（記念品は消費しない）----
-  if (check.costPoints > 0) {
-    const entry = buildRedemptionEntry({
-      summary,
-      costPoints: check.costPoints,
-      email,
-      redemptionId,
-      occurredAtMs: nowMs,
-    });
-    if (!entry) {
-      // ここへ来るのは残高が足りない場合。キューは冪等なので再送で回復できる。
-      return json(400, { error: REDEEM_ERROR.INSUFFICIENT_POINTS });
-    }
-    const applied = await store.appendEntry(email, entry);
-    if (applied.status === STORE_RESULT.UNAVAILABLE) {
-      return json(503, { error: 'redemption_not_ready' });
-    }
+  const settled = await settlePoints({
+    store, email, redemptionId, costPoints: check.costPoints, summary, ledger, nowMs,
+  });
+  if (settled === 'unavailable') {
+    // 🔴 `requested` のまま残す。発送対象にはならず、再送で回復できる。
+    return json(503, { error: 'redemption_not_ready' });
+  }
+  if (settled === 'insufficient') {
+    return json(400, { error: REDEEM_ERROR.INSUFFICIENT_POINTS });
+  }
+
+  // ---- 3. 減算が成立したときだけ発送してよい状態へ進める ----
+  const promoted = await store.updateRedemptionStatus(email, redemptionId, REDEMPTION_STATUS.APPROVED);
+  if (promoted.status === STORE_RESULT.UNAVAILABLE) {
+    return json(503, { error: 'redemption_not_ready' });
   }
 
   return json(200, {
-    status: queued.status === STORE_RESULT.ALREADY ? 'already' : 'requested',
+    status: 'requested',
     redemptionId,
     itemName: check.item.name,
     costPoints: check.costPoints,
+    redemptionStatus: REDEMPTION_STATUS.APPROVED,
   });
 }
 

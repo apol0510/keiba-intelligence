@@ -74,6 +74,7 @@ export function readOnlyMembershipStore(inner) {
     async appendEntry() { return refuse(); },
     async saveContractPrice() { return refuse(); },
     async appendRedemption() { return refuse(); },
+    async updateRedemptionStatus() { return refuse(); },
   });
 }
 
@@ -103,6 +104,9 @@ export function createDisabledMembershipStore(reason = 'not_configured') {
       return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason, writes: 0 });
     },
     async appendRedemption() {
+      return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason, writes: 0 });
+    },
+    async updateRedemptionStatus() {
       return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason, writes: 0 });
     },
   });
@@ -158,6 +162,26 @@ export function createInMemoryMembershipStore({ profiles = {}, ledgers = {}, red
       list.push(record);
       redemptionMap.set(k, list);
       writes.push({ kind: 'redemption', email: k, redemptionId: record.redemptionId });
+      return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: writes.length });
+    },
+
+    /**
+     * 申込の状態を進める（`requested` → `approved` → `shipped`）。
+     * 🔴 同じ状態への更新は書かない（冪等）。
+     */
+    async updateRedemptionStatus(email, redemptionId, status) {
+      const k = key(email);
+      const list = redemptionMap.get(k) || [];
+      const idx = list.findIndex((r) => r.redemptionId === redemptionId);
+      if (idx < 0) {
+        return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'redemption_not_found', writes: writes.length });
+      }
+      if (list[idx].status === status) {
+        return Object.freeze({ status: STORE_RESULT.ALREADY, reason: null, writes: writes.length });
+      }
+      list[idx] = Object.freeze({ ...list[idx], status });
+      redemptionMap.set(k, list);
+      writes.push({ kind: 'redemption-status', email: k, redemptionId, status });
       return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: writes.length });
     },
 

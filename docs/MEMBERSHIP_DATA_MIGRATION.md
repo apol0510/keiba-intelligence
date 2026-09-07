@@ -122,6 +122,10 @@ redemption : redemption:<email>:<交換ID>
 TBD-12 が確定した（`MEMBERSHIP_REWARDS.md` §7.9）。**住所は本テーブルへ持つ。**
 本テーブルが **当面の発送キューそのもの**である（発送管理画面は作らない）。
 
+🔴 **発送対象は `approved` だけ。** `requested` は「申込予約」で、
+**ポイントの減算がまだ成立していない**（`MEMBERSHIP_REWARDS.md` §7.9）。
+これを発送すると、ポイントを引かずに景品を送ることになる。
+
 | 列名 | 型 | 用途 |
 |---|---|---|
 | `RedemptionId` | Single line text（**primary**） | 冪等キー（`<email>:<itemId>:<requestId>`）|
@@ -131,7 +135,7 @@ TBD-12 が確定した（`MEMBERSHIP_REWARDS.md` §7.9）。**住所は本テー
 | `Kind` | Single line text | `redeemable` / `milestone` |
 | `CostPoints` | Number | 引いたポイント（記念品は **0**）|
 | `MilestoneMonths` | Number | 記念品のときだけ 12 / 24 |
-| `Status` | Single select | `requested` / `approved` / `shipped` / `cancelled` |
+| `Status` | Single select | `requested`（申込予約・**発送しない**）/ `approved`（**発送対象**）/ `shipped` / `cancelled` |
 | `RequestedAt` | **Date (ISO)** | 申込日 |
 | `ShippedAt` | **Date (ISO)** | 発送日（運用者が更新）|
 | `RecipientName` | Single line text | 受取人氏名 |
@@ -309,7 +313,7 @@ TBD-9 / TBD-10 は 2026-09-01 に確定し（`MEMBERSHIP_REWARDS.md` §7.6 / §7
 | 2 | `Status` を Single select にし、選択肢へ `requested` / `approved` / `shipped` / `cancelled` を入れる | 🔴 選択肢が無いと書き込みが 422 になる |
 | 3 | `RequestedAt` / `ShippedAt` を **`Date (ISO)`** にする | 時刻つきにすると 422（§2.1 と同じ）|
 | 4 | `npm run membership:check` | 列がそろっているかを確認 |
-| 5 | 交換を 1 件だけ実施して `requested` が 1 行入ることを確認 | 🔴 **本番 write**。承認範囲を確認してから |
+| 5 | 交換を 1 件だけ実施し、1 行が **`approved`** まで進むことを確認 | 🔴 **本番 write**。承認範囲を確認してから。`requested` で止まっていたら**減算が失敗している**（発送しないこと）|
 
 🟢 **env の追加は不要。** `MEMBERSHIP_READ_ENABLED` / `MEMBERSHIP_WRITE_ENABLED` は
 2026-09-01 から production で有効であり、同じフラグで本テーブルも読み書きする。

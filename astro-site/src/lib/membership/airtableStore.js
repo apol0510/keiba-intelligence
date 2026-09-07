@@ -54,8 +54,9 @@ export const LEDGER_FIELDS = Object.freeze({
 /**
  * 交換・発送テーブル（§2.3）。**当面の発送キューそのもの**である。
  *
- * 🔴 新しい発送管理画面は作らない。運用者は Airtable で `requested` を見て発送し、
- *    `Status` / `ShippedAt` を更新する。それで足りる。
+ * 🔴 新しい発送管理画面は作らない。運用者は Airtable で **`approved`** を見て発送し、
+ *    `Status` を `shipped` に、`ShippedAt` を発送日にする。それで足りる。
+ * 🔴 `requested` は「申込予約」で、**ポイントの減算がまだ成立していない**。発送しない。
  * 🔴 住所は **申込時点の snapshot**。あとで住所が変わっても過去行を書き換えない。
  * 🔴 発送後の自動削除・保管日数・削除 cron は**作らない**（TBD-12 確定・§7.9）。
  */
@@ -362,6 +363,37 @@ export function createAirtableMembershipStore({
           },
         });
         if (!created.ok) return unavailable(created.schemaMissing ? SCHEMA_MISSING : `write_failed:${created.code}`);
+        return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: 1 });
+      } catch {
+        return unavailable('write_failed:exception');
+      }
+    },
+
+    /**
+     * 申込の状態を進める（`requested` → `approved`）。
+     *
+     * 🔴 `approved` にしてよいのは **ポイント減算が成立したあとだけ**。
+     *    `requested` は「申込予約」であって、まだ発送してよい状態ではない。
+     * 🔴 `ShippedAt` はここで触らない（発送は運用者が Airtable 上で記録する）。
+     */
+    async updateRedemptionStatus(email, redemptionId, status) {
+      if (schemaMissing) return unavailable(SCHEMA_MISSING);
+      if (!redemptionId || !status) return unavailable('invalid_redemption');
+      try {
+        const formula = encodeURIComponent(`{${REDEMPTION_FIELDS.REDEMPTION_ID}} = "${escapeFormula(redemptionId)}"`);
+        const found = await call(`${encodeURIComponent(REDEMPTION_TABLE)}?maxRecords=1&filterByFormula=${formula}`);
+        if (!found.ok) return unavailable(found.schemaMissing ? SCHEMA_MISSING : `read_failed:${found.code}`);
+        const rec = found.data.records?.[0];
+        if (!rec) return unavailable('redemption_not_found');
+        if (rec.fields?.[REDEMPTION_FIELDS.STATUS] === status) {
+          return Object.freeze({ status: STORE_RESULT.ALREADY, reason: null, writes: 0 });
+        }
+
+        const updated = await call(`${encodeURIComponent(REDEMPTION_TABLE)}/${rec.id}`, {
+          method: 'PATCH',
+          body: { fields: { [REDEMPTION_FIELDS.STATUS]: status } },
+        });
+        if (!updated.ok) return unavailable(updated.schemaMissing ? SCHEMA_MISSING : `write_failed:${updated.code}`);
         return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: 1 });
       } catch {
         return unavailable('write_failed:exception');
