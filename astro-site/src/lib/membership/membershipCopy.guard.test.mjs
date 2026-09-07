@@ -181,10 +181,50 @@ describe('未確定の数値を出さない（TBD-1〜TBD-8）', () => {
     assert.match(rewards, /rankBonusPoints:\s*null,/, 'ACCRUAL にランク倍率を入れてはいけない（TBD-1b）');
   });
 
-  test('同梱の景品カタログは draft のまま（発送先が未確定のうちは公開しない）', () => {
+  test('景品カタログは published（M11 確定後・§7.9）', () => {
     const raw = JSON.parse(read('src/data/membership/rewardCatalog.json'));
-    // 🔴 M11（TBD-12 発送先住所）が未確定＝実際に送れない。published へ変えない。
-    assert.equal(raw.status, 'draft');
+    // TBD-12 が確定し、申込時に住所を取って RewardRedemptions へ残す構造になった。
+    assert.equal(raw.status, 'published');
+    // 🔴 production の RewardRedemptions が無い間は交換 API が 503 で fail-closed になる。
+    //    その前提を JSON の note から消さない（消すと作成前に merge されうる）。
+    assert.ok(raw.note.includes('RewardRedemptions'),
+      'note から「テーブル作成が先」の前提が消えている');
+  });
+
+  test('🔴 G-26: 住所・氏名をログへ出していない', () => {
+    const targets = ['netlify/functions/redeem-reward.js'];
+    for (const f of readdirSync(join(siteRoot, LIB_DIR))) {
+      if (f.endsWith('.js')) targets.push(join(LIB_DIR, f));
+    }
+    for (const file of targets) {
+      for (const line of codeLines(read(file))) {
+        if (!/console\.(log|error|warn|info|debug)/.test(line)) continue;
+        for (const w of ['shipping', 'address', 'Address', 'postalCode', 'recipientName']) {
+          assert.equal(line.includes(w), false,
+            `${file}: 住所をログへ出している → ${line.trim()}`);
+        }
+      }
+    }
+  });
+
+  test('🔴 G-27: 交換は「発送キュー → 台帳」の順で書く', () => {
+    const src = read(join(LIB_DIR, 'redeemHandler.js'));
+    const queue = src.indexOf('store.appendRedemption(');
+    const ledger = src.indexOf('store.appendEntry(');
+    assert.ok(queue > 0 && ledger > 0, '交換の書き込みが見つからない');
+    assert.ok(queue < ledger,
+      '🔴 台帳を先に引くと、キューへ積めなかったときポイントだけ減る');
+  });
+
+  test('🔴 G-28: クライアントが送る email / ポイントを使っていない', () => {
+    for (const file of ['netlify/functions/redeem-reward.js', join(LIB_DIR, 'redeemHandler.js')]) {
+      for (const line of codeLines(read(file))) {
+        for (const w of ['input.email', 'body.email', 'input.costPoints', 'input.balancePoints', 'input.tier']) {
+          assert.equal(line.includes(w), false,
+            `${file}: クライアントの申告を使っている → ${line.trim()}`);
+        }
+      }
+    }
   });
 
   test('🔴 G-23: カタログの品目が正本の確定ラインから外れていない（§7.1 / §7.8）', () => {

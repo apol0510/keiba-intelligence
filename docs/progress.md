@@ -2444,6 +2444,85 @@ merge 実績だけの後追い docs PR は作らない（次の実質的な更�
 - production env / Airtable / Stripe / 本番 write: **一切触れていない**
 - 交換の実運用に必要な `RewardRedemptions` テーブル（`MEMBERSHIP_DATA_MIGRATION.md` §2.3 案）は**未作成**
 
+### 2026-09-07 M11 発送先住所（TBD-12）を確定・実装、カタログを published へ
+
+仕様所有者が **TBD-12** を確定した。正本は `MEMBERSHIP_REWARDS.md` **§7.9**。
+
+#### 確定した内容
+
+- 申込時に**会員本人から取得**。必須は **受取人氏名・郵便番号・住所**の 3 つだけ
+- 🔴 Email は **session / auth 側が正本**。クライアント入力の Email で会員を識別しない
+- `RewardRedemptions` に**発送時点の snapshot** として保存。住所変更で過去行を書き換えない
+- `Status` は既存案の `requested` / `approved` / `shipped` / `cancelled`
+- 🔴 **発送後の自動削除・保管日数・削除 cron・住所専用テーブルは作らない**
+- 次回は直近の発送先を**初期表示してよい**が、**会員が確認・修正できること**
+- 退会・既存の個人情報削除契約がある場合**だけ**、それに整合させる
+- **発送管理画面は作らない。** Airtable の `RewardRedemptions` を当面の発送キューとし、
+  運用者が `requested` を見て発送し `Status` / `ShippedAt` を更新する
+
+#### 実装
+
+| 追加・変更 | 内容 |
+|---|---|
+| `src/lib/membership/redemption.js`（新規）| 住所の正規化・**サーバー側の再検証**・交換 ID・snapshot レコード。**I/O を持たない純関数** |
+| `src/lib/membership/redeemHandler.js`（新規）| 申込処理の本体。Netlify から切り離して**テスト可能**にしてある |
+| `netlify/functions/redeem-reward.js`（新規）| POST・**ログイン必須**の薄い入口。🔴 住所をログへ出さない |
+| `src/lib/membership/store.js` | `readRedemptions` / `appendRedemption` を追加（disabled / read-only / in-memory すべて）|
+| `src/lib/membership/airtableStore.js` | `RewardRedemptions` テーブルの読み書き。**RedemptionId で冪等** |
+| `src/pages/mypage.astro` | 申込フォーム（品目の選択 ＋ 住所 3 項目）。直近の発送先を初期表示し、**会員が修正できる** |
+| `src/data/membership/rewardCatalog.json` | `status` を **`published`** へ |
+
+#### 🔴 書く順序（ここが崩れると事故になる）
+
+**① `RewardRedemptions` へ積む → ② 成功したときだけ台帳を引く。**
+逆にすると、キューへの書き込みが失敗したときに
+**ポイントだけ減って景品が届かない**状態になる。静的ガード **G-27** が順序を固定している。
+
+#### 冪等性
+
+申込ごとにクライアントが**冪等キー**（`requestId`）を 1 つ作り、
+サーバーが `<email>:<itemId>:<requestId>` を `RedemptionId` にする。
+
+- 二重クリック・再送 → 2 回目以降は **`already`** を返して**何も書かない**
+- 🔴 冪等の短絡は**残高を見る前**に置いた。あとに置くと、1 回目で引かれた結果
+  2 回目が `insufficient_points` になり、**成功した申込が失敗として返る**（実装中に発見・修正）
+- 札を変えて送り直されても、**残高の再計算**が過剰交換を止める
+
+🟡 **既知の限界**: Airtable にトランザクションが無いため、**完全同時**の 2 リクエストは
+「重複なし」を同時に確認しうる（at-least-once）。`stripe-webhook` と同水準であり、
+運用者が `RewardRedemptions` で重複を確認できる。
+
+#### テスト（+30 件・`redemption.test.mjs` 新規）
+
+| 区分 | 内容 |
+|---|---|
+| 住所 | 必須 3 項目 / 郵便番号の正規化 / 長すぎる入力を拒否 / 直近住所の初期表示 |
+| **申告を信用しない** | client の `costPoints` / `balancePoints` / `tier` / `rank` / **`email`** を無視 / カタログ外の item を拒否 |
+| **二重交換の防止** | 同じ札で 2 回・4 回送っても 1 回だけ / 札を変えても残高で止まる / **キューへ積めなければポイントを引かない** |
+| 記念品 | ポイントを消費しない / 未到達を拒否 / **同じ節目を 2 回もらえない** |
+| S-2 | 12 / 24 か月は通常交換を止める / 残高不明・失効では交換させない |
+| **他会員分離** | 自分の履歴・住所だけが返る / 未ログインは 401 / store 無効は 503 |
+| snapshot | 住所を変えても過去行が変わらない / `requested` で作られる |
+
+#### 検証（ローカル実測。GitHub checks は根拠にしない）
+
+| 検査 | M9 時点 | M11 後 |
+|---|---|---|
+| `test:membership` | 210 | ✅ **243**（fail 0）|
+| `test:auth` | 150 | ✅ **150**（回帰なし）|
+| `test:ai-auth` / `test:billing` | 11 / 61 | ✅ **11 / 61** |
+| `test:stripe` | 52 / 17 / 6 | ✅ **52 / 17 / 6** |
+| `npm run build` | exit 0 | ✅ **exit 0**（14 スイート fail 0）|
+
+#### 🔴 未実施（承認境界）
+
+| # | 残件 | 理由 |
+|---|---|---|
+| 1 | **`RewardRedemptions` の production 作成**（§4.2）| production schema write。**merge より先に行う** |
+| 2 | **PR #110 の merge / 本番反映** | production deploy |
+
+production env / Airtable / Stripe / 本番 write には**一切触れていない**。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
@@ -2487,14 +2566,25 @@ merge 実績だけの後追い docs PR は作らない（次の実質的な更�
 | M8 | **Airtable アダプタ・移行ツール・E2E** | **完了**（2026-09-01 第3弾）|
 | M9 | 景品の品目の選定（TBD-3b / TBD-4b） | **完了**（2026-09-07・**米 / コーヒーの2択**。`MEMBERSHIP_REWARDS.md` §7.8。カタログは `draft` のまま）|
 | M10 | **TBD-9 / TBD-10 の確定と実装** | **完了**（2026-09-01・`MEMBERSHIP_REWARDS.md` §7.6 / §7.7）|
-| M11 | TBD-12（発送先住所）の確定 | **未着手**（交換の実運用を始める前） |
+| M11 | TBD-12（発送先住所）の確定 | **完了**（2026-09-07・`MEMBERSHIP_REWARDS.md` §7.9。交換処理・住所 snapshot・冪等性まで実装）|
 | M12 | Airtable スキーマ移行・read/write 有効化 | **完了**（2026-09-01。列 6 追加・`RewardLedger` 作成・backfill 7 件・`MEMBERSHIP_READ_ENABLED` → `MEMBERSHIP_WRITE_ENABLED`（13:28 UTC・`4cbd03f3`）。本書「スキーマ移行と READ 有効化」「✅ WRITE 有効化」節）|
 
-**工程の現在地（2026-09-07 更新）**: **M9 は完了**（品目確定＋実装＋テスト）。
-残るのは **M11（TBD-12 発送先住所）** と、M9 から派生した
-**仕入れの実行**・**TBD-13（包装資材費と景品価額）**・**カタログの `published` 化**である。
-🔴 **`published` 化は M11 の確定が前提**（発送先が無いと実際に送れない）。
-M0〜M8 / M10 / M12 は完了。
+**工程の現在地（2026-09-07 更新 2）**: **M0〜M12 の工程はすべて完了**。
+カタログは **`published`**、交換処理・住所の取得と保存・冪等性まで実装済み。
+
+🔴 **本番掲載の前に残っている 2 件**（どちらも承認境界）:
+
+| # | 残件 | 区分 |
+|---|---|---|
+| 1 | **`RewardRedemptions` の production 作成**（`MEMBERSHIP_DATA_MIGRATION.md` §4.2）| production schema write |
+| 2 | **PR #110 の merge / 本番反映** | production deploy |
+
+🔴 **順序を守ること: 1 →  2。** テーブルが無いまま merge しても壊れはしないが
+（交換 API が 503 `redemption_not_ready` で fail-closed・**ポイントは減らない**）、
+会員には「準備中」としか出せない。
+
+仕様所有者の確定待ちで残るのは **景品の仕入れの実行** と
+**TBD-13（包装資材費・景品価額 `valueYen`）** だけである。
 `MEMBERSHIP_READ_ENABLED` / `MEMBERSHIP_WRITE_ENABLED` は **production で有効**
 （2026-09-06 の read-only 実測でも `MEMBERSHIP_WRITE_ENABLED` = 設定ありを確認。
 2026-09-07 の Test Mode cleanup で削除したのは **Branch deploys スコープ**の 5 件であり、

@@ -448,10 +448,10 @@ describe('KIリワード', () => {
    M9 景品品目（TBD-3b / TBD-4b・2026-09-07 確定）— 米 / コーヒーの2択
    ================================================================ */
 
-/** 同梱カタログを、公開状態にしたコピーとして読む（本体は draft のまま触らない）。 */
+/** 同梱カタログ（公開済み）。 */
 async function publishedFixture() {
   const raw = (await import('../../data/membership/rewardCatalog.json', { with: { type: 'json' } })).default;
-  return createCatalog({ ...raw, status: 'published' });
+  return createCatalog(raw);
 }
 
 describe('M9 景品品目（米 / コーヒー）', () => {
@@ -552,9 +552,10 @@ describe('M9 景品品目（米 / コーヒー）', () => {
     }
   });
 
-  test('🔴 draft のままなら候補は 1 つも出ない（未公開を客へ出さない）', async () => {
+  test('🔴 draft へ戻せば候補は 1 つも出ない（下書きを客へ出さない）', async () => {
     const raw = (await import('../../data/membership/rewardCatalog.json', { with: { type: 'json' } })).default;
-    const c = createCatalog(raw);
+    // 同じ品目でも status を draft にした瞬間に空になること（公開の可否は status だけで決まる）
+    const c = createCatalog({ ...raw, status: 'draft' });
 
     assert.deepEqual(redeemableChoiceGroups(c), []);
     assert.deepEqual(milestoneChoiceGroups(c), []);
@@ -567,13 +568,11 @@ describe('M9 景品品目（米 / コーヒー）', () => {
    ================================================================ */
 
 describe('景品カタログ', () => {
-  test('🔴 リポジトリ同梱のカタログは未公開（M11 が終わるまで配れない）', async () => {
+  test('リポジトリ同梱のカタログは公開済み（M11 確定後・§7.9）', async () => {
     const raw = (await import('../../data/membership/rewardCatalog.json', { with: { type: 'json' } })).default;
-    // 品目は確定済み（§7.8）だが、発送先住所（TBD-12 / M11）が未確定なので published にしない。
-    assert.equal(raw.status, 'draft');
-    assert.ok(raw.items.length > 0, '品目は確定済み。空に戻さない');
-    assert.equal(isCatalogPublished(createCatalog(raw)), false);
-    assert.equal(createCatalog(raw).items.length, 0, 'draft は空として扱う');
+    assert.equal(raw.status, 'published');
+    assert.equal(raw.items.length, 8, '交換 4 品 ＋ 記念品 4 品');
+    assert.equal(isCatalogPublished(createCatalog(raw)), true);
   });
 
   test('🔴 draft のカタログは空として扱う（下書きを客へ出さない）', () => {

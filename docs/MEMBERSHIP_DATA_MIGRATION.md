@@ -3,7 +3,13 @@
 > 本書は `docs/MEMBERSHIP_REWARDS.md` の下位文書。
 > 作成日: 2026-09-01 / 最終更新: 2026-09-07
 >
-> **現在地（2026-09-07）**: 仕様所有者の承認を得て、**手順 1〜7 まで本番で実施済み**
+> **現在地（2026-09-07 更新）**: 手順 1〜7（`Customers` の列・`RewardLedger`・
+> 読み書きの有効化）は**本番で実施済み**。
+> 🔴 **残るのは `RewardRedemptions` の作成だけ**（§4.2・**未実施・承認必要**）。
+> テーブルが無い間、交換 API は 503 `redemption_not_ready` で fail-closed になり、
+> **ポイントは減らない**。
+>
+> 参考（実施済みの詳細）: 仕様所有者の承認を得て、**手順 1〜7 まで本番で実施済み**
 > （列・テーブル作成／backfill 7 件／`MEMBERSHIP_READ_ENABLED` →
 > `MEMBERSHIP_WRITE_ENABLED`（2026-09-01 13:28 UTC・`4cbd03f3`）／
 > Stripe テストイベントでの実データ確認）。詳細は §2.9、実測結果は
@@ -111,19 +117,31 @@ accrual    : accrual:<email>:<課金期間の識別子>
 redemption : redemption:<email>:<交換ID>
 ```
 
-### 2.3 交換・発送（新規テーブル `RewardRedemptions` 案）
+### 2.3 交換・発送（新規テーブル `RewardRedemptions`・**2026-09-07 確定**）
 
-| 列名（案） | 型 | 用途 |
+TBD-12 が確定した（`MEMBERSHIP_REWARDS.md` §7.9）。**住所は本テーブルへ持つ。**
+本テーブルが **当面の発送キューそのもの**である（発送管理画面は作らない）。
+
+| 列名 | 型 | 用途 |
 |---|---|---|
-| `RedemptionId` | Single line text（primary） | 冪等キー |
-| `Email` | Single line text | 会員 |
+| `RedemptionId` | Single line text（**primary**） | 冪等キー（`<email>:<itemId>:<requestId>`）|
+| `Email` | Single line text | 会員（🔴 **session 由来のみ**）|
 | `ItemId` | Single line text | 景品カタログの item id |
-| `CostPoints` | Number | 交換時に引いたポイント（台帳の `redemption` と一致） |
+| `ItemName` | Single line text | 申込時点の品名（カタログが変わっても記録が残る）|
+| `Kind` | Single line text | `redeemable` / `milestone` |
+| `CostPoints` | Number | 引いたポイント（記念品は **0**）|
+| `MilestoneMonths` | Number | 記念品のときだけ 12 / 24 |
 | `Status` | Single select | `requested` / `approved` / `shipped` / `cancelled` |
-| `RequestedAt` / `ShippedAt` | Date | 履歴 |
+| `RequestedAt` | **Date (ISO)** | 申込日 |
+| `ShippedAt` | **Date (ISO)** | 発送日（運用者が更新）|
+| `RecipientName` | Single line text | 受取人氏名 |
+| `PostalCode` | Single line text | 郵便番号（数字 7 桁で保存）|
+| `Address` | Long text | 住所 |
 
-🔴 **発送先住所を本テーブルへ持つかは未確定（TBD-12 / L-9）。**
-個人情報の取得経路・保管期間が決まるまで、住所列を作らない。
+🔴 **住所は申込時点の snapshot。** 会員が次回に別の住所を入れても、
+**過去の行は書き換えない**（どこへ送ったかの記録が消えるため）。
+🔴 **発送後の自動削除・保管日数・削除 cron・住所専用テーブルは作らない**（§7.9）。
+🔴 日付列は `Date (ISO)` にすること（`toAirtableDate` が `YYYY-MM-DD` を送る。§2.1 と同じ理由）。
 
 ## 2.4 TBD-9 / TBD-10（**2026-09-01 確定**）
 
@@ -276,6 +294,35 @@ TBD-9 / TBD-10 は 2026-09-01 に確定し（`MEMBERSHIP_REWARDS.md` §7.6 / §7
 6. **`MEMBERSHIP_WRITE_ENABLED=true`** を設定し、再デプロイする
    （Netlify の env はデプロイ時に注入されるため、設定だけでは反映されない）。
 7. Stripe のテストイベントで 1 件だけ流し、台帳が 1 行だけ増えることを確認する。
+
+### 4.2 `RewardRedemptions` の作成（🔴 **未実施・承認必要**）
+
+景品交換を本番で受けるために必要な**唯一の残りスキーマ作業**である。
+
+🔴 **本番反映（PR merge）より先に、この手順を終えること。**
+テーブルが無い状態でも**壊れはしない**（交換 API が 503 `redemption_not_ready` を返し、
+**ポイントは減らない**）が、会員には「準備中」としか出せない。
+
+| # | 操作 | 備考 |
+|---|---|---|
+| 1 | `RewardRedemptions` テーブルを作る | 列は §2.3 のとおり。`RedemptionId` を **primary** にする |
+| 2 | `Status` を Single select にし、選択肢へ `requested` / `approved` / `shipped` / `cancelled` を入れる | 🔴 選択肢が無いと書き込みが 422 になる |
+| 3 | `RequestedAt` / `ShippedAt` を **`Date (ISO)`** にする | 時刻つきにすると 422（§2.1 と同じ）|
+| 4 | `npm run membership:check` | 列がそろっているかを確認 |
+| 5 | 交換を 1 件だけ実施して `requested` が 1 行入ることを確認 | 🔴 **本番 write**。承認範囲を確認してから |
+
+🟢 **env の追加は不要。** `MEMBERSHIP_READ_ENABLED` / `MEMBERSHIP_WRITE_ENABLED` は
+2026-09-01 から production で有効であり、同じフラグで本テーブルも読み書きする。
+
+🔴 **既存の列・テーブルには触らない。** 本作業は**テーブルの新規作成のみ**で、
+`Customers` / `RewardLedger` の列は 1 つも変更しない。
+
+#### rollback
+
+| 段階 | 戻し方 |
+|---|---|
+| テーブル作成後・申込 0 件 | テーブルを削除すれば元に戻る（他機能は本テーブルを読まない）|
+| 申込が入ったあと | 🔴 **削除しない**（発送依頼の記録が消える）。カタログを `draft` に戻せば新規申込は止まる |
 
 ## 5. rollback
 
