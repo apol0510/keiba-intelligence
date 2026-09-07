@@ -2545,7 +2545,7 @@ merge 実績だけの後追い docs PR は作らない（次の実質的な更�
 | # | 残件 | 理由 |
 |---|---|---|
 | 1 | **`RewardRedemptions` の production 作成**（§4.2）| → **2026-09-07 実施済み**（次節）|
-| 2 | **PR #110 の merge / 本番反映** | production deploy |
+| 2 | **PR #110 の merge / 本番反映** | → **2026-09-07 実施済み**（`85164a91`）|
 
 production env / Airtable / Stripe / 本番 write には**一切触れていない**。
 
@@ -2588,7 +2588,82 @@ Live Mode 開始後に実データが動き始めている。
 #### 🔴 まだ行っていないこと
 
 - **本番での交換テスト**（実会員への write を伴うため）
-- **PR #110 の merge / 本番反映**
+- ~~**PR #110 の merge / 本番反映**~~ → **2026-09-07 実施済み**（`85164a91`）
+
+### 2026-09-07 PR #110 を squash merge ＋ 本番反映（仕様所有者承認）— Membership Phase 完了
+
+M9 / M11 / 本番掲載準備を `main` へ入れ、本番へ反映した。
+
+| 項目 | 値 |
+|---|---|
+| PR | [#110](https://github.com/apol0510/keiba-intelligence/pull/110) |
+| merge commit | **`85164a91`**（squash・2026-09-07 15:09 UTC）|
+| 規模 | 17 ファイル / +2,430 −48 |
+| 直前の base | `784c0310`（PR #111 の漏洩修正を含む最新 main）|
+| Netlify production deploy | ✅ **ready**（`error_message` なし）|
+
+#### 取り込みの経緯（rebase していない）
+
+本 branch は **通常 merge を 2 回**行って最新 main を取り込んだ（🔴 rebase / reset / force push は不使用）。
+
+| merge | 取り込んだ main | 結果 |
+|---|---|---|
+| `8bd02285` | `0fca64fd`（自動取込 4 件）| conflict なし。ただし **main 側の既存不具合**で `test:narrative` が 2 件 fail |
+| `b6a0fd2e` | `784c0310`（PR #111 の漏洩修正）| conflict なし・**build green** |
+
+🔴 **1 回目の build 失敗は本 PR の変更が原因ではなかった。**
+2026-09-08 川崎の自動取込データに対して `attentionMarks` の実データテストが落ちており、
+`main` 自体が red だった。**範囲外の不具合として修正せず記録にとどめ**、
+別セッションの PR #111（`784c0310`）が main に入ったのを待って取り込み直した。
+
+`package.json` は #110 と #111 の両方が触っていたが、
+**両方の変更が併存**していることを確認した（`test:membership` に `redemption.test.mjs`、
+`test:narrative` に `attentionMarkPolicy.test.mjs`）。
+
+#### merge 前の実測（ローカル。GitHub checks は検証にならない）
+
+`test:membership` **251** / `test:auth` **150** / `test:ai-auth` **11** / `test:billing` **61** /
+`test:stripe` **52・17・6** / `test:narrative` **107** / `validate:archive` ✅ /
+`npm run build` **exit 0**（14 スイート fail 0）。すべて fail 0。
+
+差分は **#110 固有の 17 ファイルと完全一致**し、取り込みによる書き換えは無かった。
+
+#### 本番反映後の確認（🔴 read-only・write は一切していない）
+
+| 対象 | 結果 |
+|---|---|
+| `/` `/pricing` `/mypage` | ✅ **200** |
+| `/terms` | ✅ 301 → `/terms/` → **200** |
+| guest → `/prediction/{nankan,jra}` | ✅ **302**（fail-closed 維持）|
+| `POST /.netlify/functions/redeem-reward`（未認証）| ✅ **401 `login_required`** — store へ到達しない |
+| `GET` 同上 | ✅ **405 `method_not_allowed`** |
+
+guest の `/mypage` に**漏れていないこと**も確認した。
+
+| 検査 | 結果 |
+|---|---|
+| 品目名（米 / コーヒー）| ✅ 出ていない |
+| 申込フォームの実体（`<form class="mp-redeem">` / `<input name="recipientName">` / `<select name="itemId">`）| ✅ **描画されていない** |
+| 会員クラブのブロック | ✅ 出ていない |
+| 買い目の馬番組み合わせパターン | ✅ 出ていない |
+| `/pricing` の品目名 | ✅ 出ていない |
+
+🟡 guest の HTML には `mp-redeem-form` / `recipientName` / `postalCode` という**文字列**が出るが、
+これは**バンドルされたクライアント script の中のフィールド名**であり、
+`document.getElementById('mp-redeem-form')` が `null` になって何も動かない。
+**フォーム要素そのものは描画されていない**（上表で確認済み）。会員データ・品目・買い目は一切含まれない。
+
+#### 🔴 実施していないこと
+
+- **本番での交換申込**（実会員への write）
+- `RewardLedger` / `RewardRedemptions` への**テスト write**
+- 景品の**仕入れの実行**・**TBD-13**（包装資材費と `valueYen`）— 仕様所有者
+
+#### Membership Phase の到達点
+
+**M0〜M12 の工程がすべて完了**し、承認境界も解消した。
+制度の実装・スキーマ・本番反映が揃い、**交換の受け皿は本番で稼働している**。
+残るのは運用側の 2 件（仕入れの実行 / TBD-13）だけである。
 
 ## Final Goal
 
@@ -2641,7 +2716,8 @@ Live Mode 開始後に実データが動き始めている。
 
 ✅ **`RewardRedemptions` は 2026-09-07 に production 作成済み**（仕様所有者が実施・下記節で実測確認）。
 
-🔴 **残る承認境界は 1 件だけ**: **PR #110 の merge / 本番反映**（production deploy）。
+✅ **PR #110 は merge・本番反映まで完了**（2026-09-07・`85164a91`）。
+**Membership Phase の承認境界はすべて解消した。**
 
 仕様所有者の確定待ちで残るのは **景品の仕入れの実行** と
 **TBD-13（包装資材費・景品価額 `valueYen`）** だけである。

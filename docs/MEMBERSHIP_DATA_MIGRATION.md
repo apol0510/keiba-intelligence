@@ -7,7 +7,9 @@
 > 手順 1〜7（`Customers` の列・`RewardLedger`・読み書きの有効化）に加えて、
 > **`RewardRedemptions` も production に作成済み**（§4.2・仕様所有者が実施）。
 > `npm run membership:check` で **13 列・`Status` 4 選択肢・0 行**を read-only 実測して確認した。
-> 🔴 残るのは **PR merge / 本番反映**（production deploy）だけ。
+> ✅ **PR #110 は 2026-09-07 15:09 UTC に merge され、本番反映も完了**（`85164a91`）。
+> スキーマ・コード・本番反映のすべてが揃い、**交換の受け皿は本番で稼働している**。
+> 🔴 ただし **本番での交換テストは未実施**（実会員への write を伴うため）。
 >
 > 参考（実施済みの詳細）: 仕様所有者の承認を得て、**手順 1〜7 まで本番で実施済み**
 > （列・テーブル作成／backfill 7 件／`MEMBERSHIP_READ_ENABLED` →
