@@ -4,8 +4,13 @@
  * 正本: docs/MEMBERSHIP_REWARDS.md §3（M-2 / M-3 / M-6）
  *
  * 🔴 **商品そのものをコードへ固定しない。**
- *    コーヒー・米・菓子等は「想定」であって確定した品目ではない。
+ *    品目は 2026-09-07 に確定した（正本 §7.8）が、**確定したからこそデータに置く**。
  *    カタログの実体は `src/data/membership/rewardCatalog.json`（将来変更できる）。
+ *    本モジュールは品目を知らず、交換ライン（600 / 1,200 pt）と節目（12 / 24 か月）で
+ *    候補をまとめるだけ。静的ガード G-25 が品目名の直書きを検査する。
+ *
+ * 🔴 **同じラインに並ぶ候補は「会員が選ぶ」もの。** こちらで 1 つに絞って返さない
+ *    （`redeemableChoiceGroups` / `milestoneChoiceGroups` / `exchangeView().next.choices`）。
  *
  * 🔴 fail-closed:
  *    - `status !== 'published'` のカタログは **空として扱う**（下書きを客へ見せない）
@@ -159,6 +164,51 @@ function rankAllows(item, rank) {
 }
 
 /**
+ * 同じ値（交換ライン／節目の月）に並ぶ景品を「会員が選ぶ候補」としてまとめる。
+ *
+ * 🔴 候補が複数あっても、こちらで 1 つに絞って渡さない。
+ *    絞ると会員の選択がこちらの自動割当に変わる。抽選・くじ・先着は入れない（S-3）。
+ * 🔴 品目そのもの（何を配るか）は `src/data/membership/rewardCatalog.json` の
+ *    データであって、このモジュールは **品目を知らない**。ここに商品名を書かない。
+ */
+function groupChoices(items, keyOf) {
+  const groups = new Map();
+  for (const item of items) {
+    const key = keyOf(item);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  return [...groups.entries()].sort((a, b) => a[0] - b[0]);
+}
+
+/**
+ * 交換ラインごとの選択候補。`[{ costPoints, choices: [...] }]` を昇順で返す。
+ *
+ * 同じ `costPoints` の景品は **どれか 1 つを会員が選ぶ**もの同士である。
+ */
+export function redeemableChoiceGroups(catalog, { rank = null } = {}) {
+  const items = redeemableItems(catalog).filter((i) => rankAllows(i, rank));
+  return Object.freeze(groupChoices(items, (i) => i.costPoints)
+    .map(([costPoints, choices]) => Object.freeze({
+      costPoints,
+      choices: Object.freeze(choices),
+    })));
+}
+
+/**
+ * 継続記念品の節目ごとの選択候補。`[{ milestoneMonths, choices: [...] }]`。
+ *
+ * 記念品もポイント交換と同じく **会員が選ぶ**（贈る側で決め打ちにしない）。
+ */
+export function milestoneChoiceGroups(catalog) {
+  return Object.freeze(groupChoices(milestoneItems(catalog), (i) => i.milestoneMonths)
+    .map(([milestoneMonths, choices]) => Object.freeze({
+      milestoneMonths,
+      choices: Object.freeze(choices),
+    })));
+}
+
+/**
  * いま交換できる景品と、次に手が届く景品を返す。
  *
  * 🔴 残高が未確定（`balancePoints === null`）なら **何も返さない**。
@@ -174,6 +224,7 @@ export function exchangeView({ catalog, balancePoints, rank, months = null } = {
     return Object.freeze({
       status: 'pending',
       available: Object.freeze([]),
+      availableChoices: Object.freeze([]),
       next: null,
       blockedByMilestone: false,
     });
@@ -184,6 +235,7 @@ export function exchangeView({ catalog, balancePoints, rank, months = null } = {
     return Object.freeze({
       status: 'blocked',
       available: Object.freeze([]),
+      availableChoices: Object.freeze([]),
       next: null,
       blockedByMilestone: true,
     });
@@ -196,14 +248,28 @@ export function exchangeView({ catalog, balancePoints, rank, months = null } = {
     .sort((a, b) => a.costPoints - b.costPoints);
 
   const nearest = upcoming[0] || null;
+  const groups = redeemableChoiceGroups(catalog, { rank });
 
   return Object.freeze({
     status: 'ready',
     blockedByMilestone: false,
     available: Object.freeze(available),
+    /**
+     * 交換ラインごとの選択候補（いま届く分だけ）。
+     * 🔴 会員はこの `choices` から**自分で選ぶ**。こちらで 1 つに決めない。
+     */
+    availableChoices: Object.freeze(
+      groups.filter((g) => balancePoints >= g.costPoints)),
     next: nearest
       ? Object.freeze({
         item: nearest,
+        /**
+         * 次のラインに並ぶ候補すべて。
+         * 🔴 `item` は進捗計算用の代表であって、**贈る品を決めたものではない**。
+         *    表示は `choices` を使うこと（1 つだけ見せると自動割当に見える）。
+         */
+        choices: Object.freeze(
+          groups.find((g) => g.costPoints === nearest.costPoints)?.choices || Object.freeze([])),
         /** 🔴 ポイント。円ではない。 */
         remainingPoints: nearest.costPoints - balancePoints,
         progressRatio: Math.min(1, balancePoints / nearest.costPoints),

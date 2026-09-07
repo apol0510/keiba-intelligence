@@ -17,6 +17,7 @@ import { TIER, tierAtLeast } from '../lib/auth/tiers.js';
 import { buildMembershipView, MEMBERSHIP_COPY } from '../lib/membership/membershipView.js';
 import { LOCK_STATUS } from '../lib/membership/priceLock.js';
 import { resolveMembershipStore, STORE_RESULT } from '../lib/membership/store.js';
+import { readRedeemContext } from '../lib/membership/redeemHandler.js';
 import { MONTHLY_LIST_PRICE_YEN } from '../lib/billing/plans.js';
 import rewardCatalogSource from '../data/membership/rewardCatalog.json';
 
@@ -48,14 +49,29 @@ const membershipStore = resolveMembershipStore({ env: runtimeEnv });
 let membershipProfile = null;
 let membershipLedger = null;
 
+/**
+ * 交換申込の初期表示用（§7.9）。
+ * 🔴 **自分のぶんだけ**。直近の発送先は初期表示に使うだけで、会員が確認・修正できる。
+ */
+let redeemCtx = { known: false, lastAddress: null, records: [] };
+
 if (membershipStore.enabled && ent.authenticated && ent.email) {
-  const [p, l] = await Promise.all([
+  const [p, l, r] = await Promise.all([
     membershipStore.readProfile(ent.email),
     membershipStore.readLedger(ent.email),
+    readRedeemContext({ store: membershipStore, email: ent.email }),
   ]);
   if (p.status !== STORE_RESULT.UNAVAILABLE) membershipProfile = p.profile;
   if (l.status !== STORE_RESULT.UNAVAILABLE) membershipLedger = l.entries;
+  redeemCtx = r;
 }
+
+/** 直近の発送先（初期表示のみ）。読めていなければ空欄で出す。 */
+const lastAddress = redeemCtx.lastAddress || { recipientName: '', postalCode: '', address: '' };
+/** 申込済みの記念品の月（同じ節目を 2 回出さない）。 */
+const claimedMilestoneMonths = redeemCtx.records
+  .filter((r) => r.kind === 'milestone' && r.status !== 'cancelled' && Number.isInteger(r.milestoneMonths))
+  .map((r) => r.milestoneMonths);
 
 const club = buildMembershipView({
   entitlement: ent,
@@ -115,8 +131,15 @@ const rankProgress = club.rank.status === 'ready' && club.rank.nextRank
   ? { label: `次のランク（${club.rank.nextLabel}）まで`, note: `あと ${club.rank.monthsToNext} か月`, ratio: club.rank.progressRatio }
   : null;
 
+/**
+ * 🔴 次のラインの候補は **すべて**並べる。1 つだけ見せると、こちらが品を決めた（自動割当）
+ *    ように見える。会員はここから自分で選ぶ。
+ */
+const nextGiftNames = club.gifts.next
+  ? (club.gifts.next.choices.length ? club.gifts.next.choices : [club.gifts.next.item]).map((i) => i.name).join(' / ')
+  : null;
 const giftProgress = club.gifts.status === 'ready' && club.gifts.next
-  ? { label: `${MEMBERSHIP_COPY.nextGiftLabel}（${club.gifts.next.item.name}）`, note: `あと ${pt(club.gifts.next.remainingPoints)}`, ratio: club.gifts.next.progressRatio }
+  ? { label: `${MEMBERSHIP_COPY.nextGiftLabel}（${nextGiftNames}）`, note: `あと ${pt(club.gifts.next.remainingPoints)}`, ratio: club.gifts.next.progressRatio }
   : null;
 
 /** 現在の tier で開いている機能。閉じているものは次の一歩を添える。 */
@@ -231,15 +254,76 @@ const expiresLabel = ent.expiresAtMs
                   <p class="mp-club-note">
                     今月は<b>継続記念品</b>をお贈りする月です。通常のポイント交換は翌月から再開します。
                   </p>
-                ) : club.gifts.status === 'ready' && club.gifts.available.length ? (
+                ) : club.gifts.status === 'ready' && club.gifts.availableChoices.length ? (
                   <ul class="mp-gift-list">
-                    {club.gifts.available.map((item) => (
-                      <li><span class="mp-gift-name">{item.name}</span><span class="mp-gift-cost">{pt(item.costPoints)}</span></li>
+                    {club.gifts.availableChoices.map((group) => (
+                      <li>
+                        <span class="mp-gift-name">
+                          {group.choices.map((item) => item.name).join(' / ')}
+                          {group.choices.length > 1 ? <b class="mp-gift-choice">どちらかお選びいただけます</b> : null}
+                        </span>
+                        <span class="mp-gift-cost">{pt(group.costPoints)}</span>
+                      </li>
                     ))}
                   </ul>
                 ) : (
                   <p class="mp-club-note">{PENDING}（プレゼントの品目が決まりしだいご案内します）</p>
                 )}
+
+                {/*
+                  申込フォーム（§7.9・TBD-12）
+                  🔴 会員が候補から **自分で選ぶ**。抽選・自動割当は行いません。
+                  🔴 品目名はカタログのデータから出す（ここに商品名を書かない）。
+                  🔴 必須は受取人氏名・郵便番号・住所の 3 つだけ。
+                  🔴 Email は送らない。会員はサーバー側でセッションから決まる。
+                */}
+                {club.gifts.status === 'ready' && !club.gifts.blockedByMilestone && club.gifts.availableChoices.length ? (
+                  <form class="mp-redeem" id="mp-redeem-form">
+                    <h4>プレゼントを申し込む</h4>
+                    <label class="mp-redeem-row">
+                      <span>受け取る品</span>
+                      <select name="itemId" required>
+                        {club.gifts.availableChoices.map((group) => (
+                          group.choices.map((item) => (
+                            <option value={item.id}>{item.name}（{pt(group.costPoints)}）</option>
+                          ))
+                        ))}
+                      </select>
+                    </label>
+                    <label class="mp-redeem-row">
+                      <span>受取人氏名</span>
+                      <input type="text" name="recipientName" maxlength="100" required value={lastAddress.recipientName} />
+                    </label>
+                    <label class="mp-redeem-row">
+                      <span>郵便番号</span>
+                      <input type="text" name="postalCode" maxlength="8" inputmode="numeric" placeholder="1000001" required value={lastAddress.postalCode} />
+                    </label>
+                    <label class="mp-redeem-row">
+                      <span>住所</span>
+                      <input type="text" name="address" maxlength="200" required value={lastAddress.address} />
+                    </label>
+                    <p class="mp-club-note">
+                      前回の発送先を初期表示しています。<b>内容をご確認のうえ</b>、変更があれば修正してください。
+                    </p>
+                    <button type="submit" class="mp-redeem-btn">この内容で申し込む</button>
+                    <p class="mp-redeem-msg" id="mp-redeem-msg" hidden></p>
+                  </form>
+                ) : null}
+
+                {club.gifts.isMilestoneMonth && club.gifts.milestoneChoices.length ? (
+                  <div class="mp-redeem-milestone">
+                    <h4>継続記念品</h4>
+                    {club.gifts.milestoneChoices
+                      .filter((g) => !claimedMilestoneMonths.includes(g.milestoneMonths))
+                      .map((group) => (
+                        <p class="mp-club-note">
+                          {group.milestoneMonths}か月の記念品：
+                          {group.choices.map((i) => i.name).join(' / ')}
+                          <b class="mp-gift-choice">どちらかお選びいただけます（ポイントは消費しません）</b>
+                        </p>
+                      ))}
+                  </div>
+                ) : null}
               </div>
 
               <div class="mp-club-sub">
@@ -327,6 +411,80 @@ const expiresLabel = ent.expiresAtMs
       )}
     </div>
   </section>
+
+<script>
+  /*
+    交換申込の送信。
+    🔴 冪等キーはフォーム 1 回につき 1 つ作る。二重クリック・再送で
+       同じ札が送られ、サーバー側が 2 回目を「already」として何も書かない。
+    🔴 Email・ポイント数・資格は送らない（サーバーがセッションと台帳から決める）。
+  */
+  const form = document.getElementById('mp-redeem-form');
+  if (form) {
+    const msg = document.getElementById('mp-redeem-msg');
+    let requestId = null;
+
+    const newRequestId = () => {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      return 'r-' + Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    };
+
+    const ERROR_TEXT = {
+      login_required: 'ログインが切れています。再度ログインしてください。',
+      invalid_address: '受取人氏名・郵便番号・住所をご確認ください。',
+      insufficient_points: 'ポイントが足りません。',
+      unknown_item: 'その景品は現在お選びいただけません。',
+      milestone_month_blocks_exchange: '今月は継続記念品をお贈りする月のため、通常の交換は翌月から再開します。',
+      milestone_already_claimed: 'その節目の記念品はお申し込み済みです。',
+      milestone_not_reached: 'その記念品はまだ対象期間に達していません。',
+      points_expired: 'ポイントの有効期限が過ぎています。',
+      catalog_not_published: '準備中です。',
+      redemption_not_ready: '準備中です。しばらくしてからお試しください。',
+    };
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = form.querySelector('button[type=submit]');
+      btn.disabled = true;
+      if (!requestId) requestId = newRequestId();
+
+      const data = new FormData(form);
+      try {
+        const res = await fetch('/.netlify/functions/redeem-reward', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            itemId: data.get('itemId'),
+            requestId,
+            shipping: {
+              recipientName: data.get('recipientName'),
+              postalCode: data.get('postalCode'),
+              address: data.get('address'),
+            },
+          }),
+        });
+        const body = await res.json().catch(() => ({}));
+        msg.hidden = false;
+        if (res.ok) {
+          msg.textContent = body.status === 'already'
+            ? 'このお申し込みは受付済みです。'
+            : 'お申し込みを受け付けました。発送までお待ちください。';
+          // 受付できたので、この札は使い切り。次の申込は新しい札にする。
+          requestId = null;
+        } else {
+          msg.textContent = ERROR_TEXT[body.error] || 'お申し込みできませんでした。';
+          btn.disabled = false;
+        }
+      } catch {
+        msg.hidden = false;
+        msg.textContent = '通信に失敗しました。時間をおいてお試しください。';
+        btn.disabled = false;
+      }
+    });
+  }
+</script>
 </BaseLayout>
 
 <script>
@@ -728,6 +886,40 @@ const expiresLabel = ent.expiresAtMs
 
   .mp-gift-list li:last-child { border-bottom: none; }
   .mp-gift-cost { font-family: var(--font-num); color: var(--text-secondary); }
+  .mp-redeem { margin-top: 14px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
+  .mp-redeem h4, .mp-redeem-milestone h4 { margin: 0 0 10px; font-size: 0.95rem; }
+  .mp-redeem-row { display: block; margin-bottom: 10px; }
+  .mp-redeem-row span { display: block; margin-bottom: 4px; font-size: 0.82rem; color: var(--text-secondary); }
+  .mp-redeem-row input, .mp-redeem-row select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font: inherit;
+    background: var(--surface, #fff);
+    color: inherit;
+  }
+  .mp-redeem-btn {
+    margin-top: 4px;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .mp-redeem-btn[disabled] { opacity: 0.6; cursor: default; }
+  .mp-redeem-msg { margin: 10px 0 0; font-size: 0.85rem; }
+  .mp-redeem-milestone { margin-top: 14px; }
+
+  /* 同じラインの候補が「選べる」ことを示すラベル（自動割当ではない） */
+  .mp-gift-choice {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
 
   .mp-club-legal {
     margin: 14px 0 0;

@@ -1,6 +1,63 @@
 {
-  "version": 0,
-  "status": "draft",
-  "note": "景品カタログの実体。交換ライン（600 / 1,200 pt）・記念品の月（12 / 24 か月）・価額の上限（1点 ¥796・保守ライン S-1）は docs/MEMBERSHIP_REWARDS.md §7.1 で確定済み。残っているのは品目そのもの（TBD-3b / TBD-4b）で、選定が済むまで items は空にしておく。架空の商品を入れないこと。items に入れる際は kind=redeemable なら costPoints を 600 か 1200 に、kind=milestone なら milestoneMonths を 12 か 24 にすること（それ以外は catalog.js が除外する）。valueYen を書く場合は 796 以内。公開するときに status を published へ変える。",
-  "items": []
+  "version": 1,
+  "status": "published",
+  "note": "景品カタログの実体。交換ライン（600 / 1,200 pt）・記念品の月（12 / 24 か月）・価額の上限（1点 ¥796・保守ライン S-1）は docs/MEMBERSHIP_REWARDS.md §7.1 で確定済み。品目（TBD-3b / TBD-4b）は 2026-09-07 に確定し、米とコーヒー豆の2択にした（同 §7.8）。同じ costPoints / milestoneMonths に並ぶ item は「会員がどちらかを選ぶ」候補であり、抽選・自動割当は行いません。valueYen は書いていない: 包装資材費が未確定で、原材料原価だけを景品価額として書くと実態と食い違うため（TBD-13）。status は published: 発送先住所の取得方法（TBD-12 / M11）が 2026-09-07 に確定し、申込時に会員本人から取得して RewardRedemptions へ snapshot として保存する構造になったため（同 §7.9）。🔴 published にする前に、production Airtable へ RewardRedemptions テーブルを作ること（docs/MEMBERSHIP_DATA_MIGRATION.md §4.2）。テーブルが無い間は交換 API が 503 redemption_not_ready を返して fail-closed になり、ポイントは減らない。",
+  "items": [
+    {
+      "id": "rice-300g-600",
+      "name": "米 約300g（2合）",
+      "kind": "redeemable",
+      "costPoints": 600,
+      "description": "まとめ仕入れした米を KI 側で小分け・ラッピングしてお送りします。"
+    },
+    {
+      "id": "coffee-50g-600",
+      "name": "コーヒー豆 50g",
+      "kind": "redeemable",
+      "costPoints": 600,
+      "description": "まとめ仕入れしたコーヒー豆を KI 側で小分け・ラッピングしてお送りします。"
+    },
+    {
+      "id": "rice-450g-1200",
+      "name": "米 約450g（3合）",
+      "kind": "redeemable",
+      "costPoints": 1200,
+      "description": "まとめ仕入れした米を KI 側で小分け・ラッピングしてお送りします。"
+    },
+    {
+      "id": "coffee-100g-1200",
+      "name": "コーヒー豆 100g",
+      "kind": "redeemable",
+      "costPoints": 1200,
+      "description": "まとめ仕入れしたコーヒー豆を KI 側で小分け・ラッピングしてお送りします。"
+    },
+    {
+      "id": "rice-300g-m12",
+      "name": "米 約300g（2合）",
+      "kind": "milestone",
+      "milestoneMonths": 12,
+      "description": "12か月継続の記念品。ポイントは消費しません。"
+    },
+    {
+      "id": "coffee-50g-m12",
+      "name": "コーヒー豆 50g",
+      "kind": "milestone",
+      "milestoneMonths": 12,
+      "description": "12か月継続の記念品。ポイントは消費しません。"
+    },
+    {
+      "id": "rice-450g-m24",
+      "name": "米 約450g（3合）",
+      "kind": "milestone",
+      "milestoneMonths": 24,
+      "description": "24か月継続の記念品。ポイントは消費しません。"
+    },
+    {
+      "id": "coffee-100g-m24",
+      "name": "コーヒー豆 100g",
+      "kind": "milestone",
+      "milestoneMonths": 24,
+      "description": "24か月継続の記念品。ポイントは消費しません。"
+    }
+  ]
 }

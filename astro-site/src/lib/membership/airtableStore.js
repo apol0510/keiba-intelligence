@@ -51,6 +51,32 @@ export const LEDGER_FIELDS = Object.freeze({
   SOURCE_REF: 'SourceRef',
 });
 
+/**
+ * 交換・発送テーブル（§2.3）。**当面の発送キューそのもの**である。
+ *
+ * 🔴 新しい発送管理画面は作らない。運用者は Airtable で **`approved`** を見て発送し、
+ *    `Status` を `shipped` に、`ShippedAt` を発送日にする。それで足りる。
+ * 🔴 `requested` は「申込予約」で、**ポイントの減算がまだ成立していない**。発送しない。
+ * 🔴 住所は **申込時点の snapshot**。あとで住所が変わっても過去行を書き換えない。
+ * 🔴 発送後の自動削除・保管日数・削除 cron は**作らない**（TBD-12 確定・§7.9）。
+ */
+export const REDEMPTION_TABLE = 'RewardRedemptions';
+export const REDEMPTION_FIELDS = Object.freeze({
+  REDEMPTION_ID: 'RedemptionId',
+  EMAIL: 'Email',
+  ITEM_ID: 'ItemId',
+  ITEM_NAME: 'ItemName',
+  KIND: 'Kind',
+  COST_POINTS: 'CostPoints',
+  MILESTONE_MONTHS: 'MilestoneMonths',
+  STATUS: 'Status',
+  REQUESTED_AT: 'RequestedAt',
+  SHIPPED_AT: 'ShippedAt',
+  RECIPIENT_NAME: 'RecipientName',
+  POSTAL_CODE: 'PostalCode',
+  ADDRESS: 'Address',
+});
+
 const API = 'https://api.airtable.com/v0';
 
 /** スキーマがまだ無いことを示す理由。**これを受け取ったら書きに行かない。** */
@@ -250,6 +276,130 @@ export function createAirtableMembershipStore({
     /**
      * 台帳へ 1 行追記する。**冪等**（同じ `entryId` があれば書かない）。
      */
+    /**
+     * 自分の交換履歴を読む。
+     * 🔴 **必ず email で絞る**。他会員の履歴・住所が混ざらないようにする。
+     * 🔴 読めなければ `records: null`（「0 件」と言い切らせない）。
+     */
+    async readRedemptions(email) {
+      if (schemaMissing) return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: SCHEMA_MISSING, records: null });
+      try {
+        const formula = encodeURIComponent(`LOWER({${REDEMPTION_FIELDS.EMAIL}}) = "${escapeFormula(normEmail(email))}"`);
+        const r = await call(`${encodeURIComponent(REDEMPTION_TABLE)}?filterByFormula=${formula}`);
+        if (!r.ok) {
+          return Object.freeze({
+            status: STORE_RESULT.UNAVAILABLE,
+            reason: r.schemaMissing ? SCHEMA_MISSING : `read_failed:${r.code}`,
+            records: null,
+          });
+        }
+        const records = (r.data.records || []).map((rec) => {
+          const f = rec.fields || {};
+          return Object.freeze({
+            redemptionId: f[REDEMPTION_FIELDS.REDEMPTION_ID] || null,
+            email: normEmail(f[REDEMPTION_FIELDS.EMAIL]),
+            itemId: f[REDEMPTION_FIELDS.ITEM_ID] || null,
+            itemName: f[REDEMPTION_FIELDS.ITEM_NAME] || null,
+            kind: f[REDEMPTION_FIELDS.KIND] || null,
+            costPoints: Number.isFinite(f[REDEMPTION_FIELDS.COST_POINTS]) ? f[REDEMPTION_FIELDS.COST_POINTS] : 0,
+            milestoneMonths: Number.isInteger(f[REDEMPTION_FIELDS.MILESTONE_MONTHS])
+              ? f[REDEMPTION_FIELDS.MILESTONE_MONTHS] : null,
+            status: f[REDEMPTION_FIELDS.STATUS] || null,
+            requestedAtMs: Date.parse(f[REDEMPTION_FIELDS.REQUESTED_AT] || '') || null,
+            shipping: Object.freeze({
+              recipientName: f[REDEMPTION_FIELDS.RECIPIENT_NAME] || '',
+              postalCode: f[REDEMPTION_FIELDS.POSTAL_CODE] || '',
+              address: f[REDEMPTION_FIELDS.ADDRESS] || '',
+            }),
+          });
+        });
+        return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, records: Object.freeze(records) });
+      } catch {
+        return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'read_failed:exception', records: null });
+      }
+    },
+
+    /**
+     * 交換申込を保存する（発送キューへ 1 行積む）。
+     *
+     * 🔴 冪等: 同じ `RedemptionId` が既にあれば **何も書かない**（`ALREADY`）。
+     *    二重クリック・再送で二重発送依頼を作らない。
+     * 🔴 住所はここで保存した値を**以後書き換えない**（発送時点の snapshot）。
+     */
+    async appendRedemption(email, record) {
+      if (schemaMissing) return unavailable(SCHEMA_MISSING);
+      if (!record || typeof record.redemptionId !== 'string' || !record.redemptionId) {
+        return unavailable('invalid_redemption');
+      }
+      try {
+        const formula = encodeURIComponent(`{${REDEMPTION_FIELDS.REDEMPTION_ID}} = "${escapeFormula(record.redemptionId)}"`);
+        const found = await call(`${encodeURIComponent(REDEMPTION_TABLE)}?maxRecords=1&filterByFormula=${formula}`);
+        if (!found.ok) return unavailable(found.schemaMissing ? SCHEMA_MISSING : `read_failed:${found.code}`);
+        if (found.data.records?.length) {
+          return Object.freeze({ status: STORE_RESULT.ALREADY, reason: null, writes: 0 });
+        }
+
+        const created = await call(encodeURIComponent(REDEMPTION_TABLE), {
+          method: 'POST',
+          body: {
+            records: [{
+              fields: {
+                [REDEMPTION_FIELDS.REDEMPTION_ID]: record.redemptionId,
+                [REDEMPTION_FIELDS.EMAIL]: normEmail(email),
+                [REDEMPTION_FIELDS.ITEM_ID]: record.itemId,
+                [REDEMPTION_FIELDS.ITEM_NAME]: record.itemName,
+                [REDEMPTION_FIELDS.KIND]: record.kind,
+                [REDEMPTION_FIELDS.COST_POINTS]: record.costPoints,
+                ...(Number.isInteger(record.milestoneMonths)
+                  ? { [REDEMPTION_FIELDS.MILESTONE_MONTHS]: record.milestoneMonths }
+                  : {}),
+                [REDEMPTION_FIELDS.STATUS]: record.status,
+                [REDEMPTION_FIELDS.REQUESTED_AT]: toAirtableDate(record.requestedAtMs),
+                [REDEMPTION_FIELDS.RECIPIENT_NAME]: record.shipping.recipientName,
+                [REDEMPTION_FIELDS.POSTAL_CODE]: record.shipping.postalCode,
+                [REDEMPTION_FIELDS.ADDRESS]: record.shipping.address,
+              },
+            }],
+          },
+        });
+        if (!created.ok) return unavailable(created.schemaMissing ? SCHEMA_MISSING : `write_failed:${created.code}`);
+        return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: 1 });
+      } catch {
+        return unavailable('write_failed:exception');
+      }
+    },
+
+    /**
+     * 申込の状態を進める（`requested` → `approved`）。
+     *
+     * 🔴 `approved` にしてよいのは **ポイント減算が成立したあとだけ**。
+     *    `requested` は「申込予約」であって、まだ発送してよい状態ではない。
+     * 🔴 `ShippedAt` はここで触らない（発送は運用者が Airtable 上で記録する）。
+     */
+    async updateRedemptionStatus(email, redemptionId, status) {
+      if (schemaMissing) return unavailable(SCHEMA_MISSING);
+      if (!redemptionId || !status) return unavailable('invalid_redemption');
+      try {
+        const formula = encodeURIComponent(`{${REDEMPTION_FIELDS.REDEMPTION_ID}} = "${escapeFormula(redemptionId)}"`);
+        const found = await call(`${encodeURIComponent(REDEMPTION_TABLE)}?maxRecords=1&filterByFormula=${formula}`);
+        if (!found.ok) return unavailable(found.schemaMissing ? SCHEMA_MISSING : `read_failed:${found.code}`);
+        const rec = found.data.records?.[0];
+        if (!rec) return unavailable('redemption_not_found');
+        if (rec.fields?.[REDEMPTION_FIELDS.STATUS] === status) {
+          return Object.freeze({ status: STORE_RESULT.ALREADY, reason: null, writes: 0 });
+        }
+
+        const updated = await call(`${encodeURIComponent(REDEMPTION_TABLE)}/${rec.id}`, {
+          method: 'PATCH',
+          body: { fields: { [REDEMPTION_FIELDS.STATUS]: status } },
+        });
+        if (!updated.ok) return unavailable(updated.schemaMissing ? SCHEMA_MISSING : `write_failed:${updated.code}`);
+        return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: 1 });
+      } catch {
+        return unavailable('write_failed:exception');
+      }
+    },
+
     async appendEntry(email, entry) {
       if (schemaMissing) return unavailable(SCHEMA_MISSING);
       if (!entry || typeof entry.entryId !== 'string' || !entry.entryId) return unavailable('invalid_entry');

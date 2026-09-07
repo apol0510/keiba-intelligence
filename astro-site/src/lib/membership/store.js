@@ -70,8 +70,11 @@ export function readOnlyMembershipStore(inner) {
     reason: null,
     readProfile: (...a) => inner.readProfile(...a),
     readLedger: (...a) => inner.readLedger(...a),
+    readRedemptions: (...a) => inner.readRedemptions(...a),
     async appendEntry() { return refuse(); },
     async saveContractPrice() { return refuse(); },
+    async appendRedemption() { return refuse(); },
+    async updateRedemptionStatus() { return refuse(); },
   });
 }
 
@@ -90,10 +93,20 @@ export function createDisabledMembershipStore(reason = 'not_configured') {
     async readLedger() {
       return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason, entries: null });
     },
+    /** 🔴 読めないときは `null`。「交換履歴 0 件」と言い切らせない。 */
+    async readRedemptions() {
+      return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason, records: null });
+    },
     async appendEntry() {
       return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason, writes: 0 });
     },
     async saveContractPrice() {
+      return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason, writes: 0 });
+    },
+    async appendRedemption() {
+      return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason, writes: 0 });
+    },
+    async updateRedemptionStatus() {
       return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason, writes: 0 });
     },
   });
@@ -103,9 +116,10 @@ export function createDisabledMembershipStore(reason = 'not_configured') {
  * in-memory store（**テスト / fixture 専用**）。
  * 冪等: 同一 `entryId` の再実行では write しない。
  */
-export function createInMemoryMembershipStore({ profiles = {}, ledgers = {} } = {}) {
+export function createInMemoryMembershipStore({ profiles = {}, ledgers = {}, redemptions = {} } = {}) {
   const profileMap = new Map(Object.entries(profiles));
   const ledgerMap = new Map(Object.entries(ledgers).map(([k, v]) => [k, [...v]]));
+  const redemptionMap = new Map(Object.entries(redemptions).map(([k, v]) => [k, [...v]]));
   const writes = [];
 
   const key = (email) => String(email || '').trim().toLowerCase();
@@ -123,6 +137,52 @@ export function createInMemoryMembershipStore({ profiles = {}, ledgers = {} } = 
     async readLedger(email) {
       const entries = ledgerMap.get(key(email)) || [];
       return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, entries: Object.freeze([...entries]) });
+    },
+
+    /** 🔴 会員ごとに分かれている。他会員の交換履歴は返らない。 */
+    async readRedemptions(email) {
+      const records = redemptionMap.get(key(email)) || [];
+      return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, records: Object.freeze([...records]) });
+    },
+
+    /**
+     * 交換申込を保存する。
+     * 🔴 冪等: 同じ `redemptionId` の再送では **何も書かない**
+     *    （二重交換・二重発送依頼を作らない）。
+     */
+    async appendRedemption(email, record) {
+      if (!record || typeof record.redemptionId !== 'string' || !record.redemptionId) {
+        return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'invalid_redemption', writes: writes.length });
+      }
+      const k = key(email);
+      const list = redemptionMap.get(k) || [];
+      if (list.some((r) => r.redemptionId === record.redemptionId)) {
+        return Object.freeze({ status: STORE_RESULT.ALREADY, reason: null, writes: writes.length });
+      }
+      list.push(record);
+      redemptionMap.set(k, list);
+      writes.push({ kind: 'redemption', email: k, redemptionId: record.redemptionId });
+      return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: writes.length });
+    },
+
+    /**
+     * 申込の状態を進める（`requested` → `approved` → `shipped`）。
+     * 🔴 同じ状態への更新は書かない（冪等）。
+     */
+    async updateRedemptionStatus(email, redemptionId, status) {
+      const k = key(email);
+      const list = redemptionMap.get(k) || [];
+      const idx = list.findIndex((r) => r.redemptionId === redemptionId);
+      if (idx < 0) {
+        return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'redemption_not_found', writes: writes.length });
+      }
+      if (list[idx].status === status) {
+        return Object.freeze({ status: STORE_RESULT.ALREADY, reason: null, writes: writes.length });
+      }
+      list[idx] = Object.freeze({ ...list[idx], status });
+      redemptionMap.set(k, list);
+      writes.push({ kind: 'redemption-status', email: k, redemptionId, status });
+      return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: writes.length });
     },
 
     async appendEntry(email, entry) {
@@ -159,6 +219,7 @@ export function createInMemoryMembershipStore({ profiles = {}, ledgers = {} } = 
     snapshot: () => Object.freeze({
       profiles: Object.fromEntries(profileMap),
       ledgers: Object.fromEntries([...ledgerMap].map(([k, v]) => [k, [...v]])),
+      redemptions: Object.fromEntries([...redemptionMap].map(([k, v]) => [k, [...v]])),
     }),
   });
 }
