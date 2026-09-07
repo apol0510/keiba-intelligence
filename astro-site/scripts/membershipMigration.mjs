@@ -33,7 +33,10 @@
  */
 
 import { createRequire } from 'node:module';
-import { CUSTOMER_FIELDS, LEDGER_TABLE, LEDGER_FIELDS } from '../src/lib/membership/airtableStore.js';
+import {
+  CUSTOMER_FIELDS, LEDGER_TABLE, LEDGER_FIELDS,
+  REDEMPTION_TABLE, REDEMPTION_FIELDS,
+} from '../src/lib/membership/airtableStore.js';
 
 const require = createRequire(import.meta.url);
 
@@ -249,6 +252,53 @@ async function main() {
     } else {
       console.log(`  必要な列: ${Object.values(LEDGER_FIELDS).join(' / ')}`);
     }
+  }
+
+  // --- 交換・発送テーブル（§2.3 / §4.2）---
+  // 🔴 ここが未作成だと交換 API は 503 で fail-closed になる（ポイントは減らない）。
+  const redemptions = await listAll(REDEMPTION_TABLE);
+  const redemptionSchema = schema?.tables.find((x) => x.name === REDEMPTION_TABLE) || null;
+  console.log(`\n=== 交換・発送テーブル ${REDEMPTION_TABLE} ===`);
+  if (redemptions.ok) {
+    console.log(`  ✅ 存在（${redemptions.records.length} 行）`);
+    if (redemptionSchema) {
+      const have = new Set(redemptionSchema.fields.map((f) => f.name));
+      const missing = Object.values(REDEMPTION_FIELDS).filter((n) => !have.has(n));
+      console.log(`  列: ${[...have].join(' / ')}`);
+      console.log(missing.length ? `  🔴 不足: ${missing.join(' / ')}` : '  ✅ 必要な列はそろっている');
+
+      // Status は singleSelect。選択肢が欠けていると書き込みが 422 になる。
+      const status = redemptionSchema.fields.find((f) => f.name === REDEMPTION_FIELDS.STATUS);
+      const choices = (status?.options?.choices || []).map((c) => c.name);
+      const needed = ['requested', 'approved', 'shipped', 'cancelled'];
+      const lackChoices = needed.filter((n) => !choices.includes(n));
+      if (choices.length) {
+        console.log(`  Status の選択肢: ${choices.join(' / ')}`);
+        console.log(lackChoices.length
+          ? `  🔴 選択肢が不足: ${lackChoices.join(' / ')}（書き込みが 422 になる）`
+          : '  ✅ 選択肢はそろっている');
+      }
+    } else {
+      console.log(`  必要な列: ${Object.values(REDEMPTION_FIELDS).join(' / ')}`);
+    }
+    // 🔴 発送対象は approved だけ。requested のまま残っているものは減算が失敗した回復待ち。
+    const byStatus = {};
+    for (const r of redemptions.records) {
+      const st = r.fields?.[REDEMPTION_FIELDS.STATUS] || '(空)';
+      byStatus[st] = (byStatus[st] || 0) + 1;
+    }
+    if (redemptions.records.length) {
+      console.log(`  状態の内訳: ${Object.entries(byStatus).map(([k, v]) => `${k}=${v}`).join(' / ')}`);
+      if (byStatus.requested) {
+        console.log(`  🔴 requested が ${byStatus.requested} 件。**発送しないこと**（ポイント減算が未成立の回復待ち）`);
+      }
+    }
+  } else if (redemptions.status === 403) {
+    console.log('  ⬜ 未作成、または PAT にこのテーブルへのアクセス権が無い (403)');
+    console.log('     → docs/MEMBERSHIP_DATA_MIGRATION.md §4.2 の手順で作成すること');
+  } else {
+    console.log(`  ⬜ 未作成 / 読めない (status ${redemptions.status})`);
+    console.log('     → docs/MEMBERSHIP_DATA_MIGRATION.md §4.2 の手順で作成すること');
   }
 
   // --- backfill 対象 ---

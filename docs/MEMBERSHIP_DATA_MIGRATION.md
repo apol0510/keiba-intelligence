@@ -312,7 +312,7 @@ TBD-9 / TBD-10 は 2026-09-01 に確定し（`MEMBERSHIP_REWARDS.md` §7.6 / §7
 | 1 | `RewardRedemptions` テーブルを作る | 列は §2.3 のとおり。`RedemptionId` を **primary** にする |
 | 2 | `Status` を Single select にし、選択肢へ `requested` / `approved` / `shipped` / `cancelled` を入れる | 🔴 選択肢が無いと書き込みが 422 になる |
 | 3 | `RequestedAt` / `ShippedAt` を **`Date (ISO)`** にする | 時刻つきにすると 422（§2.1 と同じ）|
-| 4 | `npm run membership:check` | 列がそろっているかを確認 |
+| 4 | `npm run membership:check` | **`RewardRedemptions` の節が ✅ 存在**・列・`Status` の選択肢がそろっているかを確認 |
 | 5 | 交換を 1 件だけ実施し、1 行が **`approved`** まで進むことを確認 | 🔴 **本番 write**。承認範囲を確認してから。`requested` で止まっていたら**減算が失敗している**（発送しないこと）|
 
 🟢 **env の追加は不要。** `MEMBERSHIP_READ_ENABLED` / `MEMBERSHIP_WRITE_ENABLED` は
@@ -320,6 +320,17 @@ TBD-9 / TBD-10 は 2026-09-01 に確定し（`MEMBERSHIP_REWARDS.md` §7.6 / §7
 
 🔴 **既存の列・テーブルには触らない。** 本作業は**テーブルの新規作成のみ**で、
 `Customers` / `RewardLedger` の列は 1 つも変更しない。
+
+#### 作成に使うもの
+
+`npm run membership:check` は **read-only の監査専用**でテーブルを作らない
+（作成後の確認には使える）。作成は Airtable の画面、または Metadata API へ
+§2.3 の列定義を POST して行う。**PAT に `schema.bases:write` が必要**
+（2026-09-01 に追加済み）。
+
+🔴 **`Status` の選択肢**（`requested` / `approved` / `shipped` / `cancelled`）を
+作成時に入れること。欠けていると書き込みが **422** になる。
+`membership:check` は選択肢の不足も検出する。
 
 #### rollback
 
