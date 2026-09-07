@@ -2191,6 +2191,66 @@ fixture を `.invalid` 等へ置き換えるかは別タスク（本記録では
 **Test Mode cleanup**（Airtable のテスト 5 アドレス／Stripe Test のオブジェクト／
 Branch deploys スコープの env／branch deploy／test ブランチ）は**行っていない**。
 
+### 2026-09-07 Test Mode cleanup — 🔴 **一部のみ完了**（Netlify / Git だけ。全体は未完了）
+
+🔴 **Test Mode cleanup を完了扱いにしない。** Stripe Test と Airtable は**未実施**である。
+
+#### ✅ 実施した（Netlify / Git）
+
+| # | 操作 | 対象 | 件数 | 検証 |
+|---|---|---|---|---|
+| 1 | Branch deploys スコープの env 削除 | E2E 専用 5 件<br>（`STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_PREMIUM` / `STRIPE_PORTAL_RETURN_URL` / `MEMBERSHIP_WRITE_ENABLED`）| **5** | ✅ 全件削除。総数 26 → 21 |
+| 2 | branch deploy 削除 | `test/stripe-testmode-e2e-2026-09-01` の `context=branch-deploy` | **37**（先行 2 ＋ 確定 35）| ✅ 残存 **0**（全 1,395 件を走査）|
+| 3 | ブランチ削除 | 同ブランチ（local + remote）| **1** | ✅ 両方削除。削除前 HEAD は本記録に残さない（git の reflog / PR 履歴で追える）|
+
+🔴 **保持したもの**（触っていない）
+
+| 対象 | 件数 | 理由 |
+|---|---|---|
+| Branch deploys の共用 env | **4**（`SESSION_SIGNING_SECRET` / `AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` / `PREVIEW_PAID_KEY`）| 本番と同値で**他のブランチデプロイにも効く**。消すとログイン・Airtable 読み取りが壊れる |
+| 同ブランチの **deploy-preview** | **48** | 今回の cleanup 対象外 |
+| production / Live Mode / 他ブランチ / 実会員 | — | 対象外 |
+
+🔴 **`Lock to stop auto publishing` は使っていない**（project 全体へ影響しうるため）。
+
+#### 途中で判明した見積りの誤り
+
+preflight で「branch deploy は 2 件」と報告したが、**1 ページ目しか見ていなかった**。
+空ページに到達するまでページングして再集計したところ **35 件**（`deploy-preview` は別に 48 件）だった。
+🔴 **一覧 API はページングして全件を数えること。**
+
+#### 検証（read-only）
+
+| 対象 | 結果 |
+|---|---|
+| E2E 固定 URL | ✅ `/` `/pricing` `/.netlify/functions/stripe-webhook` すべて **404**。POST も 404 ＝ **配信不能** |
+| 本番 published deploy | ✅ **ready**・`error_message: null` |
+| 本番 webhook（Live・署名なし POST）| ✅ **400 `invalid_signature`** |
+| `/pricing` | ✅ 「このプランを申し込む」1 件・**¥3,980** |
+| guest → `/prediction/{nankan,jra}` | ✅ **302**（fail-closed）|
+| portal / checkout（未ログイン）| ✅ 両方 **401 `login_required`** |
+| production env | ✅ **26 件・不変**（`STRIPE_*` 3 件も維持）|
+| `allowed_branches` | ✅ `["main"]` |
+
+**異常なし。停止条件には該当しなかった。**
+
+#### 🔴 未実施（cleanup の残り）
+
+| 対象 | 内容 | 実行できない理由 |
+|---|---|---|
+| **Stripe Test** | E2E サブスクの停止 → Customer / Test Clock / Webhook 送信先 **2 件** の cleanup | Test の `STRIPE_SECRET_KEY` 未所持・Stripe CLI 未インストール |
+| **Airtable** | 確定済み **9 レコード**の削除（`Customers` / `RewardLedger`）| `AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` 未所持 |
+
+🔴 削除対象アドレスは 5 系統（`+1` / `+test2` / `+test3` / `+test4` / **誤表記（`+` が半角スペース）**）。
+🔴 **プラスタグ無しの素のアドレス（`0510apolon@…`）と本番の実会員アドレスには触れない。**
+
+🟡 E2E URL が 404 になったため、**Stripe Test の webhook 送信先 2 件は現在 404 を返す**。
+Test Mode なので実害は無いが、送信先の削除または無効化で解消する。
+
+#### 現在地
+
+**Test Mode cleanup は Netlify / Git のみ完了。Stripe Test と Airtable が残っており、全体は未完了。**
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
