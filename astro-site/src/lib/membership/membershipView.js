@@ -20,7 +20,7 @@ import {
   MONTHLY_POINTS, GRACE_DAYS,
 } from './rewards.js';
 import {
-  createCatalog, exchangeView, milestoneItems, isCatalogPublished,
+  createCatalog, exchangeView, milestoneItems, milestoneChoiceGroups, isCatalogPublished,
   isMilestoneMonth, MILESTONE_MONTHS, REDEMPTION_TIERS,
 } from './catalog.js';
 import { resolvePriceLock } from './priceLock.js';
@@ -165,12 +165,19 @@ export function buildMembershipView({
     gifts: Object.freeze({
       status: exchange.status,
       available: exchange.available,
+      /**
+       * 交換ラインごとの選択候補 `[{ costPoints, choices }]`。
+       * 🔴 同じラインの候補は **会員がどちらかを選ぶ**もの。画面で 1 つに絞らない。
+       */
+      availableChoices: exchange.availableChoices,
       next: exchange.next,
       /** 🔴 記念品の月は通常交換を出さない（保守ライン S-2） */
       blockedByMilestone: !!exchange.blockedByMilestone,
       isMilestoneMonth: isMilestoneMonth(months),
       /** 継続記念品（M-6）。カタログ未公開なら空 */
       milestones: milestoneItems(catalog),
+      /** 節目ごとの記念品の選択候補 `[{ milestoneMonths, choices }]` */
+      milestoneChoices: milestoneChoiceGroups(catalog),
       catalogPublished: isCatalogPublished(catalog),
     }),
 

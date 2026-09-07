@@ -2346,6 +2346,104 @@ env 再設定・`allowed_branches` の一時変更・branch deploy の再作成�
 | `npm run build` | ✅ **exit 0**（組み込みテスト 90 / 150 / 11 / 61 / 52 / 17 / 6 / 198 / 12 / 30 すべて fail 0）|
 | 変更ファイル | `docs/progress.md` / `docs/MEMBERSHIP_REWARDS.md` / `docs/MEMBERSHIP_DATA_MIGRATION.md` の **3 件のみ**（コード・env・本番設定は不変）|
 
+### 2026-09-07 PR #109 を squash merge ＋ 本番反映（仕様所有者承認）
+
+前節の docs-only 同期を `main` へ入れた。
+
+| 項目 | 値 |
+|---|---|
+| PR | [#109](https://github.com/apol0510/keiba-intelligence/pull/109) |
+| merge commit | **`9251a2be`**（squash）|
+| 規模 | 3 ファイル / +88 −24（すべて `docs/`）|
+| branch | `docs/membership-phase-status-sync-2026-09-07` を local + remote とも削除済み |
+
+🔴 **GitHub の checks は検証になっていない。** `.github/workflows/*.yml`（15 本）に
+`pull_request` トリガーは無く、Netlify の Deploy Preview は `allowed_branches: ["main"]` のため
+**canceled になりつつ GitHub 上は SUCCESS** で返る。`main` の commit には
+check-run も commit status も **0 件**付かない。
+**検証根拠はローカルの `npm run build` / `npm run test:membership` の実測**である。
+
+merge 後の本番確認（read-only プローブのみ・書き込みなし）:
+
+| 対象 | 結果 |
+|---|---|
+| `/` `/pricing` `/mypage` | ✅ **200** |
+| guest → `/prediction/{nankan,jra}` | ✅ **302**（fail-closed 維持）|
+
+🟡 **この merge 実績は本 PR にまとめて記録した。** 仕様所有者の指示により、
+merge 実績だけの後追い docs PR は作らない（次の実質的な更新に同梱する）。
+
+### 2026-09-07 M9 景品の品目を確定・実装（米 / コーヒーの2択）
+
+仕様所有者が **TBD-3b / TBD-4b** を確定した。正本は `MEMBERSHIP_REWARDS.md` **§7.8**。
+
+#### 確定した内容
+
+| 区分 | 条件 | 候補（**会員がどちらかを選ぶ**）|
+|---|---|---|
+| 交換景品 | 600 pt | 米 約300g（2合） / コーヒー豆 50g |
+| 交換景品 | 1,200 pt | 米 約450g（3合） / コーヒー豆 100g |
+| 継続記念品 | 12 か月 | 米 約300g / コーヒー豆 50g |
+| 継続記念品 | 24 か月 | 米 約450g / コーヒー豆 100g |
+
+仕入れは **米 15kg ¥11,000 / コーヒー豆 1kg ¥3,000** をまとめ買いし、KI 側で小分け・ラッピングする。
+
+#### 実装（データ駆動を保った）
+
+| 層 | 変更 |
+|---|---|
+| データ | `src/data/membership/rewardCatalog.json` に **8 品**（交換 4 / 記念品 4）。`status` は **`draft` のまま** |
+| 制度 | `catalog.js` に `redeemableChoiceGroups()` / `milestoneChoiceGroups()` を追加。同じ `costPoints` / `milestoneMonths` の景品を**選択候補としてまとめる** |
+| 制度 | `exchangeView()` に `availableChoices` を追加。`next` に **`choices`** を追加（🔴 従来の `next.item` は進捗計算用の代表で、**贈る品を決めたものではない**）|
+| 表示 | `membershipView.js` の `gifts` に `availableChoices` / `milestoneChoices` を追加 |
+| UI | `mypage.astro` が**候補をすべて並べる**（「どちらかお選びいただけます」）。従来は `next.item` 1 件だけを出しており、**実質こちらが品を決めて見せていた** |
+
+🔴 **`catalog.js` は品目を知らない。** 商品名・分量は JSON のデータで、コードは
+交換ライン（600 / 1,200）と節目（12 / 24）でグループ化するだけ。静的ガード **G-25** が
+`lib/membership/*.js` と UI へ品目名を直書きしていないことを検査する。
+
+#### 🔴 `valueYen` を書かなかった理由（TBD-13 として記録）
+
+原材料原価は **米300g≈¥220 / 450g≈¥330 / コーヒー50g=¥150 / 100g=¥300** と分かっているが、
+**包装資材費が未確定**である。原材料原価だけを景品価額として登録すると実態と食い違うため、
+`valueYen` は **未設定のまま**にした（包装費込みの推測値も入れていない）。
+`catalog.js` は `valueYen` が無くても動き、ある場合だけ ¥796 上限を検査する。
+
+#### 🔴 カタログは `draft` のまま（production に品目は出ない）
+
+**M11（TBD-12 発送先住所）が未確定＝実際に送れない**ため、`status: "draft"` を維持した。
+`createCatalog` は `draft` を**空として返す**ので、会員には「準備中」と表示され、
+品目は一切出ない。**M11 確定後に `published` へ変える**。
+
+#### テスト（+12 件）
+
+| 追加 | 内容 |
+|---|---|
+| `membership.test.mjs` +9 | 各ラインに2択がある / **候補を1つに絞らない**（自動割当にしない）/ 同じ入力なら結果が同じ（ランダムでない）/ 残高に応じてラインが開く / **ランクが変わっても必要ポイントが変わらない** / 記念品月は通常交換を止める（S-2）/ `draft` なら候補が 1 つも出ない |
+| `membershipCopy.guard.test.mjs` +3 | **G-23** 品目が確定ライン（600 / 1,200・12 / 24）から外れていない・`valueYen` / `minRank` を持たない / **G-24** 各ラインに候補が 2 つ以上ある / **G-25** 品目名をコード・UI へ直書きしていない |
+
+既存ガード「同梱カタログは draft のまま」は、`items: []` の断定を外し
+**`status === 'draft'` の維持**へ改めた（品目は確定したが公開はしない、という現状に合わせた）。
+
+#### 検証（ローカル実測。GitHub checks は根拠にしない）
+
+| 検査 | 変更前 | 変更後 |
+|---|---|---|
+| `test:membership` | 198 | ✅ **210**（fail 0）|
+| `test:auth` | 150 | ✅ **150**（fail 0・回帰なし）|
+| `test:ai-auth` | 11 | ✅ **11** |
+| `test:billing` | 61 | ✅ **61** |
+| `test:stripe` | 52 / 17 / 6 | ✅ **52 / 17 / 6** |
+| `npm run build` | exit 0 | ✅ **exit 0** |
+
+#### 🔴 未実施
+
+- 景品の**仕入れの実行**（仕様所有者）
+- **TBD-12 / M11**（発送先住所）→ 確定後に `published` 化
+- **TBD-13**（包装資材費・景品価額）
+- production env / Airtable / Stripe / 本番 write: **一切触れていない**
+- 交換の実運用に必要な `RewardRedemptions` テーブル（`MEMBERSHIP_DATA_MIGRATION.md` §2.3 案）は**未作成**
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
@@ -2387,13 +2485,15 @@ env 再設定・`allowed_branches` の一時変更・branch deploy の再作成�
 | M6 | **TBD-1〜TBD-8 の確定と実装** | **完了**（2026-09-01・`MEMBERSHIP_REWARDS.md` §7.1）|
 | M7 | 法務（景表法）への対応 | **完了**（保守ライン内に収め、確認待ちを解消。§8）|
 | M8 | **Airtable アダプタ・移行ツール・E2E** | **完了**（2026-09-01 第3弾）|
-| M9 | 景品の品目の選定（TBD-3b / TBD-4b） | **未着手**（仕様所有者） |
+| M9 | 景品の品目の選定（TBD-3b / TBD-4b） | **完了**（2026-09-07・**米 / コーヒーの2択**。`MEMBERSHIP_REWARDS.md` §7.8。カタログは `draft` のまま）|
 | M10 | **TBD-9 / TBD-10 の確定と実装** | **完了**（2026-09-01・`MEMBERSHIP_REWARDS.md` §7.6 / §7.7）|
 | M11 | TBD-12（発送先住所）の確定 | **未着手**（交換の実運用を始める前） |
 | M12 | Airtable スキーマ移行・read/write 有効化 | **完了**（2026-09-01。列 6 追加・`RewardLedger` 作成・backfill 7 件・`MEMBERSHIP_READ_ENABLED` → `MEMBERSHIP_WRITE_ENABLED`（13:28 UTC・`4cbd03f3`）。本書「スキーマ移行と READ 有効化」「✅ WRITE 有効化」節）|
 
-**工程の現在地（2026-09-07）**: 残るのは **M9（景品の品目 TBD-3b / TBD-4b）** と
-**M11（TBD-12 発送先住所）** の 2 件のみで、**どちらも仕様所有者の確定待ち**である。
+**工程の現在地（2026-09-07 更新）**: **M9 は完了**（品目確定＋実装＋テスト）。
+残るのは **M11（TBD-12 発送先住所）** と、M9 から派生した
+**仕入れの実行**・**TBD-13（包装資材費と景品価額）**・**カタログの `published` 化**である。
+🔴 **`published` 化は M11 の確定が前提**（発送先が無いと実際に送れない）。
 M0〜M8 / M10 / M12 は完了。
 `MEMBERSHIP_READ_ENABLED` / `MEMBERSHIP_WRITE_ENABLED` は **production で有効**
 （2026-09-06 の read-only 実測でも `MEMBERSHIP_WRITE_ENABLED` = 設定ありを確認。

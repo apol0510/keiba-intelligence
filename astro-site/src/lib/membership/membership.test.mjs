@@ -29,6 +29,7 @@ import {
 import {
   ITEM_KIND, EMPTY_CATALOG, createCatalog, isCatalogPublished,
   redeemableItems, milestoneItems, exchangeView,
+  redeemableChoiceGroups, milestoneChoiceGroups,
   REDEMPTION_TIERS, REDEMPTION_COST_POINTS, MILESTONE_MONTHS, MAX_ITEM_VALUE_YEN, isMilestoneMonth,
 } from './catalog.js';
 import {
@@ -444,15 +445,135 @@ describe('KIリワード', () => {
 });
 
 /* ================================================================
+   M9 景品品目（TBD-3b / TBD-4b・2026-09-07 確定）— 米 / コーヒーの2択
+   ================================================================ */
+
+/** 同梱カタログを、公開状態にしたコピーとして読む（本体は draft のまま触らない）。 */
+async function publishedFixture() {
+  const raw = (await import('../../data/membership/rewardCatalog.json', { with: { type: 'json' } })).default;
+  return createCatalog({ ...raw, status: 'published' });
+}
+
+describe('M9 景品品目（米 / コーヒー）', () => {
+  test('🔴 同梱カタログは確定ラインだけを使い、架空の価額を持たない', async () => {
+    const raw = (await import('../../data/membership/rewardCatalog.json', { with: { type: 'json' } })).default;
+
+    for (const item of raw.items) {
+      if (item.kind === ITEM_KIND.REDEEMABLE) {
+        assert.ok(REDEMPTION_COST_POINTS.includes(item.costPoints), `${item.id}: 交換ライン外`);
+      } else {
+        assert.ok(MILESTONE_MONTHS.includes(item.milestoneMonths), `${item.id}: 節目外`);
+      }
+      // 🔴 包装資材費が未確定（TBD-13）。原材料原価を景品価額として書かない。
+      assert.equal('valueYen' in item, false, `${item.id}: valueYen を推測で入れない`);
+      // 🔴 ランクで同一品の必要ポイントを変えない。
+      assert.equal('minRank' in item, false, `${item.id}: 品目にランク条件を付けない`);
+      assert.ok(item.valueYen == null || item.valueYen <= MAX_ITEM_VALUE_YEN);
+    }
+  });
+
+  test('🔴 交換ラインごとに 2 択があり、会員が選べる', async () => {
+    const c = await publishedFixture();
+    const groups = redeemableChoiceGroups(c);
+
+    assert.deepEqual(groups.map((g) => g.costPoints), [600, 1200], '交換ラインは 600 / 1,200 の 2 本');
+    for (const g of groups) {
+      assert.equal(g.choices.length, 2, `${g.costPoints}pt の候補が 2 つない`);
+      const names = g.choices.map((i) => i.name).join(' / ');
+      assert.ok(names.includes('米'), `${g.costPoints}pt に米がない`);
+      assert.ok(names.includes('コーヒー'), `${g.costPoints}pt にコーヒーがない`);
+    }
+  });
+
+  test('🔴 継続記念品も節目ごとに 2 択がある', async () => {
+    const c = await publishedFixture();
+    const groups = milestoneChoiceGroups(c);
+
+    assert.deepEqual(groups.map((g) => g.milestoneMonths), [12, 24]);
+    for (const g of groups) {
+      assert.equal(g.choices.length, 2, `${g.milestoneMonths}か月の候補が 2 つない`);
+      const names = g.choices.map((i) => i.name).join(' / ');
+      assert.ok(names.includes('米') && names.includes('コーヒー'));
+    }
+  });
+
+  test('🔴 候補を 1 つに絞って返さない（自動割当にしない）', async () => {
+    const c = await publishedFixture();
+    const v = exchangeView({ catalog: c, balancePoints: 0, rank: null, months: 2 });
+
+    assert.equal(v.status, 'ready');
+    assert.equal(v.availableChoices.length, 0, '残高 0 で交換できるものは無い');
+    assert.ok(v.next, '次のラインが出ていない');
+    assert.equal(v.next.choices.length, 2, '🔴 次の候補が 1 つに絞られている＝自動割当');
+    assert.equal(v.next.remainingPoints, 600);
+  });
+
+  test('🔴 同じ入力なら結果が毎回同じ（抽選・ランダムを入れない）', async () => {
+    const c = await publishedFixture();
+    const run = () => exchangeView({ catalog: c, balancePoints: 1300, rank: null, months: 2 });
+    const a = run();
+    const b = run();
+
+    assert.deepEqual(
+      a.availableChoices.map((g) => [g.costPoints, g.choices.map((i) => i.id)]),
+      b.availableChoices.map((g) => [g.costPoints, g.choices.map((i) => i.id)]));
+  });
+
+  test('残高に応じて交換できるラインが開く', async () => {
+    const c = await publishedFixture();
+    const at = (bal) => exchangeView({ catalog: c, balancePoints: bal, rank: null, months: 2 })
+      .availableChoices.map((g) => g.costPoints);
+
+    assert.deepEqual(at(599), []);
+    assert.deepEqual(at(600), [600]);
+    assert.deepEqual(at(1199), [600]);
+    assert.deepEqual(at(1200), [600, 1200]);
+  });
+
+  test('🔴 ランクが変わっても必要ポイントは変わらない', async () => {
+    const c = await publishedFixture();
+    const costsFor = (rank) => redeemableChoiceGroups(c, { rank })
+      .flatMap((g) => g.choices.map((i) => `${i.id}:${i.costPoints}`)).sort();
+
+    const bronze = costsFor(RANK.BRONZE);
+    assert.deepEqual(costsFor(RANK.SILVER), bronze);
+    assert.deepEqual(costsFor(RANK.GOLD), bronze);
+    assert.deepEqual(costsFor(RANK.PLATINUM), bronze);
+    assert.deepEqual(costsFor(null), bronze, 'ランク未確定でも候補が消えない（品目に minRank が無いため）');
+  });
+
+  test('🔴 記念品の月は通常交換を止める（S-2 を崩していない）', async () => {
+    const c = await publishedFixture();
+    for (const months of MILESTONE_MONTHS) {
+      const v = exchangeView({ catalog: c, balancePoints: 9999, rank: null, months });
+      assert.equal(v.status, 'blocked');
+      assert.equal(v.blockedByMilestone, true);
+      assert.deepEqual(v.availableChoices, []);
+    }
+  });
+
+  test('🔴 draft のままなら候補は 1 つも出ない（未公開を客へ出さない）', async () => {
+    const raw = (await import('../../data/membership/rewardCatalog.json', { with: { type: 'json' } })).default;
+    const c = createCatalog(raw);
+
+    assert.deepEqual(redeemableChoiceGroups(c), []);
+    assert.deepEqual(milestoneChoiceGroups(c), []);
+    assert.equal(exchangeView({ catalog: c, balancePoints: 9999, rank: null, months: 2 }).status, 'pending');
+  });
+});
+
+/* ================================================================
    景品カタログ（M-2 / M-3 / M-6）
    ================================================================ */
 
 describe('景品カタログ', () => {
-  test('🔴 リポジトリ同梱のカタログは未公開（架空の商品を持たない）', async () => {
+  test('🔴 リポジトリ同梱のカタログは未公開（M11 が終わるまで配れない）', async () => {
     const raw = (await import('../../data/membership/rewardCatalog.json', { with: { type: 'json' } })).default;
+    // 品目は確定済み（§7.8）だが、発送先住所（TBD-12 / M11）が未確定なので published にしない。
     assert.equal(raw.status, 'draft');
-    assert.deepEqual(raw.items, []);
+    assert.ok(raw.items.length > 0, '品目は確定済み。空に戻さない');
     assert.equal(isCatalogPublished(createCatalog(raw)), false);
+    assert.equal(createCatalog(raw).items.length, 0, 'draft は空として扱う');
   });
 
   test('🔴 draft のカタログは空として扱う（下書きを客へ出さない）', () => {

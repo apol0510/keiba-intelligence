@@ -181,10 +181,64 @@ describe('未確定の数値を出さない（TBD-1〜TBD-8）', () => {
     assert.match(rewards, /rankBonusPoints:\s*null,/, 'ACCRUAL にランク倍率を入れてはいけない（TBD-1b）');
   });
 
-  test('同梱の景品カタログは draft のまま（架空の景品を配らない）', () => {
+  test('同梱の景品カタログは draft のまま（発送先が未確定のうちは公開しない）', () => {
     const raw = JSON.parse(read('src/data/membership/rewardCatalog.json'));
+    // 🔴 M11（TBD-12 発送先住所）が未確定＝実際に送れない。published へ変えない。
     assert.equal(raw.status, 'draft');
-    assert.deepEqual(raw.items, []);
+  });
+
+  test('🔴 G-23: カタログの品目が正本の確定ラインから外れていない（§7.1 / §7.8）', () => {
+    const raw = JSON.parse(read('src/data/membership/rewardCatalog.json'));
+    assert.ok(Array.isArray(raw.items) && raw.items.length > 0, '品目は確定済み（§7.8）。空に戻さない');
+
+    for (const item of raw.items) {
+      assert.ok(item.id && item.name, `id / name が無い: ${JSON.stringify(item)}`);
+      assert.ok(['redeemable', 'milestone'].includes(item.kind), `kind が不正: ${item.id}`);
+
+      if (item.kind === 'redeemable') {
+        assert.ok([600, 1200].includes(item.costPoints),
+          `${item.id}: 交換ラインは 600 / 1,200 pt だけ（§7.1 TBD-3）`);
+      } else {
+        assert.ok([12, 24].includes(item.milestoneMonths),
+          `${item.id}: 記念品の節目は 12 / 24 か月だけ（§7.1 TBD-5）`);
+      }
+
+      // 🔴 TBD-13: 包装資材費が未確定。原材料原価だけを景品価額として書くと実態と食い違う。
+      assert.equal('valueYen' in item, false,
+        `${item.id}: valueYen は包装資材費の確定（TBD-13）まで書かない`);
+
+      // 🔴 ランクで同一品の必要ポイントを変えない（§7.8）。品目に minRank を付けない。
+      assert.equal('minRank' in item, false,
+        `${item.id}: 品目にランク条件を付けない（必要ポイントがランクで変わって見える）`);
+    }
+  });
+
+  test('🔴 G-24: 各ラインに複数の候補があり、会員が選べる（自動割当にしない）', () => {
+    const raw = JSON.parse(read('src/data/membership/rewardCatalog.json'));
+    const groups = new Map();
+    for (const i of raw.items) {
+      const key = i.kind === 'redeemable' ? `pt:${i.costPoints}` : `m:${i.milestoneMonths}`;
+      groups.set(key, (groups.get(key) || 0) + 1);
+    }
+    for (const key of ['pt:600', 'pt:1200', 'm:12', 'm:24']) {
+      assert.ok((groups.get(key) || 0) >= 2,
+        `${key}: 候補が 1 つしかないと会員が選べない（§7.8）`);
+    }
+  });
+
+  test('🔴 G-25: 品目そのものをコードへ直書きしていない（データ駆動を保つ）', () => {
+    const targets = [];
+    for (const f of readdirSync(join(siteRoot, LIB_DIR))) {
+      if (f.endsWith('.js')) targets.push(join(LIB_DIR, f));
+    }
+    for (const file of [...targets, ...UI_FILES]) {
+      for (const line of codeLines(read(file))) {
+        for (const w of ['コーヒー', '米 約', 'コーヒー豆']) {
+          assert.equal(line.includes(w), false,
+            `${file}: 品目は rewardCatalog.json のデータ。コードへ書かない → ${line.trim()}`);
+        }
+      }
+    }
   });
 });
 
@@ -294,7 +348,8 @@ describe('/terms が確定仕様と一致している', () => {
 
   test('🔴 /terms に未確定事項・新しい条件を書かない', () => {
     for (const line of codeLines(read(TERMS))) {
-      // 景品の品目・必要ポイントは未確定（§7.5）
+      // 🔴 品目は §7.8 で確定したが、カタログは draft（M11 未確定で実際に送れない）。
+      //    規約は後から狭めると不利益変更になるため、配れる状態になるまで条件として書かない。
       for (const w of ['コーヒー', 'お米', 'お菓子', 'ギフトカード', '600pt', '1,200pt', '記念品']) {
         assert.equal(line.includes(w), false, `未確定/別条件を規約に書いている: ${w} → ${line.trim()}`);
       }

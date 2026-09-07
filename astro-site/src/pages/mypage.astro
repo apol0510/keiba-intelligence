@@ -115,8 +115,15 @@ const rankProgress = club.rank.status === 'ready' && club.rank.nextRank
   ? { label: `次のランク（${club.rank.nextLabel}）まで`, note: `あと ${club.rank.monthsToNext} か月`, ratio: club.rank.progressRatio }
   : null;
 
+/**
+ * 🔴 次のラインの候補は **すべて**並べる。1 つだけ見せると、こちらが品を決めた（自動割当）
+ *    ように見える。会員はここから自分で選ぶ。
+ */
+const nextGiftNames = club.gifts.next
+  ? (club.gifts.next.choices.length ? club.gifts.next.choices : [club.gifts.next.item]).map((i) => i.name).join(' / ')
+  : null;
 const giftProgress = club.gifts.status === 'ready' && club.gifts.next
-  ? { label: `${MEMBERSHIP_COPY.nextGiftLabel}（${club.gifts.next.item.name}）`, note: `あと ${pt(club.gifts.next.remainingPoints)}`, ratio: club.gifts.next.progressRatio }
+  ? { label: `${MEMBERSHIP_COPY.nextGiftLabel}（${nextGiftNames}）`, note: `あと ${pt(club.gifts.next.remainingPoints)}`, ratio: club.gifts.next.progressRatio }
   : null;
 
 /** 現在の tier で開いている機能。閉じているものは次の一歩を添える。 */
@@ -231,10 +238,16 @@ const expiresLabel = ent.expiresAtMs
                   <p class="mp-club-note">
                     今月は<b>継続記念品</b>をお贈りする月です。通常のポイント交換は翌月から再開します。
                   </p>
-                ) : club.gifts.status === 'ready' && club.gifts.available.length ? (
+                ) : club.gifts.status === 'ready' && club.gifts.availableChoices.length ? (
                   <ul class="mp-gift-list">
-                    {club.gifts.available.map((item) => (
-                      <li><span class="mp-gift-name">{item.name}</span><span class="mp-gift-cost">{pt(item.costPoints)}</span></li>
+                    {club.gifts.availableChoices.map((group) => (
+                      <li>
+                        <span class="mp-gift-name">
+                          {group.choices.map((item) => item.name).join(' / ')}
+                          {group.choices.length > 1 ? <b class="mp-gift-choice">どちらかお選びいただけます</b> : null}
+                        </span>
+                        <span class="mp-gift-cost">{pt(group.costPoints)}</span>
+                      </li>
                     ))}
                   </ul>
                 ) : (
@@ -728,6 +741,14 @@ const expiresLabel = ent.expiresAtMs
 
   .mp-gift-list li:last-child { border-bottom: none; }
   .mp-gift-cost { font-family: var(--font-num); color: var(--text-secondary); }
+  /* 同じラインの候補が「選べる」ことを示すラベル（自動割当ではない） */
+  .mp-gift-choice {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
 
   .mp-club-legal {
     margin: 14px 0 0;
