@@ -2935,6 +2935,70 @@ breakpoint の値（480px）そのものは実機で未確認。
 guest への漏洩は、会員クラブ節そのものが `ent.authenticated` で閉じる既存構造を維持している
 （未認証は「ログインが必要です」画面）。
 
+### 2026-09-08 プレゼントカタログを本番反映 — read-only 確認済み
+
+PR #116 を squash merge（**`840dd81f`**）し、本番へ反映した。
+
+| 項目 | 値 |
+|---|---|
+| merge commit | **`840dd81f`**（2026-09-08）|
+| 規模 | 6 ファイル / +481 −17 |
+| Netlify production deploy | ✅ **ready**（`error_message` なし）・published も `840dd81f` |
+
+#### 本番の read-only 確認（🔴 write は一切していない）
+
+**A. 品目名が公開ページへ漏れていないこと**（`rewardCatalog.json` の実品目名 4 件で検査）
+
+| ページ | 結果 |
+|---|---|
+| `/pricing` / `/terms/` / `/` | ✅ **4 件すべて未出現** |
+
+**B. guest の `/mypage`**
+
+| 検査 | 結果 |
+|---|---|
+| 「ログインが必要です」 | ✅ 表示（fail-closed）|
+| プレゼントカタログ / `mp-cat-card` / 「交換できます」/「どれか 1 つ」 | ✅ **出ていない** |
+| 会員クラブ / 品目名 | ✅ **出ていない** |
+
+**C. PII / 価額 / 運用状態**
+
+`valueYen` / `requested` / `approved` / `shipped` / `RecipientName` / `PostalCode` —
+✅ **いずれも guest HTML に出ていない**。
+
+**D. entitlement と交換申込条件（既存の回帰）**
+
+| 検査 | 結果 |
+|---|---|
+| guest → `/prediction/{nankan,jra}` | ✅ **302**（fail-closed 維持）|
+| `POST /.netlify/functions/redeem-reward`（未認証）| ✅ **401 `login_required`** |
+| 同上に **itemId ＋ 住所を付けて送信** | ✅ **401**（認証が先。store へ到達しない）|
+| `GET` 同上 | ✅ **405** |
+
+**E. Airtable（read-only 比較）**
+
+`RewardLedger` **1 行** / `RewardRedemptions` **0 行** / `Status` の選択肢そろい —
+✅ **いずれも不変。write は発生していない**。
+
+#### 🔴 本番で確認できていないこと（会員セッションが必要）
+
+次の 3 点は **有料会員としてログインしないと描画されない**ため、
+本番では未確認である。**テストでは固定済み**（`membership.test.mjs` / ガード G-31〜G-34）。
+
+| 項目 | 本番 | テスト |
+|---|---|---|
+| 600 / 1,200 pt の **2 択が維持される** | 未確認 | ✅ 固定 |
+| **ポイント不足の商品が交換可能に見えない** | 未確認 | ✅ 固定（`affordable=false` / `is-locked`）|
+| 商品カードに PII / 価額 / 運用状態が出ない | 未確認（guest HTML では確認済み）| ✅ 固定（G-33）|
+
+🟡 実機での会員表示の確認は、仕様所有者が有料会員でログインして行う必要がある。
+
+#### 実商品画像
+
+🔴 **今回の merge 条件から外した**（仕様所有者の判断）。
+repo に実写真は無く、**架空の写真は当てていない**。
+`rewardCatalog.json` の各 item に `image` を足せば**コード変更なしで差し替わる**構造になっている。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
