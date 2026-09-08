@@ -288,6 +288,30 @@ describe('未確定の数値を出さない（TBD-1〜TBD-8）', () => {
     }
   });
 
+  test('🔴 G-35: UI が未定義の CSS 変数を使っていない（枠線が黙って消える）', () => {
+    // 🔴 2026-09-08: `var(--border)` は存在せず（正しくは `--border-color`）、
+    //    border 宣言ごと無効になって「カードに見えない」状態が本番へ出た。
+    //    宣言が無効になるだけでエラーにならないので、静的に検査する。
+    const tokens = new Set();
+    for (const f of ['src/styles/global.scss', 'src/layouts/BaseLayout.astro']) {
+      let src = '';
+      try { src = read(f); } catch { continue; }
+      for (const m of src.matchAll(/(--[a-zA-Z0-9-]+)\s*:/g)) tokens.add(m[1]);
+    }
+    assert.ok(tokens.size > 20, 'トークンを読めていない（検査が素通しになる）');
+
+    for (const file of UI_FILES) {
+      const src = read(file);
+      // 自分で定義している変数は対象外
+      const local = new Set([...src.matchAll(/(--[a-zA-Z0-9-]+)\s*:/g)].map((m) => m[1]));
+      for (const m of src.matchAll(/var\((--[a-zA-Z0-9-]+)\s*(,)?/g)) {
+        const [, name, hasFallback] = m;
+        if (hasFallback || tokens.has(name) || local.has(name)) continue;
+        assert.fail(`${file}: 未定義の CSS 変数 var(${name}) を使っている（宣言が無効になる）`);
+      }
+    }
+  });
+
   test('🔴 G-31: カタログの実際の品目名が /pricing・/terms に漏れていない', () => {
     const raw = JSON.parse(read('src/data/membership/rewardCatalog.json'));
     const names = [...new Set(raw.items.map((i) => i.name))];
