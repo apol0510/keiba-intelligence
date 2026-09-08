@@ -46,6 +46,18 @@ export const BANK_CONTRACT_PRICE_YEN = Object.freeze({
 export const BANK_PRICE_ID_PREFIX = 'bank:';
 
 /**
+ * 銀行振込年払いの価格改定日。
+ *
+ * `BANK_YEARLY_PRICE_YEN = 39800` は commit `3cdd0c4e`（**2026-08-30**）で新設された。
+ * それ以前の年払いは **¥66,000**（`docs/decisions.md`）。
+ *
+ * 🔴 **この日より前に始まった契約へ現在価格を当てはめてはいけない。**
+ *    M-1 は「会員が**加入した時点**の契約価格を保持する」制度であり、
+ *    `ContractPriceYen` が空という理由だけで現在価格を書くと**別の金額を捏造**することになる。
+ */
+export const BANK_PRICE_REVISION_DATE = '2026-08-30';
+
+/**
  * 銀行振込の契約価格を作る。確定額が無いプランは **null**（保存しない）。
  *
  * @param {string} planType   `plan_type`
@@ -132,6 +144,10 @@ export const BANK_SKIP = Object.freeze({
   NO_CONFIRMED_AT: 'no_confirmed_at',
   /** 契約価格が正本で確定していないプラン（年払い以外）。推測で入れない */
   NO_CONTRACT_PRICE: 'no_contract_price',
+  /** 今回の入金確認で契約が新しく始まらない（既存契約）。現在価格を当てはめない */
+  NO_NEW_CONTRACT: 'no_new_contract',
+  /** 価格改定日より前に始まった契約。現在価格とは別の金額なので書かない */
+  LEGACY_CONTRACT: 'legacy_contract',
 });
 
 /**
@@ -194,16 +210,29 @@ export function planBankMembershipUpdate({
   }
 
   /**
-   * 契約価格（M-1）。
-   * 🔴 起点は **既存の `MembershipStartedAt` があればそれ**、無ければ今回の入金確認日。
-   *    契約価格は `saveContractPrice` 側が **既に入っていれば上書きしない**ので、
-   *    毎回渡してよい（過去に取り逃した会員も次の入金確認で埋まる）。
+   * 契約価格（M-1 継続価格ロック）。
+   *
+   * 🔴 **今回の入金確認で契約が新しく始まる場合だけ**作る（`startedAtIso` が立つとき）。
+   *    既に `MembershipStartedAt` がある会員は**過去に契約が始まっている**ので、
+   *    現在価格を当てはめてはいけない（更新のたびに現在価格で上書きしたのと同じになる）。
+   *
+   * 🔴 さらに **起点が価格改定日以降**であることを要求する。
+   *    改定前（〜2026-08-29）の年払いは **¥66,000** で、現在価格とは別物である。
+   *
+   * 🔴 これらを満たさない会員の契約価格は **null のまま**にする。
+   *    画面は「準備中」になるが、**誤った金額を出すより正しい**（fail-closed）。
+   *    実際の請求額をレコード単位で確認できたときに、別途 backfill する。
    */
-  const contractStartedAt = fields.MembershipStartedAt || resolvedConfirmedAt;
-  const contract = (email && contractStartedAt)
-    ? bankContractPriceFor(fields.plan_type, contractStartedAt)
-    : null;
-  if (!contract) skipped.push(BANK_SKIP.NO_CONTRACT_PRICE);
+  let contract = null;
+  if (!email || !startedAtIso) {
+    skipped.push(BANK_SKIP.NO_NEW_CONTRACT);
+  } else if (startedAtIso < BANK_PRICE_REVISION_DATE) {
+    // 改定前に始まった契約。現在価格を書かない
+    skipped.push(BANK_SKIP.LEGACY_CONTRACT);
+  } else {
+    contract = bankContractPriceFor(fields.plan_type, startedAtIso);
+    if (!contract) skipped.push(BANK_SKIP.NO_CONTRACT_PRICE);
+  }
 
   return Object.freeze({
     startedAtIso,
