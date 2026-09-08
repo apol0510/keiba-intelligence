@@ -66,6 +66,12 @@ if (membershipStore.enabled && ent.authenticated && ent.email) {
   redeemCtx = r;
 }
 
+/**
+ * 交換できるラインが 1 つでもあるか。
+ * 🔴 カタログの開閉の**初期状態にだけ**使う。交換の可否判定には使わない。
+ */
+const hasAffordableGift = () => (club.catalog?.redeemable || []).some((g) => g.affordable);
+
 /** 直近の発送先（初期表示のみ）。読めていなければ空欄で出す。 */
 const lastAddress = redeemCtx.lastAddress || { recipientName: '', postalCode: '', address: '' };
 /** 申込済みの記念品の月（同じ節目を 2 回出さない）。 */
@@ -249,7 +255,15 @@ const expiresLabel = ent.expiresAtMs
               </div>
 
               <div class="mp-club-sub">
-                <h3>プレゼントカタログ</h3>
+                {/*
+                  🔴 縦に長いので開閉できるようにする（`<details>`・JS 不要）。
+                     交換できる品があるときだけ最初から開く。
+                */}
+                <details class="mp-cat" open={hasAffordableGift()}>
+                <summary class="mp-cat-summary">
+                  <span>プレゼントカタログ</span>
+                  {hasAffordableGift() ? <span class="mp-cat-badge is-ready">交換できます</span> : null}
+                </summary>
                 {/*
                   🔴 品目名・画像はすべて rewardCatalog.json（正本）から描画する。
                      ここに商品名を直書きしない（静的ガード G-25）。
@@ -340,6 +354,8 @@ const expiresLabel = ent.expiresAtMs
                 ) : (
                   <p class="mp-club-note">{PENDING}（プレゼントの品目が決まりしだいご案内します）</p>
                 )}
+
+                </details>
 
                 {/*
                   申込フォーム（§7.9・TBD-12）
@@ -957,6 +973,30 @@ const expiresLabel = ent.expiresAtMs
 
   .mp-gift-list li:last-child { border-bottom: none; }
   .mp-gift-cost { font-family: var(--font-num); color: var(--text-secondary); }
+  /* 開閉できるカタログ（`<details>`。JS なし） */
+  .mp-cat { margin-top: 4px; }
+  .mp-cat-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 0;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 700;
+    list-style: none;
+  }
+  .mp-cat-summary::-webkit-details-marker { display: none; }
+  /* 開閉の向きが分かる三角 */
+  .mp-cat-summary::before {
+    content: '▸';
+    display: inline-block;
+    color: var(--text-tertiary);
+    transition: transform var(--transition-fast, 0.15s) ease;
+  }
+  .mp-cat[open] > .mp-cat-summary::before { transform: rotate(90deg); }
+  .mp-cat-summary:hover { color: var(--text-secondary); }
+
   /* ---- プレゼントカタログ（商品カード） ----
      🔴 画像は rewardCatalog.json の image があるときだけ出す。
         未登録でもカードとして成立するよう、プレースホルダで高さを確保する。 */
