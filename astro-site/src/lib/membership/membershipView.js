@@ -20,7 +20,8 @@ import {
   MONTHLY_POINTS, GRACE_DAYS,
 } from './rewards.js';
 import {
-  createCatalog, exchangeView, milestoneItems, milestoneChoiceGroups, isCatalogPublished,
+  createCatalog, exchangeView, milestoneItems, milestoneChoiceGroups, redeemableChoiceGroups,
+  isCatalogPublished,
   isMilestoneMonth, MILESTONE_MONTHS, REDEMPTION_TIERS,
 } from './catalog.js';
 import { resolvePriceLock } from './priceLock.js';
@@ -64,6 +65,41 @@ export const CONFIRMED = Object.freeze({
  * 実体は `rewards.js` の `elapsedMonthsSince`（起点＝**支払い成功日**・TBD-9）。
  */
 export { elapsedMonthsSince as continuationMonths } from './rewards.js';
+
+/**
+ * 景品カタログの一覧を組み立てる（**表示専用の純関数**）。
+ *
+ * 🔴 交換の判定には使わない。`exchangeView` の結果を書き換えることもしない。
+ * 🔴 ポイント不足の品も**カタログとして見せる**が、`affordable: false` を付けて
+ *    「申し込める」と誤認させない。
+ */
+function buildCatalogView({ catalog, balancePoints, months, rank }) {
+  const known = Number.isInteger(balancePoints);
+  const monthsKnown = Number.isInteger(months);
+
+  const redeemable = redeemableChoiceGroups(catalog, { rank }).map((g) => Object.freeze({
+    costPoints: g.costPoints,
+    choices: g.choices,
+    /** 🔴 残高が不明なら false。「交換できます」と言い切らない */
+    affordable: known && balancePoints >= g.costPoints,
+    /** 🔴 ポイント。円ではない。残高が不明なら null（推測して出さない） */
+    remainingPoints: known && balancePoints < g.costPoints ? g.costPoints - balancePoints : null,
+  }));
+
+  const milestones = milestoneChoiceGroups(catalog).map((g) => Object.freeze({
+    milestoneMonths: g.milestoneMonths,
+    choices: g.choices,
+    /** 🔴 継続月数が不明なら false（Bronze へ倒さないのと同じ考え方） */
+    reached: monthsKnown && months >= g.milestoneMonths,
+    monthsToGo: monthsKnown && months < g.milestoneMonths ? g.milestoneMonths - months : null,
+  }));
+
+  return Object.freeze({
+    published: isCatalogPublished(catalog),
+    redeemable: Object.freeze(redeemable),
+    milestones: Object.freeze(milestones),
+  });
+}
 
 /**
  * マイページ用のビューを組み立てる。
@@ -180,6 +216,17 @@ export function buildMembershipView({
       milestoneChoices: milestoneChoiceGroups(catalog),
       catalogPublished: isCatalogPublished(catalog),
     }),
+
+    /**
+     * 景品カタログの一覧表示用（**表示専用**）。
+     *
+     * 🔴 交換の可否を決めるのは `gifts`（`exchangeView`）側であって、ここではない。
+     *    ここは「どんな景品があるか」を会員が**事前に見る**ためのもの。
+     * 🔴 `draft` のカタログは空。未公開の品目を出さない。
+     * 🔴 残高・継続月数が不明なら `affordable` / `reached` は **false** にし、
+     *    「あと◯pt」も出さない（推測しない）。
+     */
+    catalog: buildCatalogView({ catalog, balancePoints: rewards.balancePoints, months, rank: rank.rank }),
 
     priceLock: Object.freeze({
       status: priceLock.status,

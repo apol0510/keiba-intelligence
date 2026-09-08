@@ -288,6 +288,61 @@ describe('未確定の数値を出さない（TBD-1〜TBD-8）', () => {
     }
   });
 
+  test('🔴 G-31: カタログの実際の品目名が /pricing・/terms に漏れていない', () => {
+    const raw = JSON.parse(read('src/data/membership/rewardCatalog.json'));
+    const names = [...new Set(raw.items.map((i) => i.name))];
+    assert.ok(names.length > 0, '品目が空（テストが素通しになる）');
+
+    // 🔴 品目を出してよいのは /mypage の景品エリアだけ（正本 §4 / §7.8）
+    for (const file of ['src/pages/pricing.astro', 'src/pages/terms.astro']) {
+      const src = read(file);
+      for (const n of names) {
+        assert.equal(src.includes(n), false, `${file}: 品目「${n}」が漏れている`);
+      }
+    }
+  });
+
+  test('🔴 G-32: /mypage も品目名を直書きせずカタログから描画している', () => {
+    const raw = JSON.parse(read('src/data/membership/rewardCatalog.json'));
+    const src = read('src/pages/mypage.astro');
+
+    for (const n of [...new Set(raw.items.map((i) => i.name))]) {
+      assert.equal(src.includes(n), false, `mypage に品目「${n}」を直書きしている`);
+    }
+    // カタログのビューを描画していること（テキスト一覧ではなくカード）
+    assert.match(src, /club\.catalog\.redeemable/, 'カタログのラインを描画していない');
+    assert.match(src, /club\.catalog\.milestones/, '記念品のラインを描画していない');
+    assert.match(src, /item\.name/, '品目名をデータから出していない');
+  });
+
+  test('🔴 G-33: カタログ表示に運用状態・価額を混ぜていない', () => {
+    const src = read('src/pages/mypage.astro');
+    const start = src.indexOf('<h3>プレゼントカタログ</h3>');
+    const end = src.indexOf('id="mp-redeem-form"');
+    assert.ok(start > 0 && end > start, 'カタログ節が見つからない');
+    // コメント行は除く（「混ぜない」と書いた注意書き自体を検出しないため）
+    const section = codeLines(src.slice(start, end))
+      .filter((l) => !l.trimStart().startsWith('🔴'))
+      .join('\n');
+
+    for (const w of ['requested', 'approved', 'shipped', 'cancelled', 'valueYen', '¥']) {
+      assert.equal(section.includes(w), false,
+        `カタログ表示に「${w}」が混ざっている`);
+    }
+  });
+
+  test('🔴 G-34: ポイント不足の品を交換できるように見せていない', () => {
+    const src = read('src/pages/mypage.astro');
+    // 「交換できます」は affordable のときだけ
+    const ready = src.indexOf('交換できます');
+    assert.ok(ready > 0, '交換可否の表示が無い');
+    const line = src.slice(src.lastIndexOf('\n', src.lastIndexOf('\n', ready) - 1), ready);
+    assert.match(line, /group\.affordable/, '🔴 affordable を見ずに「交換できます」を出している');
+    // 申込フォームは affordable なライン（availableChoices）だけを対象にする
+    assert.match(src, /club\.gifts\.availableChoices\.length \? \(\s*<form/,
+      '🔴 申込フォームがポイント不足でも出る形になっている');
+  });
+
   test('🔴 G-25: 品目そのものをコードへ直書きしていない（データ駆動を保つ）', () => {
     const targets = [];
     for (const f of readdirSync(join(siteRoot, LIB_DIR))) {

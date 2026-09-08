@@ -86,6 +86,7 @@ export const EMPTY_CATALOG = Object.freeze({
  * - `milestone`  … `milestoneMonths` が **確定した節目（12 / 24）**のいずれかであること
  * - `valueYen`   … 省略可。指定するなら **¥796 以内**であること（保守ライン S-1）
  * - `minRank`    … 省略可。指定するなら既知のランクであること
+ * - `image`      … 省略可。実物の写真を用意できたときだけ入れる（架空の写真を置かない）
  *
  * 🔴 半端なポイント数・上限超えの価額を **無言で丸めない。除外する。**
  *    丸めると、正本に無い条件の景品が客へ出てしまう。
@@ -127,6 +128,13 @@ export function createCatalog(raw) {
       valueYen: i.valueYen ?? null,
       minRank: i.minRank ?? null,
       description: isNonEmptyString(i.description) ? i.description : null,
+      /**
+       * 商品画像のパス（任意）。**カタログのデータ**として持つ。
+       * 🔴 実物の写真が用意できるまでは入れない。
+       *    架空の写真・別商品の写真を代わりに置かない（`rewardCatalog.json` の note）。
+       *    未設定なら画面は画像なしのカードとして成立する。
+       */
+      image: isNonEmptyString(i.image) ? i.image : null,
     }));
 
   const ids = new Set();
