@@ -5,7 +5,7 @@
   "description": "AI-Powered Intelligence Dashboard for 南関競馬",
   "scripts": {
     "dev": "astro dev",
-    "build": "npm run validate:archive && npm run test:narrative && npm run test:auth && npm run test:ai-auth && npm run test:billing && npm run test:stripe && npm run test:membership && npm run test:digest && npm run test:raceday && npm run test:nankan && npm run test:prune-function-data && npm run test:archive-sync && npm run test:shared-checkers && npm run test:workflow-transient && astro build && npm run prune:function-data",
+    "build": "npm run validate:archive && npm run test:narrative && npm run test:auth && npm run test:ai-auth && npm run test:billing && npm run test:stripe && npm run test:membership && npm run test:reward-alert && npm run test:digest && npm run test:raceday && npm run test:nankan && npm run test:prune-function-data && npm run test:archive-sync && npm run test:shared-checkers && npm run test:workflow-transient && astro build && npm run prune:function-data",
     "preview": "astro preview",
     "astro": "astro",
     "test:nankan-recent-races": "node src/utils/getDisplayRecentRacesForNankan.test.js",
@@ -35,6 +35,7 @@
     "test:ai-auth": "node --test src/lib/ai/commentAuth.test.mjs",
     "test:billing": "node --test src/lib/billing/billing.test.mjs src/lib/billing/purchaseEmailCopy.test.mjs src/lib/http/siteOrigin.test.mjs src/lib/billing/purchaseIntent.test.mjs",
     "test:membership": "node --test src/lib/membership/membership.test.mjs src/lib/membership/membershipCopy.guard.test.mjs src/lib/membership/redemption.test.mjs src/lib/membership/airtableStore.test.mjs src/lib/membership/membershipE2E.test.mjs src/lib/membership/bankTransfer.test.mjs",
+    "test:reward-alert": "node --test scripts/checkRewardRedemptions.test.mjs",
     "membership:check": "node scripts/membershipMigration.mjs --check",
     "membership:dry-run": "node scripts/membershipMigration.mjs --dry-run",
     "test:digest": "node --test src/lib/digest/digest.test.mjs",
