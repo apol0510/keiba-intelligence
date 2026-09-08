@@ -20,6 +20,8 @@
  */
 
 import { MONTHLY_POINTS, PERIOD_MONTHS, buildEntryId, ENTRY_TYPE } from './rewards.js';
+import { createContractPrice } from './priceLock.js';
+import { BANK_YEARLY_PRICE_YEN } from '../billing/plans.js';
 
 /**
  * `plan_type` → 1 期の月数。
@@ -28,6 +30,39 @@ import { MONTHLY_POINTS, PERIOD_MONTHS, buildEntryId, ENTRY_TYPE } from './rewar
  *    有効期限の計算と付与の計算がずれると、期限と継続月数が食い違う。
  *    片方を変えるときは両方を直すこと（テストで一致を固定している）。
  */
+/**
+ * 銀行振込で **契約価格が正本で確定している** プラン。
+ *
+ * 🔴 年払い（¥39,800）だけ。他の銀行プランは確定した価格が正本に無い
+ *    （ライト ¥6,600 / 月払い ¥12,000 系は廃止済み・`CLAUDE.md`）。
+ *    推測で入れると M-1 の価格ロックが**誤った額で固定**されるので保存しない。
+ *    保存しなければ画面は「準備中」のままで、これは fail-closed として正しい。
+ */
+export const BANK_CONTRACT_PRICE_YEN = Object.freeze({
+  yearly: BANK_YEARLY_PRICE_YEN,
+});
+
+/** 契約価格の priceId。Stripe の Price ではないので、由来が分かる識別子にする。 */
+export const BANK_PRICE_ID_PREFIX = 'bank:';
+
+/**
+ * 銀行振込の契約価格を作る。確定額が無いプランは **null**（保存しない）。
+ *
+ * @param {string} planType   `plan_type`
+ * @param {string} startedAtIso 契約の起点（既存の `MembershipStartedAt` があればそれ）
+ */
+export function bankContractPriceFor(planType, startedAtIso) {
+  const key = typeof planType === 'string' ? planType.trim() : '';
+  const amountYen = BANK_CONTRACT_PRICE_YEN[key];
+  if (!Number.isInteger(amountYen)) return null;
+  return createContractPrice({
+    amountYen,
+    currency: 'jpy',
+    priceId: `${BANK_PRICE_ID_PREFIX}${key}`,
+    startedAtIso,
+  });
+}
+
 export const BANK_PLAN_TERM_MONTHS = Object.freeze({
   yearly: PERIOD_MONTHS.ANNUAL,          // 年払い ¥39,800 → 12 か月
   light: PERIOD_MONTHS.MONTHLY,
@@ -95,6 +130,8 @@ export const BANK_SKIP = Object.freeze({
   ALREADY_STARTED: 'already_started',
   /** 入金確認日を復元できない（期間が不明など） */
   NO_CONFIRMED_AT: 'no_confirmed_at',
+  /** 契約価格が正本で確定していないプラン（年払い以外）。推測で入れない */
+  NO_CONTRACT_PRICE: 'no_contract_price',
 });
 
 /**
@@ -156,9 +193,22 @@ export function planBankMembershipUpdate({
     }
   }
 
+  /**
+   * 契約価格（M-1）。
+   * 🔴 起点は **既存の `MembershipStartedAt` があればそれ**、無ければ今回の入金確認日。
+   *    契約価格は `saveContractPrice` 側が **既に入っていれば上書きしない**ので、
+   *    毎回渡してよい（過去に取り逃した会員も次の入金確認で埋まる）。
+   */
+  const contractStartedAt = fields.MembershipStartedAt || resolvedConfirmedAt;
+  const contract = (email && contractStartedAt)
+    ? bankContractPriceFor(fields.plan_type, contractStartedAt)
+    : null;
+  if (!contract) skipped.push(BANK_SKIP.NO_CONTRACT_PRICE);
+
   return Object.freeze({
     startedAtIso,
     entry,
+    contract,
     confirmedAtIso: resolvedConfirmedAt,
     skipped: Object.freeze(skipped),
   });

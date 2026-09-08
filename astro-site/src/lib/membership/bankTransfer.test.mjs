@@ -21,6 +21,7 @@ import {
   BANK_PLAN_TERM_MONTHS, BANK_SKIP,
   periodMonthsForBankPlan, buildBankTermRef, planBankMembershipUpdate,
   deriveConfirmedAtFromExpiration,
+  BANK_CONTRACT_PRICE_YEN, bankContractPriceFor,
 } from './bankTransfer.js';
 import { MONTHLY_POINTS, PERIOD_MONTHS, ENTRY_TYPE, tenureMonthsFromLedger, summarizeRewards } from './rewards.js';
 import { createInMemoryMembershipStore, STORE_RESULT } from './store.js';
@@ -385,5 +386,78 @@ describe('入金確認・認可・メール送信へ波及しない', () => {
       });
       assert.deepEqual(inCode, [], `bankTransfer.js が ${w} を参照している`);
     }
+  });
+});
+
+/* ================================================================
+   契約価格（M-1）— 2026-09-08
+   ================================================================ */
+
+describe('銀行振込でも契約価格を保存する', () => {
+  const plan = ({ fields = {}, ...rest } = {}) => planBankMembershipUpdate({
+    recordId: 'rec1',
+    expirationDate: '2027-09-08',
+    confirmedAtIso: '2026-09-08T00:00:00.000Z',
+    ...rest,
+    fields: { Email: 'a@example.test', plan_type: 'yearly', ...fields },
+  });
+
+  test('年払いは確定額（¥39,800）で契約価格を作る', () => {
+    const p = plan();
+    assert.equal(p.contract.amountYen, 39800);
+    assert.equal(p.contract.currency, 'jpy');
+    assert.equal(p.contract.priceId, 'bank:yearly');
+    assert.equal(p.contract.startedAtIso, '2026-09-08');
+  });
+
+  test('🔴 確定額が無いプランは契約価格を作らない（推測で入れない）', () => {
+    for (const planType of ['light', 'monthly-nankan', 'monthly-jra', 'lifetime', 'unknown', '']) {
+      const p = plan({ fields: { plan_type: planType } });
+      assert.equal(p.contract, null, `${planType}: 推測した価格を入れている`);
+      assert.ok(p.skipped.includes(BANK_SKIP.NO_CONTRACT_PRICE));
+    }
+  });
+
+  test('🔴 確定額を持つのは年払いだけ', () => {
+    assert.deepEqual(Object.keys(BANK_CONTRACT_PRICE_YEN), ['yearly']);
+    assert.equal(BANK_CONTRACT_PRICE_YEN.yearly, 39800);
+  });
+
+  test('起点は既存の MembershipStartedAt を優先する（後から遡らせない）', () => {
+    const p = plan({ fields: { MembershipStartedAt: '2026-05-08' } });
+    assert.equal(p.contract.startedAtIso, '2026-05-08');
+  });
+
+  test('MembershipStartedAt が無ければ今回の入金確認日を起点にする', () => {
+    assert.equal(plan().contract.startedAtIso, '2026-09-08');
+  });
+
+  test('bankContractPriceFor は不正な入力で null', () => {
+    assert.equal(bankContractPriceFor('yearly', ''), null);
+    assert.equal(bankContractPriceFor(null, '2026-09-08'), null);
+    assert.equal(bankContractPriceFor('yearly', 'not-a-date'), null);
+  });
+
+  test('🔴 既に契約価格が入っていれば上書きしない（M-1）', async () => {
+    const store = createInMemoryMembershipStore({
+      profiles: { 'a@example.test': { contractPrice: { amountYen: 12345, currency: 'jpy', priceId: 'old', startedAtIso: '2026-01-01' } } },
+    });
+    const r = await store.saveContractPrice('a@example.test', plan().contract);
+    assert.equal(r.status, STORE_RESULT.ALREADY);
+    assert.equal(store.snapshot().profiles['a@example.test'].contractPrice.amountYen, 12345);
+  });
+
+  test('未保存なら保存される（取り逃していた会員も次の入金確認で埋まる）', async () => {
+    const store = createInMemoryMembershipStore({ profiles: { 'a@example.test': {} } });
+    const r = await store.saveContractPrice('a@example.test', plan().contract);
+    assert.equal(r.status, STORE_RESULT.APPLIED);
+    assert.equal(store.snapshot().profiles['a@example.test'].contractPrice.amountYen, 39800);
+  });
+
+  test('🔴 入金確認の関数が契約価格を保存している（配線の固定）', () => {
+    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..',
+      'netlify/functions/send-payment-confirmation-auto.js'), 'utf8');
+    assert.match(src, /store\.saveContractPrice\(/, '契約価格を保存していない');
+    assert.match(src, /plan\.contract/, 'plan.contract を使っていない');
   });
 });

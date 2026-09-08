@@ -70,6 +70,17 @@ async function recordBankMembership({ recordId, fields, expirationDate, confirme
       const r = await store.appendEntry(fields.Email, plan.entry);
       console.log(`ℹ️ membership: accrual ${r.status} (${plan.entry.points}pt / ${plan.entry.periodMonths}m)`);
     }
+
+    /**
+     * 契約価格（M-1 継続価格ロック）。
+     * 🔴 `saveContractPrice` は **既に入っていれば上書きしない**ので毎回渡してよい。
+     *    過去の入金確認で取り逃していた会員も、次の入金確認で埋まる。
+     * 🔴 確定額が無いプラン（年払い以外）は `plan.contract` が null なので何も書かない。
+     */
+    if (plan.contract) {
+      const r = await store.saveContractPrice(fields.Email, plan.contract);
+      console.log(`ℹ️ membership: contract price ${r.status} (${plan.contract.amountYen} ${plan.contract.currency})`);
+    }
   } catch (e) {
     // 🔴 入金確認・AccessEnabled・メール送信へ波及させない
     console.warn('⚠️ membership: not recorded (ignored):', e?.name || 'Error');
