@@ -1,0 +1,73 @@
+# 発送待ちの景品交換を監視する（read-only）
+#
+# 正本: docs/MEMBERSHIP_REWARDS.md §7.9（発送対象は approved のみ）
+#
+# 🔴 read-only。Airtable への書き込みは一切行わない（GET のみ）。
+# 🔴 fail-closed。取得失敗・認証失敗・スキーマ不一致は approved=0 として扱わず、
+#    ジョブを failure(red) にする。静かに緑になると発送待ちを見落とす。
+# 🔴 通知へ個人情報を出さない（Email / RecipientName / PostalCode / Address /
+#    RedemptionId は本文に含めない。RedemptionId は先頭にメールを含む形式のため）。
+# 🔴 requested は発送対象ではない（ポイント減算が未成立の回復待ち）。通知の判定に使わない。
+#
+# 通知基盤は既存の .github/scripts/send-alert-email.js を再利用する（新規実装しない）。
+
+name: Check Reward Redemptions
+
+on:
+  schedule:
+    # 毎日 9:00 JST (0:00 UTC)
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: check-reward-redemptions
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 依存は無し（fetch のみ）。npm ci は不要。
+      - name: Check RewardRedemptions (read-only)
+        id: check
+        working-directory: astro-site
+        env:
+          AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+          AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
+        run: node scripts/checkRewardRedemptions.mjs
+
+      - name: Send alert (approved が 1 件以上のときだけ)
+        if: steps.check.outputs.approved_count != '0'
+        env:
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          EMAIL_SUBJECT: ${{ steps.check.outputs.subject }}
+          EMAIL_BODY: ${{ steps.check.outputs.body }}
+        run: node "$GITHUB_WORKSPACE/.github/scripts/send-alert-email.js"
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.check.outcome }}" != "success" ]; then
+            echo "❌ 監視失敗（approved=0 とは扱っていない）。ログを確認してください。"
+            exit 0
+          fi
+          echo "approved : ${{ steps.check.outputs.approved_count }} 件"
+          echo "requested: ${{ steps.check.outputs.requested_count }} 件（🔴 発送対象ではない）"
+          if [ "${{ steps.check.outputs.approved_count }}" = "0" ]; then
+            echo "→ 発送待ちなし。通知は送っていません。"
+          else
+            echo "→ 通知を送りました。Airtable の RewardRedemptions を確認してください。"
+          fi

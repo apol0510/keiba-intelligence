@@ -2749,6 +2749,74 @@ guest の `/mypage` に**漏れていないこと**も確認した。
 
 いずれも**コード側の準備は完了**しており、値が決まれば反映するだけで足りる。
 
+### 2026-09-08 景品交換の発送待ち監視を実装（read-only・既存アラート基盤を再利用）
+
+残件 A（仕入れ）の見落としを防ぐため、**`RewardRedemptions` の `approved` を日次で監視**する
+workflow を追加した。正本: `MEMBERSHIP_REWARDS.md` §7.9。
+
+#### 実装
+
+| 追加 | 内容 |
+|---|---|
+| `astro-site/scripts/checkRewardRedemptions.mjs` | 監視本体。**GET のみ**・列名は `airtableStore.js` の `REDEMPTION_FIELDS` を import して単一の正本に揃える |
+| `astro-site/scripts/checkRewardRedemptions.test.mjs` | 不変条件 **21 件** |
+| `.github/workflows/check-reward-redemptions.yml` | 日次 **9:00 JST**（cron `0 0 * * *`）＋ `workflow_dispatch` |
+| `package.json` | `test:reward-alert` を追加し **`npm run build` に組み込み**（build は 14 → **15 スイート**）|
+
+🟢 **通知基盤は新規実装していない。** 既存の `.github/scripts/send-alert-email.js` を
+`EMAIL_SUBJECT` / `EMAIL_BODY` を渡して呼ぶだけ（`import-results-jra-daily.yml` と同じ形）。
+
+#### 🔴 設計上の要点
+
+| 要件 | 実装 |
+|---|---|
+| **read-only** | GET しか出さない。`POST` / `PATCH` / `PUT` / `DELETE` を書いていないことをテストで固定 |
+| **fail-closed** | 資格情報なし・認証失敗・テーブル無し・列不足・`Status` 選択肢不足を **`exit 1`**。🔴 **`approved=0` として通さない**（静かに緑になると発送待ちを見落とす）|
+| **通知は approved のみ** | `approved_count != '0'` のときだけ送信ステップが走る。**正常時（0 件）はメールを送らない** |
+| **requested は発送対象にしない** | 判定に使わない。本文へ**参考の件数**と「発送しないこと」の注意だけ載せる |
+| **個人情報を出さない** | `Email` / `RecipientName` / `PostalCode` / `Address` / **`RedemptionId`** を読まない・載せない |
+
+🔴 **`RedemptionId` を除外した理由**: 形式が `<email>:<itemId>:<requestId>` で
+**先頭にメールアドレスがそのまま入る**（`redemption.js` の `buildRedemptionId`）。
+識別子に見えて実体は個人情報である。静的検査で参照を禁止した。
+
+通知に載るのは **件数・品名・種別・ポイント・最も古い申込日**だけ。
+「何を何個用意すればよいか」「どれだけ待たせているか」は分かり、個人は特定できない。
+詳細は運用者が Airtable で見る。
+
+#### テスト（21 件）
+
+read-only（GET のみ）/ fail-closed **6 種**（資格情報なし・401・テーブル無し・列不足・
+選択肢不足・取得失敗）/ エラー本文を漏らさない / `requested` だけでは通知しない /
+内訳と最古日 / **通知に個人情報が入らない** / ソースの静的検査（禁止列を読まない・書き込みメソッドなし）。
+
+#### 🔴 未設定（実行にはこれが要る）
+
+| Secret | 状態 |
+|---|---|
+| `AIRTABLE_API_KEY` | ✅ 登録済み（2026-09-08・**監視専用の read-only PAT**）|
+| **`AIRTABLE_BASE_ID`** | 🔴 **未登録**（secret にも variable にも無い）|
+| `ALERT_EMAIL` / `SENDGRID_API_KEY` / `SENDGRID_FROM_EMAIL` | ✅ 既存 |
+
+`AIRTABLE_BASE_ID` が入るまで workflow は **fail-closed で failure(red)** になる。
+これは設計どおりの挙動（「0 件」と誤認しない）だが、**通知は機能しない**。
+🔴 secret 追加は承認境界のため Claude は行わない。
+
+🟢 本番の read/write PAT は GitHub へ移していない（仕様所有者が監視専用 PAT を新規発行した）。
+
+#### 🔴 範囲外で見つけた既存不具合（修正していない）
+
+`astro-site/scripts/utils/workflowStaticAudit.test.mjs` が **91 件中 7 件 fail** している。
+
+- 対象は既存の 4 workflow
+  （`import-results-nankan-daily` / `import-results-jra-daily` / `auto-sync-check` / `verify-archive-sync`）
+  の「checker 呼び出しで exit code を確認している」検査
+- **本タスクの変更とは無関係**。新規 workflow を退避して実行しても **84/91 で同じ**だった
+- 🔴 このテストは **どの npm script からも実行されていない**（`build` にも入っていない）ため、
+  **通常の検証では検出されない**。`docs/progress.md` の 2026-07-20 記録では 91/91 だったので、
+  その後の workflow 変更で乖離したとみられる
+- 範囲外のため**修正せず記録にとどめる**
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
