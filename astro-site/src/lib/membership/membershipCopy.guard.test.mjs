@@ -288,6 +288,30 @@ describe('未確定の数値を出さない（TBD-1〜TBD-8）', () => {
     }
   });
 
+  test('🔴 G-35: UI が未定義の CSS 変数を使っていない（枠線が黙って消える）', () => {
+    // 🔴 2026-09-08: `var(--border)` は存在せず（正しくは `--border-color`）、
+    //    border 宣言ごと無効になって「カードに見えない」状態が本番へ出た。
+    //    宣言が無効になるだけでエラーにならないので、静的に検査する。
+    const tokens = new Set();
+    for (const f of ['src/styles/global.scss', 'src/layouts/BaseLayout.astro']) {
+      let src = '';
+      try { src = read(f); } catch { continue; }
+      for (const m of src.matchAll(/(--[a-zA-Z0-9-]+)\s*:/g)) tokens.add(m[1]);
+    }
+    assert.ok(tokens.size > 20, 'トークンを読めていない（検査が素通しになる）');
+
+    for (const file of UI_FILES) {
+      const src = read(file);
+      // 自分で定義している変数は対象外
+      const local = new Set([...src.matchAll(/(--[a-zA-Z0-9-]+)\s*:/g)].map((m) => m[1]));
+      for (const m of src.matchAll(/var\((--[a-zA-Z0-9-]+)\s*(,)?/g)) {
+        const [, name, hasFallback] = m;
+        if (hasFallback || tokens.has(name) || local.has(name)) continue;
+        assert.fail(`${file}: 未定義の CSS 変数 var(${name}) を使っている（宣言が無効になる）`);
+      }
+    }
+  });
+
   test('🔴 G-31: カタログの実際の品目名が /pricing・/terms に漏れていない', () => {
     const raw = JSON.parse(read('src/data/membership/rewardCatalog.json'));
     const names = [...new Set(raw.items.map((i) => i.name))];
@@ -317,7 +341,7 @@ describe('未確定の数値を出さない（TBD-1〜TBD-8）', () => {
 
   test('🔴 G-33: カタログ表示に運用状態・価額を混ぜていない', () => {
     const src = read('src/pages/mypage.astro');
-    const start = src.indexOf('<h3>プレゼントカタログ</h3>');
+    const start = src.indexOf('<details class="mp-cat"');
     const end = src.indexOf('id="mp-redeem-form"');
     assert.ok(start > 0 && end > start, 'カタログ節が見つからない');
     // コメント行は除く（「混ぜない」と書いた注意書き自体を検出しないため）
@@ -333,14 +357,45 @@ describe('未確定の数値を出さない（TBD-1〜TBD-8）', () => {
 
   test('🔴 G-34: ポイント不足の品を交換できるように見せていない', () => {
     const src = read('src/pages/mypage.astro');
-    // 「交換できます」は affordable のときだけ
-    const ready = src.indexOf('交換できます');
-    assert.ok(ready > 0, '交換可否の表示が無い');
-    const line = src.slice(src.lastIndexOf('\n', src.lastIndexOf('\n', ready) - 1), ready);
-    assert.match(line, /group\.affordable/, '🔴 affordable を見ずに「交換できます」を出している');
+
+    // 「交換できます」を出す箇所は、すべて affordable 由来の条件で守られていること
+    const occurrences = [...src.matchAll(/交換できます/g)].map((m) => m.index);
+    assert.ok(occurrences.length > 0, '交換可否の表示が無い');
+    for (const idx of occurrences) {
+      const around = src.slice(Math.max(0, idx - 400), idx);
+      assert.ok(/group\.affordable/.test(around) || /hasAffordableGift\(\)/.test(around),
+        '🔴 affordable を見ずに「交換できます」を出している');
+    }
+
+    // 開閉の初期状態に使うヘルパも affordable から作っていること
+    assert.match(src, /hasAffordableGift\s*=\s*\(\)\s*=>[\s\S]{0,160}?g\.affordable/,
+      '🔴 hasAffordableGift が affordable 以外から作られている');
+
     // 申込フォームは affordable なライン（availableChoices）だけを対象にする
     assert.match(src, /club\.gifts\.availableChoices\.length \? \(\s*<form/,
       '🔴 申込フォームがポイント不足でも出る形になっている');
+  });
+
+  test('🔴 G-36: 商品説明に社内の調達・作業情報を書かない', () => {
+    const raw = JSON.parse(read('src/data/membership/rewardCatalog.json'));
+    // 🔴 2026-09-08: 「まとめ仕入れした…KI 側で小分け・ラッピング」が顧客向け説明に出ていた。
+    //    調達・原価・在庫・社内作業は会員に見せる情報ではない。
+    const NG = ['仕入れ', '小分け', 'ラッピング', '原価', '在庫', '発注', '調達'];
+    for (const item of raw.items) {
+      const text = `${item.description || ''}`;
+      for (const w of NG) {
+        assert.equal(text.includes(w), false,
+          `${item.id}: 説明に社内情報「${w}」が入っている → ${text}`);
+      }
+    }
+  });
+
+  test('🔴 G-37: カタログを開閉できる（縦に長いので畳める）', () => {
+    const src = read('src/pages/mypage.astro');
+    assert.match(src, /<details class="mp-cat"/, 'カタログが開閉できない');
+    assert.match(src, /<summary class="mp-cat-summary"/, '開閉の見出しが無い');
+    assert.ok(src.indexOf('<details class="mp-cat"') < src.indexOf('mp-cat-line'),
+      'カード群が details の外に出ている');
   });
 
   test('🔴 G-25: 品目そのものをコードへ直書きしていない（データ駆動を保つ）', () => {
