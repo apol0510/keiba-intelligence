@@ -445,6 +445,129 @@ describe('KIリワード', () => {
 });
 
 /* ================================================================
+   プレゼントカタログの表示（2026-09-08）
+   ================================================================ */
+
+describe('プレゼントカタログの表示', () => {
+  const view = async ({ balancePoints = 700, months = 7, tier = TIER.PREMIUM } = {}) => {
+    const raw = (await import('../../data/membership/rewardCatalog.json', { with: { type: 'json' } })).default;
+    const ledger = balancePoints == null ? null : Array.from(
+      { length: balancePoints / 100 },
+      (_, i) => buildAccrualEntry({
+        email: 'c@example.test', periodRef: `p${i}`,
+        occurredAtMs: Date.parse('2026-01-01T00:00:00Z') + i * 86400000,
+      })).filter(Boolean);
+    return buildMembershipView({
+      entitlement: { tier, authenticated: tier !== TIER.GUEST, email: 'c@example.test' },
+      profile: { membershipStartedAtIso: null },
+      ledger,
+      config: {},
+      catalogSource: raw,
+      nowMs: Date.parse('2026-09-08T00:00:00Z'),
+    });
+  };
+
+  test('🔴 published カタログから描画される（全ラインが出る）', async () => {
+    const v = await view();
+    assert.equal(v.catalog.published, true);
+    assert.deepEqual(v.catalog.redeemable.map((g) => g.costPoints), [600, 1200]);
+    assert.deepEqual(v.catalog.milestones.map((g) => g.milestoneMonths), [12, 24]);
+  });
+
+  test('🔴 draft のカタログは 1 品も出さない', async () => {
+    const raw = (await import('../../data/membership/rewardCatalog.json', { with: { type: 'json' } })).default;
+    const v = buildMembershipView({
+      entitlement: { tier: TIER.PREMIUM, authenticated: true, email: 'c@example.test' },
+      ledger: [], config: {},
+      catalogSource: { ...raw, status: 'draft' },
+      nowMs: Date.now(),
+    });
+    assert.equal(v.catalog.published, false);
+    assert.deepEqual(v.catalog.redeemable, []);
+    assert.deepEqual(v.catalog.milestones, []);
+  });
+
+  test('🔴 同じラインの候補を 1 商品へ絞らない（600 / 1,200 とも 2 択）', async () => {
+    const v = await view();
+    for (const g of v.catalog.redeemable) {
+      assert.equal(g.choices.length, 2, `${g.costPoints}pt の候補が 2 つない`);
+    }
+    for (const g of v.catalog.milestones) {
+      assert.equal(g.choices.length, 2, `${g.milestoneMonths}か月の候補が 2 つない`);
+    }
+  });
+
+  test('🔴 ポイント不足の品はカタログに出るが affordable にしない', async () => {
+    const v = await view({ balancePoints: 700, months: 7 });
+    const small = v.catalog.redeemable.find((g) => g.costPoints === 600);
+    const large = v.catalog.redeemable.find((g) => g.costPoints === 1200);
+
+    assert.equal(small.affordable, true);
+    assert.equal(small.remainingPoints, null);
+
+    assert.equal(large.affordable, false, '🔴 足りないのに交換できると見せている');
+    assert.equal(large.remainingPoints, 500, 'あと何 pt かは確定値から計算する');
+    assert.equal(large.choices.length, 2, 'ポイント不足でもカタログには出す');
+  });
+
+  test('🔴 残高が不明なら affordable も「あと◯pt」も出さない', async () => {
+    const v = await view({ balancePoints: null });
+    for (const g of v.catalog.redeemable) {
+      assert.equal(g.affordable, false);
+      assert.equal(g.remainingPoints, null, '🔴 残高不明で「あと◯pt」を推測している');
+    }
+  });
+
+  test('記念品は到達状況が分かる（未到達でもカタログには出る）', async () => {
+    const v = await view({ balancePoints: 700 });
+    const m12 = v.catalog.milestones.find((g) => g.milestoneMonths === 12);
+    assert.equal(m12.reached, false);
+    assert.equal(m12.monthsToGo, 5);
+    assert.equal(m12.choices.length, 2);
+  });
+
+  test('🔴 カタログに運用状態（requested / approved）を混ぜない', async () => {
+    const v = await view();
+    const dump = JSON.stringify(v.catalog);
+    for (const w of ['requested', 'approved', 'shipped', 'cancelled']) {
+      assert.equal(dump.includes(w), false, `🔴 運用状態「${w}」がカタログに混ざっている`);
+    }
+  });
+
+  test('🔴 カタログに価額・円換算を出さない', async () => {
+    const v = await view();
+    for (const g of v.catalog.redeemable) {
+      for (const item of g.choices) {
+        assert.equal(item.valueYen, null, '🔴 valueYen がカタログに出ている');
+      }
+    }
+    assert.equal(JSON.stringify(v.catalog).includes('¥'), false);
+  });
+
+  test('画像は未登録なら null（架空の写真を当てない）', async () => {
+    const v = await view();
+    for (const g of v.catalog.redeemable) {
+      for (const item of g.choices) assert.equal(item.image, null);
+    }
+  });
+
+  test('画像はカタログのデータから渡る（将来の差し替え口）', () => {
+    const c = createCatalog({
+      version: 1, status: 'published',
+      items: [{ id: 'a', name: 'A', kind: ITEM_KIND.REDEEMABLE, costPoints: 600, image: '/images/a.png' }],
+    });
+    assert.equal(c.items[0].image, '/images/a.png');
+  });
+
+  test('🔴 guest には会員クラブごと出さない（カタログも漏れない）', async () => {
+    const v = await view({ tier: TIER.GUEST });
+    assert.equal(v.isPaid, false);
+    assert.equal(v.catalog.redeemable.length > 0, true, 'ビュー自体は組める');
+    // 実際の描画は mypage 側が isPaid / authenticated で閉じる（下のガードで固定）
+  });
+});
+
+/* ================================================================
    M9 景品品目（TBD-3b / TBD-4b・2026-09-07 確定）— 米 / コーヒーの2択
    ================================================================ */
 

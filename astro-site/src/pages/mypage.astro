@@ -249,23 +249,94 @@ const expiresLabel = ent.expiresAtMs
               </div>
 
               <div class="mp-club-sub">
-                <h3>交換できるプレゼント</h3>
-                {club.gifts.blockedByMilestone ? (
-                  <p class="mp-club-note">
-                    今月は<b>継続記念品</b>をお贈りする月です。通常のポイント交換は翌月から再開します。
-                  </p>
-                ) : club.gifts.status === 'ready' && club.gifts.availableChoices.length ? (
-                  <ul class="mp-gift-list">
-                    {club.gifts.availableChoices.map((group) => (
-                      <li>
-                        <span class="mp-gift-name">
-                          {group.choices.map((item) => item.name).join(' / ')}
-                          {group.choices.length > 1 ? <b class="mp-gift-choice">どちらかお選びいただけます</b> : null}
-                        </span>
-                        <span class="mp-gift-cost">{pt(group.costPoints)}</span>
-                      </li>
+                <h3>プレゼントカタログ</h3>
+                {/*
+                  🔴 品目名・画像はすべて rewardCatalog.json（正本）から描画する。
+                     ここに商品名を直書きしない（静的ガード G-25）。
+                  🔴 交換できるかどうかは group.affordable で決める。
+                     ポイント不足の品も「どんな景品があるか」として見せるが、
+                     申し込めるとは誤認させない。
+                  🔴 requested / approved 等の運用状態はここへ混ぜない。
+                */}
+                {club.catalog.published ? (
+                  <>
+                    {club.gifts.blockedByMilestone ? (
+                      <p class="mp-club-note">
+                        今月は<b>継続記念品</b>をお贈りする月です。通常のポイント交換は翌月から再開します。
+                      </p>
+                    ) : null}
+
+                    {club.catalog.redeemable.map((group) => (
+                      <div class="mp-cat-line">
+                        <div class="mp-cat-head">
+                          <span class="mp-cat-cost">{pt(group.costPoints)}</span>
+                          {group.affordable && !club.gifts.blockedByMilestone ? (
+                            <span class="mp-cat-badge is-ready">交換できます</span>
+                          ) : group.remainingPoints != null ? (
+                            <span class="mp-cat-badge">あと {pt(group.remainingPoints)}</span>
+                          ) : (
+                            <span class="mp-cat-badge">{PENDING}</span>
+                          )}
+                        </div>
+                        {group.choices.length > 1 ? (
+                          <p class="mp-cat-choice">この中から<b>どれか 1 つ</b>をお選びいただけます</p>
+                        ) : null}
+                        <ul class="mp-cat-cards">
+                          {group.choices.map((item) => (
+                            <li class={group.affordable && !club.gifts.blockedByMilestone ? 'mp-cat-card' : 'mp-cat-card is-locked'}>
+                              <div class="mp-cat-thumb">
+                                {item.image
+                                  ? <img src={item.image} alt={item.name} loading="lazy" width="160" height="120" />
+                                  : <span class="mp-cat-noimg" aria-hidden="true">🎁</span>}
+                              </div>
+                              <div class="mp-cat-body">
+                                <p class="mp-cat-name">{item.name}</p>
+                                {item.description ? <p class="mp-cat-desc">{item.description}</p> : null}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     ))}
-                  </ul>
+
+                    {club.catalog.milestones.length ? (
+                      <div class="mp-cat-line">
+                        <div class="mp-cat-head">
+                          <span class="mp-cat-cost">継続記念品</span>
+                          <span class="mp-cat-badge">ポイントは消費しません</span>
+                        </div>
+                        {club.catalog.milestones.map((group) => (
+                          <div class="mp-cat-ms">
+                            <p class="mp-cat-choice">
+                              <b>{group.milestoneMonths}か月</b> 継続の記念品
+                              {group.reached
+                                ? <span class="mp-cat-badge is-ready">対象です</span>
+                                : group.monthsToGo != null
+                                  ? <span class="mp-cat-badge">あと {group.monthsToGo} か月</span>
+                                  : <span class="mp-cat-badge">{PENDING}</span>}
+                            </p>
+                            {group.choices.length > 1 ? (
+                              <p class="mp-cat-choice">この中から<b>どれか 1 つ</b>をお選びいただけます</p>
+                            ) : null}
+                            <ul class="mp-cat-cards">
+                              {group.choices.map((item) => (
+                                <li class={group.reached ? 'mp-cat-card' : 'mp-cat-card is-locked'}>
+                                  <div class="mp-cat-thumb">
+                                    {item.image
+                                      ? <img src={item.image} alt={item.name} loading="lazy" width="160" height="120" />
+                                      : <span class="mp-cat-noimg" aria-hidden="true">🎁</span>}
+                                  </div>
+                                  <div class="mp-cat-body">
+                                    <p class="mp-cat-name">{item.name}</p>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
                 ) : (
                   <p class="mp-club-note">{PENDING}（プレゼントの品目が決まりしだいご案内します）</p>
                 )}
@@ -886,6 +957,88 @@ const expiresLabel = ent.expiresAtMs
 
   .mp-gift-list li:last-child { border-bottom: none; }
   .mp-gift-cost { font-family: var(--font-num); color: var(--text-secondary); }
+  /* ---- プレゼントカタログ（商品カード） ----
+     🔴 画像は rewardCatalog.json の image があるときだけ出す。
+        未登録でもカードとして成立するよう、プレースホルダで高さを確保する。 */
+  .mp-cat-line { margin-top: 16px; }
+  .mp-cat-line + .mp-cat-line { padding-top: 16px; border-top: 1px solid var(--border); }
+
+  .mp-cat-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .mp-cat-cost { font-family: var(--font-num); font-weight: 700; font-size: 1rem; }
+  .mp-cat-badge {
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .mp-cat-badge.is-ready { border-color: currentColor; font-weight: 600; }
+
+  .mp-cat-choice {
+    margin: 0 0 8px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .mp-cat-cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    /* PC は 2 列以上・mobile は 1 列へ自然に落ちる */
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 10px;
+  }
+  .mp-cat-card {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  /* ポイント不足・未到達。申し込めると誤認させないため落ち着かせる */
+  .mp-cat-card.is-locked { opacity: 0.62; }
+
+  .mp-cat-thumb {
+    flex: 0 0 auto;
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .mp-cat-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .mp-cat-noimg { font-size: 1.4rem; line-height: 1; }
+
+  .mp-cat-body { min-width: 0; }
+  .mp-cat-name { margin: 0; font-size: 0.9rem; font-weight: 600; }
+  .mp-cat-desc {
+    margin: 3px 0 0;
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+  }
+  .mp-cat-ms + .mp-cat-ms { margin-top: 12px; }
+
+  @media (max-width: 480px) {
+    .mp-cat-cards { grid-template-columns: 1fr; }
+    .mp-cat-thumb { width: 48px; height: 48px; }
+  }
+
   .mp-redeem { margin-top: 14px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
   .mp-redeem h4, .mp-redeem-milestone h4 { margin: 0 0 10px; font-size: 0.95rem; }
   .mp-redeem-row { display: block; margin-bottom: 10px; }
