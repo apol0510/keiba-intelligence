@@ -463,12 +463,30 @@ describe('銀行振込の契約価格（M-1: 加入時点の価格を保持）',
     }
   });
 
-  test('recordCreatedAfterRevision は fail-closed', () => {
-    assert.equal(recordCreatedAfterRevision('2026-08-30T00:00:00.000Z'), true);
+  test('recordCreatedAfterRevision は fail-closed（境界・空・不正）', () => {
+    assert.equal(recordCreatedAfterRevision('2026-08-30'), true, '改定日ちょうどは true');
+    assert.equal(recordCreatedAfterRevision('2026-08-29'), false, '前日は false');
+    assert.equal(recordCreatedAfterRevision('2026-08-30T00:00:00.000Z'), true, '時刻つきでも日付で見る');
     assert.equal(recordCreatedAfterRevision('2026-08-29T23:59:59.000Z'), false);
     assert.equal(recordCreatedAfterRevision(''), false, '空は false');
-    assert.equal(recordCreatedAfterRevision(null), false);
+    assert.equal(recordCreatedAfterRevision(null), false, 'null は false');
+    assert.equal(recordCreatedAfterRevision(undefined), false);
     assert.equal(recordCreatedAfterRevision('not-a-date'), false, '不正な形は false');
+  });
+
+  test('🔴 recordCreatedAfterRevision は実在しない暦日を通さない', () => {
+    // 🔴 形だけの検査だと 2026-99-99 が「改定後」として通ってしまう（2026-09-09 に発見）
+    assert.equal(recordCreatedAfterRevision('2026-99-99'), false, '🔴 存在しない月日が通った');
+    assert.equal(recordCreatedAfterRevision('2026-13-01'), false, '13 月は存在しない');
+    assert.equal(recordCreatedAfterRevision('2026-00-10'), false, '0 月は存在しない');
+    assert.equal(recordCreatedAfterRevision('2026-09-31'), false, '9 月 31 日は存在しない');
+
+    // 🔴 Date.parse 任せだと 2026-02-31 を 3/3 へ繰り上げて受け入れてしまう
+    assert.equal(recordCreatedAfterRevision('2026-02-31'), false, '🔴 別日へ正規化して受け入れている');
+
+    // うるう年の判定
+    assert.equal(recordCreatedAfterRevision('2026-02-29'), false, '2026 年は平年なので存在しない');
+    assert.equal(recordCreatedAfterRevision('2028-02-29'), true, '2028 年はうるう年なので存在する');
   });
 
   test('🔴 既存契約（MembershipStartedAt あり）の更新では契約価格を書かない', () => {

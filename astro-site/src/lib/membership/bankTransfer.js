@@ -101,8 +101,32 @@ export function recordCreatedAfterRevision(createdAt) {
   const raw = typeof createdAt === 'string' ? createdAt.trim() : '';
   if (!raw) return false;
   const day = raw.slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
+  if (!isCalendarDay(day)) return false;
   return day >= BANK_PRICE_REVISION_DATE;
+}
+
+/**
+ * `YYYY-MM-DD` が **実在する暦日**か。
+ *
+ * 🔴 形だけの検査では足りない。`2026-99-99` は `\d{2}` を満たすうえに
+ *    文字列比較で改定日より「後」になり、**不正な値が改定後として通ってしまう**
+ *    （2026-09-09 に発見）。
+ * 🔴 `Date.parse` 任せにもしない。`2026-02-31` を 3/3 へ**繰り上げて受け入れて**しまい、
+ *    入力と違う日を採用することになる。作った日付が入力と一致することまで確かめる。
+ */
+function isCalendarDay(day) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!m) return false;
+
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const date = Number(m[3]);
+
+  const utc = new Date(Date.UTC(year, month - 1, date));
+  // 繰り上げ・繰り下げが起きていれば入力は実在しない日
+  return utc.getUTCFullYear() === year
+    && utc.getUTCMonth() === month - 1
+    && utc.getUTCDate() === date;
 }
 
 export function periodMonthsForBankPlan(planType) {
