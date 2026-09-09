@@ -73,9 +73,17 @@ async function recordBankMembership({ recordId, fields, expirationDate, confirme
 
     /**
      * 契約価格（M-1 継続価格ロック）。
-     * 🔴 `saveContractPrice` は **既に入っていれば上書きしない**ので毎回渡してよい。
-     *    過去の入金確認で取り逃していた会員も、次の入金確認で埋まる。
-     * 🔴 確定額が無いプラン（年払い以外）は `plan.contract` が null なので何も書かない。
+     *
+     * 🔴 `plan.contract` が立つのは **「今回の入金確認で始まる、価格改定後の新規契約」**
+     *    だと確認できたときだけ（`bankTransfer.js` の条件を参照）。
+     *    既存契約の更新・改定前からのレコード・確定額が無いプランでは null になる。
+     *
+     * 🔴 **過去に取り逃した会員はここでは埋まらない。**
+     *    起点が空のまま続いている旧会員へ現在価格を書くと、加入時の金額
+     *    （年払いは改定前 ¥66,000）と違う額を保存してしまうため、意図的に見送る。
+     *    実請求額をレコード単位で確認できたときに、別途 backfill する。
+     *
+     * 🔴 `saveContractPrice` は既存値を上書きしない（M-1）。
      */
     if (plan.contract) {
       const r = await store.saveContractPrice(fields.Email, plan.contract);

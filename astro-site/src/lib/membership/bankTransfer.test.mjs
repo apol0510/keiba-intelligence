@@ -22,6 +22,7 @@ import {
   periodMonthsForBankPlan, buildBankTermRef, planBankMembershipUpdate,
   deriveConfirmedAtFromExpiration,
   BANK_CONTRACT_PRICE_YEN, bankContractPriceFor, BANK_PRICE_REVISION_DATE,
+  recordCreatedAfterRevision,
 } from './bankTransfer.js';
 import { MONTHLY_POINTS, PERIOD_MONTHS, ENTRY_TYPE, tenureMonthsFromLedger, summarizeRewards } from './rewards.js';
 import { createInMemoryMembershipStore, STORE_RESULT } from './store.js';
@@ -403,7 +404,7 @@ describe('銀行振込の契約価格（M-1: 加入時点の価格を保持）',
   });
 
   test('現行価格で成立した新規 yearly 契約 → 39,800 を保存する', () => {
-    const p = plan();
+    const p = plan({ fields: { CreatedAt: '2026-09-08T00:00:00.000Z' } });
     assert.equal(p.startedAtIso, '2026-09-08', '新規契約として起点が立つ');
     assert.equal(p.contract.amountYen, 39800);
     assert.equal(p.contract.currency, 'jpy');
@@ -418,6 +419,58 @@ describe('銀行振込の契約価格（M-1: 加入時点の価格を保持）',
     assert.ok(p.skipped.includes(BANK_SKIP.LEGACY_CONTRACT));
   });
 
+  /* ---- 🔴 MembershipStartedAt が空 ≠ 今回が初回契約 ---- */
+
+  test('🔴 改定前からの旧レコードで起点未設定 → 次回更新でも 39,800 を書かない', () => {
+    // 実在ケース: 2026-07 加入の旧年払い（¥66,000）が MembershipStartedAt 未設定のまま。
+    // 次回更新が改定後に来ると startedAtIso >= 改定日 / yearly を満たしてしまう。
+    const p = plan({
+      fields: { CreatedAt: '2026-07-25T00:00:00.000Z' },
+      confirmedAtIso: '2026-09-15T00:00:00.000Z',
+      expirationDate: '2027-09-15',
+    });
+    assert.equal(p.startedAtIso, '2026-09-15', '起点は今回の入金確認日で立つ');
+    assert.equal(p.contract, null, '🔴 旧年払い会員へ現在価格を書いている');
+    assert.ok(p.skipped.includes(BANK_SKIP.LEGACY_RECORD));
+  });
+
+  test('🔴 CreatedAt が無く新しさを証明できない → 書かない', () => {
+    const p = plan({ confirmedAtIso: '2026-09-15T00:00:00.000Z', expirationDate: '2027-09-15' });
+    assert.equal(p.contract, null);
+    assert.ok(p.skipped.includes(BANK_SKIP.UNKNOWN_RECORD_AGE));
+  });
+
+  test('改定後に作られたレコードの新規契約なら保存する', () => {
+    const p = plan({
+      fields: { CreatedAt: '2026-09-15T00:00:00.000Z' },
+      confirmedAtIso: '2026-09-15T00:00:00.000Z',
+      expirationDate: '2027-09-15',
+    });
+    assert.equal(p.contract.amountYen, 39800);
+  });
+
+  test('🔴 今回 pending とした旧年払い 3 名を将来の更新で誤って埋めない', () => {
+    // read-only 監査（2026-09-09）で「起点不明 / 改定前」と分類した実在パターン
+    const cases = [
+      { label: 'f7df547a 相当: 改定前の契約・CreatedAt 空', fields: {}, expirationDate: '2027-07-26' },
+      { label: '22d14882 相当: 改定前の契約・CreatedAt 空', fields: {}, expirationDate: '2027-07-25' },
+      { label: 'd24693fa 相当: 期限が未来すぎて起点不明', fields: {}, expirationDate: '2028-06-15' },
+    ];
+    for (const c of cases) {
+      // どの会員も「次回更新が改定後に来る」状況を模す
+      const p = plan({ fields: c.fields, confirmedAtIso: '2026-10-01T00:00:00.000Z', expirationDate: c.expirationDate });
+      assert.equal(p.contract, null, `🔴 ${c.label}: 現在価格が書かれた`);
+    }
+  });
+
+  test('recordCreatedAfterRevision は fail-closed', () => {
+    assert.equal(recordCreatedAfterRevision('2026-08-30T00:00:00.000Z'), true);
+    assert.equal(recordCreatedAfterRevision('2026-08-29T23:59:59.000Z'), false);
+    assert.equal(recordCreatedAfterRevision(''), false, '空は false');
+    assert.equal(recordCreatedAfterRevision(null), false);
+    assert.equal(recordCreatedAfterRevision('not-a-date'), false, '不正な形は false');
+  });
+
   test('🔴 既存契約（MembershipStartedAt あり）の更新では契約価格を書かない', () => {
     // 更新のたびに現在価格を書くと、加入時価格の保持（M-1）が壊れる
     const p = plan({ fields: { MembershipStartedAt: '2026-05-08' } });
@@ -426,7 +479,7 @@ describe('銀行振込の契約価格（M-1: 加入時点の価格を保持）',
   });
 
   test('🔴 改定日ちょうど（2026-08-30）は現行価格として扱う', () => {
-    const p = plan({ confirmedAtIso: '2026-08-30T00:00:00.000Z', expirationDate: '2027-08-30' });
+    const p = plan({ fields: { CreatedAt: '2026-08-30T00:00:00.000Z' }, confirmedAtIso: '2026-08-30T00:00:00.000Z', expirationDate: '2027-08-30' });
     assert.equal(p.contract.amountYen, 39800);
   });
 
@@ -438,7 +491,7 @@ describe('銀行振込の契約価格（M-1: 加入時点の価格を保持）',
 
   test('🔴 確定額が無いプランは契約価格を作らない（推測で入れない）', () => {
     for (const planType of ['light', 'monthly-nankan', 'monthly-jra', 'lifetime', 'unknown', '']) {
-      const p = plan({ fields: { plan_type: planType } });
+      const p = plan({ fields: { plan_type: planType, CreatedAt: '2026-09-08T00:00:00.000Z' } });
       assert.equal(p.contract, null, `${planType}: 推測した価格を入れている`);
     }
   });
@@ -470,7 +523,7 @@ describe('銀行振込の契約価格（M-1: 加入時点の価格を保持）',
     const store = createInMemoryMembershipStore({
       profiles: { 'a@example.test': { contractPrice: { amountYen: 66000, currency: 'jpy', priceId: 'legacy', startedAtIso: '2026-05-08' } } },
     });
-    const r = await store.saveContractPrice('a@example.test', plan().contract);
+    const r = await store.saveContractPrice('a@example.test', plan({ fields: { CreatedAt: '2026-09-08T00:00:00.000Z' } }).contract);
     assert.equal(r.status, STORE_RESULT.ALREADY);
     assert.equal(store.snapshot().profiles['a@example.test'].contractPrice.amountYen, 66000,
       '🔴 旧価格（¥66,000）が現在価格で上書きされた');
@@ -478,7 +531,7 @@ describe('銀行振込の契約価格（M-1: 加入時点の価格を保持）',
 
   test('未保存かつ新規契約なら保存される', async () => {
     const store = createInMemoryMembershipStore({ profiles: { 'a@example.test': {} } });
-    const r = await store.saveContractPrice('a@example.test', plan().contract);
+    const r = await store.saveContractPrice('a@example.test', plan({ fields: { CreatedAt: '2026-09-08T00:00:00.000Z' } }).contract);
     assert.equal(r.status, STORE_RESULT.APPLIED);
     assert.equal(store.snapshot().profiles['a@example.test'].contractPrice.amountYen, 39800);
   });
@@ -488,7 +541,7 @@ describe('銀行振込の契約価格（M-1: 加入時点の価格を保持）',
       profiles: { 'a@example.test': { PlanType: 'pro', Status: 'active', AccessEnabled: true } },
       ledgers: { 'a@example.test': [] },
     });
-    await store.saveContractPrice('a@example.test', plan().contract);
+    await store.saveContractPrice('a@example.test', plan({ fields: { CreatedAt: '2026-09-08T00:00:00.000Z' } }).contract);
     const p = store.snapshot().profiles['a@example.test'];
     assert.equal(p.PlanType, 'pro');
     assert.equal(p.Status, 'active');

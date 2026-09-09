@@ -60,8 +60,12 @@ export const BANK_PRICE_REVISION_DATE = '2026-08-30';
 /**
  * 銀行振込の契約価格を作る。確定額が無いプランは **null**（保存しない）。
  *
- * @param {string} planType   `plan_type`
- * @param {string} startedAtIso 契約の起点（既存の `MembershipStartedAt` があればそれ）
+ * 🔴 呼び出してよいのは `planBankMembershipUpdate` が
+ *    **「今回の入金確認で始まる、改定後の新規契約」だと確認できたときだけ**。
+ *    この関数自体は新規かどうかを判断しない（額と形を作るだけ）。
+ *
+ * @param {string} planType     `plan_type`
+ * @param {string} startedAtIso 契約の起点（＝**今回の入金確認日**）
  */
 export function bankContractPriceFor(planType, startedAtIso) {
   const key = typeof planType === 'string' ? planType.trim() : '';
@@ -87,6 +91,20 @@ export const BANK_PLAN_TERM_MONTHS = Object.freeze({
  * 1 期の月数を決める。
  * 🔴 未知・未設定・`lifetime` は **null（＝付与しない）**。既定へ丸めない。
  */
+/**
+ * 顧客レコードが **価格改定以降に作られた**と証明できるか。
+ *
+ * 🔴 fail-closed。空・不正・改定前は **false**（＝現在価格を書かない）。
+ * 🔴 これは「レコードの新しさ」の判定であって、契約起点の決定ではない。
+ */
+export function recordCreatedAfterRevision(createdAt) {
+  const raw = typeof createdAt === 'string' ? createdAt.trim() : '';
+  if (!raw) return false;
+  const day = raw.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
+  return day >= BANK_PRICE_REVISION_DATE;
+}
+
 export function periodMonthsForBankPlan(planType) {
   if (typeof planType !== 'string') return null;
   const key = planType.trim();
@@ -148,6 +166,10 @@ export const BANK_SKIP = Object.freeze({
   NO_NEW_CONTRACT: 'no_new_contract',
   /** 価格改定日より前に始まった契約。現在価格とは別の金額なので書かない */
   LEGACY_CONTRACT: 'legacy_contract',
+  /** 顧客レコード自体が価格改定より前から存在する。今回が初回契約ではない */
+  LEGACY_RECORD: 'legacy_record',
+  /** レコードの作成時期が分からない。改定後の新規だと証明できない */
+  UNKNOWN_RECORD_AGE: 'unknown_record_age',
 });
 
 /**
@@ -229,6 +251,19 @@ export function planBankMembershipUpdate({
   } else if (startedAtIso < BANK_PRICE_REVISION_DATE) {
     // 改定前に始まった契約。現在価格を書かない
     skipped.push(BANK_SKIP.LEGACY_CONTRACT);
+  } else if (!recordCreatedAfterRevision(fields.CreatedAt)) {
+    /**
+     * 🔴 **`MembershipStartedAt` が空 ≠ 今回が初回契約**。
+     *    起点を取り逃したまま続いている旧会員は、次回更新でこの分岐に入る。
+     *    その会員の起点（＝今回の入金確認日）は改定後になるため、
+     *    ここを塞がないと **旧年払い（¥66,000）へ ¥39,800 を書いてしまう**。
+     *
+     * 🔴 `CreatedAt` は **`MembershipStartedAt` の値には使わない**（申込日であって
+     *    支払い成功日ではない）。ここでは
+     *    **「このレコードが改定より前から存在したか」の fail-closed 判定**にだけ使う。
+     *    分からない（`CreatedAt` が空）場合も**書かない**。
+     */
+    skipped.push(fields.CreatedAt ? BANK_SKIP.LEGACY_RECORD : BANK_SKIP.UNKNOWN_RECORD_AGE);
   } else {
     contract = bankContractPriceFor(fields.plan_type, startedAtIso);
     if (!contract) skipped.push(BANK_SKIP.NO_CONTRACT_PRICE);
