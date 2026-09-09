@@ -20,6 +20,8 @@
  */
 
 import { MONTHLY_POINTS, PERIOD_MONTHS, buildEntryId, ENTRY_TYPE } from './rewards.js';
+import { createContractPrice } from './priceLock.js';
+import { BANK_YEARLY_PRICE_YEN } from '../billing/plans.js';
 
 /**
  * `plan_type` → 1 期の月数。
@@ -28,6 +30,55 @@ import { MONTHLY_POINTS, PERIOD_MONTHS, buildEntryId, ENTRY_TYPE } from './rewar
  *    有効期限の計算と付与の計算がずれると、期限と継続月数が食い違う。
  *    片方を変えるときは両方を直すこと（テストで一致を固定している）。
  */
+/**
+ * 銀行振込で **契約価格が正本で確定している** プラン。
+ *
+ * 🔴 年払い（¥39,800）だけ。他の銀行プランは確定した価格が正本に無い
+ *    （ライト ¥6,600 / 月払い ¥12,000 系は廃止済み・`CLAUDE.md`）。
+ *    推測で入れると M-1 の価格ロックが**誤った額で固定**されるので保存しない。
+ *    保存しなければ画面は「準備中」のままで、これは fail-closed として正しい。
+ */
+export const BANK_CONTRACT_PRICE_YEN = Object.freeze({
+  yearly: BANK_YEARLY_PRICE_YEN,
+});
+
+/** 契約価格の priceId。Stripe の Price ではないので、由来が分かる識別子にする。 */
+export const BANK_PRICE_ID_PREFIX = 'bank:';
+
+/**
+ * 銀行振込年払いの価格改定日。
+ *
+ * `BANK_YEARLY_PRICE_YEN = 39800` は commit `3cdd0c4e`（**2026-08-30**）で新設された。
+ * それ以前の年払いは **¥66,000**（`docs/decisions.md`）。
+ *
+ * 🔴 **この日より前に始まった契約へ現在価格を当てはめてはいけない。**
+ *    M-1 は「会員が**加入した時点**の契約価格を保持する」制度であり、
+ *    `ContractPriceYen` が空という理由だけで現在価格を書くと**別の金額を捏造**することになる。
+ */
+export const BANK_PRICE_REVISION_DATE = '2026-08-30';
+
+/**
+ * 銀行振込の契約価格を作る。確定額が無いプランは **null**（保存しない）。
+ *
+ * 🔴 呼び出してよいのは `planBankMembershipUpdate` が
+ *    **「今回の入金確認で始まる、改定後の新規契約」だと確認できたときだけ**。
+ *    この関数自体は新規かどうかを判断しない（額と形を作るだけ）。
+ *
+ * @param {string} planType     `plan_type`
+ * @param {string} startedAtIso 契約の起点（＝**今回の入金確認日**）
+ */
+export function bankContractPriceFor(planType, startedAtIso) {
+  const key = typeof planType === 'string' ? planType.trim() : '';
+  const amountYen = BANK_CONTRACT_PRICE_YEN[key];
+  if (!Number.isInteger(amountYen)) return null;
+  return createContractPrice({
+    amountYen,
+    currency: 'jpy',
+    priceId: `${BANK_PRICE_ID_PREFIX}${key}`,
+    startedAtIso,
+  });
+}
+
 export const BANK_PLAN_TERM_MONTHS = Object.freeze({
   yearly: PERIOD_MONTHS.ANNUAL,          // 年払い ¥39,800 → 12 か月
   light: PERIOD_MONTHS.MONTHLY,
@@ -40,6 +91,44 @@ export const BANK_PLAN_TERM_MONTHS = Object.freeze({
  * 1 期の月数を決める。
  * 🔴 未知・未設定・`lifetime` は **null（＝付与しない）**。既定へ丸めない。
  */
+/**
+ * 顧客レコードが **価格改定以降に作られた**と証明できるか。
+ *
+ * 🔴 fail-closed。空・不正・改定前は **false**（＝現在価格を書かない）。
+ * 🔴 これは「レコードの新しさ」の判定であって、契約起点の決定ではない。
+ */
+export function recordCreatedAfterRevision(createdAt) {
+  const raw = typeof createdAt === 'string' ? createdAt.trim() : '';
+  if (!raw) return false;
+  const day = raw.slice(0, 10);
+  if (!isCalendarDay(day)) return false;
+  return day >= BANK_PRICE_REVISION_DATE;
+}
+
+/**
+ * `YYYY-MM-DD` が **実在する暦日**か。
+ *
+ * 🔴 形だけの検査では足りない。`2026-99-99` は `\d{2}` を満たすうえに
+ *    文字列比較で改定日より「後」になり、**不正な値が改定後として通ってしまう**
+ *    （2026-09-09 に発見）。
+ * 🔴 `Date.parse` 任せにもしない。`2026-02-31` を 3/3 へ**繰り上げて受け入れて**しまい、
+ *    入力と違う日を採用することになる。作った日付が入力と一致することまで確かめる。
+ */
+function isCalendarDay(day) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!m) return false;
+
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const date = Number(m[3]);
+
+  const utc = new Date(Date.UTC(year, month - 1, date));
+  // 繰り上げ・繰り下げが起きていれば入力は実在しない日
+  return utc.getUTCFullYear() === year
+    && utc.getUTCMonth() === month - 1
+    && utc.getUTCDate() === date;
+}
+
 export function periodMonthsForBankPlan(planType) {
   if (typeof planType !== 'string') return null;
   const key = planType.trim();
@@ -95,6 +184,16 @@ export const BANK_SKIP = Object.freeze({
   ALREADY_STARTED: 'already_started',
   /** 入金確認日を復元できない（期間が不明など） */
   NO_CONFIRMED_AT: 'no_confirmed_at',
+  /** 契約価格が正本で確定していないプラン（年払い以外）。推測で入れない */
+  NO_CONTRACT_PRICE: 'no_contract_price',
+  /** 今回の入金確認で契約が新しく始まらない（既存契約）。現在価格を当てはめない */
+  NO_NEW_CONTRACT: 'no_new_contract',
+  /** 価格改定日より前に始まった契約。現在価格とは別の金額なので書かない */
+  LEGACY_CONTRACT: 'legacy_contract',
+  /** 顧客レコード自体が価格改定より前から存在する。今回が初回契約ではない */
+  LEGACY_RECORD: 'legacy_record',
+  /** レコードの作成時期が分からない。改定後の新規だと証明できない */
+  UNKNOWN_RECORD_AGE: 'unknown_record_age',
 });
 
 /**
@@ -156,9 +255,48 @@ export function planBankMembershipUpdate({
     }
   }
 
+  /**
+   * 契約価格（M-1 継続価格ロック）。
+   *
+   * 🔴 **今回の入金確認で契約が新しく始まる場合だけ**作る（`startedAtIso` が立つとき）。
+   *    既に `MembershipStartedAt` がある会員は**過去に契約が始まっている**ので、
+   *    現在価格を当てはめてはいけない（更新のたびに現在価格で上書きしたのと同じになる）。
+   *
+   * 🔴 さらに **起点が価格改定日以降**であることを要求する。
+   *    改定前（〜2026-08-29）の年払いは **¥66,000** で、現在価格とは別物である。
+   *
+   * 🔴 これらを満たさない会員の契約価格は **null のまま**にする。
+   *    画面は「準備中」になるが、**誤った金額を出すより正しい**（fail-closed）。
+   *    実際の請求額をレコード単位で確認できたときに、別途 backfill する。
+   */
+  let contract = null;
+  if (!email || !startedAtIso) {
+    skipped.push(BANK_SKIP.NO_NEW_CONTRACT);
+  } else if (startedAtIso < BANK_PRICE_REVISION_DATE) {
+    // 改定前に始まった契約。現在価格を書かない
+    skipped.push(BANK_SKIP.LEGACY_CONTRACT);
+  } else if (!recordCreatedAfterRevision(fields.CreatedAt)) {
+    /**
+     * 🔴 **`MembershipStartedAt` が空 ≠ 今回が初回契約**。
+     *    起点を取り逃したまま続いている旧会員は、次回更新でこの分岐に入る。
+     *    その会員の起点（＝今回の入金確認日）は改定後になるため、
+     *    ここを塞がないと **旧年払い（¥66,000）へ ¥39,800 を書いてしまう**。
+     *
+     * 🔴 `CreatedAt` は **`MembershipStartedAt` の値には使わない**（申込日であって
+     *    支払い成功日ではない）。ここでは
+     *    **「このレコードが改定より前から存在したか」の fail-closed 判定**にだけ使う。
+     *    分からない（`CreatedAt` が空）場合も**書かない**。
+     */
+    skipped.push(fields.CreatedAt ? BANK_SKIP.LEGACY_RECORD : BANK_SKIP.UNKNOWN_RECORD_AGE);
+  } else {
+    contract = bankContractPriceFor(fields.plan_type, startedAtIso);
+    if (!contract) skipped.push(BANK_SKIP.NO_CONTRACT_PRICE);
+  }
+
   return Object.freeze({
     startedAtIso,
     entry,
+    contract,
     confirmedAtIso: resolvedConfirmedAt,
     skipped: Object.freeze(skipped),
   });

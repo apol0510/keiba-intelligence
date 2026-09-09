@@ -70,6 +70,25 @@ async function recordBankMembership({ recordId, fields, expirationDate, confirme
       const r = await store.appendEntry(fields.Email, plan.entry);
       console.log(`ℹ️ membership: accrual ${r.status} (${plan.entry.points}pt / ${plan.entry.periodMonths}m)`);
     }
+
+    /**
+     * 契約価格（M-1 継続価格ロック）。
+     *
+     * 🔴 `plan.contract` が立つのは **「今回の入金確認で始まる、価格改定後の新規契約」**
+     *    だと確認できたときだけ（`bankTransfer.js` の条件を参照）。
+     *    既存契約の更新・改定前からのレコード・確定額が無いプランでは null になる。
+     *
+     * 🔴 **過去に取り逃した会員はここでは埋まらない。**
+     *    起点が空のまま続いている旧会員へ現在価格を書くと、加入時の金額
+     *    （年払いは改定前 ¥66,000）と違う額を保存してしまうため、意図的に見送る。
+     *    実請求額をレコード単位で確認できたときに、別途 backfill する。
+     *
+     * 🔴 `saveContractPrice` は既存値を上書きしない（M-1）。
+     */
+    if (plan.contract) {
+      const r = await store.saveContractPrice(fields.Email, plan.contract);
+      console.log(`ℹ️ membership: contract price ${r.status} (${plan.contract.amountYen} ${plan.contract.currency})`);
+    }
   } catch (e) {
     // 🔴 入金確認・AccessEnabled・メール送信へ波及させない
     console.warn('⚠️ membership: not recorded (ignored):', e?.name || 'Error');
