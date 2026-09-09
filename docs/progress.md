@@ -3088,6 +3088,145 @@ CSS は未定義変数を参照すると **宣言ごと無効**になるため�
 🔴 **未登録のまま**。repo に実写真は無く、**架空画像・別商品の写真は当てていない**。
 `rewardCatalog.json` の各 item に `image` を足せば**コード変更なしで差し替わる**。
 
+### 2026-09-10 `MembershipStartedAt` の backfill 2 件（仕様所有者承認・production write）
+
+`/mypage` の会員クラブが全項目「準備中」だった件の調査から、
+**根拠が取れた 2 名だけ**に起点を書いた。🔴 **`ContractPriceYen` は 1 件も触っていない。**
+
+#### 発端: 「準備中」の内訳（read-only 監査）
+
+| 項目 | 状態 | 原因 |
+|---|---|---|
+| 現在の契約価格 / 継続価格ロック | 1 / 12 | **銀行振込では一度も保存していなかった**（実装の穴 → PR #121）|
+| 継続月数 / 会員ランク | 7 / 12 | `MembershipStartedAt` 未設定（← 本節の backfill）|
+| KIリワード残高 | 台帳 1 行 | 仕様どおり（TBD-9: 支払い成功日起点・過去分は遡らない）|
+
+#### 対象の選び方（🔴 CreatedAt を起点の値には使わない）
+
+正本の起点は **支払い成功日**（TBD-9）。`CreatedAt` は**申込日**なので値に採用しない。
+復元は既存実装の **`deriveConfirmedAtFromExpiration`（ExpirationDate − 契約期間）だけ**を使った。
+
+未設定 5 名の分類:
+
+| 会員(hash) | plan_type | 復元値 | 判定 |
+|---|---|---|---|
+| `f7df547a` | yearly | **2026-07-26** | ✅ 根拠あり → **書いた** |
+| `4e566c51` | light | **2026-05-08** | ✅ 根拠あり → **書いた** |
+| `d24693fa` | yearly | 2027-06-15 | 🔴 **未来日**（支払い成功日になりえない）→ 据え置き |
+| `9ff932d0` | (空) | — | 🔴 期間不明 → 据え置き |
+| `9c6dfa30` | (空) | — | 🔴 期間不明 → 据え置き |
+
+🔴 **起点不明の 3 名は推測で埋めていない。**
+
+#### 初回契約であることの裏付け
+
+当初、**「`deriveConfirmedAtFromExpiration` は最新期の開始であって初回とは限らない」**
+（更新済みなら起点を過少に書く）というリスクがあった。特に月額の `light` は危険と考えた。
+
+これは **Airtable の `createdTime`**（API メタデータ。空だった `CreatedAt` **列**とは別）で解消した。
+
+| 会員 | 復元値 | `createdTime` | 判定 |
+|---|---|---|---|
+| `f7df547a` | 2026-07-26 | **2026-07-26** 07:10 UTC | ✅ 同日 → 初回契約 |
+| `4e566c51` | 2026-05-08 | **2026-05-08** 21:58 UTC | ✅ 同日 → 初回契約 |
+
+`4e566c51` は `ExpirationDate` = 作成日 + 1 か月なので、**1 期のみで更新なし**とも確認できた。
+
+#### 実施内容
+
+| recordId | 書込前 | 書込後 |
+|---|---|---|
+| `recCPd0R1l6VjtMWB` | (空) | **`2026-07-26`** |
+| `recnkY0n9mlmuNntQ` | (空) | **`2026-05-08`** |
+
+🔴 **`MembershipStartedAt` の 1 列だけ**を PATCH した。
+書込直前に「現在値が空であること」を再確認する中止条件を入れてある（他セッションの上書き防止）。
+
+#### 検証（before / after の全フィールド比較）
+
+| 検査 | 結果 |
+|---|---|
+| 変化した列 | ✅ **`MembershipStartedAt` のみ**（両レコードとも）|
+| `PlanType` / `Status` / `AccessEnabled` | ✅ **不変** |
+| **`ContractPriceYen`** | ✅ **空のまま**（触っていない）|
+| `ExpirationDate` / `plan_type` / `有効期限` / `Plan` / `VenueAccess` / `PaymentMethod` / `Source` | ✅ **不変** |
+| `createdTime` | ✅ 不変 |
+
+集計: `MembershipStartedAt` 設定済み **7 → 9**。起点不明 **3 のまま**。
+`RewardLedger` **1 行**・`RewardRedemptions` **0 行** はいずれも不変。
+
+#### 表示結果（本番と同じコードで再現）
+
+| | `recCPd0R1l6VjtMWB`（pro）| `recnkY0n9mlmuNntQ`（light）|
+|---|---|---|
+| 継続月数 | 準備中 → **1 か月** | 準備中 → **4 か月** |
+| 会員ランク | 準備中 → **Bronze** | 準備中 → **Silver** |
+| 現在の契約価格 | **準備中**（未着手）| **準備中**（未着手）|
+
+🔴 **認可は不変**（`showBetting` はランク・継続月数を参照しない）。
+
+#### rollback
+
+```
+PATCH .../recCPd0R1l6VjtMWB  { "fields": { "MembershipStartedAt": null } }
+PATCH .../recnkY0n9mlmuNntQ  { "fields": { "MembershipStartedAt": null } }
+```
+
+書込前は両方とも**空**だったので、空に戻すだけで完全に復元できる。
+影響は表示（継続月数・ランク）だけで、認可には及ばない。
+
+#### 🔴 期限切れ Light の認可（read-only 確認のみ・変更なし）
+
+`recnkY0n9mlmuNntQ` は `ExpirationDate` が約 3 か月前に失効しているが、
+`Status: active` / `AccessEnabled: true` が Airtable に残っている。
+
+認可は**正しく閉じる**ことを本番と同じ関数で確認した:
+
+```
+applyExpiry('light', '2026-06-08', now) → 'free'
+```
+
+`tiers.js` の `applyExpiry` が有効期限を見て free へ落とすため、買い目は見えない。**問題なし。**
+
+🟡 ただし今回の backfill により、この会員は**会員クラブ上は Silver として表示される**
+（会員クラブは `isPaid` で描画）。**認可は free、表示はランクあり**という差が残る。
+本件は範囲外として**変更していない**。
+
+#### 🔴 未実施
+
+- **`ContractPriceYen` の backfill**（旧年払い 3 名 ＋ 今回の 2 名）。
+  実請求額をレコード単位で証明できてから。
+  年払いは 2026-08-30 の改定前が **¥66,000**、以降が **¥39,800**（PR #121 参照）
+- 起点不明 3 名の `MembershipStartedAt`
+
+### 2026-09-08〜09 併せて記録する merge（本節までに未記録だったもの）
+
+| PR | 内容 | merge commit |
+|---|---|---|
+| [#120](https://github.com/apol0510/keiba-intelligence/pull/120) | `/mypage` 予想ページの南関表記を中央競馬と揃える（南関東 → 南関競馬 / 大井・川崎・船橋・浦和 → 南関 全4場）| `5c7bd91a` |
+| [#121](https://github.com/apol0510/keiba-intelligence/pull/121) | **銀行振込の契約価格を M-1（加入時点の価格）に沿って保存する** | **`cc90661a`** |
+
+#### PR #121 の要点（正本に残す）
+
+`saveContractPrice` の呼び出しが `stripe-webhook.js` にしか無く、
+**銀行振込では契約価格を一度も保存していなかった**（10 名が永久に「準備中」）。
+
+契約価格を保存する条件は **次をすべて満たすときだけ**:
+
+1. 今回の入金確認で**契約が新しく始まる**（`MembershipStartedAt` が空 → 今回立つ）
+2. 起点が **価格改定日 2026-08-30 以降**（`BANK_YEARLY_PRICE_YEN=39800` は commit `3cdd0c4e` で新設。それ以前は **¥66,000**）
+3. **顧客レコード自体が改定後に作られた**と証明できる（`recordCreatedAfterRevision`）
+4. `plan_type` に確定額がある（**yearly のみ**）
+
+🔴 3 が要る理由: **「`MembershipStartedAt` が空」＝「今回が初回契約」ではない。**
+起点を取り逃したまま続く旧会員は、次回更新で 1・2・4 を満たしてしまい、
+**旧年払い（¥66,000）へ ¥39,800 を書いてしまう**（再現済み）。
+`CreatedAt` は**起点の値には使わず**、「レコードが改定前から存在したか」の fail-closed 判定にだけ使う。
+
+🔴 `recordCreatedAfterRevision` は**実在する暦日**であることまで検査する。
+形だけの検査では `2026-99-99` が「改定後」として通り、`Date.parse` 任せでは
+`2026-02-31` を 3/3 へ繰り上げて受け入れてしまう。
+
 ## Final Goal
 
 `keiba-intelligence.jp` を、**人手の日次介入なしで**運用できる状態に保つこと。具体的には:
