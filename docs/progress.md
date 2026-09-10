@@ -4507,6 +4507,69 @@ Test Clock ＋ Customer ＋ Checkout Session を作る。手順は runbook §4.B
 
 ---
 
+## 2026-09-10 経路 B: 1 か月時点の read-only 確認（🟢 PR #127 が効いていることを実測）
+
+決済は仕様所有者が完了。`qa+clock@keiba-intelligence.jp`。
+
+### QA セッションの発行（🔴 magic link / SendGrid を使わない）
+
+経路 A と同じ方法で、**QA 限定・当該会員限定**の署名付き Cookie をローカルで発行した。
+
+- 鍵は **branch-deploy スコープの `SESSION_SIGNING_SECRET`**。
+  🔴 production とは別値なので、**この Cookie は本番では通用しない**（実行前に照合）
+- `tier` は QA レコードの `PlanType` から復元（認可の判定は従来どおりサーバー側 entitlement）
+- 🔴 **production の auth / session の実装は一切変更していない**
+- token はローカルファイルへ書き出し、**チャット・ログには出していない**
+
+### 1 か月時点の実測
+
+| 項目 | 値 |
+|---|---|
+| `PlanType` | ✅ `free-registered` → **`premium`** |
+| `Status` | ✅ `active` |
+| 🟢 **`MembershipStartedAt`** | ✅ **`2026-09-10`（入った）** |
+| `ContractPriceYen` / `ContractPriceId` / `ContractCurrency` / `ContractStartedAt` | ✅ **4 列とも保存** |
+| `RewardLedger` | ✅ **1 件**・`accrual` / **100 pt** / `PeriodMonths=1` |
+| `/mypage` 会員ランク | ✅ **Bronze** |
+| `/mypage` 継続月数 | ✅ **1 か月** |
+| `/mypage` KIリワード残高 | ✅ **100 pt** |
+| `/mypage` 今月の積み上げ | ✅ **100 pt** |
+| `/mypage` 現在の契約価格 | ✅ **¥3,980** |
+| `/mypage` 継続価格ロック | ✅ **適用中** |
+
+🟢 **PR #127 が本番経路で効いていることの実測。**
+経路 A の会員（`#127` の反映**前**に決済）は `MembershipStartedAt` が**空のまま**、
+経路 B の会員（反映**後**に決済）は **入っている**。
+初回請求（`billing_reason = subscription_create`）でだけ書く実装が期待どおり動いた。
+
+### production への影響
+
+- 基準値から**不変**: `Customers` **81** / `AuthTokens` **696** / `RewardLedger` **2** / `RewardRedemptions` **0**
+- QA PAT で production base を読むと **403** のまま
+- 本番 `/` `/pricing` `/mypage` = **200**
+
+### 🔴 発見: QA から magic link を要求すると **production の SendGrid で実送信される**
+
+QA base の `AuthTokens` に 1 件（`2026-09-10T10:35:34Z` / `qa+clock@keiba-intelligence.jp`）。
+これは **QA branch deploy で magic link が要求された**記録。
+
+- `netlify/functions/send-magic-link.js` は
+  **AuthTokens へ挿入（:102）したあと `sgMail.send()`（:181）**する。
+  行が残っている＝**送信まで到達している**。
+- 🔴 **`SENDGRID_API_KEY` は `all` スコープのまま**なので、QA branch deploy は
+  **production の SendGrid アカウントで実際にメールを送る**。
+- 今回の宛先は**受信できないアドレス**なので、**バウンスが本番の送信者評価に付く**。
+- 🔴 **送信を止める env フラグは実装に無い**（`send-magic-link.js` に該当分岐なし）。
+
+**未確定（仕様所有者の判断待ち）**:
+1. branch-deploy スコープへ **ダミーの `SENDGRID_API_KEY`** を入れて QA から送れなくするか
+2. 送信を止める env フラグ（例: `MAIL_SEND_ENABLED`）を実装するか
+3. QA では magic link を**運用ルールとして使わない**（今回の Cookie 方式で通す）だけにするか
+
+🔴 いずれも env 変更・コード変更なので**未実施**。
+
+---
+
 ## Open Questions
 
 ### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）
