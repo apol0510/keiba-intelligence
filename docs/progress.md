@@ -4570,6 +4570,39 @@ QA base の `AuthTokens` に 1 件（`2026-09-10T10:35:34Z` / `qa+clock@keiba-in
 
 ---
 
+## 2026-09-10 QA harness 修正: 請求境界ちょうどで止めない
+
+### 原因（仕様所有者が Stripe Test Mode を独立確認して確定）
+
+| invoice | status | `amount_paid` |
+|---|---|---|
+| 2026-09-10（初回）| `paid` | > 0 |
+| 2026-10-10（更新）| `paid` | > 0 |
+| **2026-11-10（更新）** | 🔴 **`draft`** | **0** |
+
+`2026-11-10` の invoice は **存在するが `draft`**。`automatically_finalizes_at` は
+**作成時刻 + 1 時間**。`qaTestClock.mjs` が請求境界**ちょうど**で停止して `ready` と判定するため、
+**自動 finalize の前に観測していた**。
+
+🔴 **webhook 不達ではない。** 台帳が 2 件 / 200 pt / Bronze だったのは正しい観測だった。
+
+### 修正（🔴 production コードは変更しない。PR #125 内の QA harness / runbook だけ）
+
+`astro-site/scripts/qaTestClock.mjs`:
+
+- `settle(clockId)` を追加。**未確定の invoice が無くなるまで**、
+  `automatically_finalizes_at` を過ぎるところまで Clock を進める
+- `advance` は **開始時**と**毎月の checkpoint** で必ず `settle()` を通してから ready とする
+- `settle` サブコマンドを追加（境界で止まっている現在位置を確定させる用）
+- 🔴 **手動 finalize / 手動 pay で回避しない**（本番と違う経路になり検証にならない）
+- 🔴 請求境界は **anchor** で数え、確定待ちに進めた時間を翌月へ繰り越さない
+  （毎月 `frozen_time + 1 か月` だと 1 時間ずつずれ、24 回で丸 1 日ずれる）
+- 支払い済み判定は `status === 'paid' && amount_paid > 0`
+
+runbook §4.B にも同じ内容を追記した。
+
+---
+
 ## Open Questions
 
 ### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）

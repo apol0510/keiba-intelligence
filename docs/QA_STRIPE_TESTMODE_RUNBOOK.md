@@ -600,6 +600,35 @@ node scripts/qaTestClock.mjs advance <clock_id> 9    # 3 → 12 か月
 node scripts/qaTestClock.mjs advance <clock_id> 12   # 12 → 24 か月
 ```
 
+すでに請求境界ちょうどで止まっているとき（下記）は、先に確定させる:
+
+```bash
+node scripts/qaTestClock.mjs settle <clock_id>
+```
+
+##### 🔴 請求境界ちょうどで止めない（2026-09-10 に実際に踏んだ）
+
+Test Clock を請求日**ちょうど**へ進めると、その月の invoice は **`draft`** で作られ、
+**`automatically_finalizes_at`（＝作成時刻 + 1 時間）** に自動で finalize → 支払いへ進む。
+境界で `ready` と判定すると、**まだ払われていない invoice を観測する**。
+
+実際に `2026-11-10` まで進めた時点で:
+
+| invoice | status | `amount_paid` |
+|---|---|---|
+| 2026-09-10（初回）| `paid` | > 0 |
+| 2026-10-10（更新）| `paid` | > 0 |
+| **2026-11-10（更新）** | 🔴 **`draft`** | **0** |
+
+そのため台帳は **2 件 / 200 pt / Bronze**（3 件 / 300 pt / Silver のはずが）だった。
+**webhook 不達ではない。**
+
+- ✅ `settle()` が **自動 finalize の予定時刻を過ぎるまで Clock を進めて**から ready とする。
+  `advance` は毎月の checkpoint で必ず `settle()` を通す。
+- 🔴 **手動 finalize / 手動 pay で回避しない**（本番と違う経路になり検証にならない）。
+- 🔴 請求境界は **anchor** で数え、確定待ちに進めた時間を翌月へ繰り越さない
+  （毎月 `frozen_time + 1 か月` にすると 1 時間ずつずれて 24 回で丸 1 日ずれる）。
+
 **5. 🔴 終わったら必ず消す**
 
 ```bash

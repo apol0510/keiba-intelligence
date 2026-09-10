@@ -26,8 +26,16 @@
  *
  * 使い方（すべて Test Mode。鍵は環境変数から読む）:
  *   node scripts/qaTestClock.mjs start
- *   node scripts/qaTestClock.mjs advance <clock_id> [回数]
- *   node scripts/qaTestClock.mjs status <clock_id>
+ *   node scripts/qaTestClock.mjs settle  <clock_id>          現在位置の invoice を確定させる
+ *   node scripts/qaTestClock.mjs advance <clock_id> [回数]    1 か月ずつ進めて毎回確定させる
+ *   node scripts/qaTestClock.mjs status  <clock_id>
+ *
+ * 🔴 請求境界ちょうどで止めない。
+ *    境界へ進めた直後の invoice は `draft` で、`automatically_finalizes_at`
+ *    （作成 + 1 時間）に自動で finalize → 支払いへ進む。境界で ready と判定すると
+ *    **まだ払われていない invoice を観測する**（2026-09-10 に実際に発生）。
+ *    `settle()` が自動 finalize の予定時刻を過ぎるまで Clock を進めてから ready とする。
+ * 🔴 **手動 finalize / 手動 pay で回避しない**（本番と違う経路になり検証にならない）。
  */
 
 const API = 'https://api.stripe.com/v1';
@@ -140,6 +148,100 @@ if (cmd === 'start') {
   process.exit(0);
 }
 
+/**
+ * Test Clock を指定時刻まで進め、**進み終わる**まで待つ。
+ * 🔴 `advancing` の間は次の操作を受け付けないので必ず待つ。
+ */
+async function advanceTo(clockId, unixSec) {
+  await stripe(`test_helpers/test_clocks/${clockId}/advance`, { frozen_time: Math.floor(unixSec) });
+  for (;;) {
+    await new Promise((r) => setTimeout(r, 3000));
+    const c = await stripe(`test_helpers/test_clocks/${clockId}`);
+    if (c.status === 'advancing') continue;
+    if (c.status !== 'ready') {
+      console.error(`🔴 Test Clock が ready にならない（status=${c.status}）。中止。`);
+      process.exit(1);
+    }
+    return c;
+  }
+}
+
+/** この Clock にぶら下がっている Customer。 */
+async function customersOf(clockId) {
+  const r = await stripe(`customers?test_clock=${clockId}&limit=100`);
+  return (r.data || []).map((c) => c.id);
+}
+
+/** まだ支払いが成立していない invoice（draft / open など）。 */
+async function pendingInvoices(customerIds) {
+  const out = [];
+  for (const cid of customerIds) {
+    const r = await stripe(`invoices?customer=${cid}&limit=100`);
+    for (const inv of r.data || []) {
+      if (!['paid', 'void', 'uncollectible'].includes(inv.status)) out.push(inv);
+    }
+  }
+  return out;
+}
+
+/**
+ * 🔴 請求境界ちょうどで止めない。
+ *
+ * Test Clock を請求日ちょうどへ進めると、その月の invoice は **`draft`** で作られ、
+ * `automatically_finalizes_at`（＝作成時刻 + 1 時間）に自動で finalize → 支払いへ進む。
+ * 境界ちょうどで `ready` と判定すると、**まだ払われていない invoice を観測**することになる
+ * （2026-09-10 に実際に発生。3 か月時点を見たつもりが 2 件 / 200pt / Bronze だった）。
+ *
+ * そこで **自動 finalize の予定時刻を過ぎるまで Clock を進めて**から ready とする。
+ * 🔴 **手動 finalize / 手動 pay で回避しない**（本番と違う経路になり、検証にならない）。
+ */
+async function settle(clockId, { rounds = 8 } = {}) {
+  const customers = await customersOf(clockId);
+  if (!customers.length) {
+    console.error('🔴 この Test Clock に Customer がいない。中止。');
+    process.exit(1);
+  }
+  for (let i = 1; i <= rounds; i++) {
+    const pending = await pendingInvoices(customers);
+    if (!pending.length) return true;
+
+    const clock = await stripe(`test_helpers/test_clocks/${clockId}`);
+    const finalizeAt = pending
+      .map((inv) => inv.automatically_finalizes_at)
+      .filter((t) => Number.isFinite(t));
+    // 予定時刻が読めない場合だけ 1 時間先を見る（Stripe の既定と同じ）
+    const target = (finalizeAt.length ? Math.max(...finalizeAt) : clock.frozen_time + 3600) + 60;
+    const to = Math.max(target, clock.frozen_time + 60);
+    console.log(`    未確定 ${pending.length} 件（${pending.map((x) => x.status).join(',')}）→ `
+      + `${new Date(to * 1000).toISOString()} まで進める`);
+    await advanceTo(clockId, to);
+  }
+  const still = await pendingInvoices(customers);
+  console.error(`🔴 ${rounds} 回進めても支払いが成立しない invoice が ${still.length} 件ある。中止。`);
+  process.exit(1);
+}
+
+/** 支払い済み invoice の件数（read-only の要約。金額・id は出さない）。 */
+async function paidCount(clockId) {
+  const customers = await customersOf(clockId);
+  let paid = 0;
+  for (const cid of customers) {
+    const r = await stripe(`invoices?customer=${cid}&limit=100`);
+    paid += (r.data || []).filter((i) => i.status === 'paid' && i.amount_paid > 0).length;
+  }
+  return paid;
+}
+
+if (cmd === 'settle') {
+  const clockId = process.argv[3];
+  if (!clockId) { console.error('🔴 使い方: settle <clock_id>'); process.exit(1); }
+  console.log('  現在位置の未確定 invoice を確定させる（手動 finalize は使わない）');
+  await settle(clockId);
+  const clock = await stripe(`test_helpers/test_clocks/${clockId}`);
+  console.log(`  ✅ ${new Date(clock.frozen_time * 1000).toISOString()} / 支払い済み invoice ${await paidCount(clockId)} 件`);
+  process.exit(0);
+}
+
 if (cmd === 'advance') {
   const clockId = process.argv[3];
   const times = Number(process.argv[4] || 1);
@@ -147,25 +249,32 @@ if (cmd === 'advance') {
     console.error('🔴 使い方: advance <clock_id> [回数]');
     process.exit(1);
   }
-  let clock = await stripe(`test_helpers/test_clocks/${clockId}`);
+
+  // 🔴 まず現在位置を確定させる（前回が境界で止まっている場合に取りこぼさない）
+  console.log('  [0] 現在位置を確定');
+  await settle(clockId);
+
+  /*
+   * 🔴 請求境界は **anchor** で数え、finalize 待ちのぶんを繰り越さない。
+   *    毎月 frozen_time から +1 か月にすると、確定待ちで進めた 1 時間ぶんが
+   *    毎月ずれて積み上がる（24 回で丸 1 日）。
+   */
+  let anchor = (await stripe(`test_helpers/test_clocks/${clockId}`)).frozen_time;
+
   for (let i = 1; i <= times; i++) {
-    const next = new Date(clock.frozen_time * 1000);
+    const next = new Date(anchor * 1000);
     next.setUTCMonth(next.getUTCMonth() + 1);
-    await stripe(`test_helpers/test_clocks/${clockId}/advance`, {
-      frozen_time: Math.floor(next.getTime() / 1000),
-    });
-    // 進み終わるまで待つ（webhook もこの間に飛ぶ）
-    for (;;) {
-      await new Promise((r) => setTimeout(r, 3000));
-      clock = await stripe(`test_helpers/test_clocks/${clockId}`);
-      if (clock.status !== 'advancing') break;
-    }
-    console.log(`  ${i}/${times} → ${new Date(clock.frozen_time * 1000).toISOString().slice(0, 10)} (${clock.status})`);
-    if (clock.status !== 'ready') {
-      console.error('🔴 Test Clock が ready にならない。中止。');
-      process.exit(1);
-    }
+    anchor = Math.floor(next.getTime() / 1000);
+
+    await advanceTo(clockId, anchor);
+    console.log(`  [${i}/${times}] 請求日 ${new Date(anchor * 1000).toISOString().slice(0, 10)} へ到達`);
+    // 🔴 境界ちょうどで ready にしない。自動 finalize → 支払いまで進める
+    await settle(clockId);
+    console.log(`        ✅ 確定（支払い済み invoice ${await paidCount(clockId)} 件）`);
   }
+
+  const clock = await stripe(`test_helpers/test_clocks/${clockId}`);
+  console.log(`  完了: ${new Date(clock.frozen_time * 1000).toISOString()} / status ${clock.status}`);
   process.exit(0);
 }
 
