@@ -20,6 +20,17 @@
 
 import { STORE_RESULT } from './store.js';
 import { createContractPrice } from './priceLock.js';
+import { ENTRY_TYPE } from './rewards.js';
+import { isAccrualForbidden } from './rewardScope.js';
+
+/**
+ * 🔴 **読むだけ**の既存列。`CUSTOMER_FIELDS` には入れない（あれは書き込む列）。
+ *    買い切り・永久会員かどうかの判定にだけ使う。
+ * 🔴 `CreatedAt` は**加入日として使わない**（§7.6 / §7.10）。ここにも入れない。
+ */
+export const CUSTOMER_READ_ONLY_FIELDS = Object.freeze({
+  PLAN_TYPE: 'plan_type',
+});
 
 /** Customers 側に追加する列（§2.1）。**既存列はここに含めない。** */
 export const CUSTOMER_FIELDS = Object.freeze({
@@ -404,6 +415,25 @@ export function createAirtableMembershipStore({
       if (schemaMissing) return unavailable(SCHEMA_MISSING);
       if (!entry || typeof entry.entryId !== 'string' || !entry.entryId) return unavailable('invalid_entry');
       try {
+        /*
+         * 🔴 買い切り・永久会員には**継続ポイントを積まない**（§7.10）。
+         *
+         *    ここは付与のすべての経路（銀行振込 / Stripe / 将来の経路）が通る
+         *    唯一の出口なので、判定をここへ置く。
+         *
+         * 🔴 止めるのは「買い切りだと**証拠から分かる**」ときだけ。
+         *    レコードが読めない・`plan_type` が空のときは**止めない**。
+         *    根拠なく止めると、支払い済みの月が永久に欠落する（台帳は再生成できない）。
+         * 🔴 交換（redemption）は止めない。買い切り会員でも過去に積んだぶんは使える。
+         */
+        if (entry.type === ENTRY_TYPE.ACCRUAL) {
+          const owner = await findCustomer(email);
+          const planType = owner?.fields?.[CUSTOMER_READ_ONLY_FIELDS.PLAN_TYPE];
+          if (isAccrualForbidden({ planType })) {
+            return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'lifetime_not_accruing', writes: 0 });
+          }
+        }
+
         const formula = encodeURIComponent(`{${LEDGER_FIELDS.ENTRY_ID}} = "${escapeFormula(entry.entryId)}"`);
         const found = await call(`${encodeURIComponent(LEDGER_TABLE)}?maxRecords=1&filterByFormula=${formula}`);
         if (!found.ok) return unavailable(found.schemaMissing ? SCHEMA_MISSING : `read_failed:${found.code}`);
