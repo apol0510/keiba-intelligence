@@ -4432,6 +4432,28 @@ Test Clock と Customer は Stripe ダッシュボードでも作れるが、
 
 ## Open Questions
 
+### 🔴 Stripe 経由で `MembershipStartedAt` が書かれない（2026-09-10 に QA E2E で発見・範囲外）
+
+`stripe-webhook.js` は membership store の **`saveContractPrice()` と `appendEntry()` しか呼ばない**。
+`MembershipStartedAt`（`airtableStore.js` の `CUSTOMER_FIELDS.STARTED_AT`）は
+**読まれるだけで Stripe 経路からは書かれない**。書いているのは銀行振込経路（`bankTransfer.js`）だけ。
+
+**実測（QA base・経路 A）**: 決済後、`ContractPriceYen` / `ContractPriceId` /
+`ContractCurrency` / `ContractStartedAt` の 4 列は保存されたが、
+**`MembershipStartedAt` は空のまま**だった。
+
+🟢 表示は壊れていない。`membershipView.js` の `resolveTenureMonths()` は
+**台帳（`RewardLedger`）があればそちらを使う**ため、Bronze・1 か月・100pt は正しく出た。
+`startedAtIso` は**台帳が読めないときのフォールバック**。
+
+**未確定**: Stripe 経路でも `MembershipStartedAt` を書くべきか。
+- 書くなら「いつの日付を起点にするか」（`checkout.session.completed` の日 /
+  初回 invoice の `status_transitions.paid_at` / `ContractStartedAt` と同じ日）を決める必要がある
+- 🔴 2026-09-07 の backfill で「**起点不明を推測で埋めない**」と確定しているため、
+  仕様所有者の判断なしに既定値を置かない
+- 🔴 本タスクの範囲外のため**修正していない**
+
+
 0.1 🔴 **`@netlify/blobs` が `astro-site/package.json` の依存に無く、
    `stripe-webhook.js` の `stripe-events` ストアが機能していない疑い（R-2・2026-09-03）。**
 

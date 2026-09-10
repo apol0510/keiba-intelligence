@@ -438,7 +438,40 @@ Test Clock で時計を進めても、その Subscription には請求が発生�
 | 2 | ログイン | ✅ **QA 専用 `SESSION_SIGNING_SECRET` でセッションを発行**（tier=`free`）|
 | 3 | QA `/mypage` | ✅ **200**・QA 会員の Email が表示・「無料会員」「KI 会員クラブ」を含む |
 | 4 | 🔴 **実際の `stripe-create-checkout.js`** へ POST（`plan: premium`）| ✅ **200** と Checkout URL。id は **`cs_test_…`** ＝ **Test Mode** |
-| 5 | カード入力 | 🔴 **ここで停止**（承認境界）|
+| 5 | カード入力・決済 | ✅ **完了**（仕様所有者）|
+
+#### 決済後の read-only 確認（2026-09-10）
+
+| 確認対象 | 結果 |
+|---|---|
+| `PlanType` | ✅ `free-registered` → **`premium`** |
+| `Status` | ✅ `active` |
+| **初回 invoice → `RewardLedger`** | ✅ **1 行**・`Type=accrual`・`Points=100`・`PeriodMonths=1`・`EntryId=accrual:<email>:<invoice id>` |
+| `ContractPriceYen` | ✅ **3980** |
+| `ContractPriceId` | ✅ Test の Price id が入っている（🔴 値は repo に書かない）|
+| `ContractCurrency` | ✅ `jpy` |
+| `ContractStartedAt` | ✅ `2026-09-10` |
+| `/mypage` の表示 | ✅ **Bronze** / **1 か月** / **100 pt** / **¥3,980** |
+| 🔴 **`MembershipStartedAt`** | 🔴 **空のまま**（下記）|
+| QA の他テーブル | `AuthTokens` 0 件 / `RewardRedemptions` 0 件 |
+
+🟢 **`ContractPrice*` 4 列と初回 accrual は期待どおり保存された。**
+Bronze・1 か月・100pt も一致。**本番と同じ webhook 経路**で確認できた。
+
+#### 🔴 範囲外の欠落 — Stripe 経由では `MembershipStartedAt` が書かれない
+
+`stripe-webhook.js` は membership store の
+**`saveContractPrice()` と `appendEntry()` しか呼んでいない**。
+`MembershipStartedAt`（`airtableStore.js` の `CUSTOMER_FIELDS.STARTED_AT`）は
+**読まれるだけで、Stripe 経路からは一度も書かれない**。
+書いているのは銀行振込経路（`bankTransfer.js`）だけ。
+
+🟢 **今回の表示が正しかった理由**: `membershipView.js` の `resolveTenureMonths()` は
+**台帳（`RewardLedger`）があればそちらを使う**。`startedAtIso` は台帳が読めないときの
+フォールバックにすぎない。
+
+🔴 **これは本タスクの範囲外。** 仕様判断が要るため修正せず、
+`docs/progress.md` の Open Questions へ記録する。
 
 🔴 **magic link は使っていない。**
 `SENDGRID_API_KEY` は `all` スコープのままなので、QA からマジックリンクを要求すると
