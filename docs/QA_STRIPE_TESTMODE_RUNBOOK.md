@@ -65,12 +65,14 @@
 | 4 | Stripe Test Mode の確認 | ✅ **完了**（read-only。下記 §3.4）|
 | 4' | **QA ブランチの作成** | ✅ **完了** — `qa-stripe-testmode` |
 | 5 | **`AIRTABLE_*` の `all` → コンテキスト別分離** | ✅ **完了・PASS**（下記 §3.5'）|
-| 6 | Netlify env（branch-deploy スコープ）| 🟡 **一部完了** — 設定できた 3 / 値が無い 3 / 意図的に未設定 1（下記 §3.5'）|
+| 6 | Netlify env（branch-deploy スコープ）| ✅ **完了** — **8 キーすべて設定済み**。`STRIPE_PORTAL_RETURN_URL` のみ意図的に未設定（下記 §3.5'）|
 | 7 | `allowed_branches` へ `qa-stripe-testmode` を追加 | ✅ **完了** — `["main"]` → `["main","qa-stripe-testmode"]`。他の build 設定に差分 0 件 |
 | 8 | **初回 branch deploy** | ✅ **ready** — `https://qa-stripe-testmode--keiba-intelligence.netlify.app` |
-| 9 | Test webhook 送信先の作成 | 🔴 **未実施**（次の承認境界）|
-| 10 | `STRIPE_WEBHOOK_SECRET`（branch-deploy）| 🔴 **未実施**（9 の実施後に発行される）|
-| 11 | Test Clock による E2E | 🔴 **未実施** |
+| 9 | Test webhook 送信先の作成 | ✅ **完了**（仕様所有者）— 5 イベント / `status=enabled` |
+| 10 | `STRIPE_WEBHOOK_SECRET`（branch-deploy）| ✅ **完了**（仕様所有者）— QA へ反映済みを実測（§3.9）|
+| 11 | E2E 実行前チェック | ✅ **全項目 PASS**（下記 §3.9）|
+| 12 | **経路 A**（QA `/pricing` から通常 Checkout 1 回）| 🔴 **未実施**（承認境界。下記 §4.A）|
+| 13 | **経路 B**（Test Clock で 1→3→12→24 か月）| 🔴 **未実施**（承認境界。下記 §4.B）|
 
 ### 3.0' 初回 branch deploy の実測（2026-09-10）
 
@@ -269,6 +271,10 @@ Netlify の Secret Scanning は「env の値」と「repo 内の文字列」の�
 
 #### branch-deploy スコープの現在値
 
+🟢 **2026-09-10 時点で 8 キーすべて設定済み。**（下表は分離作業直後の記録。
+その後 `AIRTABLE_API_KEY` / `STRIPE_SECRET_KEY` / `STRIPE_PRICE_PREMIUM` /
+`STRIPE_WEBHOOK_SECRET` を仕様所有者が設定し、**すべて production と別値**であることを確認した。§3.9）
+
 | キー | branch-deploy | 備考 |
 |---|---|---|
 | `AIRTABLE_BASE_ID` | ✅ QA base | production と**別値**であることを確認済み |
@@ -360,25 +366,102 @@ production と同じ `true` でよい。
 
 ## 4. 月数を進めて変化を見る
 
-### 4.1 仕組み
+### 4.0 🔴 経路を 2 つに分ける理由（2026-09-10 に判明）
 
+`astro-site/netlify/functions/stripe-create-checkout.js:98` は
+Checkout Session に **`customer_email` だけ**を渡しており、**`customer` を渡していない**。
+
+```js
+mode: 'subscription',
+line_items: [{ price: priceId, quantity: 1 }],
+customer_email: ent.email,        // 🔴 customer は渡していない
+client_reference_id: ent.email,
 ```
-tenureMonthsFromLedger = ACCRUAL エントリの periodMonths を合計
-```
 
-Stripe の月額サブスクを **Test Clock** で進めると、請求のたびに
-`invoice.payment_succeeded` が飛び、`stripe-webhook.js` が台帳へ
-`accrual`（`periodMonths=1`）を積む。**本番と同じ経路**である。
+Stripe の仕様では、この場合 **Checkout が新しい Customer を作る**。
+したがって **事前に作った Test Clock Customer には Subscription が紐付かない**。
+Test Clock で時計を進めても、その Subscription には請求が発生しない。
 
-### 4.2 手順
+🔴 **production コード・auth 仕様は変更しない。**
+代わりに検証を **2 経路**へ分ける。
 
-1. Test Clock 付きの Customer を作る
-2. QA 会員として `/pricing` から Checkout（Test Mode のカード）
-3. 1 回目の請求 → 台帳 1 行 → **継続月数 1 か月 / Bronze**
-4. Test Clock を **1 か月**進める → 自動更新請求 → 台帳が増える
-5. 必要な回数だけ 4 を繰り返す
+| 経路 | 何を通すか | 何を確かめるか |
+|---|---|---|
+| **A: 通常 Checkout（1 回だけ）** | ✅ **実際の `stripe-create-checkout.js` を通る** | 本番の入口そのもの。初月ぶんの一次情報 |
+| **B: Test Clock（1→3→12→24 か月）** | 🔴 **`stripe-create-checkout.js` を通らない**（API で Session を作る）| 月数・ランク・ポイントの推移 |
 
-### 4.3 目視できる変化（ランク閾値はコード定数 0 / 3 / 12 / 24）
+🔴 **B は本番の入口を通らない。** B の結果をもって
+「`stripe-create-checkout.js` が正しい」とは記録しない。入口の検証は **A が正本**。
+
+---
+
+### 4.A 経路 A — QA `/pricing` から通常の Test Checkout を 1 回
+
+**そのまま本番と同じ道を通す。** Test Clock は使わない。
+
+1. QA の branch deploy で QA 会員としてログインする
+2. `/pricing` の購入ボタンから Checkout を開く
+   （→ `stripe-create-checkout.js` が Session を作る）
+3. Test Mode のカードで決済する
+4. `checkout.session.completed` → `invoice.payment_succeeded` が QA の
+   `stripe-webhook.js` へ届く
+
+#### 確認する項目
+
+| 対象 | 期待 |
+|---|---|
+| `stripe-create-checkout.js` | **200 と Checkout URL**（QA の origin へ戻る `success_url`）|
+| `checkout.session.completed` | QA `Customers` の `PlanType` / `Status` が更新される |
+| 初回 `invoice.payment_succeeded` | `RewardLedger` に **`accrual` 1 行**（`periodMonths=1`）|
+| `MembershipStartedAt` | **保存される**（空でない）|
+| `ContractPriceYen` / `ContractPriceId` / `ContractCurrency` / `ContractStartedAt` | **4 列とも保存される** |
+| `/mypage` | **継続 1 か月 / Bronze / 100 pt** |
+
+---
+
+### 4.B 経路 B — Test Clock で 1 → 3 → 12 → 24 か月
+
+🔴 **この経路は `stripe-create-checkout.js` を通らない。**
+Test Clock Customer を先に作り、**その Customer ID を指定した Checkout Session を
+Stripe API で直接作る**。
+
+1. **Test Clock** を作る
+2. その Test Clock に紐づく **Customer** を作る
+3. **その Customer ID を指定して** Checkout Session を API で作る
+4. 返ってきた URL を開き、Test Mode のカードで決済する
+5. Test Clock を **1 か月**進める → 自動更新請求 → 台帳が増える
+6. 必要な回数だけ 5 を繰り返す
+
+#### 🔴 Session の契約は現行 production Checkout に合わせる
+
+`stripe-create-checkout.js:94-113` と **同じ値**にする。
+違うのは `customer_email` → `customer` の 1 点だけ。
+
+| 項目 | 値 | 出どころ |
+|---|---|---|
+| `mode` | `subscription` | 同上 |
+| `line_items` | `[{ price: <STRIPE_PRICE_PREMIUM>, quantity: 1 }]` | 🔴 **env の値**。`priceIdFor()` と同じ |
+| **`customer`** | 🔴 **Test Clock の Customer ID** | **ここだけが差分**（`customer_email` は同時に指定できない）|
+| `client_reference_id` | QA 会員の Email | 同上 |
+| `allow_promotion_codes` | `true` | 同上 |
+| `success_url` | `<QA branch deploy>/mypage?checkout=success` | 同上（origin が QA になる）|
+| `cancel_url` | `<QA branch deploy>/pricing?checkout=cancelled` | 同上 |
+| `metadata` | `{ ki_plan: 'premium', ki_email: <QA 会員>, ki_price_id: <Price ID> }` | 同上 |
+| **`subscription_data.metadata`** | **同じ 3 キー** | 🔴 **必須** |
+
+🔴 **`subscription_data.metadata` を落とすと Test Clock の請求が会員へ紐付かない。**
+`stripe-webhook.js` の `emailFromInvoice()` は
+`invoice.parent.subscription_details.metadata.ki_email` を読む。
+ここが空だと `invoice.customer_email` へ落ちるため、Customer の請求先メールが
+QA 会員と一致していないと **台帳が積まれない**。
+
+🔴 `ki_plan` は `plans.js` の `id: 'premium'`、
+`ki_price_id` は **env `STRIPE_PRICE_PREMIUM` の値そのもの**
+（`stripe-webhook.js` はこれを読んで契約価格を記録する）。
+
+### 4.C 目視できる変化（ランク閾値はコード定数 0 / 3 / 12 / 24）
+
+🔴 1 か月ぶんは **経路 A** で、3 / 12 / 24 か月は **経路 B** で見る。
 
 | 進めた月数 | 継続月数 | ランク | 残高（100pt/月）|
 |---|---|---|---|
@@ -391,7 +474,7 @@ Stripe の月額サブスクを **Test Clock** で進めると、請求のたび
 年額 Price なら 2 回で 24 か月（`periodMonths=12`×2）だが、
 「月次の決済成功を進めて見る」目的からは外れる。
 
-### 4.4 契約価格・価格ロックの確認
+### 4.D 契約価格・価格ロックの確認
 
 Stripe の Checkout を通すと `stripe-webhook.js` が `ContractPrice*` を保存する。
 `/mypage` の「現在の契約価格」「継続価格ロック」が**準備中 → 実値**へ変わる。
@@ -400,11 +483,23 @@ Stripe の Checkout を通すと `stripe-webhook.js` が `ContractPrice*` を保
 **期間表記なしで金額だけ**を出す（銀行振込の `bank:yearly` は `/ 年` と出る）。
 期間まで出すには契約価格に期間を保存する必要があり、**別途の仕様判断**。
 
-### 4.5 プレゼント・交換の確認
+### 4.E プレゼント・交換の確認
 
 600 pt（6 か月）で交換ラインが開く。`/mypage` のカタログで
 「あと ◯ pt」→「交換できます」へ変わる。
 🔴 記念品の月（12 / 24 か月）は **通常交換が止まる**（保守ライン S-2）。
+
+### 4.F 🔴 E2E の最後に必ず再確認する
+
+| 検証 | 期待 |
+|---|---|
+| QA base の 4 テーブル | **増えている**（＝ QA へ書けている）|
+| 🔴 **production base の件数** | **基準値から不変**: `Customers` **81** / `AuthTokens` **696** / `RewardLedger` **2** / `RewardRedemptions` **0** |
+| 🔴 QA PAT で production base を読む | **HTTP 403 到達不可**のまま |
+| production に注入される env 値 | **変化 0 件**（全 env を sha256 で突き合わせ）|
+| 本番 `/` `/pricing` `/mypage` | **200** / guest 予想 **302** |
+
+🔴 **production の件数が 1 件でも増えていたら、そこで停止して報告する。**
 
 ---
 
@@ -443,6 +538,9 @@ Stripe の Checkout を通すと `stripe-webhook.js` が `ContractPrice*` を保
 4. Stripe の実キー・Price id・本番 URL を **repo に書く**（ビルドが落ちる）
 5. `SECRETS_SCAN_OMIT_*` で secrets scanning を無効化する
 6. QA の検証結果をもって**本番の実測**と記録する
-7. `qa-marker.txt` と空コミットを `main` へ merge する
-8. `allowed_branches` に QA 以外のブランチを足したまま放置する
+7. 🔴 **経路 B（Test Clock）の結果をもって `stripe-create-checkout.js` を検証したと記録する**
+   （B は本番の入口を通らない。入口の検証は **経路 A が正本**）
+8. `customer_email` を `customer` に変える等、**production コードを QA の都合で書き換える**
+9. `qa-marker.txt` と空コミットを `main` へ merge する
+10. `allowed_branches` に QA 以外のブランチを足したまま放置する
    （`branch-deploy` の env は**すべての branch deploy に効く**）

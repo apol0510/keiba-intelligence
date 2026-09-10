@@ -4326,6 +4326,58 @@ Stripe Test の webhook 送信先（5 イベント / `status=enabled`）と `STR
 
 ---
 
+## 2026-09-10 🔴 Test Clock 経路の不整合を発見 — E2E を 2 経路へ分割（コード変更なし）
+
+仕様所有者が指摘し、コードで裏付けた。**production コード・auth 仕様は変更していない。**
+
+### 事実（コードで確認）
+
+`astro-site/netlify/functions/stripe-create-checkout.js:98` は Checkout Session に
+**`customer_email` だけ**を渡し、**`customer` を渡していない**。
+
+```js
+mode: 'subscription',
+line_items: [{ price: priceId, quantity: 1 }],
+customer_email: ent.email,        // 🔴 customer は渡していない
+client_reference_id: ent.email,
+```
+
+Stripe の仕様では、この場合 **Checkout が新しい Customer を作る**。
+そのため **事前に作った Test Clock Customer には Subscription が紐付かず**、
+時計を進めても請求が発生しない。当初の runbook §4.2 は
+「Test Clock 付き Customer を作る → `/pricing` から Checkout」という手順で、
+**この経路では成立しなかった**。
+
+### 対応 — 検証を 2 経路へ分ける（docs のみ）
+
+| 経路 | 何を通すか | 何を確かめるか |
+|---|---|---|
+| **A: 通常 Checkout（1 回）** | ✅ **実際の `stripe-create-checkout.js` を通る** | 本番の入口そのもの。`checkout.session.completed` / 初回 invoice / `MembershipStartedAt` / `ContractPrice*` 4 列 / **Bronze・1 か月・100pt** |
+| **B: Test Clock（1→3→12→24）** | 🔴 **`stripe-create-checkout.js` を通らない** | 月数・ランク・ポイントの推移のみ |
+
+経路 B は Test Clock Customer を先に作り、**その Customer ID を指定した
+Checkout Session を Stripe API で直接作る**。Price・metadata・`success_url` /
+`cancel_url` は **現行 production Checkout（`stripe-create-checkout.js:94-113`）と同じ契約**に
+合わせ、差分は `customer_email` → `customer` の **1 点だけ**にする。
+
+🔴 **`subscription_data.metadata` の 3 キー（`ki_plan` / `ki_email` / `ki_price_id`）は必須。**
+`stripe-webhook.js` の `emailFromInvoice()` は
+`invoice.parent.subscription_details.metadata.ki_email` を読むため、
+ここが空だと `invoice.customer_email` へ落ち、**台帳が会員へ積まれない**。
+
+🔴 **経路 B の結果をもって `stripe-create-checkout.js` を検証したとは記録しない。**
+入口の検証は **経路 A が正本**。runbook §7 の禁止事項へ明記した。
+
+### E2E の最後に必ず再確認する（§4.F）
+
+- QA base の 4 テーブルが**増えている**（＝ QA へ書けている）
+- 🔴 production base が**基準値から不変**: `Customers` **81** / `AuthTokens` **696** /
+  `RewardLedger` **2** / `RewardRedemptions` **0**
+- 🔴 QA PAT で production base を読むと **403** のまま
+- production に注入される env 値の変化 **0 件** / 本番 **200**・guest **302**
+
+---
+
 ## Open Questions
 
 0.1 🔴 **`@netlify/blobs` が `astro-site/package.json` の依存に無く、
