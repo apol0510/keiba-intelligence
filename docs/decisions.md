@@ -983,3 +983,47 @@ Phase 2（PR #63）が CLOSED になった理由の記録も見つからない�
 正本: `docs/MEMBERSHIP_REWARDS.md` §7.10
 
 ---
+
+## 2026-09-11 プレビュー環境からのメール送信を止める（production SendGrid の隔離）
+
+**事実**（2026-09-10 に実際に発生）
+
+Stripe Test Mode の QA を branch deploy で行っていたとき、QA の画面から
+マジックリンクを要求したら **production の SendGrid アカウントで実際にメールが飛んだ**。
+`SENDGRID_API_KEY` は **`all` スコープ**で、Deploy Preview / ブランチデプロイにも
+production の値が入るため。宛先は受信できない QA 用アドレスだったので、
+**バウンスが本番の送信者評価に付いた**。これは「production 完全隔離」と矛盾する。
+
+**決定**
+
+**コードで塞ぐ**（env をコンテキスト別へ割る案は採らない）。
+
+| 案 | 採否 | 理由 |
+|---|---|---|
+| A. `SENDGRID_API_KEY` を `all` → コンテキスト別へ | ❌ | 🔴 最も危険。production の値を取りこぼすと**本番の全メール**（magic link・入金確認・アラート）が止まる。しかも **Deploy Preview は塞げない** |
+| **B. ホスト判定でコードから止める** | ✅ **採用** | 既存の `isPreviewHost()` を再利用するだけ。Deploy Preview・ブランチデプロイ・localhost を**まとめて**塞げる。テストで固定でき、revert で戻せる |
+| C. 運用ルールのみ | ❌ | 技術的な強制がなく再発する |
+
+**実装**
+
+- `src/lib/mail/previewMailGuard.js`（新規・純関数）。判定は `previewMode.js` の
+  `isPreviewHost()` に一本化する。
+- **メールを送る 8 つの Netlify Function すべて**へ早期 return を入れる
+  （`bank-transfer-application` / `contact-form` / `send-magic-link` / `send-alert` /
+  `register-free` / `send-test` / `send-broadcast` / `send-payment-confirmation-auto`）。
+- 🔴 **送信だけでなく、送信に付随する書き込みより前**で止める
+  （届かないトークン行などを残さない）。
+
+**fail-closed の向き**
+
+🔴 ここでは「**本番のメールを誤って止めない**」side へ倒す。
+本番ホストでは常に送る。**ホストが読めないときも止めない**。
+止めるのは「プレビューだと**判定できた**とき」だけ。
+
+**影響**
+
+- 本番: **変更なし**（`keiba-intelligence.jp` / `www.` / `keiba-intelligence.netlify.app` は素通り）
+- Deploy Preview / ブランチデプロイ / localhost: メール送信が **503 `mail_disabled_on_preview`**
+- 🔴 **production env は変更していない**
+
+---

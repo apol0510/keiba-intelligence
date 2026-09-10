@@ -40,6 +40,28 @@ exports.handler = async (event) => {
     };
   }
 
+  /*
+   * 🔴 **本番以外のホストからはメールを送らない**（`docs/decisions.md` 2026-09-11）。
+   *
+   *    `SENDGRID_API_KEY` は `all` スコープで、Deploy Preview / ブランチデプロイにも
+   *    **production の値**が入る。QA からの送信は本番アカウントの実送信になり、
+   *    受信できないアドレス宛のバウンスが**本番の送信者評価に付く**。
+   *
+   * 🔴 送信だけでなく、**送信に付随する書き込みより前**で止める。
+   */
+  {
+    const { isMailSendBlocked, PREVIEW_MAIL_BLOCKED, PREVIEW_MAIL_BLOCKED_STATUS } =
+      await import('../../src/lib/mail/previewMailGuard.js');
+    if (isMailSendBlocked(event.headers)) {
+      console.warn('⚠️ mail blocked on preview host');
+      return {
+        statusCode: PREVIEW_MAIL_BLOCKED_STATUS,
+        headers,
+        body: JSON.stringify(PREVIEW_MAIL_BLOCKED),
+      };
+    }
+  }
+
   try {
     const { broadcast_id, test_email } = JSON.parse(event.body);
 

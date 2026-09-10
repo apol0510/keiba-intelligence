@@ -4453,6 +4453,62 @@ E2E をここから先へ進めるには、**Stripe への外部 write が必要
 
 ---
 
+## 2026-09-11 プレビュー環境からのメール送信を塞いだ（production SendGrid の隔離）
+
+正本: `docs/decisions.md`（2026-09-11）
+
+### 背景
+
+2026-09-10 の QA（branch deploy）でマジックリンクを要求したら、
+**production の SendGrid アカウントで実際にメールが飛んだ**。
+`SENDGRID_API_KEY` が `all` スコープのため。受信できない QA アドレス宛だったので
+**バウンスが本番の送信者評価に付いた**。
+
+### 調査で分かった範囲
+
+🔴 **magic link だけの問題ではなかった。** メールを送る Netlify Function は **8 つ**あり、
+**すべてプレビュー / ブランチデプロイから到達できた**。
+
+`bank-transfer-application` / `contact-form` / `send-magic-link` / `send-alert` /
+`register-free` / `send-test` / `send-broadcast` / `send-payment-confirmation-auto`
+
+### 実装
+
+- `src/lib/mail/previewMailGuard.js`（新規・純関数）。判定は既存の `isPreviewHost()` に一本化
+- **8 つすべて**へ早期 return を追加。🔴 **送信に付随する書き込みより前**に置いた
+- `test:mail-guard` を追加し、**`npm run build` にも組み込んだ**
+
+🔴 **fail-closed の向きは「本番のメールを誤って止めない」側。**
+本番ホストでは常に送る。ホストが読めないときも止めない。
+止めるのは「プレビューだと**判定できた**とき」だけ。
+
+### テストで固定したこと
+
+1. 本番ホスト（`keiba-intelligence.jp` / `www.` / `keiba-intelligence.netlify.app` /
+   大文字 / ポート付き）では**止めない**
+2. ホストが空・未定義でも**止めない**
+3. Deploy Preview / ブランチデプロイ / localhost / `.local` では**止める**
+4. **送信する関数を数え漏らしていない**（`netlify/functions` を走査して一覧と突き合わせる）
+5. 8 つすべてでガードが**ハンドラ内**にあり、**送信・書き込みより前**にある
+6. ブロック時に**早期 return** している / 応答に秘密値を含まない
+
+### 退行検出の実測
+
+| 注入した退行 | 結果 |
+|---|---|
+| `send-magic-link` からガードを外す | **2 件 fail** |
+| 本番ホストも止めてしまう | **2 件 fail** |
+
+いずれも戻すと全 pass。
+
+### production env は変更していない
+
+🔴 `SENDGRID_API_KEY` を `all` → コンテキスト別へ割る案（A）は**採らなかった**。
+production の値を取りこぼすと**本番の全メールが止まる**うえ、
+**Deploy Preview は塞げない**ため。
+
+---
+
 ## Open Questions
 
 0.1 🔴 **`@netlify/blobs` が `astro-site/package.json` の依存に無く、
