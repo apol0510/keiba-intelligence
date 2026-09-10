@@ -240,6 +240,16 @@ function membershipResultFromStore(r, label) {
   return MEMBERSHIP_RESULT.FAILED;
 }
 
+/**
+ * 複数の membership 反映のうち **いちばん重い結果**を返す。
+ * 🔴 1 つでも FAILED なら FAILED（processed にせず Stripe に再送させる）。
+ */
+function worstMembershipResult(...results) {
+  if (results.includes(MEMBERSHIP_RESULT.FAILED)) return MEMBERSHIP_RESULT.FAILED;
+  if (results.includes(MEMBERSHIP_RESULT.OK)) return MEMBERSHIP_RESULT.OK;
+  return MEMBERSHIP_RESULT.SKIPPED;
+}
+
 /** 契約時の価格を記録する（M-1 継続価格ロック）。既に入っていれば上書きしない。 */
 async function recordContractPrice(email, session) {
   if (!isWriteEnabled(process.env)) {
@@ -478,7 +488,33 @@ async function recordPaidPeriod(email, invoice, stripe) {
       return MEMBERSHIP_RESULT.FAILED;
     }
     // `already` は冪等（既に積んである）ので成功扱い
-    return membershipResultFromStore(await store.appendEntry(email, entry), 'reward accrual');
+    const accrual = membershipResultFromStore(await store.appendEntry(email, entry), 'reward accrual');
+
+    /*
+     * 継続月数の起点（`MembershipStartedAt`）を記録する。
+     *
+     * 正本: `docs/MEMBERSHIP_REWARDS.md` §7.6（TBD-9・2026-09-01 確定）
+     *   Stripe の起点は **初回の支払い成功**。
+     *
+     * 🔴 **初回だけ書く。更新で起点を動かさない。**（store 側が既存値を見て ALREADY を返す）
+     * 🔴 起点は `status_transitions.paid_at`（＝ここまで来た `occurredAtMs`）。
+     *    受信時刻・申込日・登録日で代用しない（§7.6「支払っていない期間を数えない」）。
+     * 🔴 ここへ来る前に **`amount_paid > 0` / 間隔既知 / `paid_at` あり**を確認済み。
+     *    前提が欠けた invoice はすでに return しているので、
+     *    **支払いが成立していない請求で起点が入ることはない**。
+     *
+     * 🟢 2026-09-10 まで、この書き込みは **どの経路にも存在しなかった**
+     *    （webhook は saveContractPrice と appendEntry しか呼んでいなかった）。
+     *    表示は台帳から継続月数を出すため壊れていなかったが、
+     *    台帳が読めないときのフォールバックが空のままだった。
+     */
+    const startedAtIso = new Date(occurredAtMs).toISOString();
+    const started = membershipResultFromStore(
+      await store.saveMembershipStart(email, startedAtIso),
+      'membership start',
+    );
+
+    return worstMembershipResult(accrual, started);
   } catch {
     // 🔴 認可は巻き戻さない。ただし成功扱いにもしない（再送で復旧させる）
     console.warn('⚠️ stripe-webhook: reward accrual not recorded');

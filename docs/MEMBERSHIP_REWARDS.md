@@ -253,6 +253,26 @@ UI に数値として出すものではない**。UI に出してよいのは従
 | Stripe 月額 | **初回の支払い成功**（`invoice.payment_succeeded` / Checkout 完了時の支払い） |
 | 銀行振込 年払い | **入金確認日**（`Status` を active にして入金確認メールを送った日）|
 
+Stripe の実装（2026-09-10 接続）:
+
+- `stripe-webhook.js` の `invoice.payment_succeeded` で、**台帳へ積んだあと**に
+  `store.saveMembershipStart(email, <paid_at>)` を呼ぶ。
+- 起点は **`status_transitions.paid_at`**（＝付与に使う `occurredAtMs` と同じ値）。
+  🔴 **webhook の受信時刻で代用しない**（再送・遅延で起点がずれる）。
+- 🔴 **初回だけ書く。更新で起点を動かさない。**
+  store 側が既存値を見て `ALREADY` を返し、**PATCH を投げない**。
+  ここを上書きすると、長く続けている会員の継続月数が毎月 0 に戻る。
+- 前提（**`amount_paid > 0` / 間隔既知 / `paid_at` あり**）が欠けた請求は
+  その手前で return しているので、**支払いが成立していない請求で起点は入らない**。
+- 書き込みに失敗したら **event を processed にしない**（Stripe の再送で復旧させる）。
+  再送しても既存値があれば `ALREADY` なので二重に動かない。
+
+🔴 **2026-09-10 まで、この書き込みはどの Stripe 経路にも存在しなかった**
+（webhook は `saveContractPrice` と `appendEntry` しか呼んでいなかった）。
+表示は台帳から継続月数を出すため壊れていなかったが、
+**台帳が読めないときのフォールバックが空のまま**だった。
+QA の Test Mode E2E（経路 A）で実測して判明した。
+
 銀行振込の実装（2026-09-01 接続）:
 
 - `send-payment-confirmation-auto.js`（入金確認メール）の **最後**で会員継続制度へ反映する。

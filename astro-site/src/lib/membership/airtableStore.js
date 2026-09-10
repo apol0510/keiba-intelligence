@@ -468,5 +468,41 @@ export function createAirtableMembershipStore({
         return unavailable('write_failed:exception');
       }
     },
+
+    /**
+     * 継続月数の起点（`MembershipStartedAt`）を保存する。
+     *
+     * 正本: `docs/MEMBERSHIP_REWARDS.md` §7.6（TBD-9）
+     *   Stripe … **初回の支払い成功**日 / 銀行振込 … 入金確認日
+     *
+     * 🔴 **初回だけ書く。更新で起点を動かさない。**
+     *    既に入っていれば `ALREADY` を返し、**PATCH を投げない**。
+     *    ここを上書きすると、長く続けている会員の継続月数が毎月 0 に戻る。
+     * 🔴 値が無いときは書かない（`invalid_started_at`）。**推測で埋めない**（§7.6）。
+     */
+    async saveMembershipStart(email, startedAtIso) {
+      if (schemaMissing) return unavailable(SCHEMA_MISSING);
+      // 🔴 ISO 文字列だけを受ける。数値を渡されると `toAirtableDate` が
+      //    ミリ秒として解釈し、`2026` が 1970-01-01 になる。
+      if (typeof startedAtIso !== 'string') return unavailable('invalid_started_at');
+      const day = toAirtableDate(startedAtIso);
+      if (!day) return unavailable('invalid_started_at');
+      try {
+        const rec = await findCustomer(email);
+        if (!rec) return unavailable('customer_not_found');
+        // 🔴 既に起点がある＝過去に契約が始まっている。触らない
+        if (rec.fields?.[CUSTOMER_FIELDS.STARTED_AT]) {
+          return Object.freeze({ status: STORE_RESULT.ALREADY, reason: null, writes: 0 });
+        }
+        const updated = await call(`${encodeURIComponent(customersTable)}/${rec.id}`, {
+          method: 'PATCH',
+          body: { fields: { [CUSTOMER_FIELDS.STARTED_AT]: day } },
+        });
+        if (!updated.ok) return unavailable(updated.schemaMissing ? SCHEMA_MISSING : `write_failed:${updated.code}`);
+        return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: 1 });
+      } catch {
+        return unavailable('write_failed:exception');
+      }
+    },
   });
 }

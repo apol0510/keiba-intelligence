@@ -4144,6 +4144,64 @@ HTML からは消えないため、この画面だけウィジェットごと描
 
 ---
 
+## 2026-09-10 Stripe 経路で `MembershipStartedAt` を記録する（既知の実装欠落の修正）
+
+### 背景
+
+QA の Test Mode E2E（経路 A）で決済後の Airtable を実測したところ、
+`ContractPrice*` 4 列と初回 accrual は保存されたのに、
+**`MembershipStartedAt` が空のまま**だった。
+
+原因は **実装の欠落**。`stripe-webhook.js` は membership store の
+`saveContractPrice()` と `appendEntry()` しか呼んでおらず、
+**`MembershipStartedAt` は Stripe 経路から一度も書かれていなかった**
+（書いていたのは銀行振込経路の `bankTransfer.js` だけ）。
+
+🟢 表示は壊れていなかった。`resolveTenureMonths()` は**台帳があればそちらを使う**ため。
+`startedAtIso` は**台帳が読めないときのフォールバック**で、そこが空のままだった。
+
+### 正本（仕様は 2026-09-01 に確定済み・未確定ではない）
+
+`docs/MEMBERSHIP_REWARDS.md` §7.6（TBD-9）
+
+| 経路 | 起点 |
+|---|---|
+| Stripe 月額 | **初回の支払い成功** |
+| 銀行振込 年払い | 入金確認日 |
+
+### 実装
+
+| ファイル | 変更 |
+|---|---|
+| `netlify/functions/stripe-webhook.js` | `recordPaidPeriod()` で台帳へ積んだあと `saveMembershipStart()` を呼ぶ。`worstMembershipResult()` を追加 |
+| `src/lib/membership/airtableStore.js` | `saveMembershipStart()` を追加（**既存値があれば PATCH を投げず `ALREADY`**）|
+| `src/lib/membership/store.js` | read-only ラッパ／disabled／in-memory の 3 系統へ同メソッドを追加 |
+| `src/lib/membership/membershipStart.guard.test.mjs` | 新規ガード |
+| `airtableStore.test.mjs` / `membershipE2E.test.mjs` | テスト追加 |
+| `package.json` | `test:membership` へ追加 |
+
+- 起点は **`status_transitions.paid_at`**（付与に使う `occurredAtMs` と同じ値）。
+  🔴 **受信時刻で代用しない**（再送・遅延でずれる）
+- 🔴 **初回だけ書く。更新で起点を動かさない**（store が既存値を見て `ALREADY`）
+- 前提（`amount_paid > 0` / 間隔既知 / `paid_at` あり）が欠けた請求はその手前で return するため、
+  **支払いが成立していない請求で起点は入らない**
+- 書き込み失敗は **processed にしない**（Stripe の再送で復旧。再送は `ALREADY` で二重に動かない）
+- 🔴 **認可・entitlement・既存 3 列（`PlanType` / `Status` / `AccessEnabled`）は一切触っていない**
+
+### 検証
+
+- ガードが退行を捕まえることを実測（呼び出しを外すと **5 件 fail**、戻すと全 pass）
+- `npm run test:membership` **318 pass / 0 fail**（追加前は 302）
+- `npm run test:stripe` / `test:auth` / `test:billing` すべて fail 0
+- `npm run build` **exit 0**
+
+### 既存データ
+
+🔴 **backfill はしていない。** §7.6 の「起点が不明な会員は空のままにする。推測で埋めない」に従う。
+本修正は **これ以降の初回支払いから**効く。
+
+---
+
 ## 2026-08-31 本番反映（完了）
 
 PR #80 を `main` へ merge し、本番へ反映した。
