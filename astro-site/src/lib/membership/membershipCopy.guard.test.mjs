@@ -312,6 +312,27 @@ describe('未確定の数値を出さない（TBD-1〜TBD-8）', () => {
     }
   });
 
+  test('🔴 G-38: 契約価格に期間を決め打ちしていない（年払いを月額と誤表示しない）', () => {
+    const src = read('src/pages/mypage.astro');
+    // 🔴 2026-09-10: `/ 月` 固定で、銀行振込の年払い ¥39,800 を月額として表示していた
+    for (const line of codeLines(src)) {
+      if (!/contractPriceYen/.test(line)) continue;
+      assert.equal(/\/\s*月/.test(line), false,
+        `🔴 契約価格に期間を決め打ちしている → ${line.trim()}`);
+    }
+    // 期間は確定できたときだけ付ける
+    assert.match(src, /billingPeriodSuffix\(club\.priceLock\.periodMonths\)/,
+      '期間を priceLock.periodMonths から出していない');
+    assert.match(src, /function billingPeriodSuffix[\s\S]{0,400}return '';/,
+      '🔴 確定できないときに空文字を返していない（既定で期間を付けてしまう）');
+  });
+
+  test('🔴 G-39: レコードの新しさは createdTime（不変メタ）で判定する', () => {
+    const src = read(join(LIB_DIR, 'bankTransfer.js'));
+    assert.match(src, /recordCreatedTime \|\| fields\.CreatedAt/,
+      '🔴 CreatedAt 列だけに依存している（空の会員で契約価格が落ちる）');
+  });
+
   test('🔴 G-31: カタログの実際の品目名が /pricing・/terms に漏れていない', () => {
     const raw = JSON.parse(read('src/data/membership/rewardCatalog.json'));
     const names = [...new Set(raw.items.map((i) => i.name))];

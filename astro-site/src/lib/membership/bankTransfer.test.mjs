@@ -22,7 +22,7 @@ import {
   periodMonthsForBankPlan, buildBankTermRef, planBankMembershipUpdate,
   deriveConfirmedAtFromExpiration,
   BANK_CONTRACT_PRICE_YEN, bankContractPriceFor, BANK_PRICE_REVISION_DATE,
-  recordCreatedAfterRevision,
+  recordCreatedAfterRevision, periodMonthsFromContractPriceId,
 } from './bankTransfer.js';
 import { MONTHLY_POINTS, PERIOD_MONTHS, ENTRY_TYPE, tenureMonthsFromLedger, summarizeRewards } from './rewards.js';
 import { createInMemoryMembershipStore, STORE_RESULT } from './store.js';
@@ -572,5 +572,94 @@ describe('銀行振込の契約価格（M-1: 加入時点の価格を保持）',
       'netlify/functions/send-payment-confirmation-auto.js'), 'utf8');
     assert.match(src, /store\.saveContractPrice\(/, '契約価格を保存していない');
     assert.match(src, /plan\.contract/, 'plan.contract を使っていない');
+  });
+});
+
+/* ================================================================
+   🔴 本番実測で見つかった 2 件（2026-09-10）
+   ================================================================ */
+
+describe('🔴 CreatedAt 列が空でも createdTime で新規契約と判定する', () => {
+  const plan = (over = {}) => planBankMembershipUpdate({
+    recordId: 'rec1',
+    expirationDate: '2027-09-10',
+    confirmedAtIso: '2026-09-10T00:00:00.000Z',
+    ...over,
+    fields: { Email: 'a@example.test', plan_type: 'yearly', ...(over.fields || {}) },
+  });
+
+  test('🔴 実測ケース: 新規 yearly で CreatedAt 列が空 → 契約価格が保存される', () => {
+    // 2026-09-10 の実会員: MembershipStartedAt と台帳は入るのに ContractPrice* だけ空だった。
+    // 原因は fields.CreatedAt（運用で空）に依存していたこと。
+    const p = plan({ recordCreatedTime: '2026-09-10T01:24:15.000Z' });
+    assert.equal(p.startedAtIso, '2026-09-10');
+    assert.equal(p.entry.points, 1200, '台帳は 12 か月ぶん');
+    assert.equal(p.entry.periodMonths, 12);
+    assert.ok(p.contract, '🔴 契約価格が保存されない（実測の不具合）');
+    assert.equal(p.contract.amountYen, 39800);
+    assert.equal(p.contract.priceId, 'bank:yearly');
+  });
+
+  test('🔴 createdTime が改定前なら保存しない（legacy）', () => {
+    const p = plan({ recordCreatedTime: '2026-07-25T00:00:00.000Z' });
+    assert.equal(p.contract, null);
+    assert.ok(p.skipped.includes(BANK_SKIP.LEGACY_RECORD));
+  });
+
+  test('🔴 createdTime が無ければ保存しない（fail-closed）', () => {
+    const p = plan({ recordCreatedTime: null });
+    assert.equal(p.contract, null);
+    assert.ok(p.skipped.includes(BANK_SKIP.UNKNOWN_RECORD_AGE));
+  });
+
+  test('🔴 createdTime が不正な値なら保存しない', () => {
+    for (const bad of ['2026-99-99T00:00:00.000Z', 'not-a-date', '2026-02-31']) {
+      const p = plan({ recordCreatedTime: bad });
+      assert.equal(p.contract, null, `${bad}: 不正な createdTime で保存している`);
+    }
+  });
+
+  test('createdTime を CreatedAt 列より優先する（不変メタが根拠）', () => {
+    // 列が改定前でも、レコードの作成自体が改定後なら新規契約
+    const p = plan({
+      recordCreatedTime: '2026-09-10T01:24:15.000Z',
+      fields: { CreatedAt: '2026-07-25T00:00:00.000Z' },
+    });
+    assert.ok(p.contract, 'createdTime を優先していない');
+  });
+
+  test('createdTime が無いときは CreatedAt 列にフォールバックする', () => {
+    const p = plan({ fields: { CreatedAt: '2026-09-10T00:00:00.000Z' } });
+    assert.ok(p.contract);
+  });
+
+  test('🔴 入金確認の関数が createdTime を渡している（配線の固定）', () => {
+    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..',
+      'netlify/functions/send-payment-confirmation-auto.js'), 'utf8');
+    assert.match(src, /recordCreatedTime:\s*recordData\.createdTime/,
+      '🔴 createdTime を渡していない（CreatedAt 列が空の会員で契約価格が落ちる）');
+  });
+});
+
+describe('🔴 契約価格の請求期間は priceId から確定する（推測しない）', () => {
+  test('銀行振込の年払いは 12 か月と確定できる', () => {
+    assert.equal(periodMonthsFromContractPriceId('bank:yearly'), 12);
+  });
+
+  test('銀行振込の月額プランは 1 か月', () => {
+    for (const p of ['bank:light', 'bank:monthly-nankan', 'bank:monthly-jra']) {
+      assert.equal(periodMonthsFromContractPriceId(p), 1, p);
+    }
+  });
+
+  test('🔴 Stripe の priceId からは確定できない（null を返す）', () => {
+    // 本番に実在: ContractPriceId=price_1UCaFH… / ¥3,980。期間は保存されていない
+    assert.equal(periodMonthsFromContractPriceId('price_1UCaFHLbPC6OVRqMtZuTkKRX'), null);
+  });
+
+  test('🔴 空・不明な形は null（既定で「/ 月」にしない）', () => {
+    for (const v of ['', null, undefined, 'bank:unknown', 'bank:', 'yearly']) {
+      assert.equal(periodMonthsFromContractPriceId(v), null, String(v));
+    }
   });
 });

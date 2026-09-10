@@ -25,11 +25,13 @@
  * @param {object} o
  * @param {string} o.recordId
  * @param {object} o.fields         更新前のレコード
+ * @param {string} o.recordCreatedTime Airtable の `createdTime`（不変メタ）。
+ *   🔴 `CreatedAt` 列は運用で空のことがあるので、レコードの新しさはこちらで判定する。
  * @param {string} o.expirationDate この入金で設定した有効期限
  * @param {string|null} [o.confirmedAtIso] 初回のみ「いま確認した」時刻。
  *   🔴 再実行では null を渡し、`ExpirationDate − 期間` から復元させる。
  */
-async function recordBankMembership({ recordId, fields, expirationDate, confirmedAtIso = null }) {
+async function recordBankMembership({ recordId, fields, expirationDate, confirmedAtIso = null, recordCreatedTime = null }) {
   try {
     const [{ resolveMembershipStore, isWriteEnabled }, { planBankMembershipUpdate }, { toAirtableDate }] =
       await Promise.all([
@@ -39,7 +41,7 @@ async function recordBankMembership({ recordId, fields, expirationDate, confirme
       ]);
     if (!isWriteEnabled(process.env)) return;
 
-    const plan = planBankMembershipUpdate({ fields, recordId, expirationDate, confirmedAtIso });
+    const plan = planBankMembershipUpdate({ fields, recordId, expirationDate, confirmedAtIso, recordCreatedTime });
 
     if (plan.skipped.length) {
       // 🔴 理由をログに残すが、処理は続ける（起点だけ書ける場合もある）
@@ -314,6 +316,8 @@ exports.handler = async (event, context) => {
     await recordBankMembership({
       recordId: airtableRecordId,
       fields,
+      // 🔴 Airtable の不変メタ。CreatedAt 列が空でも新規契約だと判定できる
+      recordCreatedTime: recordData.createdTime || null,
       // 再実行のときは保存済みの有効期限を使う（この実行では書き換えていない）
       expirationDate: alreadyConfirmed
         ? (fields.ExpirationDate || fields['有効期限'] || null)

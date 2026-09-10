@@ -89,6 +89,17 @@ const club = buildMembershipView({
 });
 
 const PENDING = MEMBERSHIP_COPY.pending;
+
+/**
+ * 契約価格に付ける期間表記。
+ * 🔴 確定できない（null）なら **何も付けない**。誤った期間を出すより良い。
+ */
+function billingPeriodSuffix(periodMonths) {
+  if (periodMonths === 1) return ' / 月';
+  if (periodMonths === 12) return ' / 年';
+  if (Number.isInteger(periodMonths) && periodMonths > 0) return ` / ${periodMonths}か月`;
+  return '';
+}
 const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
 const pt = (n) => `${new Intl.NumberFormat('ja-JP').format(n)} pt`;
 
@@ -96,8 +107,14 @@ const pt = (n) => `${new Intl.NumberFormat('ja-JP').format(n)} pt`;
 const CLUB_ROWS = [
   {
     label: MEMBERSHIP_COPY.contractPriceLabel,
+    /**
+     * 🔴 期間は **確定できたときだけ**出す。
+     *    以前は `/ 月` 固定で、銀行振込の年払い（¥39,800）を月額として誤表示していた。
+     *    `periodMonths` が null（Stripe 契約は期間を保存していない）なら**金額だけ**出す。
+     *    推測して「/ 月」を既定にしない。
+     */
     value: club.priceLock.status === LOCK_STATUS.LOCKED
-      ? `¥${yen(club.priceLock.contractPriceYen)} / 月`
+      ? `¥${yen(club.priceLock.contractPriceYen)}${billingPeriodSuffix(club.priceLock.periodMonths)}`
       : PENDING,
   },
   {
