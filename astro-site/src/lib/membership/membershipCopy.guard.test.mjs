@@ -753,7 +753,8 @@ describe('ランク・リワードを認可に使わない', () => {
     }
     assert.ok(files.length > 20, '検査対象を集められていない（ガードが素通しになる）');
     const docs = ['docs/progress.md', 'docs/decisions.md', 'docs/STRIPE_TESTMODE_E2E.md',
-                  'docs/MEMBERSHIP_REWARDS.md', 'docs/spec.md', 'CLAUDE.md'];
+                  'docs/MEMBERSHIP_REWARDS.md', 'docs/spec.md', 'CLAUDE.md',
+                  'docs/QA_STRIPE_TESTMODE_RUNBOOK.md'];
 
     for (const f of [...files, ...docs.map((d) => `../${d}`)]) {
       const src = read(f);
