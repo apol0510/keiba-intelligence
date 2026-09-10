@@ -241,6 +241,35 @@ function membershipResultFromStore(r, label) {
 }
 
 /**
+ * Stripe 側で **「この請求で契約が始まった」と確定できる** `billing_reason`。
+ *
+ * API 契約（stripe 22.6.0 / `cjs/resources/Invoices.d.ts`）:
+ *   `billing_reason: BillingReason | null`
+ *   `'automatic_pending_invoice_item_invoice' | 'manual' | 'quote_accept' |
+ *    'subscription' | 'subscription_create' | 'subscription_cycle' |
+ *    'subscription_threshold' | 'subscription_update' | 'upcoming' | (未知の文字列)`
+ *
+ *   - `subscription_create` … **A new subscription was created**（＝初回請求）
+ *   - `subscription_cycle`  … A subscription advanced into a new period（＝更新）
+ *   - `subscription`        … 2018 年 5 月以前の旧値。更新と初回を**区別していない**
+ *   - 型に未知の文字列が含まれる＝**将来値が増えうる**
+ */
+const FIRST_BILLING_REASON = 'subscription_create';
+
+/**
+ * 継続月数の起点を書いてよい請求か（TBD-9・§7.6）。
+ *
+ * 🔴 **`MembershipStartedAt` が空だから書く、にしてはいけない。**
+ *    長く続けている会員の列がたまたま空だった場合、**更新請求の支払日が
+ *    起点として入り、継続月数が実際より短くなる**。
+ * 🔴 判定できないものは **書かない**（`null` / 欠落 / 未知 / 旧値 `subscription`）。
+ *    推測で初回とみなさない。
+ */
+export function isFirstBillingInvoice(invoice) {
+  return invoice?.billing_reason === FIRST_BILLING_REASON;
+}
+
+/**
  * 複数の membership 反映のうち **いちばん重い結果**を返す。
  * 🔴 1 つでも FAILED なら FAILED（processed にせず Stripe に再送させる）。
  */
@@ -496,23 +525,34 @@ async function recordPaidPeriod(email, invoice, stripe) {
      * 正本: `docs/MEMBERSHIP_REWARDS.md` §7.6（TBD-9・2026-09-01 確定）
      *   Stripe の起点は **初回の支払い成功**。
      *
-     * 🔴 **初回だけ書く。更新で起点を動かさない。**（store 側が既存値を見て ALREADY を返す）
+     * 🔴 **「列が空だから書く」にしてはいけない。**
+     *    起点が空の会員へ更新請求が来たとき、その支払日を入れると
+     *    **継続月数が実際より短くなる**。書いてよいのは
+     *    Stripe 側で **初回請求と確定できる invoice だけ**（`isFirstBillingInvoice`）。
+     *    判定できない請求（`billing_reason` の欠落・未知・旧値）では **書かない**。
      * 🔴 起点は `status_transitions.paid_at`（＝ここまで来た `occurredAtMs`）。
      *    受信時刻・申込日・登録日で代用しない（§7.6「支払っていない期間を数えない」）。
      * 🔴 ここへ来る前に **`amount_paid > 0` / 間隔既知 / `paid_at` あり**を確認済み。
      *    前提が欠けた invoice はすでに return しているので、
      *    **支払いが成立していない請求で起点が入ることはない**。
+     * 🔴 store 側でも既存値があれば `ALREADY` で **PATCH を投げない**（二重の防御）。
      *
      * 🟢 2026-09-10 まで、この書き込みは **どの経路にも存在しなかった**
      *    （webhook は saveContractPrice と appendEntry しか呼んでいなかった）。
      *    表示は台帳から継続月数を出すため壊れていなかったが、
      *    台帳が読めないときのフォールバックが空のままだった。
      */
-    const startedAtIso = new Date(occurredAtMs).toISOString();
-    const started = membershipResultFromStore(
-      await store.saveMembershipStart(email, startedAtIso),
-      'membership start',
-    );
+    let started = MEMBERSHIP_RESULT.SKIPPED;
+    if (isFirstBillingInvoice(invoice)) {
+      const startedAtIso = new Date(occurredAtMs).toISOString();
+      started = membershipResultFromStore(
+        await store.saveMembershipStart(email, startedAtIso),
+        'membership start',
+      );
+    } else {
+      // 🔴 更新・判定不能では書かない。付与（accrual）は従来どおり行う
+      console.log('ℹ️ stripe-webhook:', note('membership start', 'skipped', 'not_first_billing'));
+    }
 
     return worstMembershipResult(accrual, started);
   } catch {

@@ -4182,7 +4182,14 @@ QA の Test Mode E2E（経路 A）で決済後の Airtable を実測したとこ
 
 - 起点は **`status_transitions.paid_at`**（付与に使う `occurredAtMs` と同じ値）。
   🔴 **受信時刻で代用しない**（再送・遅延でずれる）
-- 🔴 **初回だけ書く。更新で起点を動かさない**（store が既存値を見て `ALREADY`）
+- 🔴 **呼ぶのは初回請求と確定できる invoice だけ**
+  （`invoice.billing_reason === 'subscription_create'`）。
+  🔴 **「列が空だから書く」にしない**。起点が空の会員へ更新請求が来たとき
+  その支払日を入れると、**継続月数が実際より短くなる**。
+  更新（`subscription_cycle`）・旧値（`subscription`）・欠落・未知は **書かない**。
+  型に未知の将来値が含まれるため **除外リスト方式にしない**。
+  判定できない請求では付与だけ行い、起点は skip（`FAILED` にして再送させない）
+- 🔴 **二重の防御**: 初回と判定されても store が既存値を見て `ALREADY`（PATCH を投げない）
 - 前提（`amount_paid > 0` / 間隔既知 / `paid_at` あり）が欠けた請求はその手前で return するため、
   **支払いが成立していない請求で起点は入らない**
 - 書き込み失敗は **processed にしない**（Stripe の再送で復旧。再送は `ALREADY` で二重に動かない）
@@ -4190,9 +4197,21 @@ QA の Test Mode E2E（経路 A）で決済後の Airtable を実測したとこ
 
 ### 検証
 
-- ガードが退行を捕まえることを実測（呼び出しを外すと **5 件 fail**、戻すと全 pass）
-- `npm run test:membership` **318 pass / 0 fail**（追加前は 302）
-- `npm run test:stripe` / `test:auth` / `test:billing` すべて fail 0
+- 🔴 **実ハンドラを通した E2E を追加**（`stripeWebhook.test.mjs`）。
+  membership store は `airtable` パッケージではなく **生 fetch** で叩くので、
+  そこだけ差し替えて **実コードの PATCH を観測**する。
+  - 初回 + 空欄 → 保存（`MembershipStartedAt` だけを PATCH）
+  - 初回 + 既存値 → **PATCH を投げない**
+  - 更新 + 空欄 → **保存しない**
+  - 更新 + 既存値 → 上書きしない
+  - `billing_reason` の欠落 / `null` / 旧値 `subscription` / 未知 / `subscription_update` /
+    `manual` → **保存しない**
+  - 同 event の再送・別 event の再送でも **PATCH は 1 回**
+- 退行を実測で確認:
+  - `saveMembershipStart` の呼び出しを外す → ガード **5 件 fail**
+  - 初回判定を外す（列が空なら書く）→ E2E **2 件 fail**
+- `npm run test:membership` **320 pass / 0 fail**（追加前は 302）
+- `npm run test:stripe` **58 pass**（追加前は 52）/ `test:auth` / `test:billing` すべて fail 0
 - `npm run build` **exit 0**
 
 ### 既存データ

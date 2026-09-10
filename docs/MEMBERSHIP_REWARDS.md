@@ -259,8 +259,31 @@ Stripe の実装（2026-09-10 接続）:
   `store.saveMembershipStart(email, <paid_at>)` を呼ぶ。
 - 起点は **`status_transitions.paid_at`**（＝付与に使う `occurredAtMs` と同じ値）。
   🔴 **webhook の受信時刻で代用しない**（再送・遅延で起点がずれる）。
-- 🔴 **初回だけ書く。更新で起点を動かさない。**
-  store 側が既存値を見て `ALREADY` を返し、**PATCH を投げない**。
+
+- 🔴 **呼ぶのは「Stripe 側で初回請求と確定できる invoice」だけ。**
+  判定は **`invoice.billing_reason === 'subscription_create'`**
+  （`isFirstBillingInvoice()`）。
+
+  | `billing_reason` | 意味（stripe 22.6.0 の API 契約）| 起点を書くか |
+  |---|---|---|
+  | `subscription_create` | **A new subscription was created**（初回請求）| ✅ **書く** |
+  | `subscription_cycle` | A subscription advanced into a new period（更新）| ❌ |
+  | `subscription_update` / `subscription_threshold` | 変更・閾値 | ❌ |
+  | `subscription` | 2018 年 5 月以前の旧値。**初回と更新を区別しない** | ❌ |
+  | `manual` / `quote_accept` / `upcoming` / その他 | サブスクの初回ではない | ❌ |
+  | 欠落 / `null` / 未知の将来値 | 判定できない | ❌ |
+
+  🔴 **`MembershipStartedAt` が空だから書く、にしてはいけない。**
+  起点が空の会員へ更新請求が来たとき、その支払日を入れると
+  **継続月数が実際より短くなる**（長く続けている人が新規扱いになる）。
+  🔴 **判定できないものは書かない。** 推測で初回とみなさない。
+  型に未知の文字列が含まれる＝将来値が増えうるため、
+  **除外リスト方式にしない**（未知が初回として通る）。
+  判定できない請求では **付与（accrual）だけ行い、起点は skip する**
+  （`FAILED` にして再送させない）。
+
+- 🔴 **二重の防御。** 仮に初回と判定されても、store 側が既存値を見て
+  `ALREADY` を返し **PATCH を投げない**。
   ここを上書きすると、長く続けている会員の継続月数が毎月 0 に戻る。
 - 前提（**`amount_paid > 0` / 間隔既知 / `paid_at` あり**）が欠けた請求は
   その手前で return しているので、**支払いが成立していない請求で起点は入らない**。

@@ -58,6 +58,33 @@ describe('Stripe の支払い成功で起点を記録する', () => {
       '🔴 受信時刻を起点にしている');
   });
 
+  test('🔴 初回請求と確定できる invoice だけに限定する', () => {
+    const body = recordPaidPeriodBody();
+    // 「列が空だから書く」ではなく、Stripe 側の billing_reason で判定する
+    assert.match(body, /if \(isFirstBillingInvoice\(invoice\)\) \{/,
+      '🔴 初回判定なしで saveMembershipStart を呼んでいる');
+    assert.ok(body.indexOf('isFirstBillingInvoice') < body.indexOf('saveMembershipStart'),
+      '🔴 判定が呼び出しより後にある');
+    // 判定できない請求では書かずに skip する（FAILED にして再送させない）
+    assert.match(body, /not_first_billing/);
+    assert.match(body, /let started = MEMBERSHIP_RESULT\.SKIPPED;/);
+  });
+
+  test('🔴 初回の判定は subscription_create のみ（推測で fallback しない）', () => {
+    assert.match(webhook, /const FIRST_BILLING_REASON = 'subscription_create';/);
+    assert.match(webhook, /export function isFirstBillingInvoice\(invoice\) \{\s*\n\s*return invoice\?\.billing_reason === FIRST_BILLING_REASON;\s*\n\}/);
+    // 🔴 更新・旧値・未知を初回として扱う分岐を足さない
+    //    （API 契約の説明はコメントに書いてあるので、**コードだけ**を見る）
+    const code = webhook.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    for (const bad of ['subscription_cycle', 'subscription_update', 'subscription_threshold']) {
+      assert.equal(code.includes(bad), false, `🔴 ${bad} を判定に混ぜている`);
+    }
+    // 🔴 「billing_reason が無ければ初回とみなす」を作らない
+    assert.equal(/billing_reason\s*\|\|/.test(webhook), false, '🔴 欠落時の fallback がある');
+    assert.equal(/billing_reason\s*(!==|!=)\s*'subscription_cycle'/.test(webhook), false,
+      '🔴 除外リスト方式になっている（未知の値が初回として通る）');
+  });
+
   test('🔴 台帳の付与より後に呼ぶ（付与を巻き添えにしない）', () => {
     const body = recordPaidPeriodBody();
     assert.ok(body.indexOf('appendEntry') < body.indexOf('saveMembershipStart'),
