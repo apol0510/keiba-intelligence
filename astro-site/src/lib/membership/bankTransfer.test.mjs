@@ -654,7 +654,7 @@ describe('🔴 契約価格の請求期間は priceId から確定する（推�
 
   test('🔴 Stripe の priceId からは確定できない（null を返す）', () => {
     // 本番に実在: ContractPriceId=price_1UCaFH… / ¥3,980。期間は保存されていない
-    assert.equal(periodMonthsFromContractPriceId('price_1UCaFHLbPC6OVRqMtZuTkKRX'), null);
+    assert.equal(periodMonthsFromContractPriceId('price_FIXTURE_not_a_real_id'), null);
   });
 
   test('🔴 空・不明な形は null（既定で「/ 月」にしない）', () => {
