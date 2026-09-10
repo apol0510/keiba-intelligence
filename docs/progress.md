@@ -4378,6 +4378,58 @@ Checkout Session を Stripe API で直接作る**。Price・metadata・`success_
 
 ---
 
+## 2026-09-10 経路 A を実行（カード入力の直前で停止）
+
+### 実施
+
+| # | 手順 | 結果 |
+|---|---|---|
+| 1 | QA `Customers` へ QA 会員を **1 件だけ**作成 | ✅ `qa+stripe-testmode@keiba-intelligence.jp` / `free-registered` / `active` / `AccessEnabled=✓`（`recmTcnATkdpQDNNV`）|
+| 2 | ログイン | ✅ **QA 専用 `SESSION_SIGNING_SECRET` でセッション発行**（tier=`free`）|
+| 3 | QA `/mypage` | ✅ **200**・QA 会員の Email を表示・「無料会員」「KI 会員クラブ」を含む |
+| 4 | 🔴 **実際の `stripe-create-checkout.js`** へ POST（`plan: premium`）| ✅ **200** と Checkout URL。id は **`cs_test_…`** ＝ Test Mode |
+| 5 | カード入力 | 🔴 **停止**（承認境界）|
+
+🔴 **magic link は使わなかった。** `SENDGRID_API_KEY` は `all` スコープのままなので、
+QA からマジックリンクを要求すると **production の SendGrid で実際にメールが飛ぶ**。
+外部送信は承認境界のため、QA 専用のセッション鍵で Cookie を発行した。
+**production の auth 仕様・コードは未変更。**
+
+### 実行直後の確認
+
+- QA `Customers` **1 件**（作成した 1 件のみ）／他 3 テーブルは 0 件
+- 🔴 production は **`Customers` 81 / `AuthTokens` 696 / `RewardLedger` 2 / `RewardRedemptions` 0 で不変**
+- 🔴 QA PAT で production base を読むと **403** のまま
+- 本番 `/` `/pricing` `/mypage` = **200** / guest 予想 = **302**
+
+### 🔴 過去の記述の訂正 — Stripe 3 キーの「別値確認」は成立していなかった
+
+2026-09-10 の先行報告で
+「`STRIPE_SECRET_KEY` / `STRIPE_PRICE_PREMIUM` / `STRIPE_WEBHOOK_SECRET` は
+production と別値であることを sha256 で確認」と書いたが、**これは誤り**。
+この 3 キーは Netlify で **`is_secret=true`** であり、API は値を `***` に
+マスクして返す。**比較していたのはマスク文字列**だった。
+
+実際に確認できるのは **挙動**のほう。
+
+| キー | 確認できたこと |
+|---|---|
+| `STRIPE_SECRET_KEY` | QA から作った Checkout Session の id が **`cs_test_…`**（live 鍵なら `cs_live_…`）＝ **Test Mode で動いている** |
+| `STRIPE_PRICE_PREMIUM` | Checkout が **200** を返した＝ Price が Test Mode に実在する |
+| `STRIPE_WEBHOOK_SECRET` | 署名なし POST が **`invalid_signature`** ＝ secret は入っている。**別値である保証は Stripe 側の仕様**（test / live は別、endpoint ごとに別）に依る |
+
+`AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` / `SESSION_SIGNING_SECRET` は `is_secret=false` で
+**値を読めるため、別値であることを実際に確認済み**（さらに QA PAT は production base へ **403**）。
+
+### 🔴 経路 B の実行主体（新たな制約）
+
+`STRIPE_SECRET_KEY` を読めないため、**Test Clock / Customer / Checkout Session を作る
+API 呼び出しは、鍵を持っている仕様所有者が実行する**。
+Test Clock と Customer は Stripe ダッシュボードでも作れるが、
+**Customer を指定した Checkout Session の作成は API / CLI が要る**。
+
+---
+
 ## Open Questions
 
 0.1 🔴 **`@netlify/blobs` が `astro-site/package.json` の依存に無く、

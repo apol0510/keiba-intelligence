@@ -333,10 +333,21 @@ Stripe Test の webhook 送信先（5 イベント / `status=enabled`）と
 | env 設定直後（再デプロイ前）| **503 `{"error":"not_configured"}`** ＝ 未反映 |
 | QA を再デプロイした後 | ✅ **400 `{"error":"invalid_signature"}`** ＝ **反映済み**（署名検証まで到達）|
 
-branch-deploy の 8 キーはすべて設定済みで、
-**`AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` / `SESSION_SIGNING_SECRET` /
-`STRIPE_SECRET_KEY` / `STRIPE_PRICE_PREMIUM` / `STRIPE_WEBHOOK_SECRET` は
-production と別値**であることを sha256 で確認。
+branch-deploy の 8 キーはすべて設定済み。
+
+🔴 **Stripe の 3 キーは Netlify で `is_secret=true` になっており、API から値を読めない**
+（`***` にマスクされる）。したがって **env の突き合わせでは production と別値だと確認できない**。
+確認できるのは下表のとおり **実際の挙動**である。
+
+| キー | `is_secret` | production と別値だと確認できたか |
+|---|---|---|
+| `AIRTABLE_API_KEY` | `false` | ✅ **確認済み**（値を読んで sha256 で照合。さらに QA PAT は production base へ **403**）|
+| `AIRTABLE_BASE_ID` | `false` | ✅ **確認済み** |
+| `SESSION_SIGNING_SECRET` | `false` | ✅ **確認済み** |
+| `STRIPE_SECRET_KEY` | 🔴 `true` | ❌ 読めない。**代わりに実挙動で確認** → QA から作った Checkout Session の id が **`cs_test_…`**（live 鍵なら `cs_live_…`）|
+| `STRIPE_PRICE_PREMIUM` | 🔴 `true` | ❌ 読めない。Checkout が **200 を返した**＝ Price が Test Mode に実在する |
+| `STRIPE_WEBHOOK_SECRET` | 🔴 `true` | ❌ 読めない。**署名なし POST が `invalid_signature`** ＝ 何らかの secret が入っている。**別値である保証は Stripe 側の仕様**（test / live は別、endpoint ごとに別）に依る |
+
 `MEMBERSHIP_READ_ENABLED` / `MEMBERSHIP_WRITE_ENABLED` は機能フラグなので
 production と同じ `true` でよい。
 
@@ -419,6 +430,27 @@ Test Clock で時計を進めても、その Subscription には請求が発生�
 
 ---
 
+#### 実績（2026-09-10・カード入力の直前まで）
+
+| # | 手順 | 結果 |
+|---|---|---|
+| 1 | QA `Customers` へ QA 会員を **1 件だけ**作成 | ✅ `qa+stripe-testmode@keiba-intelligence.jp` / `PlanType=free-registered` / `Status=active` / `AccessEnabled=✓` |
+| 2 | ログイン | ✅ **QA 専用 `SESSION_SIGNING_SECRET` でセッションを発行**（tier=`free`）|
+| 3 | QA `/mypage` | ✅ **200**・QA 会員の Email が表示・「無料会員」「KI 会員クラブ」を含む |
+| 4 | 🔴 **実際の `stripe-create-checkout.js`** へ POST（`plan: premium`）| ✅ **200** と Checkout URL。id は **`cs_test_…`** ＝ **Test Mode** |
+| 5 | カード入力 | 🔴 **ここで停止**（承認境界）|
+
+🔴 **magic link は使っていない。**
+`SENDGRID_API_KEY` は `all` スコープのままなので、QA からマジックリンクを要求すると
+**production の SendGrid で実際にメールが飛ぶ**。外部送信は承認境界なので、
+QA 専用のセッション鍵で Cookie を発行する方法を採った（**production の auth 仕様は未変更**）。
+
+🟢 実行直後の確認: QA `Customers` **1 件** /
+production は **`Customers` 81・`AuthTokens` 696・`RewardLedger` 2・`RewardRedemptions` 0 で不変** /
+QA PAT は production base へ **403** のまま / 本番 **200**・guest **302**。
+
+---
+
 ### 4.B 経路 B — Test Clock で 1 → 3 → 12 → 24 か月
 
 🔴 **この経路は `stripe-create-checkout.js` を通らない。**
@@ -454,6 +486,14 @@ Stripe API で直接作る**。
 `invoice.parent.subscription_details.metadata.ki_email` を読む。
 ここが空だと `invoice.customer_email` へ落ちるため、Customer の請求先メールが
 QA 会員と一致していないと **台帳が積まれない**。
+
+#### 🔴 経路 B の実行主体（2026-09-10 時点の制約）
+
+`STRIPE_SECRET_KEY` は Netlify で `is_secret=true` のため **値を読めない**。
+したがって **Test Clock / Customer / Checkout Session を作る API 呼び出しは、
+鍵を持っている仕様所有者が実行する**。
+（Test Clock と Customer は Stripe ダッシュボードでも作れるが、
+**Customer を指定した Checkout Session の作成は API / CLI が要る**。）
 
 🔴 `ki_plan` は `plans.js` の `id: 'premium'`、
 `ki_price_id` は **env `STRIPE_PRICE_PREMIUM` の値そのもの**
