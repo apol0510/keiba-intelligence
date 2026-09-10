@@ -4481,7 +4481,46 @@ Test Clock と Customer は Stripe ダッシュボードでも作れるが、
 
 ---
 
+## 2026-09-10 経路 B: 専用 QA 会員を作成（カード入力の直前で停止）
+
+### 実施
+
+| # | 内容 | 結果 |
+|---|---|---|
+| 1 | QA `Customers` へ **経路 B 専用**の会員を 1 件だけ作成 | ✅ `qa+clock@keiba-intelligence.jp`（`reciXFkrrTlaIeRRK`）/ `free-registered` / `active` / `AccessEnabled=✓` / **`MembershipStartedAt` は空** |
+| 2 | 経路 A の会員・台帳 | ✅ **残してある**（`Customers` 2 件 / `RewardLedger` 1 件は経路 A のもの）|
+| 3 | 経路 B 会員の台帳 | ✅ **0 件**（これが 0 でないと 1→3→12→24 が観測できない）|
+
+🟢 `MembershipStartedAt` が空から始まるので、**PR #127（初回請求だけ起点を書く）の検証もそのまま行える**。
+
+### production への影響
+
+- 基準値から**不変**: `Customers` **81** / `AuthTokens` **696** / `RewardLedger` **2** / `RewardRedemptions` **0**
+- QA PAT で production base を読むと **403** のまま
+- 本番 `/` `/pricing` `/mypage` = **200**
+
+### 次（🔴 仕様所有者が実行する）
+
+`STRIPE_SECRET_KEY` は Netlify で `is_secret=true` のため読めない。
+`read -rs` で入力してもらい、`astro-site/scripts/qaTestClock.mjs start` で
+Test Clock ＋ Customer ＋ Checkout Session を作る。手順は runbook §4.B。
+
+---
+
 ## Open Questions
+
+### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）
+
+`CLAUDE.md`「🚨 プロジェクト識別ルール 🚨」は作業ディレクトリを
+**`/Users/apolon/Projects/keiba-intelligence/astro-site`** と書いているが、
+実際のチェックアウト先は **`/Users/user/Projects/keiba-intelligence/astro-site`**。
+
+2026-09-10 に、この表記をそのまま使った実行コマンドを提示してしまい、
+仕様所有者から **`/Users/user/...` が正本**である旨の訂正を受けた。
+
+🔴 **本タスクの範囲外のため修正していない。** どちらへ寄せるかは仕様所有者の判断。
+（`CLAUDE.md` の他の記述・`git remote` 等との整合も併せて見る必要がある）
+
 
 ### ✅ 解決済み — Stripe 経由で `MembershipStartedAt` が書かれなかった（**既知の実装欠落**）
 
