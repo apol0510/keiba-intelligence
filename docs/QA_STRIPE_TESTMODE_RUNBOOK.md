@@ -73,7 +73,7 @@
 | 11 | E2E 実行前チェック | ✅ **全項目 PASS**（下記 §3.9）|
 | 12 | **経路 A**（QA `/pricing` から通常 Checkout 1 回）| ✅ **完了**（§4.A）— `ContractPrice*` 4 列・初回 accrual・Bronze / 1 か月 / 100pt を確認 |
 | 13 | QA branch を最新 `main` へ通常 merge して再デプロイ | ✅ **完了** — `519ac4b1`（`origin/main` `b3f09afc` を含む）。**#126 / #127 が QA に載っている**ことを確認 |
-| 14 | **経路 B**（Test Clock で 1→3→12→24 か月）| 🔴 **未実施**（承認境界。下記 §4.B）|
+| 14 | **経路 B**（Test Clock で 1→3→12→24 か月）| ✅ **完了・全 PASS**（下記 §4.G）|
 
 ### 3.0' 初回 branch deploy の実測（2026-09-10）
 
@@ -657,6 +657,44 @@ unset STRIPE_SECRET_KEY STRIPE_PRICE_PREMIUM
 🔴 `ki_plan` は `plans.js` の `id: 'premium'`、
 `ki_price_id` は **env `STRIPE_PRICE_PREMIUM` の値そのもの**
 （`stripe-webhook.js` はこれを読んで契約価格を記録する）。
+
+### 4.G 経路 B の実測（2026-09-10 実施・**全 PASS**）
+
+会員: 経路 B 専用の QA 会員（経路 A とは別アドレス）。
+Test Clock で `2026-09-10` → `2028-08-10` まで **24 回の請求**を通した。
+
+| 時点 | 支払い済み invoice | 台帳 | 合計 pt | 継続月数 | ランク | `/mypage` |
+|---|---|---|---|---|---|---|
+| 1 か月 | 1 | 1 件 | **100** | 1 か月 | **Bronze** | ✅ Bronze / 1 か月 / 100 pt / ¥3,980 |
+| 3 か月 | 3 | 3 件 | **300** | 3 か月 | **Silver** | ✅ Silver / 3 か月 / 300 pt / ¥3,980 |
+| 12 か月 | 12 | 12 件 | **1,200** | 12 か月 | **Gold** | ✅ Gold / 12 か月 / 1,200 pt / ¥3,980 |
+| 24 か月 | 24 | 24 件 | **2,400** | 24 か月 | **Platinum** | ✅ Platinum / 24 か月 / 2,400 pt / ¥3,980 |
+
+**全時点で共通して確認できたこと**
+
+| 項目 | 結果 |
+|---|---|
+| 各 accrual の `PeriodMonths` | **すべて 1** |
+| `EntryId` の重複 | **なし**（24 件すべて一意）|
+| `Points` | **全件 100** |
+| 🔴 **`MembershipStartedAt`** | **`2026-09-10` から一度も動かない**（23 回の更新請求を経ても）|
+| `ContractPriceYen` / `ContractPriceId` / `ContractCurrency` / `ContractStartedAt` | **4 列とも初回値のまま** |
+| `PlanType` / `Status` | `premium` / `active` |
+| `RewardRedemptions` | **0 件** |
+| 🔴 **production base** | **`Customers` 81 / `AuthTokens` 696 / `RewardLedger` 2 / `RewardRedemptions` 0 で全工程を通して不変** |
+| 🔴 **QA PAT → production base** | 全工程で **HTTP 403** |
+
+🟢 **表示だけの偽装はしていない。**
+本番と同じ `stripe-webhook.js` → `RewardLedger` → `membershipView.js` を通した結果である。
+
+🟢 **PR #127（初回請求だけ起点を書く）の対照実験になった。**
+
+| 会員 | 決済時期 | `MembershipStartedAt` |
+|---|---|---|
+| 経路 A | `#127` の本番反映**前** | 🔴 **空のまま** |
+| 経路 B | `#127` の本番反映**後** | ✅ **`2026-09-10`**（24 回の請求を通して不変）|
+
+---
 
 ### 4.C 目視できる変化（ランク閾値はコード定数 0 / 3 / 12 / 24）
 

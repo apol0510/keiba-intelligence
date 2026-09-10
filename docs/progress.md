@@ -4740,6 +4740,31 @@ runbook §4.B にも同じ内容を追記した。
 
 ---
 
+## 2026-09-10 経路 B（Test Clock）1→3→12→24 か月 E2E 完了・**全 PASS**
+
+管理者が実会員と同じ決済後の会員クラブ進捗を `/mypage` で目視できる状態を、
+**production から完全に隔離した環境**で通しで確認した。
+
+| 時点 | 支払い済み invoice | 台帳 | 合計 pt | 継続月数 | ランク | `/mypage` |
+|---|---|---|---|---|---|---|
+| 1 か月 | 1 | 1 件 | **100** | 1 か月 | **Bronze** | ✅ Bronze / 1 か月 / 100 pt / ¥3,980 |
+| 3 か月 | 3 | 3 件 | **300** | 3 か月 | **Silver** | ✅ Silver / 3 か月 / 300 pt / ¥3,980 |
+| 12 か月 | 12 | 12 件 | **1,200** | 12 か月 | **Gold** | ✅ Gold / 12 か月 / 1,200 pt / ¥3,980 |
+| 24 か月 | 24 | 24 件 | **2,400** | 24 か月 | **Platinum** | ✅ Platinum / 24 か月 / 2,400 pt / ¥3,980 |
+
+- 各 accrual の `PeriodMonths` は**すべて 1**／`EntryId` の**重複なし**／`Points` は**全件 100**
+- 🔴 **`MembershipStartedAt` は `2026-09-10` から一度も動かない**（23 回の更新請求を経ても）
+- `ContractPrice*` **4 列とも初回値のまま**／`PlanType` `premium`・`Status` `active`／`RewardRedemptions` 0
+- 🔴 **production は全工程を通して `81 / 696 / 2 / 0` で不変**、QA PAT → production は常に **403**
+- 🟢 **表示だけの偽装をしていない**。本番と同じ
+  `stripe-webhook.js` → `RewardLedger` → `membershipView.js` を通した結果
+
+🟢 **PR #127 の対照実験になった。**
+経路 A（`#127` 反映**前**に決済）は `MembershipStartedAt` が**空のまま**、
+経路 B（反映**後**）は **`2026-09-10`** が入り、24 回の請求を通して動かなかった。
+
+---
+
 ## Open Questions
 
 ### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）
