@@ -4052,6 +4052,66 @@ Stripe 経由の付与は Stripe 設定後に動き出す。
 
 - なし（本ドキュメント基盤の作成・検証・push・Draft PR 作成までは阻害要因なく完了）。
 
+## 2026-09-10 決済直後 `/mypage?checkout=success` で未ログインのとき、無料会員登録を出さない（仕様変更）
+
+### 背景
+
+QA の Test Mode E2E（経路 A）で決済後の画面を実測したところ、
+**支払いを終えた直後の未ログイン画面に「無料会員に登録」が出ていた**。
+案内として誤りなので仕様として直す。
+
+### 確定した仕様
+
+`/mypage?checkout=success` で **未ログイン**のとき:
+
+- 🔴 **無料会員登録の導線を 1 つも出さない**
+  - 本文の「無料会員に登録」
+  - ヘッダーの「無料登録」
+  - フッターの「無料会員登録 →」
+- 表示は **「お支払い後の確認にはログインが必要です」＋「ログイン」だけ**
+- 🔴 `checkout=success` を **認証・決済成功の証拠に使わない**。
+  未ログインなら有料情報は一切出さない（**fail-closed 維持**）
+- 🔴 **通常の未ログイン `/mypage`（`?checkout=success` なし）は従来のまま**
+
+### 実装
+
+| ファイル | 変更 |
+|---|---|
+| `src/pages/mypage.astro` | `checkoutSuccess` / `afterCheckoutUnauthed` を算出し、未ログインの分岐を 2 つに分けた |
+| `src/layouts/BaseLayout.astro` | `hideFreeRegisterCta` prop を追加。ヘッダー／フッターの `/register` を**条件付きレンダリング**にした |
+| `src/lib/auth/checkoutSuccessGuest.guard.test.mjs` | 新規ガード |
+| `package.json` | `test:auth` へ追加 |
+
+🔴 **`hidden` 属性で隠すだけにしていない。**
+ページ末尾の `get-session` 応答が `[data-auth-out]` の `hidden` を一括で付け外しするため、
+隠すだけでは **JS で復活する**。だから DOM ごと出さない。
+
+🔴 **AI チャットもこの画面では出さない。**
+`AIChat.astro` の `getRelatedLinks()` が「無料会員登録 → `/register`」を候補に持ち、
+**`is:inline` のスクリプトなので文字列ごと HTML に載る**。実行時に出し分けても
+HTML からは消えないため、この画面だけウィジェットごと描画しない（他ページは従来どおり）。
+
+### 実測（ローカル dev で実描画・`<style>` を除く）
+
+| ページ | `/register` | 無料登録 | 無料会員登録 | 無料会員に登録 | AI チャット |
+|---|---|---|---|---|---|
+| 🔴 未ログイン `/mypage?checkout=success` | **0** | **0** | **0** | **0** | なし |
+| 未ログイン `/mypage`（通常）| 4 | 1 | 2 | 1 | あり |
+| `/pricing`（他ページ）| 4 | 1 | 4 | 1 | あり |
+
+🟢 `<style>` を含めても `/mypage?checkout=success` の `/register` は **0**。
+残る 2 件は `global.scss` の**コメント**で、**本番ビルドでは minify により除去される**
+（`dist/**/*.css` に 0 件であることを確認済み）。
+
+### 変更していないもの
+
+- ログイン済みの `checkout=success` → `refresh-session` で出し直す動作
+- `entitlement` / 認可の判定 / fail-closed
+- 通常の未ログイン `/mypage` の導線
+- `/pricing` など他ページ
+
+---
+
 ## 2026-08-30 プラン構成の単純化（完了）
 
 仕様所有者の指示により、ライト/プレミアムの二本立てを廃止した。

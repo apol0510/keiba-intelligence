@@ -28,6 +28,24 @@ const ent = entitlementFromAstro(Astro);
 const isPaid = tierAtLeast(ent.tier, TIER.LIGHT);
 
 /* ------------------------------------------------------------------
+   決済直後の戻り先（`?checkout=success`）で未ログインだったとき
+
+   🔴 `checkout=success` は **認証の証拠にも決済成功の証拠にもしない**。
+      Stripe の `success_url` に付くだけの値で、誰でも手で付けられる。
+      認可・表示の判定は従来どおり **サーバー側 entitlement のみ**が決める。
+      したがって未ログインなら有料情報は一切出さない（fail-closed のまま）。
+
+   🔴 この値で変えるのは **「未ログイン時に何を勧めるか」だけ**。
+      支払いを終えた人に「無料会員に登録」を出すのは案内として誤りなので、
+      本文・ヘッダー・フッターの無料登録導線を **DOM ごと出さない**。
+      出すのは「ログイン」だけ。
+
+   🔴 通常の未ログイン `/mypage`（`?checkout=success` なし）は**従来のまま**。
+   ------------------------------------------------------------------ */
+const checkoutSuccess = Astro.url.searchParams.get('checkout') === 'success';
+const afterCheckoutUnauthed = checkoutSuccess && !ent.authenticated;
+
+/* ------------------------------------------------------------------
    会員クラブ（KI Membership / KIリワード）
    正本: docs/MEMBERSHIP_REWARDS.md §5
 
@@ -186,10 +204,19 @@ const expiresLabel = ent.expiresAtMs
   : null;
 ---
 
-<BaseLayout title="マイページ" description="KEIBA Intelligence マイページ。プラン確認・お支払い管理。">
+<BaseLayout title="マイページ" description="KEIBA Intelligence マイページ。プラン確認・お支払い管理。"
+            hideFreeRegisterCta={afterCheckoutUnauthed}>
   <section class="mypage">
     <div class="container">
-      {!ent.authenticated ? (
+      {!ent.authenticated && afterCheckoutUnauthed ? (
+        <div class="mp-guest">
+          <div class="mp-guest-icon">🔒</div>
+          <h1>お支払い後の確認にはログインが必要です</h1>
+          <div class="mp-guest-actions">
+            <a class="mp-btn mp-btn-primary" href="/login">ログイン</a>
+          </div>
+        </div>
+      ) : !ent.authenticated ? (
         <div class="mp-guest">
           <div class="mp-guest-icon">🔒</div>
           <h1>ログインが必要です</h1>
