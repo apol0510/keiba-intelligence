@@ -253,6 +253,49 @@ UI に数値として出すものではない**。UI に出してよいのは従
 | Stripe 月額 | **初回の支払い成功**（`invoice.payment_succeeded` / Checkout 完了時の支払い） |
 | 銀行振込 年払い | **入金確認日**（`Status` を active にして入金確認メールを送った日）|
 
+Stripe の実装（2026-09-10 接続）:
+
+- `stripe-webhook.js` の `invoice.payment_succeeded` で、**台帳へ積んだあと**に
+  `store.saveMembershipStart(email, <paid_at>)` を呼ぶ。
+- 起点は **`status_transitions.paid_at`**（＝付与に使う `occurredAtMs` と同じ値）。
+  🔴 **webhook の受信時刻で代用しない**（再送・遅延で起点がずれる）。
+
+- 🔴 **呼ぶのは「Stripe 側で初回請求と確定できる invoice」だけ。**
+  判定は **`invoice.billing_reason === 'subscription_create'`**
+  （`isFirstBillingInvoice()`）。
+
+  | `billing_reason` | 意味（stripe 22.6.0 の API 契約）| 起点を書くか |
+  |---|---|---|
+  | `subscription_create` | **A new subscription was created**（初回請求）| ✅ **書く** |
+  | `subscription_cycle` | A subscription advanced into a new period（更新）| ❌ |
+  | `subscription_update` / `subscription_threshold` | 変更・閾値 | ❌ |
+  | `subscription` | 2018 年 5 月以前の旧値。**初回と更新を区別しない** | ❌ |
+  | `manual` / `quote_accept` / `upcoming` / その他 | サブスクの初回ではない | ❌ |
+  | 欠落 / `null` / 未知の将来値 | 判定できない | ❌ |
+
+  🔴 **`MembershipStartedAt` が空だから書く、にしてはいけない。**
+  起点が空の会員へ更新請求が来たとき、その支払日を入れると
+  **継続月数が実際より短くなる**（長く続けている人が新規扱いになる）。
+  🔴 **判定できないものは書かない。** 推測で初回とみなさない。
+  型に未知の文字列が含まれる＝将来値が増えうるため、
+  **除外リスト方式にしない**（未知が初回として通る）。
+  判定できない請求では **付与（accrual）だけ行い、起点は skip する**
+  （`FAILED` にして再送させない）。
+
+- 🔴 **二重の防御。** 仮に初回と判定されても、store 側が既存値を見て
+  `ALREADY` を返し **PATCH を投げない**。
+  ここを上書きすると、長く続けている会員の継続月数が毎月 0 に戻る。
+- 前提（**`amount_paid > 0` / 間隔既知 / `paid_at` あり**）が欠けた請求は
+  その手前で return しているので、**支払いが成立していない請求で起点は入らない**。
+- 書き込みに失敗したら **event を processed にしない**（Stripe の再送で復旧させる）。
+  再送しても既存値があれば `ALREADY` なので二重に動かない。
+
+🔴 **2026-09-10 まで、この書き込みはどの Stripe 経路にも存在しなかった**
+（webhook は `saveContractPrice` と `appendEntry` しか呼んでいなかった）。
+表示は台帳から継続月数を出すため壊れていなかったが、
+**台帳が読めないときのフォールバックが空のまま**だった。
+QA の Test Mode E2E（経路 A）で実測して判明した。
+
 銀行振込の実装（2026-09-01 接続）:
 
 - `send-payment-confirmation-auto.js`（入金確認メール）の **最後**で会員継続制度へ反映する。

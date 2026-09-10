@@ -160,6 +160,67 @@ describe('冪等性', () => {
 });
 
 /* ================================================================
+   2'. 継続月数の起点（MembershipStartedAt・TBD-9 §7.6）
+   ================================================================ */
+
+describe('継続月数の起点（MembershipStartedAt）', () => {
+  const found = (fields) => ({
+    status: 200, body: { records: [{ id: 'rec1', fields: { Email: 'a@example.com', ...fields } }] },
+  });
+
+  test('空なら支払い成功日を書く', async () => {
+    const f = stubFetch(async (url, init) => (init.method === 'PATCH'
+      ? { status: 200, body: { records: [] } }
+      : found({})));
+    const r = await store(f).saveMembershipStart('a@example.com', '2026-09-10T04:05:06.000Z');
+    assert.equal(r.status, STORE_RESULT.APPLIED);
+
+    const patch = f.writes().find((c) => c.method === 'PATCH');
+    assert.ok(patch, 'PATCH が送られていない');
+    assert.deepEqual(Object.keys(patch.body.fields), [CUSTOMER_FIELDS.STARTED_AT]);
+    // 日付列なので YYYY-MM-DD へ丸める
+    assert.equal(patch.body.fields[CUSTOMER_FIELDS.STARTED_AT], '2026-09-10');
+  });
+
+  test('🔴 既に入っていれば動かさない（更新で起点をずらさない）', async () => {
+    const f = stubFetch(async () => found({ [CUSTOMER_FIELDS.STARTED_AT]: '2025-04-01' }));
+    const r = await store(f).saveMembershipStart('a@example.com', '2026-09-10T04:05:06.000Z');
+    assert.equal(r.status, STORE_RESULT.ALREADY);
+    assert.equal(f.writes().length, 0, '🔴 PATCH を投げてはいけない');
+  });
+
+  test('🔴 起点が無いなら書かない（推測で埋めない）', async () => {
+    for (const bad of [null, undefined, '', '   ', 'not-a-date', 2026]) {
+      const f = stubFetch(async () => found({}));
+      const r = await store(f).saveMembershipStart('a@example.com', bad);
+      assert.equal(r.status, STORE_RESULT.UNAVAILABLE, `${JSON.stringify(bad)} が通っている`);
+      assert.equal(r.reason, 'invalid_started_at');
+      assert.equal(f.writes().length, 0);
+    }
+  });
+
+  test('🔴 他の列を巻き添えにしない', async () => {
+    const f = stubFetch(async (url, init) => (init.method === 'PATCH'
+      ? { status: 200, body: { records: [] } }
+      : found({})));
+    await store(f).saveMembershipStart('a@example.com', '2026-09-10T00:00:00.000Z');
+    const written = Object.keys(f.writes().find((c) => c.method === 'PATCH').body.fields);
+    for (const forbidden of ['PlanType', 'Status', 'AccessEnabled', 'VenueAccess', 'Email',
+      CUSTOMER_FIELDS.PRICE_YEN, CUSTOMER_FIELDS.PRICE_ID]) {
+      assert.equal(written.includes(forbidden), false, `${forbidden} を書いてはいけない`);
+    }
+  });
+
+  test('会員レコードが無ければ作らない', async () => {
+    const f = stubFetch(async () => ({ status: 200, body: { records: [] } }));
+    const r = await store(f).saveMembershipStart('nobody@example.com', '2026-09-10T00:00:00.000Z');
+    assert.equal(r.status, STORE_RESULT.UNAVAILABLE);
+    assert.equal(r.reason, 'customer_not_found');
+    assert.equal(f.writes().length, 0);
+  });
+});
+
+/* ================================================================
    3. 既存列を触らない / 他会員へ混入しない
    ================================================================ */
 

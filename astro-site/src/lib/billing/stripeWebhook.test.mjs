@@ -1151,3 +1151,147 @@ test('🔴 test:stripe は --test を使わない（IPC 経由の不安定さを
     assert.ok(cmd.includes(f), `${f} が実行対象から外れている`);
   }
 });
+
+/* ==================================================================
+   継続月数の起点（MembershipStartedAt）— TBD-9 / §7.6
+
+   🔴 **「列が空だから書く」ではいけない。**
+      起点が空の会員へ更新請求が来たとき、その支払日を入れると
+      継続月数が実際より短くなる。書いてよいのは Stripe 側で
+      **初回請求と確定できる invoice だけ**（`billing_reason === 'subscription_create'`）。
+
+   membership store は `airtable` パッケージではなく **生 fetch** で
+   `api.airtable.com` を叩く。ここだけ差し替えて **実コードを通す**。
+   ================================================================== */
+
+/** membership store 用の Airtable（`fetch` 経由）を差し替える。 */
+function withMembershipAirtable(rows, fn) {
+  const realFetch = globalThis.fetch;
+  const saved = { key: process.env.AIRTABLE_API_KEY, base: process.env.AIRTABLE_BASE_ID };
+  const state = { rows: rows.map((r) => ({ ...r, fields: { ...r.fields } })), patches: [] };
+
+  globalThis.fetch = async (url, init = {}) => {
+    const u = String(url);
+    if (!u.includes('api.airtable.com')) return realFetch(url, init);
+    const method = init.method || 'GET';
+    const json = (data) => ({ ok: true, status: 200, async json() { return data; }, async text() { return ''; } });
+
+    if (method === 'GET') {
+      const m = decodeURIComponent(u).match(/LOWER\(\{Email\}\) = "([^"]*)"/);
+      const email = (m ? m[1] : '').toLowerCase();
+      const row = state.rows.find((r) => String(r.fields.Email || '').toLowerCase() === email);
+      return json({ records: row ? [row] : [] });
+    }
+    if (method === 'PATCH') {
+      const body = JSON.parse(init.body);
+      const id = decodeURIComponent(u).split('/').pop();
+      state.patches.push({ id, fields: { ...body.fields } });
+      const row = state.rows.find((r) => r.id === id);
+      if (row) Object.assign(row.fields, body.fields);
+      return json({ records: [] });
+    }
+    // POST（台帳への追記など）は成功扱い。ここでの関心事は Customers の PATCH
+    return json({ records: [{ id: 'recNEW', fields: {} }] });
+  };
+
+  process.env.AIRTABLE_API_KEY = 'pat_test_only_not_a_real_key';
+  process.env.AIRTABLE_BASE_ID = 'app_test_only';
+
+  const restore = () => {
+    globalThis.fetch = realFetch;
+    if (saved.key === undefined) delete process.env.AIRTABLE_API_KEY;
+    else process.env.AIRTABLE_API_KEY = saved.key;
+    if (saved.base === undefined) delete process.env.AIRTABLE_BASE_ID;
+    else process.env.AIRTABLE_BASE_ID = saved.base;
+  };
+  return Promise.resolve(fn(state)).finally(restore);
+}
+
+/** `MembershipStartedAt` を書いた PATCH だけ取り出す。 */
+const startPatches = (state) => state.patches.filter((p) => 'MembershipStartedAt' in p.fields);
+
+/** 支払い成功の invoice に `billing_reason` を載せる。 */
+const paidWithReason = (email, evtId, invoiceId, billing_reason) =>
+  paymentSucceeded(email, evtId, invoiceId, billing_reason === undefined ? {} : { billing_reason });
+
+const ROW = (fields = {}) => [{ id: 'recALICE', fields: { Email: ALICE, PlanType: 'premium', Status: 'active', ...fields } }];
+/** PAID_AT_SEC = 2026-08-15T00:00:00Z → JST では同日 09:00 */
+const PAID_DAY = '2026-08-15';
+
+test('🔴 初回請求 + 空欄 → 支払い成功日を保存する', async () => {
+  await withWriteFlag('true', () => withMembershipAirtable(ROW(), async (state) => {
+    const res = await post(paidWithReason(ALICE, 'evt_ms_1', 'in_ms_1', 'subscription_create'));
+    assert.equal(res.statusCode, 200, res.body);
+    const p = startPatches(state);
+    assert.equal(p.length, 1, '🔴 起点が保存されていない');
+    assert.equal(p[0].fields.MembershipStartedAt, PAID_DAY);
+    assert.deepEqual(Object.keys(p[0].fields), ['MembershipStartedAt'], '他の列を巻き添えにしている');
+  }));
+});
+
+test('🔴 初回請求 + 既存値 → 上書きしない（PATCH を投げない）', async () => {
+  await withWriteFlag('true', () => withMembershipAirtable(ROW({ MembershipStartedAt: '2025-04-01' }), async (state) => {
+    const res = await post(paidWithReason(ALICE, 'evt_ms_2', 'in_ms_2', 'subscription_create'));
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(startPatches(state).length, 0, '🔴 起点を上書きしている');
+    assert.equal(state.rows[0].fields.MembershipStartedAt, '2025-04-01');
+  }));
+});
+
+test('🔴 更新請求 + 空欄 → 保存しない（更新日を起点にしない）', async () => {
+  await withWriteFlag('true', () => withMembershipAirtable(ROW(), async (state) => {
+    const res = await post(paidWithReason(ALICE, 'evt_ms_3', 'in_ms_3', 'subscription_cycle'));
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(startPatches(state).length, 0,
+      '🔴 更新請求の支払日が起点として入った（継続月数が実際より短くなる）');
+    assert.equal(state.rows[0].fields.MembershipStartedAt, undefined);
+  }));
+});
+
+test('🔴 更新請求 + 既存値 → 上書きしない', async () => {
+  await withWriteFlag('true', () => withMembershipAirtable(ROW({ MembershipStartedAt: '2025-04-01' }), async (state) => {
+    const res = await post(paidWithReason(ALICE, 'evt_ms_4', 'in_ms_4', 'subscription_cycle'));
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(startPatches(state).length, 0);
+    assert.equal(state.rows[0].fields.MembershipStartedAt, '2025-04-01');
+  }));
+});
+
+test('🔴 billing_reason の欠落・未知・旧値 → 保存しない（推測で初回とみなさない）', async () => {
+  const cases = [
+    ['欠落', undefined],
+    ['null', null],
+    ['旧値 subscription（初回と更新を区別しない）', 'subscription'],
+    ['未知の将来値', 'subscription_something_new'],
+    ['subscription_update', 'subscription_update'],
+    ['manual', 'manual'],
+  ];
+  let n = 0;
+  for (const [label, reason] of cases) {
+    n += 1;
+    await withWriteFlag('true', () => withMembershipAirtable(ROW(), async (state) => {
+      const res = await post(paidWithReason(ALICE, `evt_ms_5_${n}`, `in_ms_5_${n}`, reason));
+      assert.equal(res.statusCode, 200, res.body);
+      assert.equal(startPatches(state).length, 0, `🔴 ${label} で起点を書いている`);
+    }));
+  }
+});
+
+test('🔴 同じ初回請求が再送されても冪等（2 回目は PATCH を投げない）', async () => {
+  await withWriteFlag('true', () => withMembershipAirtable(ROW(), async (state) => {
+    const first = await post(paidWithReason(ALICE, 'evt_ms_6', 'in_ms_6', 'subscription_create'));
+    assert.equal(first.statusCode, 200, first.body);
+    assert.equal(startPatches(state).length, 1);
+
+    // 🔴 Stripe の再送（同じ event id）。列は既に埋まっている
+    const again = await post(paidWithReason(ALICE, 'evt_ms_6', 'in_ms_6', 'subscription_create'));
+    assert.equal(again.statusCode, 200, again.body);
+    assert.equal(startPatches(state).length, 1, '🔴 再送で PATCH が増えている');
+    assert.equal(state.rows[0].fields.MembershipStartedAt, PAID_DAY);
+
+    // 🔴 別 event id での再送（冪等キーが効かない経路）でも増えない
+    const third = await post(paidWithReason(ALICE, 'evt_ms_6b', 'in_ms_6', 'subscription_create'));
+    assert.equal(third.statusCode, 200, third.body);
+    assert.equal(startPatches(state).length, 1, '🔴 別 event の再送で起点が書き換わっている');
+  }));
+});
