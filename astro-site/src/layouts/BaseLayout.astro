@@ -8,13 +8,28 @@ interface Props {
   ogImage?: string;
   /** 同一内容を複数 URL で出す場合に正規 URL を指定する（例: /free-prediction/* → /prediction/*） */
   canonicalPath?: string;
+  /**
+   * 🔴 無料会員登録の導線（ヘッダー「無料登録」／フッター「無料会員登録 →」）を
+   *    **DOM ごと出さない**。
+   *
+   *    決済直後の `/mypage?checkout=success` で未ログインだったときに使う。
+   *    支払いを終えた人へ「無料会員に登録」を出すのは案内として誤りなので、
+   *    その画面ではログイン以外の導線を消す。
+   *
+   * 🔴 `hidden` 属性で隠すだけでは駄目。ページ末尾の `get-session` 応答で
+   *    `[data-auth-out]` の `hidden` が一括で付け外しされるため、**復活してしまう**。
+   *    だから条件付きレンダリングで**要素そのものを出さない**。
+   * 🔴 これは表示だけの分岐。認可は各ページのサーバー側 entitlement が決める。
+   */
+  hideFreeRegisterCta?: boolean;
 }
 
 const {
   title,
   description = 'AI-Powered Intelligence Dashboard for 南関・中央競馬。的中率71%、回収率186%を誇る競馬予想プラットフォーム。南関4場とJRA全10場に対応。',
   ogImage = '/og-image.png',
-  canonicalPath
+  canonicalPath,
+  hideFreeRegisterCta = false
 } = Astro.props;
 
 /*
@@ -117,7 +132,9 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
           </div>
           <a href="/pricing">料金プラン</a>
           <span id="auth-nav-button">
-            <a href="/register" data-auth-out hidden={navAuthed}>無料登録</a>
+            {!hideFreeRegisterCta && (
+              <a href="/register" data-auth-out hidden={navAuthed}>無料登録</a>
+            )}
             <a href="/login" data-auth-out hidden={navAuthed}>ログイン</a>
             <a href="/mypage" data-auth-in hidden={!navAuthed}>マイページ</a>
             <form class="nav-logout" method="POST" action="/.netlify/functions/logout"
@@ -163,7 +180,9 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
               <span class="footer-stat-label">回収率</span>
             </div>
           </div>
-          <a href="/register" class="footer-cta" data-auth-out hidden={navAuthed}>無料会員登録 →</a>
+          {!hideFreeRegisterCta && (
+            <a href="/register" class="footer-cta" data-auth-out hidden={navAuthed}>無料会員登録 →</a>
+          )}
         </div>
 
         <details class="footer-section footer-acc" open>
@@ -896,6 +915,13 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
     })();
   </script>
 
-  <AIChat />
+  {/*
+    🔴 `hideFreeRegisterCta` のときは AI チャットも出さない。
+       `AIChat.astro` の `getRelatedLinks()` が「無料会員登録 → /register」を
+       候補に持っており、**`is:inline` のスクリプトなので文字列ごと HTML に出る**。
+       決済を終えた人へ無料会員登録を勧めないという要件を満たすには、
+       この画面でウィジェットごと出さないのが確実（他のページは従来どおり）。
+  */}
+  {!hideFreeRegisterCta && <AIChat />}
 </body>
 </html>

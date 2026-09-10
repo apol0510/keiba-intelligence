@@ -73,6 +73,7 @@ export function readOnlyMembershipStore(inner) {
     readRedemptions: (...a) => inner.readRedemptions(...a),
     async appendEntry() { return refuse(); },
     async saveContractPrice() { return refuse(); },
+    async saveMembershipStart() { return refuse(); },
     async appendRedemption() { return refuse(); },
     async updateRedemptionStatus() { return refuse(); },
   });
@@ -101,6 +102,9 @@ export function createDisabledMembershipStore(reason = 'not_configured') {
       return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason, writes: 0 });
     },
     async saveContractPrice() {
+      return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason, writes: 0 });
+    },
+    async saveMembershipStart() {
       return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason, writes: 0 });
     },
     async appendRedemption() {
@@ -212,6 +216,24 @@ export function createInMemoryMembershipStore({ profiles = {}, ledgers = {}, red
       }
       profileMap.set(k, { ...p, contractPrice: contract });
       writes.push({ kind: 'contract', email: k, priceId: contract.priceId });
+      return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: writes.length });
+    },
+
+    /**
+     * 継続月数の起点（`MembershipStartedAt`）を **初回だけ**書く（TBD-9・§7.6）。
+     * 🔴 更新では起点を動かさない。既に入っていれば **ALREADY**（write しない）。
+     */
+    async saveMembershipStart(email, startedAtIso) {
+      if (typeof startedAtIso !== 'string' || !startedAtIso.trim()) {
+        return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'invalid_started_at', writes: writes.length });
+      }
+      const k = key(email);
+      const p = profileMap.get(k) || {};
+      if (p.membershipStartedAtIso) {
+        return Object.freeze({ status: STORE_RESULT.ALREADY, reason: null, writes: writes.length });
+      }
+      profileMap.set(k, { ...p, membershipStartedAtIso: startedAtIso });
+      writes.push({ kind: 'membership-start', email: k, startedAtIso });
       return Object.freeze({ status: STORE_RESULT.APPLIED, reason: null, writes: writes.length });
     },
 

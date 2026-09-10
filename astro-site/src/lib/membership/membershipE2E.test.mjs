@@ -112,6 +112,48 @@ describe('E2E: Stripe 月額', () => {
     assert.equal(v.priceLock.cheaperThanCurrent, true, '正規 ¥5,000 より安く据え置かれている');
   });
 
+  test('🔴 初回の支払い成功だけが継続月数の起点になる（TBD-9 §7.6）', async () => {
+    const store = createInMemoryMembershipStore();
+    const first = Date.UTC(2026, 8, 10, 4, 5, 6);   // 初回の支払い成功
+    const second = Date.UTC(2026, 9, 10, 4, 5, 6);  // 翌月の更新
+    const third = Date.UTC(2026, 10, 10, 4, 5, 6);  // 翌々月の更新
+
+    // 初回: 起点が入る
+    const r1 = await store.saveMembershipStart(EMAIL, new Date(first).toISOString());
+    assert.equal(r1.status, STORE_RESULT.APPLIED);
+    assert.equal((await store.readProfile(EMAIL)).profile.membershipStartedAtIso,
+      new Date(first).toISOString());
+
+    // 🔴 更新では起点を動かさない
+    for (const at of [second, third]) {
+      const r = await store.saveMembershipStart(EMAIL, new Date(at).toISOString());
+      assert.equal(r.status, STORE_RESULT.ALREADY, '🔴 更新で起点が書き換わっている');
+    }
+    assert.equal((await store.readProfile(EMAIL)).profile.membershipStartedAtIso,
+      new Date(first).toISOString(), '🔴 起点が初回からずれた');
+
+    // 🔴 起点を動かすと継続月数が毎月 0 に戻る。動かないことを継続月数でも確かめる
+    const startedAtIso = (await store.readProfile(EMAIL)).profile.membershipStartedAtIso;
+    // 台帳が読めないとき（fallback 経路）でも 3 か月と数えられる
+    const fallback = resolveTenureMonths({
+      entries: null, ledgerKnown: false, startedAtIso, nowMs: Date.UTC(2026, 11, 10),
+    });
+    assert.equal(fallback.months, 3, '🔴 起点からの継続月数が合わない');
+  });
+
+  test('🔴 起点が無いままだと「準備中」になる（推測で埋めない）', async () => {
+    const store = createInMemoryMembershipStore();
+    // webhook が起点を書かなかった状態（2026-09-10 まではこれが本番の状態だった）
+    const profile = (await store.readProfile(EMAIL)).profile;
+    assert.equal(profile, null);
+
+    const unknown = resolveTenureMonths({
+      entries: null, ledgerKnown: false, startedAtIso: null, nowMs: Date.UTC(2026, 11, 10),
+    });
+    assert.equal(unknown.status, 'pending', '🔴 起点不明を 0 か月で埋めてはいけない');
+    assert.equal(unknown.months, null, '🔴 0 か月（Bronze）で埋めてはいけない');
+  });
+
   test('毎月の付与 → 3 か月で Silver → 6 か月で小の品が交換できる', async () => {
     const store = createInMemoryMembershipStore();
     const now = Date.UTC(2026, 8, 15);
