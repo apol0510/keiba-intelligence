@@ -109,18 +109,28 @@ Airtable UI で新しい base を作る。名前の例: `keiba-intelligence-QA`�
 
 ### 3.3 スキーマを作る
 
+🔴 **PAT をコマンドラインに書かない**（shell history に残る）。
+`read -s` で環境変数へ入れ、**終わったら必ず `unset`** する（§4.B と同じ方式）。
+
 ```bash
 cd astro-site
-AIRTABLE_API_KEY=<QA PAT> \
-AIRTABLE_QA_BASE_ID=<QA base id> \
-AIRTABLE_BASE_ID=<production base id> \
+read -rs -p "QA PAT: " AIRTABLE_API_KEY && export AIRTABLE_API_KEY && echo
+read -rs -p "QA base id: " AIRTABLE_QA_BASE_ID && export AIRTABLE_QA_BASE_ID && echo
+read -rs -p "production base id: " AIRTABLE_BASE_ID && export AIRTABLE_BASE_ID && echo
+
 node scripts/bootstrapQaBase.mjs            # まず dry-run
 ```
 
 内容を確認してから:
 
 ```bash
-… node scripts/bootstrapQaBase.mjs --apply
+node scripts/bootstrapQaBase.mjs --apply
+```
+
+🔴 終わったら必ず:
+
+```bash
+unset AIRTABLE_API_KEY AIRTABLE_QA_BASE_ID AIRTABLE_BASE_ID
 ```
 
 作られるもの（**本番と同じ 4 テーブル / 57 列**。2026-09-10 に Metadata API から抽出）:
@@ -555,23 +565,56 @@ QA 会員と一致していないと **台帳が積まれない**。
 契約を取り違えないよう、`stripe-create-checkout.js:94-113` と同じ値を組み立てる
 スクリプトを用意した。**差分は `customer_email` → `customer` の 1 点だけ**。
 
+🔴 **鍵をコマンドラインに書かない。**
+`STRIPE_SECRET_KEY=sk_test_... node ...` と書くと、**shell history にそのまま残る**。
+`read -s`（入力を画面に出さない）で環境変数へ入れ、**終わったら必ず `unset`** する。
+
+**1. 鍵を非表示で環境変数へ入れる**（この 2 行に秘密値は含まれないので history に残ってよい）
+
 ```bash
 cd astro-site
-STRIPE_SECRET_KEY=sk_test_... \
-STRIPE_PRICE_PREMIUM=price_... \
-QA_ORIGIN=https://qa-stripe-testmode--keiba-intelligence.netlify.app \
-QA_EMAIL=<経路 B 用の新しいアドレス> \
-node scripts/qaTestClock.mjs start
-# → test_clock / customer / Checkout URL が出る。カードを入力して決済する
-
-STRIPE_SECRET_KEY=sk_test_... node scripts/qaTestClock.mjs advance <clock_id> 2   # 1 → 3 か月
-STRIPE_SECRET_KEY=sk_test_... node scripts/qaTestClock.mjs advance <clock_id> 9   # 3 → 12 か月
-STRIPE_SECRET_KEY=sk_test_... node scripts/qaTestClock.mjs advance <clock_id> 12  # 12 → 24 か月
+read -rs -p "Stripe Test secret key: " STRIPE_SECRET_KEY && export STRIPE_SECRET_KEY && echo
+read -rs -p "Stripe Test price id:   " STRIPE_PRICE_PREMIUM && export STRIPE_PRICE_PREMIUM && echo
 ```
 
-- 🔴 `sk_test_` 以外の鍵は**受け付けずに中止**する。
+**2. QA の宛先を入れる**（秘密ではないので直接書いてよい）
+
+```bash
+export QA_ORIGIN=https://qa-stripe-testmode--keiba-intelligence.netlify.app
+export QA_EMAIL=<経路 B 用の新しいアドレス>
+```
+
+**3. Test Clock ＋ Customer ＋ Checkout Session を作る**
+
+```bash
+node scripts/qaTestClock.mjs start
+```
+
+→ `test_clock` / `customer` / Checkout URL が出るので、**URL を開いてカードを入力**する。
+
+**4. 月を進める**（`<clock_id>` は手順 3 の出力。秘密ではない）
+
+```bash
+node scripts/qaTestClock.mjs advance <clock_id> 2    # 1 → 3 か月
+node scripts/qaTestClock.mjs advance <clock_id> 9    # 3 → 12 か月
+node scripts/qaTestClock.mjs advance <clock_id> 12   # 12 → 24 か月
+```
+
+**5. 🔴 終わったら必ず消す**
+
+```bash
+unset STRIPE_SECRET_KEY STRIPE_PRICE_PREMIUM
+```
+
+##### スクリプト側の安全条件
+
+- 🔴 `sk_test_` 以外の鍵は**受け付けずに中止**する（種別だけ伝え、値は出さない）。
 - 🔴 `QA_ORIGIN` が branch deploy の形でなければ**中止**する（本番へ戻す設定を作らない）。
-- 🔴 鍵・Price id は**出力しない**。
+- 🔴 **鍵を stdout / stderr / ログへ出さない。**
+  Stripe のエラー本文は `Invalid API Key provided: sk_test_51****` のように
+  **鍵の一部を含めて返す**ため、出力前に `redact()` で
+  `sk_` / `rk_` / `pk_` / `whsec_` 始まりを `[REDACTED]` に伏せる。
+- 🔴 鍵・Price id を **repo に書かない**（Netlify の Secret Scanning でビルドが落ちる）。
 - `advance` は Stripe 側が `ready` に戻るまで待つ（この間に webhook が飛ぶ）。
 
 #### 🔴 経路 B の実行主体（2026-09-10 時点の制約）
@@ -669,5 +712,10 @@ Stripe の Checkout を通すと `stripe-webhook.js` が `ContractPrice*` を保
    （B は本番の入口を通らない。入口の検証は **経路 A が正本**）
 8. `customer_email` を `customer` に変える等、**production コードを QA の都合で書き換える**
 9. `qa-marker.txt` と空コミットを `main` へ merge する
-10. `allowed_branches` に QA 以外のブランチを足したまま放置する
+10. 🔴 **秘密値をコマンドラインに書く**（`STRIPE_SECRET_KEY=sk_test_... node ...` /
+    `AIRTABLE_API_KEY=<PAT> node ...`）。**shell history に残る。**
+    `read -s` で入れ、終わったら `unset` する
+11. 秘密値を **stdout / stderr / ログ**へ出す
+    （Stripe のエラー本文は鍵の一部を含めて返す。必ず伏字化する）
+12. `allowed_branches` に QA 以外のブランチを足したまま放置する
    （`branch-deploy` の env は**すべての branch deploy に効く**）

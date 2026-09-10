@@ -4465,7 +4465,19 @@ Test Clock と Customer は Stripe ダッシュボードでも作れるが、
 `stripe-create-checkout.js:94-113` と**同じ契約**で Session を組み立てる
 （差分は `customer_email` → `customer` の 1 点だけ）。
 🔴 `sk_test_` 以外の鍵と、branch deploy 以外の `QA_ORIGIN` は**受け付けずに中止**する。
-🔴 鍵・Price id は出力しない。
+
+### 🔴 秘密値をコマンドラインに書かない（2026-09-10 確定）
+
+`STRIPE_SECRET_KEY=sk_test_... node ...` の形は **shell history にそのまま残る**ため **禁止**。
+
+- `read -s`（入力を画面に出さない）で環境変数へ入れ、**終わったら必ず `unset`** する
+- runbook §3.3（QA base の bootstrap）も同じ方式へ揃えた
+- 🔴 **鍵を stdout / stderr / ログへ出さない。**
+  Stripe のエラー本文は `Invalid API Key provided: sk_test_51****` のように
+  **鍵の一部を含めて返す**ので、`qaTestClock.mjs` に `redact()` を入れ、
+  `sk_` / `rk_` / `pk_` / `whsec_` 始まりと鍵そのものを `[REDACTED]` へ伏せる
+- 🔴 鍵・Price id を repo に書かない（Netlify の Secret Scanning でビルドが落ちる）
+- runbook §7 の禁止事項にも追記した
 
 ---
 
