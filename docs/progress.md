@@ -4215,6 +4215,79 @@ E2E をここから先へ進めるには、**Stripe への外部 write が必要
 
 ---
 
+## 2026-09-10 Stripe Test Mode 隔離 QA 環境 — env 分離と初回 branch deploy（完了）
+
+管理者が **実会員と同じ決済後の会員クラブ進捗**を `/mypage` で目視するための、
+production から隔離された QA 環境。本日ぶんの実施記録。正本は
+[`docs/QA_STRIPE_TESTMODE_RUNBOOK.md`](./QA_STRIPE_TESTMODE_RUNBOOK.md)。
+
+### 実施したこと（仕様所有者の承認あり）
+
+| # | 作業 | 結果 |
+|---|---|---|
+| 1 | `AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` を `all` 1 値 → **コンテキスト別**へ分離 | ✅ **PASS** |
+| 2 | branch-deploy スコープの env 設定 | 🟡 **3 キー設定 / 3 キーは値が無く未設定 / 1 キーは意図的に未設定** |
+| 3 | `allowed_branches` へ `qa-stripe-testmode` を追加 | ✅ `["main"]` → `["main","qa-stripe-testmode"]` |
+| 4 | **初回 QA branch deploy** | ✅ **ready** |
+
+### 1 の検証（🔴 最も危険な作業だったため）
+
+`updateEnvVar` で 1 回の呼び出しに全コンテキストの値を載せ、**原子的に**置換した。
+
+- 変換前後の **全 25 env** を突き合わせ、**構造が変わったのは対象 2 件のみ**
+- 🔴 **production に注入される値が変化した env は 0 件**（sha256 で byte 一致を確認）
+- `AIRTABLE_*` に `all` の残存 **なし**
+- 本番 `/` `/pricing` `/mypage` = **200**、guest の `/prediction/{nankan,jra}` = **302**（fail-closed）
+- 🔴 **値はチャット・ログ・repo のいずれにも出していない**（照合は sha256 の先頭 10 桁のみ）
+
+### 4 の実測
+
+- URL: **`https://qa-stripe-testmode--keiba-intelligence.netlify.app`**
+- `/qa-marker.txt` `/` `/pricing` `/mypage` = **200** / guest 予想 = **302**
+- 🔴 **301 の罠を回避できていることを実測**: QA ホストへの **POST** は **503 `{"error":"not_configured"}`**
+  で **3xx ではない**。一方 `keiba-intelligence.netlify.app/mypage` は **301** を返す
+  （`netlify.toml` の 301 は `from` がホスト固定のため branch deploy には当たらない）
+- 本番は無傷（`/` `/pricing` `/mypage` = 200）
+
+🟢 `main` とツリーが完全一致していると Netlify が
+`Canceled build due to no content change` でビルドをスキップするため、
+QA ブランチに `astro-site/public/qa-marker.txt` を 1 ファイルだけ置いた。
+🔴 **この marker と空コミットを `main` へ merge しない。**
+
+### 🔴 値が無くて設定できていない 3 キー（仕様所有者の入力待ち）
+
+いずれも **fail-closed で正しく止まっている**。
+
+| キー | 必要な値 | 現在の挙動 |
+|---|---|---|
+| `AIRTABLE_API_KEY` | QA 専用 PAT | QA デプロイは **Airtable へ一切接続できない**（`MEMBERSHIP_WRITE_ENABLED=true` でも書けない）|
+| `STRIPE_SECRET_KEY` | Test の secret key | 決済導線は「準備中」 |
+| `STRIPE_PRICE_PREMIUM` | Test の Price id（既存の「KEIBA Intelligence プレミアム（テスト）」）| 同上 |
+
+🔴 **PAT / secret key は資格情報なので、Netlify の UI で仕様所有者が直接入力する。**
+値をチャット・repo・シェル履歴に載せない。
+
+### 🟡 `STRIPE_PORTAL_RETURN_URL` を意図的に未設定にした
+
+1. `netlify/functions/stripe-portal.js:69` の fallback は `${resolveSiteOrigin(headers)}/mypage`。
+   `src/lib/http/siteOrigin.js` の `isAllowedSiteHost()` が **`*.netlify.app` を許可**するため、
+   branch deploy では **設定した場合とまったく同じ URL** になる。
+2. 🔴 runbook に branch deploy の URL を文字列として書いてあり、Netlify の Secret Scanning は
+   **env の値と repo 内の文字列の一致**でビルドを落とす。同じ URL を env に入れると
+   **QA ビルドが `Exposed secrets detected` で red になる**（2026-09-10 に本番で 2 回発生した同じ罠）。
+
+**未設定のほうが安全で、挙動は同一。**
+
+### 次の承認境界
+
+1. Stripe Test の **webhook 送信先を 1 件作成**
+   （`https://qa-stripe-testmode--keiba-intelligence.netlify.app/.netlify/functions/stripe-webhook`）
+2. 発行された `STRIPE_WEBHOOK_SECRET` を branch-deploy へ設定
+3. Test Clock で 1 → 3 → 12 → 24 か月の E2E
+4. PR #125 の merge 判断（**現時点では未 merge**）
+
+---
+
 ## Open Questions
 
 0.1 🔴 **`@netlify/blobs` が `astro-site/package.json` の依存に無く、

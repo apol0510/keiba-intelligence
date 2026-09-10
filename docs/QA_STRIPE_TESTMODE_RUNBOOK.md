@@ -63,11 +63,29 @@
 | 3 | スキーマの作成 | ✅ **完了**（bootstrap write は不要だった）|
 | 3' | **スキーマ照合（`--check`）** | ✅ **PASS** — 4 テーブル / 57 列・型・選択肢・primary 一致・**全 4 テーブル 0 レコード**。production データの混入なし |
 | 4 | Stripe Test Mode の確認 | ✅ **完了**（read-only。下記 §3.4）|
-| 4' | **QA ブランチの作成** | ✅ **完了** — `qa-stripe-testmode`（`main` と同一 SHA）。🔴 **deploy は起きていない**（`allowed_branches` が `["main"]` のため）|
-| 5 | Test webhook 送信先の作成 | 🔴 **未実施**（branch deploy URL が決まってから）|
-| 6 | Netlify env（branch scope・**9 キー**）| 🔴 **未実施**（承認境界）|
-| 7 | `allowed_branches` の一時追加 | 🔴 **未実施**（承認境界）|
-| 8 | branch deploy の作成 | 🔴 **未実施**（承認境界）|
+| 4' | **QA ブランチの作成** | ✅ **完了** — `qa-stripe-testmode` |
+| 5 | **`AIRTABLE_*` の `all` → コンテキスト別分離** | ✅ **完了・PASS**（下記 §3.5'）|
+| 6 | Netlify env（branch-deploy スコープ）| 🟡 **一部完了** — 設定できた 3 / 値が無い 3 / 意図的に未設定 1（下記 §3.5'）|
+| 7 | `allowed_branches` へ `qa-stripe-testmode` を追加 | ✅ **完了** — `["main"]` → `["main","qa-stripe-testmode"]`。他の build 設定に差分 0 件 |
+| 8 | **初回 branch deploy** | ✅ **ready** — `https://qa-stripe-testmode--keiba-intelligence.netlify.app` |
+| 9 | Test webhook 送信先の作成 | 🔴 **未実施**（次の承認境界）|
+| 10 | `STRIPE_WEBHOOK_SECRET`（branch-deploy）| 🔴 **未実施**（9 の実施後に発行される）|
+| 11 | Test Clock による E2E | 🔴 **未実施** |
+
+### 3.0' 初回 branch deploy の実測（2026-09-10）
+
+| 確認 | 結果 |
+|---|---|
+| `/qa-marker.txt` `/` `/pricing` `/mypage` | **200** |
+| guest の `/prediction/{nankan,jra}` | **302**（fail-closed）|
+| 🔴 **301 の罠**: QA ホストへの **POST** | **503 `{"error":"not_configured"}`** = **3xx ではない** ✅ リダイレクトされていない |
+| 参考: `keiba-intelligence.netlify.app/mypage` | **301 → `https://keiba-intelligence.jp/mypage`**（罠が実在することの裏付け）|
+| 本番 `/` `/pricing` `/mypage` | **200**（無傷）|
+
+🟢 **`main` とツリーが完全一致していると Netlify が
+`Canceled build due to no content change` でビルドをスキップする。**
+そのため QA ブランチには `astro-site/public/qa-marker.txt` を 1 ファイルだけ置いてある。
+🔴 **この marker コミットを `main` へ merge しない。**
 
 🔴 QA base id・PAT は **repo にも本書にも書かない**（Secret Scanning のため）。
 
@@ -233,6 +251,53 @@ Netlify の Secret Scanning は「env の値」と「repo 内の文字列」の�
 2026-09-02 / 09-06 / **09-10** に実際に発生している（09-10 は本番ビルドが 2 回 red・
 `Exposed secrets detected`）。**`SECRETS_SCAN_OMIT_*` で回避しない。**
 
+### 3.5' env の実施結果（2026-09-10）
+
+#### `AIRTABLE_*` のコンテキスト別分離 — ✅ PASS
+
+`updateEnvVar` で `all` の 1 値を **`production` / `deploy-preview` / `dev` / `dev-server` へ
+同一値のまま複製**し、`branch-deploy` だけを別扱いにした（1 回の呼び出しで原子的に置換）。
+
+| 検証 | 結果 |
+|---|---|
+| 変換前後の全 25 env の突き合わせ | **構造が変わったのは `AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` の 2 件のみ** |
+| 🔴 production に注入される値の変化 | **0 件**（sha256 で byte 一致を確認）|
+| `AIRTABLE_*` に `all` の残存 | **なし** |
+| 本番 `/` `/pricing` `/mypage` | **200** |
+
+🔴 **値はチャット・ログ・repo のいずれにも出していない。** 照合は sha256 の先頭 10 桁のみ。
+
+#### branch-deploy スコープの現在値
+
+| キー | branch-deploy | 備考 |
+|---|---|---|
+| `AIRTABLE_BASE_ID` | ✅ QA base | production と**別値**であることを確認済み |
+| `MEMBERSHIP_READ_ENABLED` | ✅ `true` | 追加のみ。production の値は不変 |
+| `MEMBERSHIP_WRITE_ENABLED` | ✅ `true` | 同上。🟢 機能フラグなので production と同じ `true` でよい |
+| `SESSION_SIGNING_SECRET` | ✅ 既存の branch-deploy 専用値 | 🔴 **production とは別値**であることを確認済み（QA の Cookie は本番で通用しない）|
+| `STRIPE_PORTAL_RETURN_URL` | 🟡 **意図的に未設定** | 下記 |
+| `AIRTABLE_API_KEY` | 🔴 **未設定** | QA PAT の値が必要 |
+| `STRIPE_SECRET_KEY` | 🔴 **未設定** | Test の secret key が必要 |
+| `STRIPE_PRICE_PREMIUM` | 🔴 **未設定** | Test の Price id が必要 |
+| `STRIPE_WEBHOOK_SECRET` | 🔴 **未設定** | 送信先を作ると発行される |
+
+🟢 **未設定の 4 つは fail-closed で正しく止まっている。**
+QA ホストへの webhook POST は **503 `{"error":"not_configured"}`** を返す。
+`AIRTABLE_API_KEY` が無いため、**QA デプロイは Airtable へ一切接続できない**
+（`MEMBERSHIP_WRITE_ENABLED=true` でも書けない）。値を入れた後は
+`AIRTABLE_BASE_ID` が QA base を指すので、**production base へは到達しない**。
+
+#### 🟡 `STRIPE_PORTAL_RETURN_URL` を意図的に未設定にした理由
+
+1. `netlify/functions/stripe-portal.js:69` の fallback は `${resolveSiteOrigin(headers)}/mypage`。
+   `src/lib/http/siteOrigin.js` の `isAllowedSiteHost()` は **`*.netlify.app` を許可**するため、
+   branch deploy では **設定した場合とまったく同じ URL** になる。
+2. 🔴 本書に branch deploy の URL を**文字列として書いてある**。
+   Netlify の Secret Scanning は **env の値と repo 内の文字列の一致**でビルドを落とすので、
+   同じ URL を env に入れると **QA ビルドが `Exposed secrets detected` で red になる**。
+
+**設定しないほうが安全で、挙動は同一。**
+
 ### 3.6 QA 会員を作る
 
 QA base の `Customers` に 1 行だけ作る。例:
@@ -302,10 +367,10 @@ Stripe の Checkout を通すと `stripe-webhook.js` が `ContractPrice*` を保
 
 | # | 対象 | 内容 |
 |---|---|---|
-| 1 | Netlify | Branch deploys スコープの env **9 キー**を削除（🔴 `AIRTABLE_*` は削除ではなく **all スコープへ戻す**）|
+| 1 | Netlify | Branch deploys スコープの env を削除（🔴 `AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` は**削除ではなく、`all` の 1 値へ戻す**）|
 | 2 | Netlify | 対象ブランチの branch deploy を削除（🔴 **ページングして全件**）|
-| 3 | Netlify | `allowed_branches` を `["main"]` へ戻す |
-| 4 | Git | QA ブランチを削除 |
+| 3 | Netlify | `allowed_branches` を **`["main"]`** へ戻す |
+| 4 | Git | QA ブランチ `qa-stripe-testmode` を削除（🔴 `qa-marker.txt` ごと消える。**main へ merge しない**）|
 | 5 | Stripe | Test の Customer / Subscription / Test Clock / Webhook 送信先を削除 |
 | 6 | Airtable | 🔴 **QA base ごと削除してよい**（実会員は 1 件も入っていない）|
 
@@ -319,8 +384,9 @@ Stripe の Checkout を通すと `stripe-webhook.js` が `ContractPrice*` を保
 |---|---|
 | QA base を作った後 | base を削除する。production には影響しない |
 | branch env を入れた後 | env を削除して branch deploy を消す |
-| `allowed_branches` を変えた後 | `["main"]` へ戻す |
-| 🔴 production への影響 | **無い**（env・base・鍵をすべて分けているため）|
+| `allowed_branches` を変えた後 | **`["main"]`** へ戻す |
+| 🔴 **`AIRTABLE_*` の分離を戻したい** | `production` の値を `all` の 1 値へ戻す。**変換前のスナップショットは残していない**ので、`production` の現在値が正（本作業で byte 一致を確認済み）|
+| 🔴 production への影響 | **無い**（env・base・鍵をすべて分けており、production 値の byte 一致を実測済み）|
 
 ---
 
@@ -332,3 +398,6 @@ Stripe の Checkout を通すと `stripe-webhook.js` が `ContractPrice*` を保
 4. Stripe の実キー・Price id・本番 URL を **repo に書く**（ビルドが落ちる）
 5. `SECRETS_SCAN_OMIT_*` で secrets scanning を無効化する
 6. QA の検証結果をもって**本番の実測**と記録する
+7. `qa-marker.txt` と空コミットを `main` へ merge する
+8. `allowed_branches` に QA 以外のブランチを足したまま放置する
+   （`branch-deploy` の env は**すべての branch deploy に効く**）
