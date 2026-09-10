@@ -62,10 +62,12 @@
 | 2 | QA 専用 PAT の発行 | ✅ **完了**（仕様所有者）|
 | 3 | スキーマの作成 | ✅ **完了**（bootstrap write は不要だった）|
 | 3' | **スキーマ照合（`--check`）** | ✅ **PASS** — 4 テーブル / 57 列・型・選択肢・primary 一致・**全 4 テーブル 0 レコード**。production データの混入なし |
-| 4 | Stripe Test Mode のキー再発行 | 🔴 **未実施** |
-| 5 | Netlify env（branch scope）| 🔴 **未実施**（承認境界）|
-| 6 | `allowed_branches` の一時追加 | 🔴 **未実施**（承認境界）|
-| 7 | branch deploy の作成 | 🔴 **未実施**（承認境界）|
+| 4 | Stripe Test Mode の確認 | ✅ **完了**（read-only。下記 §3.4）|
+| 4' | **QA ブランチの作成** | ✅ **完了** — `qa-stripe-testmode`（`main` と同一 SHA）。🔴 **deploy は起きていない**（`allowed_branches` が `["main"]` のため）|
+| 5 | Test webhook 送信先の作成 | 🔴 **未実施**（branch deploy URL が決まってから）|
+| 6 | Netlify env（branch scope・**9 キー**）| 🔴 **未実施**（承認境界）|
+| 7 | `allowed_branches` の一時追加 | 🔴 **未実施**（承認境界）|
+| 8 | branch deploy の作成 | 🔴 **未実施**（承認境界）|
 
 🔴 QA base id・PAT は **repo にも本書にも書かない**（Secret Scanning のため）。
 
@@ -116,13 +118,20 @@ node scripts/bootstrapQaBase.mjs            # まず dry-run
 🔴 前回のキーは cleanup 済みで**再取得できない**。**再発行**すること。
 以下は `netlify/functions/stripe-webhook.js` と `rewards.js` から確定した要件。
 
-#### 必要な値（3 つ）
+#### 必要な値（3 つ）と 2026-09-10 の確認結果
 
-| # | 値 | 要件 | env キー |
-|---|---|---|---|
-| 1 | Secret key | Test Mode（`sk_test_…`）| `STRIPE_SECRET_KEY` |
-| 2 | **Price** | 🔴 **recurring / `interval=month` / `interval_count=1`** / **JPY** | `STRIPE_PRICE_PREMIUM` |
-| 3 | Webhook 署名シークレット | 下記の送信先を作ると発行される | `STRIPE_WEBHOOK_SECRET` |
+| # | 値 | 要件 | env キー | 状態 |
+|---|---|---|---|---|
+| 1 | Secret key | Test Mode（`sk_test_…`）| `STRIPE_SECRET_KEY` | 取得すればよい |
+| 2 | **Price** | 🔴 **recurring / `interval=month` / `interval_count=1`** / **JPY** | `STRIPE_PRICE_PREMIUM` | ✅ **既存を再利用できる**（下記）|
+| 3 | Webhook 署名シークレット | 送信先を作ると発行される | `STRIPE_WEBHOOK_SECRET` | 🔴 **送信先が 0 件**。作成が要る |
+
+✅ **Price は新規作成しなくてよい。**
+Test Mode に「**KEIBA Intelligence プレミアム（テスト）**」**¥3,980 / 月**・
+`interval_count=1`・**トライアルなし**の Price が既にある（仕様所有者が read-only 確認）。
+要件（月次・`interval_count` あり・トライアルなし）をすべて満たす。
+
+🔴 **Test の webhook 送信先は現在 0 件。** §3.4' で作る。
 
 🔴 **Price は必ず「月次」にする。**
 `periodMonthsFromPrice()` は `interval` × `interval_count` で月数を出し、
@@ -130,9 +139,18 @@ node scripts/bootstrapQaBase.mjs            # まず dry-run
 `month` / `year` 以外（`day` / `week`）も**付与されない**。
 月額 1 期 = **1 か月 / 100 pt**、年額 1 期 = **12 か月 / 1,200 pt**。
 
-#### Webhook 送信先
+#### 3.4' Webhook 送信先（🔴 branch deploy を作ってから登録する）
 
-- URL: branch deploy の `https://<branch-deploy>/.netlify/functions/stripe-webhook`
+- QA ブランチ: **`qa-stripe-testmode`**（`main` と同一。本番コードを検証対象にする）
+- branch deploy URL（見込み）: `https://qa-stripe-testmode--keiba-intelligence.netlify.app`
+- 登録する URL: `https://qa-stripe-testmode--keiba-intelligence.netlify.app/.netlify/functions/stripe-webhook`
+
+🟢 **301 の罠に当たらないことを確認済み。**
+`netlify.toml` の 301 は `from = "https://keiba-intelligence.netlify.app/*"` と
+**ホスト固定**で、branch deploy のホスト（`qa-stripe-testmode--…`）には当たらない。
+（当たると **POST が GET へ変換されて webhook が壊れる**。既知の罠）
+
+🔴 **URL は branch deploy を作ってから確定させること。** 見込みのまま登録しない。
 - 🔴 **有効化するイベント（5 つ）** — これ以外は届いても無視される
 
 | イベント | 何が起きるか |
@@ -174,8 +192,8 @@ node scripts/bootstrapQaBase.mjs            # まず dry-run
 |---|---|---|---|
 | `STRIPE_SECRET_KEY` | dev / deploy-preview / production / dev-server | **追加**（Test の値）| 🟢 追加のみ |
 | `STRIPE_WEBHOOK_SECRET` | 同上 | **追加**（Test の値）| 🟢 追加のみ |
-| `STRIPE_PRICE_PREMIUM` | 同上 | **追加**（Test の**月額** Price）| 🟢 追加のみ |
-| `STRIPE_PORTAL_RETURN_URL` | **未設定** | **追加**（branch deploy の `/mypage`）| 🟢 追加のみ。🔴 本番 URL を入れない |
+| `STRIPE_PRICE_PREMIUM` | 同上 | **追加**（既存の Test Price「KEIBA Intelligence プレミアム（テスト）」）| 🟢 追加のみ。**新規作成は不要** |
+| `STRIPE_PORTAL_RETURN_URL` | **未設定** | **追加** → `https://qa-stripe-testmode--keiba-intelligence.netlify.app/mypage` | 🟢 追加のみ。🔴 本番 URL を入れない |
 | `MEMBERSHIP_READ_ENABLED` | production のみ | **追加**（`true`）| 🟢 追加のみ |
 | `MEMBERSHIP_WRITE_ENABLED` | production のみ | **追加**（`true`）| 🟢 追加のみ |
 | `SESSION_SIGNING_SECRET` | dev / **branch-deploy** / deploy-preview / production / dev-server | **branch-deploy の値を差し替え** | 🟡 branch のみに影響 |
@@ -214,13 +232,6 @@ node -e "require('crypto').randomBytes(48).toString('base64url')" >/dev/null   #
 Netlify の Secret Scanning は「env の値」と「repo 内の文字列」の一致でビルドを落とす。
 2026-09-02 / 09-06 / **09-10** に実際に発生している（09-10 は本番ビルドが 2 回 red・
 `Exposed secrets detected`）。**`SECRETS_SCAN_OMIT_*` で回避しない。**
-
-🔴 **`SESSION_SIGNING_SECRET` を本番と同じにしない。**
-同じにすると、QA で発行したセッション Cookie が**本番でも有効**になる。
-
-🔴 **値を repo に書かない。** Netlify の Secret Scanning は
-「production env の値」と「repo 内の文字列」の一致でビルドを落とす
-（2026-09-02 / 09-06 / **09-10** に実際に発生）。`SECRETS_SCAN_OMIT_*` で回避しない。
 
 ### 3.6 QA 会員を作る
 
