@@ -738,11 +738,20 @@ describe('ランク・リワードを認可に使わない', () => {
   test('🔴 テスト・ドキュメントに実在の Stripe id を書かない', () => {
     // 🔴 docs も対象。2026-09-06 まで検査から漏れており、
     //    docs/progress.md に実 id が 19 箇所残っていた。
-    const files = [
-      'src/lib/billing/stripeWebhook.test.mjs',
-      'src/lib/billing/stripeCheckout.test.mjs',
-      'src/lib/membership/membershipE2E.test.mjs',
-    ];
+    /**
+     * 🔴 対象を**列挙しない**。列挙だと新しいテストがすり抜ける。
+     *    2026-09-10 に `bankTransfer.test.mjs` へ実 price id を書いてしまい、
+     *    production ビルドが exit 2 で 2 回落ちた（この一覧に無かったため）。
+     */
+    const files = [];
+    for (const dir of ['src/lib/membership', 'src/lib/billing', 'src/lib/auth', 'netlify/functions']) {
+      let entries = [];
+      try { entries = readdirSync(join(siteRoot, dir)); } catch { continue; }
+      for (const f of entries) {
+        if (f.endsWith('.mjs') || f.endsWith('.js')) files.push(join(dir, f));
+      }
+    }
+    assert.ok(files.length > 20, '検査対象を集められていない（ガードが素通しになる）');
     const docs = ['docs/progress.md', 'docs/decisions.md', 'docs/STRIPE_TESTMODE_E2E.md',
                   'docs/MEMBERSHIP_REWARDS.md', 'docs/spec.md', 'CLAUDE.md'];
 
@@ -766,9 +775,14 @@ describe('ランク・リワードを認可に使わない', () => {
     }
 
     // 逆に、実 id の形は必ず捕まえる（ガードが緩んでいないこと）
+    // 🔴 見本は **その場で組み立てる**。リテラルで書くと、このファイル自身が
+    //    「実 id らしき値を含むファイル」になって自己検査に引っかかる
+    //    （2026-09-10 に検出）。実在の id は絶対に置かない。
+    const specimen = (prefix, ch) => `${prefix}_${ch.repeat(16)}`;
     const caught = [
-      'price_1UAsLMLbPC6OVRqMoZ3VSfRR', 'cus_VCar1zVD6J9chN', 'sub_1UCCk8LbPC6OVRqMDVO7qhOv',
-      'evt_1UCCvpLbPC6OVRqMLSTIZm7Z', 'we_1UAgTiLbPC6OVRqMcfol1yoP', 'clock_1UCBARLbPC6OVRqME93sxVzj',
+      specimen('price', 'A'), specimen('cus', 'B'), specimen('sub', 'C'),
+      specimen('evt', 'D'), specimen('we', 'E'), specimen('clock', 'F'),
+      specimen('in', 'G'), specimen('pm', 'H'), specimen('acct', 'I'),
     ];
     for (const v of caught) {
       assert.equal(REALISH_STRIPE_ID.test(v), true, `🔴 実 id を見逃した: ${v}`);
