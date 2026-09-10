@@ -60,6 +60,17 @@ function entitlementFor(tier, nowMs) {
 }
 
 /** ある月に「継続 n か月」となる起点を作る。 */
+/**
+ * 🔴 実データでは `MembershipStartedAt` は **最初の支払い成功日** と一致する
+ *    （Stripe = 初回 invoice の `paid_at` / 銀行振込 = 入金確認日。§7.6）。
+ *    台帳より前に起点を置くと、§7.10 の「台帳前の期間を引き継ぐ」が働いて
+ *    月数が増える。**その状況を試したいテスト以外はこちらを使う。**
+ */
+function startedAtOfFirstAccrual(entries) {
+  const at = Math.min(...entries.filter((e) => e.type === 'accrual').map((e) => e.occurredAtMs));
+  return new Date(at).toISOString();
+}
+
 function startedAtFor(months, nowMs) {
   const d = new Date(nowMs);
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - months, d.getUTCDate())).toISOString();
@@ -239,7 +250,7 @@ describe('E2E: Stripe 月額', () => {
     }
     const ledger = (await store.readLedger(EMAIL)).entries;
     const v = view({
-      store, profile: { membershipStartedAtIso: startedAtFor(12, now) },
+      store, profile: { membershipStartedAtIso: startedAtOfFirstAccrual(ledger) },
       ledger, nowMs: now, tier: TIER.PREMIUM,
     });
 
@@ -256,9 +267,10 @@ describe('E2E: Stripe 月額', () => {
     await store.appendEntry(EMAIL, buildAccrualEntry({
       email: EMAIL, periodRef: 'in_13', occurredAtMs: Date.UTC(2026, 8, 1),
     }));
+    const nextLedger = (await store.readLedger(EMAIL)).entries;
     const next = view({
-      store, profile: { membershipStartedAtIso: startedAtFor(13, now) },
-      ledger: (await store.readLedger(EMAIL)).entries, nowMs: now, tier: TIER.PREMIUM,
+      store, profile: { membershipStartedAtIso: startedAtOfFirstAccrual(nextLedger) },
+      ledger: nextLedger, nowMs: now, tier: TIER.PREMIUM,
     });
     assert.equal(next.months.value, 13);
     assert.equal(next.gifts.blockedByMilestone, false);
@@ -348,9 +360,10 @@ describe('E2E: 銀行振込の年払い ¥39,800', () => {
     // 🔴 同じ年払い期を二度処理しても二重付与しない
     assert.equal((await store.appendEntry(EMAIL, e)).status, STORE_RESULT.ALREADY);
 
+    let bankLedger = (await store.readLedger(EMAIL)).entries;
     let v = view({
-      store, profile: { membershipStartedAtIso: startedAtFor(12, now) },
-      ledger: (await store.readLedger(EMAIL)).entries, nowMs: now, tier: TIER.PREMIUM,
+      store, profile: { membershipStartedAtIso: startedAtOfFirstAccrual(bankLedger) },
+      ledger: bankLedger, nowMs: now, tier: TIER.PREMIUM,
     });
     assert.equal(v.rewards.balancePoints, 1200);
     assert.equal(v.months.value, 12, '年払い 1 期で 12 か月ぶん数える');
@@ -362,9 +375,10 @@ describe('E2E: 銀行振込の年払い ¥39,800', () => {
     await store.appendEntry(EMAIL, buildAccrualEntry({
       email: EMAIL, periodRef: 'in_next', occurredAtMs: Date.UTC(2026, 8, 15),
     }));
+    bankLedger = (await store.readLedger(EMAIL)).entries;
     v = view({
-      store, profile: { membershipStartedAtIso: startedAtFor(13, now) },
-      ledger: (await store.readLedger(EMAIL)).entries, nowMs: now, tier: TIER.PREMIUM,
+      store, profile: { membershipStartedAtIso: startedAtOfFirstAccrual(bankLedger) },
+      ledger: bankLedger, nowMs: now, tier: TIER.PREMIUM,
     });
     assert.equal(v.months.value, 13);
     assert.deepEqual(v.gifts.available.map((i) => i.id).sort(), ['large', 'large-gold', 'small']);

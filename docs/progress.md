@@ -4352,6 +4352,107 @@ E2E をここから先へ進めるには、**Stripe への外部 write が必要
 
 ---
 
+## 2026-09-11 継続リワードの対象決済方式・移行時の引継ぎ・買い切り会員（仕様確定 → 実装）
+
+正本: `docs/MEMBERSHIP_REWARDS.md` §7.10 / `docs/decisions.md`（2026-09-11）/ `docs/spec.md`
+
+### 現行実装との差分
+
+| # | 新仕様 | 現行実装 | 対応 |
+|---|---|---|---|
+| 1 | 継続リワードの主対象はクレジット継続決済 | 支払い方法の概念が**どこにも無かった** | `rewardScope.js` を新規追加（純関数）|
+| 2 | 銀行振込 → クレジット移行で継続月数を引き継ぐ | 🔴 **引き継げていなかった**（下記）| `resolveTenureMonths()` に台帳前期間の引継ぎを追加 |
+| 3 | 引き継いだ月数でランクも継続 | 2 の結果として落ちていた | 2 で解消 |
+| 4 | 買い切りはポイント蓄積の主対象にしない | 銀行振込経路だけ除外（`BANK_PLAN_TERM_MONTHS` に `lifetime` 無し）。**他経路は素通し** | `appendEntry()` で全経路を塞いだ |
+| 5 | `CreatedAt` を加入日に使わない | 元々使っていない | ガードテストで**固定** |
+| 6 | 根拠不明は推測しない | `resolveTenureMonths` は `pending` を返していた | 維持 ＋ テストで固定 |
+
+🔴 **2 が実害のあった欠落。**
+台帳が動く前から銀行振込で続けていた会員がクレジットへ移行すると、
+`resolveTenureMonths()` は「台帳が空でないなら台帳が正」で分岐するため、
+**継続月数が台帳の 1 件ぶんへ落ちていた**（起点 2025-04-10 の会員なら 17 か月 → 1 か月、
+**Gold → Bronze へ降格**）。
+
+### 実装
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/membership/rewardScope.js` | **新規**。支払い方法・対象範囲・買い切り判定（純関数・認可に非関与）|
+| `src/lib/membership/rewards.js` | `preLedgerMonths()` を追加し、`resolveTenureMonths()` で台帳前期間を足す |
+| `src/lib/membership/airtableStore.js` | `appendEntry()` で **accrual のみ**、買い切りと**証拠から分かる**ときだけ止める |
+| `src/lib/membership/rewardScope.test.mjs` | **新規**。指定 9 項目を固定 |
+| `src/lib/membership/membershipE2E.test.mjs` | fixture の起点を**実データ準拠**（＝最初の支払い成功日）へ |
+| `package.json` | `test:membership` へ追加 |
+
+- 🔴 引継ぎの計算は **単調非減少**（移行前 ≦ 移行後）。テストで固定した
+- 🔴 買い切りの遮断は **positive identification のときだけ**。
+  `plan_type` が読めない・空・未知、会員レコードが無い場合は**止めない**
+  （台帳は再生成できないため、誤って止めると支払い済みの月が永久に欠落する）
+- 🔴 **交換（redemption）は止めない**（過去に積んだぶんは使える）
+- 🔴 **認可・entitlement・契約価格・既存 3 列には一切触っていない**
+
+#### 🔴 意図的な非付与を「書込失敗」と区別する（2026-09-11 追加修正）
+
+最初の実装は遮断時に `STORE_RESULT.UNAVAILABLE` を返していた。
+`stripe-webhook.js` の `membershipResultFromStore()` は
+`applied` / `already` **以外をすべて FAILED** として扱うため、
+**正常な非付与が 500 になり、Stripe が同じイベントを再送し続ける**状態だった
+（買い切り会員が支払うたびに無限再送）。
+
+- `STORE_RESULT.NOT_APPLICABLE`（**仕様どおりの非適用**）を追加し、遮断時はこれを返す
+- `membershipResultFromStore()` は `not-applicable` を **SKIPPED**（＝ 200・再送不要）へ写す
+- 同じ危険が `redeemHandler.js` の `settlePoints()` にもあった
+  （非 `UNAVAILABLE` を一律「減算成立」と見なしていた）。
+  **`applied` / `already` だけ**を成立扱いへ狭めた
+
+| store の戻り | webhook | HTTP |
+|---|---|---|
+| `applied` / `already` | OK | 200 |
+| **`not-applicable`** | **SKIPPED** | **200** |
+| `unavailable` | FAILED（再送させる）| 500 |
+
+#### 🔴 非付与のときは `MembershipStartedAt` も書かない（2026-09-11 追加修正 2）
+
+`recordPaidPeriod()` は台帳へ積んだあと、初回請求（`subscription_create`）なら
+`saveMembershipStart()` を呼ぶ。付与を止めた買い切り会員でもこれが走っていたため、
+**起点が空の買い切り会員に、新しい Stripe 初回請求日が「加入日」として入る**状態だった。
+継続月数の根拠が汚れるので、`not-applicable` のときは**起点の書き込みも行わない**。
+
+🔴 `unavailable`（本当に書けなかった）では止めない。再送で復旧させる。
+
+**実ハンドラを通したテスト**（`stripeWebhook.test.mjs`）:
+買い切り会員（`plan_type=lifetime` / `ExpirationDate=2099-12-31`）へ
+`invoice.payment_succeeded` を **`subscription_create` / `subscription_cycle` の両方**で通し、
+
+- `RewardLedger` へ **POST されない**（🔴 stub が POST も記録するよう直した。
+  記録していないと「積まれていない」の主張が素通りする）
+- 🔴 **`MembershipStartedAt` へ PATCH されない**（起点を作らない・変えない）
+- webhook が **200**・`membership_not_recorded` を返さない（＝再送を要求しない）
+- `PlanType` / `plan_type` / `Status` / `AccessEnabled` / `ExpirationDate` /
+  `ContractPrice*` を **一切書き換えない**（永久閲覧権限が不変）
+- 再送が来ても毎回 200（無限再送にならない）
+- 🔴 買い切り**でない**会員は従来どおり台帳へ積まれる（遮断が広がっていない）
+
+### 退行検出の実測
+
+| 注入した退行 | 結果 |
+|---|---|
+| 台帳前期間の引継ぎを外す | **3 件 fail** |
+| 買い切りの遮断を外す | **1 件 fail**（＋ 実ハンドラ側 **2 件 fail**）|
+| **遮断時に `UNAVAILABLE` を返す**（＝不具合 1 の再現）| 実ハンドラ側 **3 件 fail** |
+| **非付与でも起点を書く**（＝不具合 2 の再現）| 実ハンドラ側 **2 件 fail** |
+
+いずれも戻すと全 pass。
+
+### 既存会員への影響
+
+- **継続月数が減る会員はいない**（引継ぎは加算のみ）
+- 台帳と起点が同じ日の会員（＝現行の全 Stripe / 銀行振込会員）は **月数が変わらない**
+- 起点が台帳初回より**前**にある会員だけ **月数が増える**（本来の引継ぎ）
+- 🔴 **契約・閲覧権限・契約価格は変わらない**
+
+---
+
 ## Open Questions
 
 0.1 🔴 **`@netlify/blobs` が `astro-site/package.json` の依存に無く、

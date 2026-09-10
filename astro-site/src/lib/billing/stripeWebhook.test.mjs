@@ -1168,7 +1168,7 @@ test('🔴 test:stripe は --test を使わない（IPC 経由の不安定さを
 function withMembershipAirtable(rows, fn) {
   const realFetch = globalThis.fetch;
   const saved = { key: process.env.AIRTABLE_API_KEY, base: process.env.AIRTABLE_BASE_ID };
-  const state = { rows: rows.map((r) => ({ ...r, fields: { ...r.fields } })), patches: [] };
+  const state = { rows: rows.map((r) => ({ ...r, fields: { ...r.fields } })), patches: [], posts: [] };
 
   globalThis.fetch = async (url, init = {}) => {
     const u = String(url);
@@ -1190,7 +1190,12 @@ function withMembershipAirtable(rows, fn) {
       if (row) Object.assign(row.fields, body.fields);
       return json({ records: [] });
     }
-    // POST（台帳への追記など）は成功扱い。ここでの関心事は Customers の PATCH
+    // 🔴 POST（台帳への追記）も記録する。記録しないと
+    //    「積まれていないこと」を主張するテストが**素通りする**
+    if (method === 'POST') {
+      const body = JSON.parse(init.body || '{}');
+      state.posts.push({ url: u, records: body.records || [] });
+    }
     return json({ records: [{ id: 'recNEW', fields: {} }] });
   };
 
@@ -1294,4 +1299,101 @@ test('🔴 同じ初回請求が再送されても冪等（2 回目は PATCH を
     assert.equal(third.statusCode, 200, third.body);
     assert.equal(startPatches(state).length, 1, '🔴 別 event の再送で起点が書き換わっている');
   }));
+});
+
+/* ==================================================================
+   買い切り・永久会員には継続ポイントを積まない（§7.10.4）
+
+   🔴 **意図的な非付与を「書込失敗」と区別する。**
+      区別しないと `membershipResultFromStore()` が FAILED を返し、
+      webhook が 500 → **Stripe が同じイベントを再送し続ける**。
+   ================================================================== */
+
+const LIFETIME_ROW = (fields = {}) => [{
+  id: 'recLIFE',
+  fields: {
+    Email: ALICE,
+    // 🔴 買い切り・永久会員の実データ形（有効期限は 2099-12-31 固定）
+    PlanType: 'premium', plan_type: 'lifetime', Status: 'active',
+    AccessEnabled: true, ExpirationDate: '2099-12-31',
+    ...fields,
+  },
+}];
+
+/** Customers への PATCH のうち、認可・契約に関わる列を触ったもの。 */
+const ENTITLEMENT_FIELDS = ['PlanType', 'plan_type', 'Status', 'AccessEnabled', 'ExpirationDate',
+  'ContractPriceYen', 'ContractPriceId', 'ContractCurrency', 'ContractStartedAt'];
+
+for (const reason of ['subscription_create', 'subscription_cycle']) {
+  test(`🔴 買い切り会員の invoice.payment_succeeded（${reason}）: 積まない・失敗にしない`, async () => {
+    await withWriteFlag('true', () => withMembershipAirtable(LIFETIME_ROW(), async (state) => {
+      const res = await post(paidWithReason(ALICE, `evt_life_${reason}`, `in_life_${reason}`, reason));
+
+      // 1. webhook を失敗扱いにしない（＝ Stripe に再送を要求しない）
+      assert.equal(res.statusCode, 200, `🔴 ${res.statusCode} を返している（Stripe が再送し続ける）`);
+      const body = JSON.parse(res.body);
+      assert.notEqual(body.error, 'membership_not_recorded', '🔴 書込失敗として扱っている');
+
+      // 2. RewardLedger へ書かれない（🔴 POST を見る。PATCH ではない）
+      const ledgerWrites = state.posts.filter((p) => p.url.includes('RewardLedger'));
+      assert.equal(ledgerWrites.length, 0, '🔴 買い切り会員の台帳へ積んでいる');
+
+      // 3. 🔴 起点（MembershipStartedAt）も書かない
+      //    書くと、買い切り会員に「加入日」が入って継続月数の根拠が汚れる
+      assert.equal(state.patches.filter((p) => 'MembershipStartedAt' in p.fields).length, 0,
+        '🔴 買い切り会員に起点を書いている');
+      assert.equal(state.rows[0].fields.MembershipStartedAt, undefined);
+
+      // 4. 認可・契約・永久閲覧権限が不変
+      for (const p of state.patches) {
+        for (const f of ENTITLEMENT_FIELDS) {
+          assert.equal(f in p.fields, false, `🔴 ${f} を書き換えている`);
+        }
+      }
+      const row = state.rows[0].fields;
+      assert.equal(row.plan_type, 'lifetime');
+      assert.equal(row.PlanType, 'premium');
+      assert.equal(row.Status, 'active');
+      assert.equal(row.AccessEnabled, true);
+      assert.equal(row.ExpirationDate, '2099-12-31', '🔴 永久閲覧の有効期限が変わっている');
+    }));
+  });
+}
+
+test('🔴 買い切り会員へ再送が来ても毎回 200（無限再送にならない）', async () => {
+  await withWriteFlag('true', () => withMembershipAirtable(LIFETIME_ROW(), async (state) => {
+    for (const evt of ['evt_life_retry', 'evt_life_retry', 'evt_life_retry2']) {
+      const res = await post(paidWithReason(ALICE, evt, 'in_life_retry', 'subscription_cycle'));
+      assert.equal(res.statusCode, 200, `🔴 ${evt} で ${res.statusCode}`);
+    }
+    assert.equal(state.patches.filter((p) => 'MembershipStartedAt' in p.fields).length, 0,
+      '更新請求では起点も書かない');
+  }));
+});
+
+test('🔴 買い切りでない会員は従来どおり積む（遮断が広がっていない）', async () => {
+  await withWriteFlag('true', () => withMembershipAirtable(
+    [{ id: 'recALICE', fields: { Email: ALICE, PlanType: 'premium', plan_type: 'monthly-nankan', Status: 'active' } }],
+    async (state) => {
+      const res = await post(paidWithReason(ALICE, 'evt_not_life', 'in_not_life', 'subscription_cycle'));
+      assert.equal(res.statusCode, 200);
+      assert.notEqual(JSON.parse(res.body).error, 'membership_not_recorded');
+      // 🔴 遮断が広がっていないこと＝こちらは台帳へ積まれている
+      assert.equal(state.posts.filter((p) => p.url.includes('RewardLedger')).length, 1,
+        '🔴 買い切りでない会員まで止めている');
+    },
+  ));
+});
+
+test('🔴 買い切り会員には起点（MembershipStartedAt）も書かない', async () => {
+  for (const reason of ['subscription_create', 'subscription_cycle']) {
+    await withWriteFlag('true', () => withMembershipAirtable(LIFETIME_ROW(), async (state) => {
+      const res = await post(paidWithReason(ALICE, `evt_life_start_${reason}`, `in_life_start_${reason}`, reason));
+      assert.equal(res.statusCode, 200, reason);
+      const startPatch = state.patches.filter((p) => 'MembershipStartedAt' in p.fields);
+      assert.equal(startPatch.length, 0,
+        `🔴 ${reason} で買い切り会員に起点を書いている（継続月数の根拠が汚れる）`);
+      assert.equal(state.rows[0].fields.MembershipStartedAt, undefined);
+    }));
+  }
 });

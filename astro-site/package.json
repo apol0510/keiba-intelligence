@@ -34,7 +34,7 @@
     "test:stripe": "node --experimental-test-module-mocks src/lib/billing/stripeWebhook.test.mjs && node --experimental-test-module-mocks src/lib/billing/stripeCheckout.test.mjs && node src/lib/billing/stripeWebhookBlobs.guard.test.mjs",
     "test:ai-auth": "node --test src/lib/ai/commentAuth.test.mjs",
     "test:billing": "node --test src/lib/billing/billing.test.mjs src/lib/billing/purchaseEmailCopy.test.mjs src/lib/http/siteOrigin.test.mjs src/lib/billing/purchaseIntent.test.mjs",
-    "test:membership": "node --test src/lib/membership/membership.test.mjs src/lib/membership/membershipCopy.guard.test.mjs src/lib/membership/redemption.test.mjs src/lib/membership/airtableStore.test.mjs src/lib/membership/membershipE2E.test.mjs src/lib/membership/bankTransfer.test.mjs src/lib/membership/membershipStart.guard.test.mjs",
+    "test:membership": "node --test src/lib/membership/membership.test.mjs src/lib/membership/membershipCopy.guard.test.mjs src/lib/membership/redemption.test.mjs src/lib/membership/airtableStore.test.mjs src/lib/membership/membershipE2E.test.mjs src/lib/membership/bankTransfer.test.mjs src/lib/membership/membershipStart.guard.test.mjs src/lib/membership/rewardScope.test.mjs",
     "test:reward-alert": "node --test scripts/checkRewardRedemptions.test.mjs",
     "membership:check": "node scripts/membershipMigration.mjs --check",
     "membership:dry-run": "node scripts/membershipMigration.mjs --dry-run",

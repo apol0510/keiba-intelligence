@@ -368,6 +368,38 @@ export function tenureMonthsFromLedger(entries) {
     .reduce((sum, e) => sum + (e.periodMonths ?? PERIOD_MONTHS.MONTHLY), 0);
 }
 
+/**
+ * 台帳が始まる**前**の期間（月数）。
+ *
+ * 正本: `docs/MEMBERSHIP_REWARDS.md` §7.10（2026-09-11 確定）
+ *   銀行振込 → クレジット継続決済へ移行した会員は、
+ *   **それまでの正当に確認できる継続月数を引き継ぐ**。
+ *
+ * 🔴 これが無いと、移行した瞬間に継続月数が**台帳の 1 件ぶん**へ落ちる。
+ *    起点 2025-04-01 の会員がクレジットへ移った初月に
+ *    17 か月 → 1 か月（Gold → Bronze）へ**降格**していた。
+ *
+ * 数えるのは **起点（`MembershipStartedAt`）から最初の台帳エントリまで**だけ。
+ * 台帳が動き出したあとの未払い期間は従来どおり台帳が正（§7.7 TBD-10）。
+ *
+ * 🔴 起点が無ければ **0**（推測で埋めない）。
+ * 🔴 `CreatedAt`（申込日）は**使わない**。支払っていない期間を数えないため。
+ */
+function preLedgerMonths(entries, startedAtIso) {
+  if (!isNonEmptyString(startedAtIso)) return 0;
+  const start = Date.parse(startedAtIso);
+  if (!Number.isFinite(start)) return 0;
+
+  const firsts = dedupeEntries(entries)
+    .filter((e) => e.type === ENTRY_TYPE.ACCRUAL && isFiniteNumber(e.occurredAtMs))
+    .map((e) => e.occurredAtMs);
+  if (!firsts.length) return 0;
+
+  const firstAccrualMs = Math.min(...firsts);
+  if (start >= firstAccrualMs) return 0; // 台帳が起点と同時か、それより前から始まっている
+  return elapsedMonthsSince(startedAtIso, firstAccrualMs) || 0;
+}
+
 /** 起点からの経過月数（台帳が始まる前の期間を数えるための後方互換）。 */
 export function elapsedMonthsSince(startedAtIso, nowMs) {
   if (!isNonEmptyString(startedAtIso)) return null;
@@ -385,6 +417,9 @@ export function elapsedMonthsSince(startedAtIso, nowMs) {
  *
  * 優先順:
  *   1. 台帳に支払い済み期間があれば **台帳が正**（保留・未払いが自然に反映される）
+ *      ＋ 🔴 **台帳が始まる前の期間**（起点 → 最初のエントリ）を足す。
+ *      これが銀行振込 → クレジット継続決済の**引継ぎ**（§7.10）。
+ *      足すのは**起点が保存されている場合だけ**で、無ければ 0（推測しない）。
  *   2. 台帳が空で、起点（＝**支払い成功日**）が保存されていれば経過月数
  *      （台帳が動き出す前から続いている既存会員のための後方互換）
  *   3. どちらも無ければ **pending**
@@ -398,7 +433,13 @@ export function resolveTenureMonths({ entries, ledgerKnown = false, startedAtIso
   if (ledgerKnown) {
     const fromLedger = tenureMonthsFromLedger(entries);
     if (fromLedger > 0) {
-      return Object.freeze({ status: 'ready', months: fromLedger, source: 'ledger' });
+      // 🔴 台帳の前にある「正当に確認できる期間」を取りこぼさない（§7.10 引継ぎ）
+      const carried = preLedgerMonths(entries, startedAtIso);
+      return Object.freeze({
+        status: 'ready',
+        months: fromLedger + carried,
+        source: carried > 0 ? 'ledger+carried' : 'ledger',
+      });
     }
   }
   const legacy = elapsedMonthsSince(startedAtIso, nowMs);
