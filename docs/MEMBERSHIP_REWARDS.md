@@ -582,6 +582,17 @@ fail-closed になり、**ポイントは減らない**。§7.9。2026-09-07 に
 | **`not-applicable`** | **SKIPPED（仕様どおり。再送不要）** | **200** |
 | `unavailable` | FAILED（書けなかった。再送させる）| 500 |
 
+##### 🔴 非付与のときは `MembershipStartedAt` も書かない
+
+`recordPaidPeriod()` は台帳へ積んだあと、初回請求なら `saveMembershipStart()` を呼ぶ。
+**買い切り会員で付与を止めたのに起点だけ書くと、継続月数の根拠が汚れる**
+（起点が空の買い切り会員に、新しい Stripe 初回請求日が「加入日」として入る）。
+
+そこで `not-applicable` のときは **起点の書き込みも行わない**。
+
+🔴 `unavailable`（**本当に書けなかった**）では止めない。
+再送で復旧させたいので、起点の書き込みも再試行させる。
+
 同じ理由で `redeemHandler.js` の `settlePoints()` も、
 **`applied` / `already` だけ**を「減算が成立した」と見なす
 （それ以外を成立扱いにすると、引かれていないのに交換が進む）。

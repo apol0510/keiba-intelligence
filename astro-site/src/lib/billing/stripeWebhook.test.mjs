@@ -1338,7 +1338,13 @@ for (const reason of ['subscription_create', 'subscription_cycle']) {
       const ledgerWrites = state.posts.filter((p) => p.url.includes('RewardLedger'));
       assert.equal(ledgerWrites.length, 0, '🔴 買い切り会員の台帳へ積んでいる');
 
-      // 3. 認可・契約・永久閲覧権限が不変
+      // 3. 🔴 起点（MembershipStartedAt）も書かない
+      //    書くと、買い切り会員に「加入日」が入って継続月数の根拠が汚れる
+      assert.equal(state.patches.filter((p) => 'MembershipStartedAt' in p.fields).length, 0,
+        '🔴 買い切り会員に起点を書いている');
+      assert.equal(state.rows[0].fields.MembershipStartedAt, undefined);
+
+      // 4. 認可・契約・永久閲覧権限が不変
       for (const p of state.patches) {
         for (const f of ENTITLEMENT_FIELDS) {
           assert.equal(f in p.fields, false, `🔴 ${f} を書き換えている`);
@@ -1377,4 +1383,17 @@ test('🔴 買い切りでない会員は従来どおり積む（遮断が広が
         '🔴 買い切りでない会員まで止めている');
     },
   ));
+});
+
+test('🔴 買い切り会員には起点（MembershipStartedAt）も書かない', async () => {
+  for (const reason of ['subscription_create', 'subscription_cycle']) {
+    await withWriteFlag('true', () => withMembershipAirtable(LIFETIME_ROW(), async (state) => {
+      const res = await post(paidWithReason(ALICE, `evt_life_start_${reason}`, `in_life_start_${reason}`, reason));
+      assert.equal(res.statusCode, 200, reason);
+      const startPatch = state.patches.filter((p) => 'MembershipStartedAt' in p.fields);
+      assert.equal(startPatch.length, 0,
+        `🔴 ${reason} で買い切り会員に起点を書いている（継続月数の根拠が汚れる）`);
+      assert.equal(state.rows[0].fields.MembershipStartedAt, undefined);
+    }));
+  }
 });

@@ -4411,12 +4411,22 @@ E2E をここから先へ進めるには、**Stripe への外部 write が必要
 | **`not-applicable`** | **SKIPPED** | **200** |
 | `unavailable` | FAILED（再送させる）| 500 |
 
+#### 🔴 非付与のときは `MembershipStartedAt` も書かない（2026-09-11 追加修正 2）
+
+`recordPaidPeriod()` は台帳へ積んだあと、初回請求（`subscription_create`）なら
+`saveMembershipStart()` を呼ぶ。付与を止めた買い切り会員でもこれが走っていたため、
+**起点が空の買い切り会員に、新しい Stripe 初回請求日が「加入日」として入る**状態だった。
+継続月数の根拠が汚れるので、`not-applicable` のときは**起点の書き込みも行わない**。
+
+🔴 `unavailable`（本当に書けなかった）では止めない。再送で復旧させる。
+
 **実ハンドラを通したテスト**（`stripeWebhook.test.mjs`）:
 買い切り会員（`plan_type=lifetime` / `ExpirationDate=2099-12-31`）へ
-`invoice.payment_succeeded` を通し、
+`invoice.payment_succeeded` を **`subscription_create` / `subscription_cycle` の両方**で通し、
 
 - `RewardLedger` へ **POST されない**（🔴 stub が POST も記録するよう直した。
   記録していないと「積まれていない」の主張が素通りする）
+- 🔴 **`MembershipStartedAt` へ PATCH されない**（起点を作らない・変えない）
 - webhook が **200**・`membership_not_recorded` を返さない（＝再送を要求しない）
 - `PlanType` / `plan_type` / `Status` / `AccessEnabled` / `ExpirationDate` /
   `ContractPrice*` を **一切書き換えない**（永久閲覧権限が不変）
@@ -4429,7 +4439,8 @@ E2E をここから先へ進めるには、**Stripe への外部 write が必要
 |---|---|
 | 台帳前期間の引継ぎを外す | **3 件 fail** |
 | 買い切りの遮断を外す | **1 件 fail**（＋ 実ハンドラ側 **2 件 fail**）|
-| **遮断時に `UNAVAILABLE` を返す**（＝今回の不具合の再現）| 実ハンドラ側 **3 件 fail** |
+| **遮断時に `UNAVAILABLE` を返す**（＝不具合 1 の再現）| 実ハンドラ側 **3 件 fail** |
+| **非付与でも起点を書く**（＝不具合 2 の再現）| 実ハンドラ側 **2 件 fail** |
 
 いずれも戻すと全 pass。
 

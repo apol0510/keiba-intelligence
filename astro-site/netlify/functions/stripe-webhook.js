@@ -36,7 +36,7 @@ import Airtable from 'airtable';
 import { planFromMetadata, hasStripeSecret, STRIPE_ENV } from '../../src/lib/billing/plans.js';
 import { TIER } from '../../src/lib/auth/tiers.js';
 import { notifyKma, buildEventId } from '../../src/lib/kma/client.js';
-import { resolveMembershipStore, isWriteEnabled } from '../../src/lib/membership/store.js';
+import { resolveMembershipStore, isWriteEnabled, STORE_RESULT } from '../../src/lib/membership/store.js';
 import { contractPriceFromCheckoutSession } from '../../src/lib/membership/priceLock.js';
 import { buildPaidPeriodEntry, PERIOD_MONTHS } from '../../src/lib/membership/rewards.js';
 import { CUSTOMER_FIELDS, toAirtableDate } from '../../src/lib/membership/airtableStore.js';
@@ -528,7 +528,21 @@ async function recordPaidPeriod(email, invoice, stripe) {
       return MEMBERSHIP_RESULT.FAILED;
     }
     // `already` は冪等（既に積んである）ので成功扱い
-    const accrual = membershipResultFromStore(await store.appendEntry(email, entry), 'reward accrual');
+    const appended = await store.appendEntry(email, entry);
+    const accrual = membershipResultFromStore(appended, 'reward accrual');
+
+    /*
+     * 🔴 **仕様どおりの非付与なら、起点も書かない。**
+     *
+     *    買い切り・永久会員（§7.10.4）は継続ポイントを積まない。
+     *    それなのに `MembershipStartedAt` だけ書いてしまうと、
+     *    **継続月数の根拠が汚れる**（起点が空の買い切り会員に、
+     *    新しい Stripe 初回請求日が「加入日」として入る）。
+     *
+     * 🔴 `UNAVAILABLE`（本当に書けなかった）ではここを止めない。
+     *    再送で復旧させたいので、起点の書き込みも再試行させる。
+     */
+    const notAccruing = appended?.status === STORE_RESULT.NOT_APPLICABLE;
 
     /*
      * 継続月数の起点（`MembershipStartedAt`）を記録する。
@@ -554,7 +568,9 @@ async function recordPaidPeriod(email, invoice, stripe) {
      *    台帳が読めないときのフォールバックが空のままだった。
      */
     let started = MEMBERSHIP_RESULT.SKIPPED;
-    if (isFirstBillingInvoice(invoice)) {
+    if (notAccruing) {
+      console.log('ℹ️ stripe-webhook:', note('membership start', 'skipped', 'not_accruing'));
+    } else if (isFirstBillingInvoice(invoice)) {
       const startedAtIso = new Date(occurredAtMs).toISOString();
       started = membershipResultFromStore(
         await store.saveMembershipStart(email, startedAtIso),
