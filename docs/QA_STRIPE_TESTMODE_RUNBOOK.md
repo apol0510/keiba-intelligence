@@ -71,8 +71,9 @@
 | 9 | Test webhook 送信先の作成 | ✅ **完了**（仕様所有者）— 5 イベント / `status=enabled` |
 | 10 | `STRIPE_WEBHOOK_SECRET`（branch-deploy）| ✅ **完了**（仕様所有者）— QA へ反映済みを実測（§3.9）|
 | 11 | E2E 実行前チェック | ✅ **全項目 PASS**（下記 §3.9）|
-| 12 | **経路 A**（QA `/pricing` から通常 Checkout 1 回）| 🔴 **未実施**（承認境界。下記 §4.A）|
-| 13 | **経路 B**（Test Clock で 1→3→12→24 か月）| 🔴 **未実施**（承認境界。下記 §4.B）|
+| 12 | **経路 A**（QA `/pricing` から通常 Checkout 1 回）| ✅ **完了**（§4.A）— `ContractPrice*` 4 列・初回 accrual・Bronze / 1 か月 / 100pt を確認 |
+| 13 | QA branch を最新 `main` へ通常 merge して再デプロイ | ✅ **完了** — `519ac4b1`（`origin/main` `b3f09afc` を含む）。**#126 / #127 が QA に載っている**ことを確認 |
+| 14 | **経路 B**（Test Clock で 1→3→12→24 か月）| 🔴 **未実施**（承認境界。下記 §4.B）|
 
 ### 3.0' 初回 branch deploy の実測（2026-09-10）
 
@@ -525,6 +526,53 @@ Stripe API で直接作る**。
 `invoice.parent.subscription_details.metadata.ki_email` を読む。
 ここが空だと `invoice.customer_email` へ落ちるため、Customer の請求先メールが
 QA 会員と一致していないと **台帳が積まれない**。
+
+#### 🔴 経路 B は **別の QA 会員**で行う（経路 A の会員を使い回さない）
+
+継続月数は `tenureMonthsFromLedger()` が
+**その会員の accrual の `periodMonths` を合算**して出す。
+経路 A の会員には既に **1 か月・100 pt** が積まれているため、
+同じメールアドレスで経路 B を始めると **1 → 3 → 12 → 24 が観測できない**
+（実際には 2 → 4 → 13 → 25 になる）。
+
+🔴 **経路 B 用に新しいメールアドレスの QA 会員を 1 件作る。**
+経路 A のレコード・台帳は**消さない**（経路 A の実績として残す）。
+
+🟢 新しい会員なら `MembershipStartedAt` も空から始まるので、
+**PR #127（初回請求だけ起点を書く）の検証もそのまま行える**。
+
+#### 実行前に要るもの
+
+| # | 前提 | 状態 |
+|---|---|---|
+| 1 | QA branch deploy が `#126` / `#127` を載せている | ✅ **確認済み**（下記）|
+| 2 | Stripe Test の webhook 送信先が QA を向いている | ✅ 5 イベント / `status=enabled` |
+| 3 | 経路 B 用の **新しい QA 会員**（`Customers` に 1 件）| 🔴 未作成 |
+| 4 | `STRIPE_SECRET_KEY`（Test）| 🔴 **仕様所有者しか読めない**（下記）|
+
+#### 手順（`astro-site/scripts/qaTestClock.mjs`）
+
+契約を取り違えないよう、`stripe-create-checkout.js:94-113` と同じ値を組み立てる
+スクリプトを用意した。**差分は `customer_email` → `customer` の 1 点だけ**。
+
+```bash
+cd astro-site
+STRIPE_SECRET_KEY=sk_test_... \
+STRIPE_PRICE_PREMIUM=price_... \
+QA_ORIGIN=https://qa-stripe-testmode--keiba-intelligence.netlify.app \
+QA_EMAIL=<経路 B 用の新しいアドレス> \
+node scripts/qaTestClock.mjs start
+# → test_clock / customer / Checkout URL が出る。カードを入力して決済する
+
+STRIPE_SECRET_KEY=sk_test_... node scripts/qaTestClock.mjs advance <clock_id> 2   # 1 → 3 か月
+STRIPE_SECRET_KEY=sk_test_... node scripts/qaTestClock.mjs advance <clock_id> 9   # 3 → 12 か月
+STRIPE_SECRET_KEY=sk_test_... node scripts/qaTestClock.mjs advance <clock_id> 12  # 12 → 24 か月
+```
+
+- 🔴 `sk_test_` 以外の鍵は**受け付けずに中止**する。
+- 🔴 `QA_ORIGIN` が branch deploy の形でなければ**中止**する（本番へ戻す設定を作らない）。
+- 🔴 鍵・Price id は**出力しない**。
+- `advance` は Stripe 側が `ready` に戻るまで待つ（この間に webhook が飛ぶ）。
 
 #### 🔴 経路 B の実行主体（2026-09-10 時点の制約）
 

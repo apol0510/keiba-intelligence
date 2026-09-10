@@ -4430,6 +4430,45 @@ Test Clock と Customer は Stripe ダッシュボードでも作れるが、
 
 ---
 
+## 2026-09-10 PR #127 本番反映 → QA ブランチ追随（経路 B の直前）
+
+### 本番反映
+
+- PR #127 squash merge → `main` = **`b3f09afc`** / production deploy **ready・published**（`10:00:02Z`）
+- read-only 確認: `/` `/pricing` `/mypage` `/register` **200** / guest 予想 **302**
+- `#126` の維持: `/mypage?checkout=success`（未ログイン）で
+  `/register` `無料登録` `無料会員登録` `無料会員に登録` **すべて 0 件**
+- webhook は **400 `invalid_signature`**（fail-closed のまま）
+
+### QA ブランチの追随
+
+- `qa-stripe-testmode` へ `origin/main` を **通常 merge**（🔴 rebase なし・2 parents）= **`519ac4b1`**
+- `main` との差分は `astro-site/public/qa-marker.txt` の **1 ファイルのみ**
+- QA branch deploy **ready**（`519ac4b1`）。`isFirstBillingInvoice` が QA 側のコードに入っていることを確認
+- QA の健全性: `/` `/pricing` `/mypage` **200** / guest **302** / webhook **400** /
+  `?checkout=success` の登録導線 **0 件**
+- production は無傷
+
+### 🔴 経路 B は別の QA 会員で行う（新たに判明）
+
+継続月数は `tenureMonthsFromLedger()` が**その会員の accrual の `periodMonths` を合算**する。
+経路 A の会員には既に **1 か月・100 pt** が積まれているため、同じアドレスで経路 B を始めると
+**1 → 3 → 12 → 24 が観測できない**（実際には 2 → 4 → 13 → 25 になる）。
+
+🔴 経路 B 用に**新しいアドレスの QA 会員を 1 件**作る。経路 A のレコード・台帳は**消さない**。
+🟢 新しい会員なら `MembershipStartedAt` も空から始まるので、
+**PR #127（初回請求だけ起点を書く）の検証もそのまま行える**。
+
+### 経路 B 用のツールを追加
+
+`astro-site/scripts/qaTestClock.mjs`。
+`stripe-create-checkout.js:94-113` と**同じ契約**で Session を組み立てる
+（差分は `customer_email` → `customer` の 1 点だけ）。
+🔴 `sk_test_` 以外の鍵と、branch deploy 以外の `QA_ORIGIN` は**受け付けずに中止**する。
+🔴 鍵・Price id は出力しない。
+
+---
+
 ## Open Questions
 
 ### ✅ 解決済み — Stripe 経由で `MembershipStartedAt` が書かれなかった（**既知の実装欠落**）
