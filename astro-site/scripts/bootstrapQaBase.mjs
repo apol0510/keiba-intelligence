@@ -15,9 +15,11 @@
  *   AIRTABLE_BASE_ID=appYYYY（production。誤爆を防ぐためだけに渡す）
  *   node scripts/bootstrapQaBase.mjs            # 何を作るか出すだけ（既定）
  *   node scripts/bootstrapQaBase.mjs --apply    # 実際に作る
+ *   node scripts/bootstrapQaBase.mjs --check    # 🔴 read-only。本番と同じ形か照合する
  */
 
 const APPLY = process.argv.includes('--apply');
+const CHECK = process.argv.includes('--check');
 const KEY = process.env.AIRTABLE_API_KEY;
 const QA = process.env.AIRTABLE_QA_BASE_ID;
 const PROD = process.env.AIRTABLE_BASE_ID;
@@ -118,6 +120,63 @@ export { TABLES };
 
 function fail(msg) { console.error(`🔴 ${msg}`); process.exit(1); }
 
+/** 列の型・オプションを比較用の短い文字列にする。 */
+export function fieldSignature(field) {
+  const o = field.options || {};
+  const parts = [field.type];
+  if (o.choices) parts.push(`choices=${o.choices.map((c) => c.name).join(',')}`);
+  if (o.dateFormat) parts.push(`dateFormat=${o.dateFormat.name}`);
+  if (o.precision != null) parts.push(`precision=${o.precision}`);
+  return parts.join(' ');
+}
+
+/**
+ * 期待するスキーマと実際のスキーマを突き合わせる（**純関数**）。
+ *
+ * 🔴 「本番に無い列」は落とさない（Airtable が既定で足す列があるため）。
+ *    落とすのは **不足・型違い・primary 違い**だけ。
+ */
+export function diffSchema(expectedTables, actualTables) {
+  const actual = new Map(actualTables.map((t) => [t.name, t]));
+  const problems = [];
+  const report = [];
+
+  for (const want of expectedTables) {
+    const got = actual.get(want.name);
+    if (!got) {
+      problems.push(`${want.name}: テーブルが無い`);
+      report.push({ table: want.name, ok: false, missing: want.fields.map((f) => f.name), mismatched: [], extra: [] });
+      continue;
+    }
+
+    const gotFields = new Map(got.fields.map((f) => [f.name, f]));
+    const missing = [];
+    const mismatched = [];
+    for (const wf of want.fields) {
+      const gf = gotFields.get(wf.name);
+      if (!gf) { missing.push(wf.name); continue; }
+      const a = fieldSignature(wf);
+      const b = fieldSignature(gf);
+      if (a !== b) mismatched.push(`${wf.name}: 期待「${a}」/ 実際「${b}」`);
+    }
+
+    const primaryName = got.fields.find((f) => f.id === got.primaryFieldId)?.name;
+    const wantPrimary = want.fields[0].name;
+    const primaryOk = primaryName === wantPrimary;
+
+    if (missing.length) problems.push(`${want.name}: 列が不足 → ${missing.join(' / ')}`);
+    if (mismatched.length) problems.push(`${want.name}: 型が違う → ${mismatched.join(' / ')}`);
+    if (!primaryOk) problems.push(`${want.name}: primary が違う（期待 ${wantPrimary} / 実際 ${primaryName}）`);
+
+    report.push({
+      table: want.name, ok: !missing.length && !mismatched.length && primaryOk,
+      missing, mismatched, primaryOk, wantPrimary, primaryName,
+      extra: got.fields.filter((f) => !want.fields.some((w) => w.name === f.name)).map((f) => f.name),
+    });
+  }
+  return { ok: problems.length === 0, problems, report };
+}
+
 /** 🔴 production への誤爆を防ぐ最重要チェック。 */
 export function assertNotProduction(qaBaseId, prodBaseId) {
   if (!qaBaseId) return '対象 base（AIRTABLE_QA_BASE_ID）が未設定';
@@ -136,7 +195,37 @@ async function main() {
 
   const res = await fetch(`${API}/${QA}/tables`, { headers: { Authorization: `Bearer ${KEY}` } });
   if (!res.ok) fail(`対象 base の schema を読めない (${res.status})。PAT に対象 base への schema 権限があるか確認`);
-  const existing = new Map((await res.json()).tables.map((t) => [t.name, t]));
+  const actualTables = (await res.json()).tables;
+  const existing = new Map(actualTables.map((t) => [t.name, t]));
+
+  if (CHECK) {
+    const { ok, report } = diffSchema(TABLES, actualTables);
+    console.log('   本番と同じ形か照合（read-only）\n');
+    for (const r of report) {
+      console.log(`  ${r.ok ? '✅' : '🔴'} ${r.table.padEnd(20)} primary=${r.primaryName ?? '(無)'}${r.primaryOk === false ? ` 🔴 期待 ${r.wantPrimary}` : ''}`);
+      if (r.missing?.length) console.log(`      🔴 不足: ${r.missing.join(' / ')}`);
+      for (const m of r.mismatched || []) console.log(`      🔴 ${m}`);
+      if (r.extra?.length) console.log(`      🟡 本番に無い列（許容）: ${r.extra.join(' / ')}`);
+    }
+    console.log(`\n  テーブル ${TABLES.length} / 期待する列 合計 ${TABLES.reduce((s, t) => s + t.fields.length, 0)}`);
+    console.log(`  実際のテーブル ${actualTables.length} / 列 合計 ${actualTables.reduce((s, t) => s + t.fields.length, 0)}`);
+
+    // 🔴 レコードが 0 件であることの確認（production を複製していないことの裏取り）
+    let total = 0;
+    for (const t of TABLES) {
+      const rr = await fetch(`https://api.airtable.com/v0/${QA}/${encodeURIComponent(t.name)}?maxRecords=3`,
+        { headers: { Authorization: `Bearer ${KEY}` } });
+      if (!rr.ok) { console.log(`  🟡 ${t.name} の件数を確認できない (${rr.status})`); continue; }
+      const n = ((await rr.json()).records || []).length;
+      total += n;
+      console.log(`  ${n === 0 ? '✅' : '🔴'} ${t.name.padEnd(20)} レコード ${n === 0 ? '0 件' : `${n} 件以上ある`}`);
+    }
+    if (total > 0) console.log('\n  🔴 レコードがある。production base を複製していないか確認すること。');
+
+    console.log(ok && total === 0 ? '\n✅ 本番と同じスキーマ・レコード 0 件。' : '\n🔴 上の指摘を確認すること。');
+    if (!ok || total > 0) process.exit(1);
+    return;
+  }
 
   for (const table of TABLES) {
     const found = existing.get(table.name);
