@@ -54,6 +54,21 @@
 
 ## 3. 手順
 
+### 3.0 実施状況（2026-09-10）
+
+| # | 作業 | 状態 |
+|---|---|---|
+| 1 | QA base の作成 | ✅ **完了**（仕様所有者）|
+| 2 | QA 専用 PAT の発行 | ✅ **完了**（仕様所有者）|
+| 3 | スキーマの作成 | ✅ **完了**（bootstrap write は不要だった）|
+| 3' | **スキーマ照合（`--check`）** | ✅ **PASS** — 4 テーブル / 57 列・型・選択肢・primary 一致・**全 4 テーブル 0 レコード**。production データの混入なし |
+| 4 | Stripe Test Mode のキー再発行 | 🔴 **未実施** |
+| 5 | Netlify env（branch scope）| 🔴 **未実施**（承認境界）|
+| 6 | `allowed_branches` の一時追加 | 🔴 **未実施**（承認境界）|
+| 7 | branch deploy の作成 | 🔴 **未実施**（承認境界）|
+
+🔴 QA base id・PAT は **repo にも本書にも書かない**（Secret Scanning のため）。
+
 ### 3.1 QA base を作る（空でよい）
 
 Airtable UI で新しい base を作る。名前の例: `keiba-intelligence-QA`。
@@ -108,20 +123,54 @@ node scripts/bootstrapQaBase.mjs            # まず dry-run
 
 ### 3.5 branch を作り、Netlify env を branch scope で設定する
 
-`allowed_branches` に QA ブランチを一時追加してから branch deploy を作る。
+`allowed_branches` は現在 **`["main"]`**。QA ブランチを一時追加してから branch deploy を作る。
 
-**Branch deploys スコープの env（8 件）**
+#### 現状のスコープ（2026-09-10 に read-only 確認。🔴 値は見ていない）
 
-| キー | 値 | 備考 |
-|---|---|---|
-| `STRIPE_SECRET_KEY` | Test の `sk_test_…` | |
-| `STRIPE_WEBHOOK_SECRET` | Test の `whsec_…` | |
-| `STRIPE_PRICE_PREMIUM` | Test の**月額** Price id | |
-| `STRIPE_PORTAL_RETURN_URL` | branch deploy の `/mypage` | 🔴 本番 URL を入れない |
-| **`AIRTABLE_API_KEY`** | 🔴 **QA 専用 PAT** | 本番 PAT を入れない |
-| **`AIRTABLE_BASE_ID`** | 🔴 **QA base id** | ここが隔離の要 |
-| **`SESSION_SIGNING_SECRET`** | 🔴 **本番と別のランダム値** | テストセッションを本番で無効にする |
-| `MEMBERSHIP_READ_ENABLED` / `MEMBERSHIP_WRITE_ENABLED` | `true` | |
+| キー | 現在のスコープ | branch-deploy への設定 | 危険度 |
+|---|---|---|---|
+| `STRIPE_SECRET_KEY` | dev / deploy-preview / production / dev-server | **追加**（Test の値）| 🟢 追加のみ |
+| `STRIPE_WEBHOOK_SECRET` | 同上 | **追加**（Test の値）| 🟢 追加のみ |
+| `STRIPE_PRICE_PREMIUM` | 同上 | **追加**（Test の**月額** Price）| 🟢 追加のみ |
+| `STRIPE_PORTAL_RETURN_URL` | **未設定** | **追加**（branch deploy の `/mypage`）| 🟢 追加のみ。🔴 本番 URL を入れない |
+| `MEMBERSHIP_READ_ENABLED` | production のみ | **追加**（`true`）| 🟢 追加のみ |
+| `MEMBERSHIP_WRITE_ENABLED` | production のみ | **追加**（`true`）| 🟢 追加のみ |
+| `SESSION_SIGNING_SECRET` | dev / **branch-deploy** / deploy-preview / production / dev-server | **branch-deploy の値を差し替え** | 🟡 branch のみに影響 |
+| **`AIRTABLE_API_KEY`** | 🔴 **all（1 値）** | QA 専用 PAT | 🔴 **下記の注意** |
+| **`AIRTABLE_BASE_ID`** | 🔴 **all（1 値）** | QA base id | 🔴 **下記の注意** |
+
+#### 🔴 いちばん危険な作業: `AIRTABLE_*` の `all` → コンテキスト別への変換
+
+`AIRTABLE_API_KEY` と `AIRTABLE_BASE_ID` は **「all」スコープで 1 つの値**しか持っていない。
+branch-deploy だけ別の値にするには、**コンテキスト別の値へ変換**する必要がある。
+
+🔴 **この変換で production の値を取りこぼすと、本番のログイン・会員データ読み書きが全部壊れる。**
+
+安全な進め方:
+
+1. 変換前に **production の現在値を控える**
+   （`netlify env:get AIRTABLE_BASE_ID --context production` / 同 `AIRTABLE_API_KEY`）
+2. UI でコンテキスト別へ変え、**production / deploy-preview / dev / dev-server に元の値**を入れる
+3. **branch-deploy にだけ QA の値**を入れる
+4. 変換後に **production の値が元のままか**を必ず読み直して確認する
+5. 本番 `/mypage` が 200 で、ログイン済み会員の表示が壊れていないことを確認する
+
+🟢 `SESSION_SIGNING_SECRET` は既にコンテキスト別なので、**branch-deploy の値を変えるだけ**でよい。
+新しい値の作り方（値は画面に出さない）:
+
+```bash
+node -e "require('crypto').randomBytes(48).toString('base64url')" >/dev/null   # 例
+# 実際は UI の入力欄へ直接貼る。ターミナルの履歴に残さないこと
+```
+
+🔴 **`SESSION_SIGNING_SECRET` を本番と同じにしない。**
+同じにすると、QA で発行したセッション Cookie が**本番でも有効**になる。
+
+#### 🔴 QA base id・PAT・Test キーを repo に書かない
+
+Netlify の Secret Scanning は「env の値」と「repo 内の文字列」の一致でビルドを落とす。
+2026-09-02 / 09-06 / **09-10** に実際に発生している（09-10 は本番ビルドが 2 回 red・
+`Exposed secrets detected`）。**`SECRETS_SCAN_OMIT_*` で回避しない。**
 
 🔴 **`SESSION_SIGNING_SECRET` を本番と同じにしない。**
 同じにすると、QA で発行したセッション Cookie が**本番でも有効**になる。
