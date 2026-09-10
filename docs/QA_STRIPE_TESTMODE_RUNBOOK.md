@@ -313,6 +313,51 @@ branch deploy でマジックリンクを送ってログインできることを
 
 ---
 
+## 3.9 E2E 実行前チェック（2026-09-10 実測・**全項目 PASS**）
+
+Stripe Test の webhook 送信先（5 イベント / `status=enabled`）と
+`STRIPE_WEBHOOK_SECRET` を仕様所有者が設定した後の実測。
+
+### A. env が QA デプロイの関数へ実際に入ったか
+
+🔴 **Netlify の env は「次のビルド」から関数へ入る。** 設定しただけでは反映されない。
+
+| 時点 | QA ホストへの webhook POST |
+|---|---|
+| env 設定直後（再デプロイ前）| **503 `{"error":"not_configured"}`** ＝ 未反映 |
+| QA を再デプロイした後 | ✅ **400 `{"error":"invalid_signature"}`** ＝ **反映済み**（署名検証まで到達）|
+
+branch-deploy の 8 キーはすべて設定済みで、
+**`AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` / `SESSION_SIGNING_SECRET` /
+`STRIPE_SECRET_KEY` / `STRIPE_PRICE_PREMIUM` / `STRIPE_WEBHOOK_SECRET` は
+production と別値**であることを sha256 で確認。
+`MEMBERSHIP_READ_ENABLED` / `MEMBERSHIP_WRITE_ENABLED` は機能フラグなので
+production と同じ `true` でよい。
+
+### B. 🔴 Airtable の隔離（二重）
+
+| 検証 | 結果 |
+|---|---|
+| QA base の中身（QA PAT で read）| `Customers` / `AuthTokens` / `RewardLedger` / `RewardRedemptions` = **すべて 0 件** |
+| 🔴 **QA PAT で production base を読む** | **HTTP 403 到達不可** ✅ |
+| production base の基準値（E2E 後の比較用）| `Customers` **81** / `AuthTokens` **696** / `RewardLedger` **2** / `RewardRedemptions` **0** |
+
+🟢 **隔離は二重になっている。**
+① branch-deploy の `AIRTABLE_BASE_ID` が QA base を指す。
+② 仮に base id を取り違えても、**QA PAT は production base へ 403 で弾かれる**。
+
+### C. production への影響
+
+| 検証 | 結果 |
+|---|---|
+| 本日の全作業後、**production に注入される env 値**が変化した env | **0 件**（全 25 env を sha256 で突き合わせ）|
+| env の増減 | **なし**（25 → 25）|
+| 本番 `/` `/pricing` `/mypage` | **200** |
+| 本番 guest の `/prediction/{nankan,jra}` | **302**（fail-closed）|
+| Test イベントが誤って本番へ届いた場合 | production と branch-deploy の `STRIPE_WEBHOOK_SECRET` は**別値**なので、**署名検証に失敗して 400**（fail-closed）|
+
+---
+
 ## 4. 月数を進めて変化を見る
 
 ### 4.1 仕組み

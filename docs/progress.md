@@ -4288,6 +4288,44 @@ QA ブランチに `astro-site/public/qa-marker.txt` を 1 ファイルだけ置
 
 ---
 
+## 2026-09-10 QA E2E 実行前チェック（全項目 PASS・実行は承認待ち）
+
+Stripe Test の webhook 送信先（5 イベント / `status=enabled`）と `STRIPE_WEBHOOK_SECRET` を
+仕様所有者が設定。その後の実測。詳細は
+[`docs/QA_STRIPE_TESTMODE_RUNBOOK.md`](./QA_STRIPE_TESTMODE_RUNBOOK.md) §3.9。
+
+### env が関数へ入ったことの確認
+
+🔴 **Netlify の env は「次のビルド」から関数へ入る。** 設定しただけでは反映されない。
+
+| 時点 | QA ホストへの webhook POST |
+|---|---|
+| env 設定直後 | **503 `not_configured`** ＝ 未反映 |
+| QA 再デプロイ後 | ✅ **400 `invalid_signature`** ＝ 反映済み |
+
+### 🔴 Airtable の隔離は二重
+
+| 検証 | 結果 |
+|---|---|
+| QA base の 4 テーブル | **すべて 0 件** |
+| 🔴 **QA PAT で production base を読む** | **HTTP 403 到達不可** ✅ |
+| production 基準値（E2E 後の比較用）| `Customers` **81** / `AuthTokens` **696** / `RewardLedger` **2** / `RewardRedemptions` **0** |
+
+### production への影響
+
+- 本日の全作業後、**production に注入される env 値が変化した env は 0 件**（全 25 env を sha256 で突き合わせ）
+- env の増減なし（25 → 25）／本番 `/` `/pricing` `/mypage` = **200**／guest 予想 = **302**
+- Test イベントが誤って本番へ届いても、`STRIPE_WEBHOOK_SECRET` が別値なので **署名検証に失敗して 400**
+
+### 次の承認境界（E2E 本体）
+
+1. QA base の `Customers` に **QA 会員を 1 行 write**（QA Airtable への最初の書き込み）
+2. QA の `/pricing` から **Test Mode の Checkout** を通す
+3. **Test Clock** を進めて 1 → 3 → 12 → 24 か月の変化を `/mypage` で目視
+4. E2E 後に production の基準値（81 / 696 / 2 / 0）が**不変**であることを再確認
+
+---
+
 ## Open Questions
 
 0.1 🔴 **`@netlify/blobs` が `astro-site/package.json` の依存に無く、
