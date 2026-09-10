@@ -4774,7 +4774,8 @@ runbook §4.B にも同じ内容を追記した。
 | **セッション Cookie** | ✅ | branch-deploy の `SESSION_SIGNING_SECRET` は production と**別値** |
 | **メール（SendGrid）** | 🟢 **PR #129 で解決** | `all` スコープのままだった。下記 |
 | production env | ✅ | 全 25 env で**注入値の変化 0 件** |
-| production のページ / 会員データ | ✅ | 全工程を通して **200 / 302**、**81 / 696 / 2 / 0** で不変 |
+| production のページ | ✅ | 全工程を通して **200 / 302** |
+| production の会員データ | ✅ **QA 由来 0 件** | 下記 |
 
 🔴 **メールだけが唯一の穴だった。**
 しかも magic link に限らず、送信する Netlify Function **8 つすべて**が QA から到達できた。
@@ -4784,6 +4785,28 @@ PR #129（`fix/preview-mail-isolation`）で共有ガードを 8 つ全部へ入
 
 runbook §4.9 に総点検表を、§7 の禁止事項に
 「QA から magic link を要求しない」を追記した。
+
+### 🔴 件数の基準値は固定値ではない（2026-09-11 に判明）
+
+`Customers` 81 / `AuthTokens` 696 は **2026-09-10 時点のスナップショット**で、
+本番は**実ユーザーの登録で増える**。実際 2026-09-10 16:16Z に **82 / 697** へ増えた。
+中身は `Source=keiba-intelligence` / `free-registered` の**実ユーザーの新規登録 1 件**
+（＋その magic link トークン 1 件）で、QA 作業とは無関係
+（時刻も PR #129 の本番反映 `83fb5437` より前）。
+
+🔴 **「件数が基準値と一致すること」を隔離の判定に使わない。** 使うのは:
+
+1. **QA 由来の行が production に 0 件**（`qa+…` / `example.invalid` / `qa-stripe-testmode` を
+   全 4 テーブルで走査 → **実測 0 件**）
+2. `RewardLedger` に **QA の 25 件が混ざっていない**（実測 **2 件**のみ・どちらも実会員）
+
+### PR #129 の本番反映後の実測
+
+| 対象 | 結果 |
+|---|---|
+| QA の送信 8 関数すべて | **503 `mail_disabled_on_preview`** |
+| 本番 `send-magic-link`（空 body）| **400 `Email is required`** ＝ ガードで止まっていない |
+| QA の `/` `/pricing` `/mypage` / guest / webhook | **200 / 302 / 400**（従来どおり）|
 
 ## 2026-09-11 継続リワードの対象決済方式・移行時の引継ぎ・買い切り会員（仕様確定 → 実装）
 

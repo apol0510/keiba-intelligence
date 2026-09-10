@@ -749,10 +749,10 @@ Stripe の Checkout を通すと `stripe-webhook.js` が `ContractPrice*` を保
 | **Airtable** | ✅ **二重** | branch-deploy の `AIRTABLE_BASE_ID` が QA base ／ QA PAT は production base へ **403**（実測）|
 | **Stripe** | ✅ | branch-deploy は **Test Mode 鍵**（QA から作った Session の id が `cs_test_…`）。webhook 送信先も Test の別 endpoint |
 | **セッション Cookie** | ✅ | branch-deploy の `SESSION_SIGNING_SECRET` は production と**別値**（実測）。QA の Cookie は本番で通用しない |
-| **メール（SendGrid）** | 🟢 **PR #129 で解決** | 下記 |
+| **メール（SendGrid）** | ✅ **PR #129 で解決・本番反映済み** | 下記。QA の**送信 8 関数すべてが 503**、本番は従来どおり（実測）|
 | production env | ✅ | 全 25 env を突き合わせ、**production に注入される値の変化 0 件**（実測）|
 | production のページ | ✅ | 全工程を通して `/` `/pricing` `/mypage` **200**・guest **302** |
-| production の会員データ | ✅ | 全工程を通して `Customers` **81** / `AuthTokens` **696** / `RewardLedger` **2** / `RewardRedemptions` **0** で不変 |
+| production の会員データ | ✅ **QA 由来の行は 0** | 下記「件数の基準値について」|
 
 ### 🔴 メールだけ隔離できていなかった → PR #129 で解決
 
@@ -765,6 +765,15 @@ Stripe の Checkout を通すと `stripe-webhook.js` が `ContractPrice*` を保
 
 **PR #129**（`fix/preview-mail-isolation`）で、共有ガード
 `src/lib/mail/previewMailGuard.js` を **8 つすべて**へ入れて塞いだ。
+**2026-09-10 に本番反映済み**（`83fb5437`）。
+
+実測（QA branch を main へ追随させたあと）:
+
+| 対象 | 結果 |
+|---|---|
+| QA の送信 8 関数すべて | **503 `mail_disabled_on_preview`** |
+| 本番 `send-magic-link`（空 body）| **400 `Email is required`** ＝ **ガードで止まっていない**（従来どおり）|
+| QA の `/` `/pricing` `/mypage` / guest 予想 / webhook | **200 / 302 / 400**（従来どおり）|
 
 - 判定は既存の `isPreviewHost()`。Deploy Preview / ブランチデプロイ / localhost をまとめて止める
 - 🔴 **送信に付随する書き込みより前**で止める（届かないトークン行を残さない）
@@ -775,6 +784,24 @@ Stripe の Checkout を通すと `stripe-webhook.js` が `ContractPrice*` を保
 
 🔴 **QA で magic link は使わない。** ログインは
 QA 専用 `SESSION_SIGNING_SECRET` で発行した Cookie で行う（§4.A の実績どおり）。
+
+### 🔴 件数の基準値について（2026-09-11 更新）
+
+`Customers` **81** / `AuthTokens` **696** は **2026-09-10 時点のスナップショット**であり、
+**固定値ではない**。本番は**実ユーザーの登録で増える**。
+
+実際、2026-09-10 16:16Z に `Customers` 82 / `AuthTokens` 697 へ増えた。
+中身は `Source=keiba-intelligence` / `PlanType=free-registered` の
+**実ユーザーの新規登録 1 件**（＋その magic link トークン 1 件）で、
+QA 作業とは無関係（時刻も PR #129 の本番反映より前）。
+
+🔴 **したがって「件数が基準値と一致すること」を隔離の判定に使わない。**
+判定に使うのは次の 2 つ:
+
+1. **QA 由来の行が production に 0 件**であること
+   （`qa+…` / `example.invalid` / `qa-stripe-testmode` を全 4 テーブルで走査。**実測 0 件**）
+2. `RewardLedger` に **QA の 25 件（経路 A 1 件＋経路 B 24 件）が混ざっていない**こと
+   （実測 **2 件**のみで、どちらも実会員のもの）
 
 ---
 
