@@ -430,7 +430,9 @@ export function createAirtableMembershipStore({
           const owner = await findCustomer(email);
           const planType = owner?.fields?.[CUSTOMER_READ_ONLY_FIELDS.PLAN_TYPE];
           if (isAccrualForbidden({ planType })) {
-            return Object.freeze({ status: STORE_RESULT.UNAVAILABLE, reason: 'lifetime_not_accruing', writes: 0 });
+            // 🔴 仕様どおりの非付与。**書込失敗ではない**ので UNAVAILABLE にしない
+            //    （UNAVAILABLE だと webhook が 500 を返し、Stripe が再送し続ける）
+            return Object.freeze({ status: STORE_RESULT.NOT_APPLICABLE, reason: 'lifetime_not_accruing', writes: 0 });
           }
         }
 

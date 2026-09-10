@@ -237,7 +237,10 @@ describe('買い切り会員への継続ポイント誤付与', () => {
       ? { status: 200, body: { records: [] } }
       : customerRow('lifetime')));
     const r = await store(f).appendEntry(EMAIL, accrual);
-    assert.equal(r.status, STORE_RESULT.UNAVAILABLE);
+    // 🔴 仕様どおりの非付与。**書込失敗（UNAVAILABLE）と区別する**
+    assert.equal(r.status, STORE_RESULT.NOT_APPLICABLE);
+    assert.notEqual(r.status, STORE_RESULT.UNAVAILABLE,
+      '🔴 UNAVAILABLE にすると webhook が 500 を返して Stripe が再送し続ける');
     assert.equal(r.reason, 'lifetime_not_accruing');
     assert.equal(f.writes().length, 0, '🔴 台帳へ書いている');
   });

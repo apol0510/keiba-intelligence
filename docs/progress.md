@@ -4391,12 +4391,45 @@ E2E をここから先へ進めるには、**Stripe への外部 write が必要
 - 🔴 **交換（redemption）は止めない**（過去に積んだぶんは使える）
 - 🔴 **認可・entitlement・契約価格・既存 3 列には一切触っていない**
 
+#### 🔴 意図的な非付与を「書込失敗」と区別する（2026-09-11 追加修正）
+
+最初の実装は遮断時に `STORE_RESULT.UNAVAILABLE` を返していた。
+`stripe-webhook.js` の `membershipResultFromStore()` は
+`applied` / `already` **以外をすべて FAILED** として扱うため、
+**正常な非付与が 500 になり、Stripe が同じイベントを再送し続ける**状態だった
+（買い切り会員が支払うたびに無限再送）。
+
+- `STORE_RESULT.NOT_APPLICABLE`（**仕様どおりの非適用**）を追加し、遮断時はこれを返す
+- `membershipResultFromStore()` は `not-applicable` を **SKIPPED**（＝ 200・再送不要）へ写す
+- 同じ危険が `redeemHandler.js` の `settlePoints()` にもあった
+  （非 `UNAVAILABLE` を一律「減算成立」と見なしていた）。
+  **`applied` / `already` だけ**を成立扱いへ狭めた
+
+| store の戻り | webhook | HTTP |
+|---|---|---|
+| `applied` / `already` | OK | 200 |
+| **`not-applicable`** | **SKIPPED** | **200** |
+| `unavailable` | FAILED（再送させる）| 500 |
+
+**実ハンドラを通したテスト**（`stripeWebhook.test.mjs`）:
+買い切り会員（`plan_type=lifetime` / `ExpirationDate=2099-12-31`）へ
+`invoice.payment_succeeded` を通し、
+
+- `RewardLedger` へ **POST されない**（🔴 stub が POST も記録するよう直した。
+  記録していないと「積まれていない」の主張が素通りする）
+- webhook が **200**・`membership_not_recorded` を返さない（＝再送を要求しない）
+- `PlanType` / `plan_type` / `Status` / `AccessEnabled` / `ExpirationDate` /
+  `ContractPrice*` を **一切書き換えない**（永久閲覧権限が不変）
+- 再送が来ても毎回 200（無限再送にならない）
+- 🔴 買い切り**でない**会員は従来どおり台帳へ積まれる（遮断が広がっていない）
+
 ### 退行検出の実測
 
 | 注入した退行 | 結果 |
 |---|---|
 | 台帳前期間の引継ぎを外す | **3 件 fail** |
-| 買い切りの遮断を外す | **1 件 fail** |
+| 買い切りの遮断を外す | **1 件 fail**（＋ 実ハンドラ側 **2 件 fail**）|
+| **遮断時に `UNAVAILABLE` を返す**（＝今回の不具合の再現）| 実ハンドラ側 **3 件 fail** |
 
 いずれも戻すと全 pass。
 

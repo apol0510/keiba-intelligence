@@ -236,6 +236,17 @@ function note(label, status, reason) {
 function membershipResultFromStore(r, label) {
   const status = r && r.status;
   if (status === 'applied' || status === 'already') return MEMBERSHIP_RESULT.OK;
+  /*
+   * 🔴 **仕様どおりの非適用**（`STORE_RESULT.NOT_APPLICABLE`）は失敗ではない。
+   *
+   *    例: 買い切り・永久会員には継続ポイントを積まない（§7.10.4）。
+   *    ここを FAILED にすると **500 を返して Stripe が同じイベントを再送し続ける**。
+   *    再送しても結果は変わらないので、SKIPPED（＝処理済みとして受理）にする。
+   */
+  if (status === 'not-applicable') {
+    console.log('ℹ️ stripe-webhook:', note(label, 'skipped', r && r.reason));
+    return MEMBERSHIP_RESULT.SKIPPED;
+  }
   console.warn(`⚠️ stripe-webhook: ${note(label, status, r && r.reason)}`);
   return MEMBERSHIP_RESULT.FAILED;
 }

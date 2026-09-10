@@ -566,6 +566,26 @@ fail-closed になり、**ポイントは減らない**。§7.9。2026-09-07 に
 実際に止めるのは `airtableStore.appendEntry()`（**全付与経路が通る唯一の出口**）。
 🔴 **交換（redemption）は止めない**（過去に積んだぶんは使える）。
 
+##### 🔴 意図的な非付与と「書込失敗」を必ず区別する
+
+止めたときに返すのは **`STORE_RESULT.NOT_APPLICABLE`**（仕様どおりの非適用）。
+🔴 **`UNAVAILABLE`（＝書けなかった）にしてはいけない。**
+
+`stripe-webhook.js` の `membershipResultFromStore()` は
+`applied` / `already` **以外をすべて FAILED** として扱うため、
+`UNAVAILABLE` を返すと **webhook が 500 を返し、Stripe が同じイベントを
+再送し続ける**（買い切り会員が支払うたびに無限再送になる）。
+
+| store の戻り | webhook の扱い | HTTP |
+|---|---|---|
+| `applied` / `already` | OK（記録できた）| 200 |
+| **`not-applicable`** | **SKIPPED（仕様どおり。再送不要）** | **200** |
+| `unavailable` | FAILED（書けなかった。再送させる）| 500 |
+
+同じ理由で `redeemHandler.js` の `settlePoints()` も、
+**`applied` / `already` だけ**を「減算が成立した」と見なす
+（それ以外を成立扱いにすると、引かれていないのに交換が進む）。
+
 🟡 **未確定（TBD-15）**: **称号名・表示文言**。既存正本に無いため確定させない。
 候補（🔴 **どれも未採用。表示に出さない**）:
 
