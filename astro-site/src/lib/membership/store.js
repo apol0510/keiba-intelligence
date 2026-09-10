@@ -39,6 +39,16 @@ export const STORE_RESULT = Object.freeze({
   ALREADY: 'already',
   /** 🔴 未設定 / 無効 / アダプタ未注入。**成功と区別する** */
   UNAVAILABLE: 'unavailable',
+  /**
+   * 🔴 **意図的に適用しなかった**（仕様どおりの非適用。**失敗ではない**）。
+   *
+   *    例: 買い切り・永久会員には継続ポイントを積まない（§7.10.4）。
+   *
+   * 🔴 `UNAVAILABLE`（＝書けなかった）と**必ず区別する**。
+   *    混ぜると、正常な非付与が「書込失敗」として扱われ、
+   *    Stripe webhook が 500 を返して**同じイベントを再送し続ける**。
+   */
+  NOT_APPLICABLE: 'not-applicable',
 });
 
 const flagOn = (env, name) => {

@@ -70,8 +70,12 @@ async function settlePoints({ store, email, redemptionId, costPoints, summary, l
   if (!entry) return 'insufficient';
 
   const applied = await store.appendEntry(email, entry);
-  if (applied.status === STORE_RESULT.UNAVAILABLE) return 'unavailable';
-  // APPLIED / ALREADY のどちらも「減算が成立している」
+  // 🔴 「減算が成立している」と言えるのは APPLIED / ALREADY だけ。
+  //    それ以外（UNAVAILABLE / NOT_APPLICABLE / 未知の値）は**成立扱いにしない**。
+  //    ここを取りこぼすと、引かれていないのに交換が進む。
+  if (applied.status !== STORE_RESULT.APPLIED && applied.status !== STORE_RESULT.ALREADY) {
+    return 'unavailable';
+  }
   return 'done';
 }
 
