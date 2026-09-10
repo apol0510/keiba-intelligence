@@ -4765,6 +4765,28 @@ runbook §4.B にも同じ内容を追記した。
 
 ---
 
+## 2026-09-11 QA 完全分離の総点検（メール以外は隔離済み・メールは PR #129 で解決）
+
+| 経路 | 隔離 | 根拠 |
+|---|---|---|
+| **Airtable** | ✅ **二重** | branch-deploy の base が QA ／ QA PAT は production base へ **403** |
+| **Stripe** | ✅ | branch-deploy は Test Mode 鍵（Session id が `cs_test_…`）。webhook も Test の別 endpoint |
+| **セッション Cookie** | ✅ | branch-deploy の `SESSION_SIGNING_SECRET` は production と**別値** |
+| **メール（SendGrid）** | 🟢 **PR #129 で解決** | `all` スコープのままだった。下記 |
+| production env | ✅ | 全 25 env で**注入値の変化 0 件** |
+| production のページ / 会員データ | ✅ | 全工程を通して **200 / 302**、**81 / 696 / 2 / 0** で不変 |
+
+🔴 **メールだけが唯一の穴だった。**
+しかも magic link に限らず、送信する Netlify Function **8 つすべて**が QA から到達できた。
+PR #129（`fix/preview-mail-isolation`）で共有ガードを 8 つ全部へ入れて塞いだ。
+🔴 **`SENDGRID_API_KEY` の env 変換はしていない**（production の値を取りこぼすと
+本番の全メールが止まり、しかも Deploy Preview は塞げないため）。
+
+runbook §4.9 に総点検表を、§7 の禁止事項に
+「QA から magic link を要求しない」を追記した。
+
+---
+
 ## Open Questions
 
 ### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）

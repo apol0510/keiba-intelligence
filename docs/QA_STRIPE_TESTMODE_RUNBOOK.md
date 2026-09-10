@@ -74,6 +74,8 @@
 | 12 | **経路 A**（QA `/pricing` から通常 Checkout 1 回）| ✅ **完了**（§4.A）— `ContractPrice*` 4 列・初回 accrual・Bronze / 1 か月 / 100pt を確認 |
 | 13 | QA branch を最新 `main` へ通常 merge して再デプロイ | ✅ **完了** — `519ac4b1`（`origin/main` `b3f09afc` を含む）。**#126 / #127 が QA に載っている**ことを確認 |
 | 14 | **経路 B**（Test Clock で 1→3→12→24 か月）| ✅ **完了・全 PASS**（下記 §4.G）|
+| 15 | **QA が production へ触れないことの総点検** | ✅ **完了**（下記 §4.9）|
+| 16 | メール（SendGrid）の隔離 | 🟢 **PR #129 で解決**（未 merge。§4.9）|
 
 ### 3.0' 初回 branch deploy の実測（2026-09-10）
 
@@ -740,6 +742,42 @@ Stripe の Checkout を通すと `stripe-webhook.js` が `ContractPrice*` を保
 
 ---
 
+## 4.9 🔴 QA が production へ触れないことの総点検（2026-09-11）
+
+| 経路 | 隔離できているか | 根拠 |
+|---|---|---|
+| **Airtable** | ✅ **二重** | branch-deploy の `AIRTABLE_BASE_ID` が QA base ／ QA PAT は production base へ **403**（実測）|
+| **Stripe** | ✅ | branch-deploy は **Test Mode 鍵**（QA から作った Session の id が `cs_test_…`）。webhook 送信先も Test の別 endpoint |
+| **セッション Cookie** | ✅ | branch-deploy の `SESSION_SIGNING_SECRET` は production と**別値**（実測）。QA の Cookie は本番で通用しない |
+| **メール（SendGrid）** | 🟢 **PR #129 で解決** | 下記 |
+| production env | ✅ | 全 25 env を突き合わせ、**production に注入される値の変化 0 件**（実測）|
+| production のページ | ✅ | 全工程を通して `/` `/pricing` `/mypage` **200**・guest **302** |
+| production の会員データ | ✅ | 全工程を通して `Customers` **81** / `AuthTokens` **696** / `RewardLedger` **2** / `RewardRedemptions` **0** で不変 |
+
+### 🔴 メールだけ隔離できていなかった → PR #129 で解決
+
+`SENDGRID_API_KEY` は **`all` スコープ**のままで、branch deploy にも production の値が入る。
+2026-09-10、QA からマジックリンクを要求したら **production の SendGrid で実送信**され、
+受信できない QA アドレス宛の**バウンスが本番の送信者評価に付いた**。
+
+調査の結果、**magic link だけの問題ではなかった**。
+メールを送る Netlify Function は **8 つ**あり、**すべて QA から到達できた**。
+
+**PR #129**（`fix/preview-mail-isolation`）で、共有ガード
+`src/lib/mail/previewMailGuard.js` を **8 つすべて**へ入れて塞いだ。
+
+- 判定は既存の `isPreviewHost()`。Deploy Preview / ブランチデプロイ / localhost をまとめて止める
+- 🔴 **送信に付随する書き込みより前**で止める（届かないトークン行を残さない）
+- 🔴 **本番ホストでは常に送る**。ホストが読めないときも止めない
+  （本番のメールを誤って止めない側へ倒す）
+- 🔴 **`SENDGRID_API_KEY` の env 変換はしていない**
+  （production の値を取りこぼすと**本番の全メールが止まる**うえ、Deploy Preview を塞げない）
+
+🔴 **QA で magic link は使わない。** ログインは
+QA 専用 `SESSION_SIGNING_SECRET` で発行した Cookie で行う（§4.A の実績どおり）。
+
+---
+
 ## 5. 後片付け（QA を止めるとき）
 
 | # | 対象 | 内容 |
@@ -784,5 +822,8 @@ Stripe の Checkout を通すと `stripe-webhook.js` が `ContractPrice*` を保
     `read -s` で入れ、終わったら `unset` する
 11. 秘密値を **stdout / stderr / ログ**へ出す
     （Stripe のエラー本文は鍵の一部を含めて返す。必ず伏字化する）
-12. `allowed_branches` に QA 以外のブランチを足したまま放置する
+12. 🔴 **QA から magic link を要求する**（`SENDGRID_API_KEY` は `all` スコープで、
+    production の SendGrid で実送信される。PR #129 で塞いだが、
+    ログインは QA 専用 `SESSION_SIGNING_SECRET` の Cookie で行う）
+13. `allowed_branches` に QA 以外のブランチを足したまま放置する
    （`branch-deploy` の env は**すべての branch deploy に効く**）
