@@ -98,6 +98,12 @@ export const BANK_PLAN_TERM_MONTHS = Object.freeze({
  * 🔴 これは「レコードの新しさ」の判定であって、契約起点の決定ではない。
  */
 export function recordCreatedAfterRevision(createdAt) {
+  /**
+   * 🔴 渡すのは **Airtable の `createdTime`（レコードの不変メタ）**。
+   *    `CreatedAt` **列**は運用で空のことがあり（2026-09-10 の実会員で確認）、
+   *    空を根拠不足として扱うと **正当な新規契約でも契約価格を保存できない**。
+   *    `createdTime` は常に存在し、あとから変わらないので根拠として使える。
+   */
   const raw = typeof createdAt === 'string' ? createdAt.trim() : '';
   if (!raw) return false;
   const day = raw.slice(0, 10);
@@ -127,6 +133,22 @@ function isCalendarDay(day) {
   return utc.getUTCFullYear() === year
     && utc.getUTCMonth() === month - 1
     && utc.getUTCDate() === date;
+}
+
+/**
+ * 保存済みの `ContractPriceId` から **請求期間（月数）** を確定する。
+ *
+ * 🔴 **推測しない。** 確定できるのは銀行振込の `bank:<plan>` だけで、
+ *    Stripe の `price_xxx` は**期間を保存していない**ので `null` を返す。
+ *    呼び出し側は `null` のとき **期間を表示してはいけない**
+ *    （`/ 月` を既定にすると、年払いを月額として誤表示する）。
+ *
+ * @returns {number|null} 月数。確定できなければ null
+ */
+export function periodMonthsFromContractPriceId(priceId) {
+  const raw = typeof priceId === 'string' ? priceId.trim() : '';
+  if (!raw.startsWith(BANK_PRICE_ID_PREFIX)) return null;
+  return periodMonthsForBankPlan(raw.slice(BANK_PRICE_ID_PREFIX.length));
 }
 
 export function periodMonthsForBankPlan(planType) {
@@ -212,7 +234,7 @@ export const BANK_SKIP = Object.freeze({
  *   entry        … 台帳へ積む付与エントリ。判定できなければ null
  */
 export function planBankMembershipUpdate({
-  fields = {}, recordId, expirationDate, confirmedAtIso = null,
+  fields = {}, recordId, expirationDate, confirmedAtIso = null, recordCreatedTime = null,
 } = {}) {
   const skipped = [];
   const email = typeof fields.Email === 'string' ? fields.Email.trim() : '';
@@ -275,7 +297,7 @@ export function planBankMembershipUpdate({
   } else if (startedAtIso < BANK_PRICE_REVISION_DATE) {
     // 改定前に始まった契約。現在価格を書かない
     skipped.push(BANK_SKIP.LEGACY_CONTRACT);
-  } else if (!recordCreatedAfterRevision(fields.CreatedAt)) {
+  } else if (!recordCreatedAfterRevision(recordCreatedTime || fields.CreatedAt)) {
     /**
      * 🔴 **`MembershipStartedAt` が空 ≠ 今回が初回契約**。
      *    起点を取り逃したまま続いている旧会員は、次回更新でこの分岐に入る。
@@ -287,7 +309,8 @@ export function planBankMembershipUpdate({
      *    **「このレコードが改定より前から存在したか」の fail-closed 判定**にだけ使う。
      *    分からない（`CreatedAt` が空）場合も**書かない**。
      */
-    skipped.push(fields.CreatedAt ? BANK_SKIP.LEGACY_RECORD : BANK_SKIP.UNKNOWN_RECORD_AGE);
+    const ageSource = recordCreatedTime || fields.CreatedAt;
+    skipped.push(ageSource ? BANK_SKIP.LEGACY_RECORD : BANK_SKIP.UNKNOWN_RECORD_AGE);
   } else {
     contract = bankContractPriceFor(fields.plan_type, startedAtIso);
     if (!contract) skipped.push(BANK_SKIP.NO_CONTRACT_PRICE);

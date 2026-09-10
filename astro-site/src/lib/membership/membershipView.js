@@ -25,6 +25,7 @@ import {
   isMilestoneMonth, MILESTONE_MONTHS, REDEMPTION_TIERS,
 } from './catalog.js';
 import { resolvePriceLock } from './priceLock.js';
+import { periodMonthsFromContractPriceId } from './bankTransfer.js';
 
 /** 制度の名称。UI はここから引く（表記ゆれと禁止語の混入を防ぐ）。 */
 export const MEMBERSHIP_COPY = Object.freeze({
@@ -232,6 +233,12 @@ export function buildMembershipView({
       status: priceLock.status,
       contractPriceYen: priceLock.contractPriceYen,
       contractStartedAtIso: priceLock.contractStartedAtIso,
+      /**
+       * 請求期間（月数）。🔴 **確定できないときは null**。
+       *    null のとき画面は「/ 月」などの期間を出してはいけない
+       *    （Stripe の契約は期間を保存していないため確定できない）。
+       */
+      periodMonths: periodMonthsFromContractPriceId(profile?.contractPrice?.priceId),
       cheaperThanCurrent: priceLock.cheaperThanCurrent,
     }),
 
