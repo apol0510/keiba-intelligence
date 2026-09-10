@@ -113,17 +113,60 @@ node scripts/bootstrapQaBase.mjs            # まず dry-run
 
 ### 3.4 Stripe Test Mode を用意する
 
-| 対象 | 内容 |
-|---|---|
-| Secret key | Test Mode の `sk_test_…` |
-| Price | 🔴 **月額**の Price（月次で進めるため）|
-| Webhook | 送信先 = branch deploy の `/.netlify/functions/stripe-webhook`。署名シークレットを控える |
-
 🔴 前回のキーは cleanup 済みで**再取得できない**。**再発行**すること。
+以下は `netlify/functions/stripe-webhook.js` と `rewards.js` から確定した要件。
+
+#### 必要な値（3 つ）
+
+| # | 値 | 要件 | env キー |
+|---|---|---|---|
+| 1 | Secret key | Test Mode（`sk_test_…`）| `STRIPE_SECRET_KEY` |
+| 2 | **Price** | 🔴 **recurring / `interval=month` / `interval_count=1`** / **JPY** | `STRIPE_PRICE_PREMIUM` |
+| 3 | Webhook 署名シークレット | 下記の送信先を作ると発行される | `STRIPE_WEBHOOK_SECRET` |
+
+🔴 **Price は必ず「月次」にする。**
+`periodMonthsFromPrice()` は `interval` × `interval_count` で月数を出し、
+🔴 **`interval_count` が無いときに 1 で補わない**（＝付与しない）。
+`month` / `year` 以外（`day` / `week`）も**付与されない**。
+月額 1 期 = **1 か月 / 100 pt**、年額 1 期 = **12 か月 / 1,200 pt**。
+
+#### Webhook 送信先
+
+- URL: branch deploy の `https://<branch-deploy>/.netlify/functions/stripe-webhook`
+- 🔴 **有効化するイベント（5 つ）** — これ以外は届いても無視される
+
+| イベント | 何が起きるか |
+|---|---|
+| `checkout.session.completed` | 会員を有料へ。**契約価格を保存**（`ContractPrice*`）|
+| `invoice.payment_succeeded` | 🔴 **台帳へ付与**（継続月数・残高が動く中核）|
+| `invoice.payment_failed` | 付与を保留（認可は止めない。TBD-10）|
+| `customer.subscription.updated` | `active` / `trialing` 以外で解約扱い |
+| `customer.subscription.deleted` | 解約。`CancelledAt` を保存 |
+
+#### 🔴 付与が成立する条件（満たさないと台帳が動かない）
+
+| 条件 | 根拠 |
+|---|---|
+| `invoice.amount_paid > 0` | 🔴 **¥0 請求では付与しない**（2026-09-05 に誤付与を実測して修正）|
+| `price.recurring.interval` が `month` / `year` | それ以外は付与しない |
+| `price.recurring.interval_count` が存在する | 🔴 **欠けていても 1 で補わない** |
+| `invoice.status_transitions.paid_at` がある | 🔴 受信時刻で代用しない |
+
+🔴 **トライアル期間を付けない。** 初回が ¥0 請求になり、付与されずに月数が進まない。
+
+#### 用意しないもの
+
+| 対象 | 理由 |
+|---|---|
+| `STRIPE_PRICE_LIGHT` | ライトは保留プラン。QA でも使わない |
+| 年額 Price | 「月次で進める」目的から外れる（2 回で 24 か月になる）|
+| Customer Portal の設定 | 解約まで見るなら要るが、月数の進行には不要 |
 
 ### 3.5 branch を作り、Netlify env を branch scope で設定する
 
 `allowed_branches` は現在 **`["main"]`**。QA ブランチを一時追加してから branch deploy を作る。
+
+**Branch deploys スコープへ入れる env は 9 キー。**
 
 #### 現状のスコープ（2026-09-10 に read-only 確認。🔴 値は見ていない）
 
@@ -248,7 +291,7 @@ Stripe の Checkout を通すと `stripe-webhook.js` が `ContractPrice*` を保
 
 | # | 対象 | 内容 |
 |---|---|---|
-| 1 | Netlify | Branch deploys スコープの env 8 件を削除 |
+| 1 | Netlify | Branch deploys スコープの env **9 キー**を削除（🔴 `AIRTABLE_*` は削除ではなく **all スコープへ戻す**）|
 | 2 | Netlify | 対象ブランチの branch deploy を削除（🔴 **ページングして全件**）|
 | 3 | Netlify | `allowed_branches` を `["main"]` へ戻す |
 | 4 | Git | QA ブランチを削除 |
