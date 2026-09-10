@@ -4432,151 +4432,26 @@ Test Clock と Customer は Stripe ダッシュボードでも作れるが、
 
 ## Open Questions
 
-### 🔴 Stripe 経由で `MembershipStartedAt` が書かれない（2026-09-10 に QA E2E で発見・範囲外）
+### ✅ 解決済み — Stripe 経由で `MembershipStartedAt` が書かれなかった（**既知の実装欠落**）
 
-`stripe-webhook.js` は membership store の **`saveContractPrice()` と `appendEntry()` しか呼ばない**。
-`MembershipStartedAt`（`airtableStore.js` の `CUSTOMER_FIELDS.STARTED_AT`）は
-**読まれるだけで Stripe 経路からは書かれない**。書いているのは銀行振込経路（`bankTransfer.js`）だけ。
+🔴 **これは「未確定の仕様」ではなく「既知の実装欠落」だった。**
+起点の仕様は **2026-09-01 に TBD-9 として確定済み**（`docs/MEMBERSHIP_REWARDS.md` §7.6）:
+**Stripe ＝ 初回の支払い成功 / 銀行振込 ＝ 入金確認日**。
+確定した仕様に対して、**Stripe 側の実装だけが入っていなかった**。
 
-**実測（QA base・経路 A）**: 決済後、`ContractPriceYen` / `ContractPriceId` /
-`ContractCurrency` / `ContractStartedAt` の 4 列は保存されたが、
-**`MembershipStartedAt` は空のまま**だった。
-
-🟢 表示は壊れていない。`membershipView.js` の `resolveTenureMonths()` は
-**台帳（`RewardLedger`）があればそちらを使う**ため、Bronze・1 か月・100pt は正しく出た。
-`startedAtIso` は**台帳が読めないときのフォールバック**。
-
-**未確定**: Stripe 経路でも `MembershipStartedAt` を書くべきか。
-- 書くなら「いつの日付を起点にするか」（`checkout.session.completed` の日 /
-  初回 invoice の `status_transitions.paid_at` / `ContractStartedAt` と同じ日）を決める必要がある
-- 🔴 2026-09-07 の backfill で「**起点不明を推測で埋めない**」と確定しているため、
-  仕様所有者の判断なしに既定値を置かない
-- 🔴 本タスクの範囲外のため**修正していない**
-
-
-0.1 🔴 **`@netlify/blobs` が `astro-site/package.json` の依存に無く、
-   `stripe-webhook.js` の `stripe-events` ストアが機能していない疑い（R-2・2026-09-03）。**
-
-   `hasProcessed` / `markProcessed` は `import('@netlify/blobs')` の失敗を try/catch で
-   飲み込むため、**壊れていても静かに「重複なし」として通る**。
-   同一 deploy で同じ event id を 3 回再送しても `duplicate:true` が一度も出なかった。
-
-   - データ破壊は起きていない（下流の冪等性で二重反映は防がれている。実測済み）
-   - ただし Test Mode E2E #6 の期待値 `duplicate:true` が満たせない
-   - 確認方法: 依存に `@netlify/blobs` を加える／関数ログで `eventStore()` の失敗を見る
-
-
-
-0. ~~**会員継続制度の未確定事項 TBD-1〜TBD-8**~~（2026-09-01 **確定**。`MEMBERSHIP_REWARDS.md` §7.1）。
-   ~~**法務確認 L-1〜L-9**~~（保守ライン内に設計を収めたため**確認待ちは解消**。§8）。
-
-   残っているのは次の **2 件のみ**（2026-09-08 現在。詳細は本書
-   「Membership Phase の残件（2026-09-08 整理）」節）:
-
-   | # | 内容 | いつ必要か |
-   |---|---|---|
-   | ~~TBD-3b / 4b（品目）~~ | ~~景品の品目そのもの~~ | **2026-09-07 確定**（§7.8・米 / コーヒーの2択）|
-   | **TBD-3b / 4b（実行）** | **景品の仕入れの実行**（小分け・ラッピングの体制）| 最初の `approved` が出る前 |
-   | ~~TBD-9 / TBD-10~~ | ~~継続月数の起点 / 支払い失敗中の扱い~~ | **2026-09-01 確定**（§7.6 / §7.7）|
-   | ~~TBD-12~~ | ~~発送先住所の取得方法・保管期間~~ | **2026-09-07 確定**（§7.9）|
-   | **TBD-13** | **包装資材費**と、そこから決まる**景品価額 `valueYen`** | S-1 の自動検査を効かせたいとき |
-
-   継続的な確認事項は **決算期のポイントの会計処理（税理士）**のみ（§8.2 L-5）。
-
-0.5 ~~**`/mypage` の「利用できる機能」に『穴馬レポート・優先メルマガ』が残っている（2026-09-01 発見）。**~~
-   （2026-09-01 **解消**。仕様所有者の指示により削除した）
-
-   `docs/RENEWAL_2026_08.md` §6.1 が「実装が無いものを訴求しない」として
-   プレミアム限定コンテンツの訴求を廃止し `canSeePremiumExtras` ごと削除していたのに対し、
-   `src/pages/mypage.astro` の `FEATURES` 配列に該当行が残り、
-   プレミアム会員へ「✓」として表示されていた（**実装は無い**）。
-
-   → 該当行と、それだけに使われていた `isPremium` を削除。
-   併せて `membershipCopy.guard.test.mjs` に
-   「廃止済みの訴求（穴馬レポート / 優先メルマガ / 詳細レポート / `canSeePremiumExtras`）と
-   廃止済みの価格（¥88,000 / ¥66,000 / ¥12,000 / ¥6,600 / `venueAccess`）を UI に書かない」
-   静的ガードを追加し、**再混入を禁止**した。
-
-1. **`CLAUDE.md` の「メインレース10点ロジック」は F3・5点固定に完全に置き換わったのか、一部が併存しているのか。**
-   コードは F3（`umatanHit.js` の `reverseTopK`）が現行。ただし `CLAUDE.md` の 10 点節は削除されておらず、
-   「置き換えた」と明記した記録も見つからない。→ 仕様所有者の確認が必要。
-2. **`BET_POINT_LOGIC.md` の検証表の数値はいつ時点のものか。**
-   - `BET_POINT_LOGIC.md` 記載値（**時点の記載なし**）: 南関 217.1% / 公開的中 784 / ¥1,483,110、JRA 212.8% / 634 / ¥1,417,180
-   - **2026-07-20 に実測した時点値**: 南関 214.8% / 902 / ¥1,673,170、JRA 212.9% / 744 / ¥1,647,970
-
-   **両者とも archive の蓄積件数に依存する時点測定値であり、恒久的な仕様値ではない。**
-   archive に開催が追加されれば数値は変動するため、いずれの数値も「満たすべき基準」として扱わないこと。
-   テストは pass するため恒等式・冪等性の破綻ではなく、文書側がスナップショットである可能性が高いが明記がない。
-3. 🔴 **買い目の相手数が出走頭数を見ていない（2026-08-30 発見・仕様所有者へ報告済み）。**
-
-   「8頭立てなのに展開16点・推奨6点で違和感がある」という指摘から実測した結果、
-   **相手数が頭数に関係なく常に 6 頭固定**であることが判明した。
-
-   南関 2026-08-18 川崎（12R開催）:
-
-   | レース | 頭数 | 相手数 | 展開 | 推奨 |
-   |---|---|---|---|---|
-   | R1 / R2 / R3 / R8 / R10 | 12頭 | 6/6 | 16点 | 10点 |
-   | R4 | 10頭 | 6/6 | 16点 | 8点 |
-   | R5 / R7 | 11頭 | 6/6 | 16点 | 8点 |
-   | R9 | 9頭 | 6/6 | 16点 | 8点 |
-   | **R6 / R12** | **8頭** | **6/6** | 16点 | **6点（差10）** |
-   | R11（メイン） | 9頭 | 5 | 5点 | 5点（差0） |
-
-   JRA 2026-08-16（36レース）も `6/6` が 32 レース、`5` が 3、`5/5` が 1。
-
-   **8 頭立てでは軸を除く 7 頭のうち 6 頭を相手に取っている＝ほぼ全頭買い。**
-   そのため展開が常に 16 点になり、少頭数ほど推奨点数との差が開く。
-
-   原因は推奨点数のロジックではなく、**買い目生成側（`scripts/importPrediction.js` /
-   `importPredictionJra.js`）が出走頭数を見ていない**こと。
-
-   取り得る道:
-   - (a) **買い目生成を頭数連動にする** — 根本解決。ただし `importPrediction` の変更は
-     archive・的中判定・過去実績へ影響するため、影響範囲の確認が必要。
-   - (b) **推奨点数を展開点数にも連動させる** — 表示だけの変更で低リスク。
-
-   🔴 **依頼範囲外のため未着手。** 仕様所有者の指示待ち。
-   メインレースは `getTop5Challengers` で 5 頭に絞られているため、この問題は
-   **通常レースのみ**に出る。
-
-3. **`feat/fixed6-nearest150-recovery` は何のためのブランチで、生かすのか破棄するのか。**
-   対応 PR が存在せず、コミット意図を示す文書も見つからない。
-4. Workflow Phase 2（統合）は依然として実施する方針か、それとも 14 workflow の現状維持で確定したのか。
-5. lint / typecheck を導入しない判断は明示的になされたものか、単に未着手か。
-6. ~~**`CLAUDE.md` の「本番 URL 取り扱いルール」表と `astro-site/netlify.toml` の 301 が食い違う。**~~
-   （2026-08-05 発見 → **2026-08-09 解決**。本番 URL は `https://keiba-intelligence.jp/`）
-
-   仕様所有者が `keiba-intelligence.jp` を本番として提示したことで確定。
-   実装側の根拠（`netlify.toml` の 301 `force = true` / `sitemap.xml.js` の baseUrl /
-   `docs/spec.md`）とも一致し、`CLAUDE.md` だけが古かった。
-
-   併せて **canonical / og:url が「301 で転送される URL」を指していた**のを直した。
-   `astro.config.mjs` の `site` が `netlify.app` のままで、sitemap（`.jp`）と矛盾していた。
-   `results/[year]/[month]/[day].astro` の JSON-LD（image / organizer.url / offers.url）も同様。
-
-   🔴 **残る注意**: `netlify.app` 側へ POST してはいけない。301 でメソッドが GET へ
-   変換され、**フォーム送信が壊れる**（配信停止ページ等）。
-11. **JRA の過去走に上がり3F・通過順が無い。**（2026-08-28）
-    `src/data/horseHistories/jra/**` の全レコードで `last3f` / `passingOrder` が空のため、
-    JRA では脚質判定・上がり順位・展開予想が算出できない（南関は算出できている）。
-    KI は共有データの読み取り専用消費者であり、KI 側では補完できない。
-    → 上流（`keiba-data-shared-admin` / jv-link-cli）での取得可否の確認が必要。
-12. **`src/pages/free-prediction/jra/detail/[slug].astro` の去就。**（2026-08-28）
-    新レイアウトが過去走をインライン描画するため参照元が無くなった。
-    静的生成のコストはあるが害は無いため削除していない。→ 削除可否は要判断。
-13. **KMA 側に必要な未完の依存。**（2026-08-28。**別リポジトリのため本改修では実施しない**）
-    - `brands/index.js` の KI `contentUrls`（`loginUrl` / `unsubscribeUrlBase`）が `null`
-    - KI の `plans` が analytics-keiba 由来（`premium-combo` / `premium-tan`）のままで、
-      本改修の tier（`free` / `light` / `premium`）と一致しない
-    - `keiba-intelligence:signup-onboarding` の本文コンテンツが未作成
-    - `race` 設定（レース配信）が `null`
-    - 各自動化フラグが false（**有効化は高リスク境界。承認必須**）
-
-7. **配信停止で `recipientRef` を Customers レコードへ対応付ける方法が未確定。**（2026-08-05）
-   KMA 側 onboarding の `audience.adapterId` / `audience.mode` が未確定のため、
-   `astro-site/src/lib/unsubscribe/store.js` の本番 store は **既定で無効（fail-closed）**にしてある。
-   対応付けが確定するまで、実際の解除は確定できない（画面には「現在お手続きできません」と表示される）。
+- **発見**: 2026-09-10・QA の Test Mode E2E（経路 A）で実測。
+  決済後、`ContractPrice*` 4 列と初回 accrual は保存されたのに
+  **`MembershipStartedAt` が空のまま**だった。
+- **原因**: `stripe-webhook.js` が membership store の
+  `saveContractPrice()` と `appendEntry()` **しか呼んでいなかった**。
+  書いていたのは銀行振込経路の `bankTransfer.js` だけ。
+- 🟢 **表示は壊れていなかった**。`resolveTenureMonths()` は台帳を優先するため。
+  空だったのは**台帳が読めないときのフォールバック**。
+- **修正**: PR #127（`fix/stripe-membership-started-at`）。
+  `invoice.payment_succeeded` で台帳へ積んだあと `saveMembershipStart()` を呼ぶ。
+  起点は `status_transitions.paid_at`。**初回だけ書き、更新で動かさない。**
+- 🔴 **既存データの backfill はしていない**（§7.6「起点が不明な会員は空のまま・推測で埋めない」）。
+  本修正は **これ以降の初回支払いから**効く。
 
 ## High-risk Operations Not Yet Executed
 

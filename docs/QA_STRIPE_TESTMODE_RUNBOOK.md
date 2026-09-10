@@ -458,7 +458,7 @@ Test Clock で時計を進めても、その Subscription には請求が発生�
 🟢 **`ContractPrice*` 4 列と初回 accrual は期待どおり保存された。**
 Bronze・1 か月・100pt も一致。**本番と同じ webhook 経路**で確認できた。
 
-#### 🔴 範囲外の欠落 — Stripe 経由では `MembershipStartedAt` が書かれない
+#### ✅ 解決済み — Stripe 経由で `MembershipStartedAt` が書かれなかった（**既知の実装欠落**）
 
 `stripe-webhook.js` は membership store の
 **`saveContractPrice()` と `appendEntry()` しか呼んでいない**。
@@ -470,8 +470,14 @@ Bronze・1 か月・100pt も一致。**本番と同じ webhook 経路**で確�
 **台帳（`RewardLedger`）があればそちらを使う**。`startedAtIso` は台帳が読めないときの
 フォールバックにすぎない。
 
-🔴 **これは本タスクの範囲外。** 仕様判断が要るため修正せず、
-`docs/progress.md` の Open Questions へ記録する。
+🔴 **これは「未確定の仕様」ではなく「既知の実装欠落」だった。**
+起点の仕様は **2026-09-01 に TBD-9 として確定済み**（`docs/MEMBERSHIP_REWARDS.md` §7.6）で、
+**Stripe 側の実装だけが入っていなかった**。
+
+**修正済み: PR #127**（`fix/stripe-membership-started-at`）。
+`invoice.payment_succeeded` で台帳へ積んだあと `saveMembershipStart()` を呼ぶ。
+起点は `status_transitions.paid_at`。**初回だけ書き、更新で動かさない。**
+🔴 既存データの backfill はしない（§7.6「起点が不明な会員は空のまま・推測で埋めない」）。
 
 🔴 **magic link は使っていない。**
 `SENDGRID_API_KEY` は `all` スコープのままなので、QA からマジックリンクを要求すると
