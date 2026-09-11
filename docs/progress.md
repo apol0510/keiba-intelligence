@@ -5200,6 +5200,52 @@ Airtable の UI で base を作ると既定のテーブル（`Table 1` 等）が
 仕様所有者による PAT 再入力 → dry-run → `--apply` → `--check`。
 `--check` の 403 は 4 テーブル未作成の段階のものなので、`--apply` 後に改めて判定する。
 
+## 2026-09-12 UAT base 完成 → UAT 会員 1 行を作成（§9 #3・#4 完了）
+
+### `--check` PASS（UAT base 完成）
+
+PR #132 の修正後、仕様所有者が `npm run qa-base:bootstrap -- --check` を実施し、
+**4 テーブル / 57 列・全テーブル レコード 0 件・extra table なし・exit 0** を確認した。
+
+🔴 **UAT base は完成として扱う。`--check` を再実行しない。**
+
+前段として、期待していないテーブル `Table 1`（`tbluS6F7F1aaVPcIv` / 1 列 / 0 records）を
+**承認のうえ 1 件だけ削除**した（Airtable UI。Web API にテーブル削除エンドポイントは無い）。
+削除前に base 名 `keiba-intelligence UAT` / base id が production と別 / table id 一致 /
+0 records を URL と画面で照合している。正本 4 テーブルと production には触れていない。
+
+### UAT 会員 1 行を作成（§4 / §9 #4）
+
+| 列 | 値 |
+|---|---|
+| `Email` | `uat@keiba-intelligence.jp` |
+| `PlanType` | `free-registered` |
+| `Status` | `active` |
+| `AccessEnabled` | ✓ |
+
+- 作成先: UAT base の `Customers`（record 1 件のみ）
+- 🔴 `Email` は `src/lib/auth/uatLogin.js` の `UAT_MEMBER_EMAIL` と**一致**させてある。
+  ここがずれると UAT ログインのセッションが会員行に紐づかない
+- `Source` は空のまま。会員検索は `refresh-session.js` の
+  `filterByFormula: {Email} = "…"` だけで、Source では絞っていないため影響しない
+- tier は `PlanType` / `ExpirationDate` から決まる（`planTypeToTier` → `applyExpiry`）ので、
+  この 4 列で free 会員として成立する
+
+作成後、グリッドで **1 record** であることを確認済み。
+
+### 残件（仕様所有者の作業。いずれも値そのものを扱うため Claude は実行しない）
+
+1. **branch-deploy スコープの env 8 件**
+   `AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` / `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` /
+   `STRIPE_PRICE_PREMIUM` / `MEMBERSHIP_READ_ENABLED`(`true`) /
+   `MEMBERSHIP_WRITE_ENABLED`(`true`) / `UAT_LOGIN_KEY`
+   （`SESSION_SIGNING_SECRET` は設定済み・production と別値）
+2. **Stripe Test の webhook 送信先**を UAT ホスト宛に作成し、
+   発行された `whsec_…` を `STRIPE_WEBHOOK_SECRET` へ
+
+🟢 env が入るまで UAT は fail-closed のまま。現時点で
+`uat-login` は UAT ホストで **503 `not_configured`**、本番では **404** である（実測済み）。
+
 ## Open Questions
 
 ### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）
