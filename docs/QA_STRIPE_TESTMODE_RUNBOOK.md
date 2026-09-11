@@ -826,8 +826,8 @@ QA 作業とは無関係（時刻も PR #129 の本番反映より前）。
 | 2 | branch deploy | ✅ **完了** — **5 件**削除。ページングで **残 0 件**を再確認 | QA ホスト `/` `/qa-marker.txt` ともに **404** |
 | 3 | `allowed_branches` | ✅ **完了** — `["main","qa-stripe-testmode"]` → **`["main"]`** | 他の `build_settings` の差分 **0 件** |
 | 4 | ブランチ | ✅ **完了** — remote / local とも削除（`1b7b4471`）| `main` は `29ce9df1` のまま不変 |
-| 5 | Stripe | 🔴 **未実施**（下記「実施できなかった理由」）| — |
-| 6 | Airtable（QA base / QA PAT）| 🔴 **未実施**（同上）| — |
+| 5 | Stripe | ✅ **完了** — Test Clock / Customer / Webhook 送信先を削除 | 下記 |
+| 6 | Airtable（QA base / QA PAT）| ✅ **完了** — QA base 削除・QA PAT 失効 | 下記 |
 
 #### 削除した branch-deploy の env（7 値）
 
@@ -864,16 +864,45 @@ branch-deploy の値だけを削除した。** 理由:
 本作業は branch-deploy スコープの値しか触っておらず、production base へは一度も接続していない。
 最後の実測は §4.9（2026-09-11・QA 由来行 **0 件**）。
 
-#### 🔴 実施できなかった理由（5 / 6）
+#### 5. Stripe Test Mode（2026-09-11 実施・ブラウザ）
 
-| # | 対象 | 理由 |
+| 対象 | 識別 | 結果 |
 |---|---|---|
-| 5 | Stripe | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_PREMIUM` は Netlify の **secret env**（`is_secret=true`）で、**API / CLI / UI のいずれからも値を読み出せない**。Test の secret key が無いと Customer / Subscription / Test Clock / Webhook 送信先を削除できない。**Stripe ダッシュボード（Test Mode）で削除する**のが早い。対象の識別子は本書 §4.G と `docs/progress.md`「🔴 cleanup / Live Mode」§A-2 に一覧がある |
-| 6 | Airtable | **base の削除 API は存在しない**（作成も UI 専用。§2）。PAT の失効も UI 専用。なお QA base id / QA PAT は Netlify から削除済みのため、**base は UI 上の名前で特定する**（例: `keiba-intelligence-QA`）|
+| Test Clock | `KI QA membership tenure`（2026/09/10 19:29 作成・クロック 2028-08-10）| ✅ **完了（削除）**。紐づくテストサブスクは同時にキャンセル |
+| Customer（経路 B）| `qa+clock@keiba-intelligence.jp` | ✅ Test Clock の完了に伴い**消滅** |
+| Customer（経路 A）| `qa+stripe-testmode@keiba-intelligence.jp`（`cus_VEVRM…`）| ✅ **削除**（詳細画面に「この顧客のアカウントは完全に削除されました」・ログに `DELETE /v1/customers/… 200 OK`・サブスクは即時キャンセル）|
+| Webhook 送信先 | QA branch deploy 宛（`we_1UE1cW…`・5 イベント・アクティブ）| ✅ **削除**（送信先 0 件）|
 
-🔴 **5 / 6 が残っている間は、QA base と QA PAT が生きている。**
-ただし **Netlify 側からは到達できない**（branch-deploy の `AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` は削除済み、
-branch deploy 自体も無い、`allowed_branches` も `["main"]`）。
+🔴 **Stripe ダッシュボード（Test Mode）で実施した。** `STRIPE_SECRET_KEY` /
+`STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_PREMIUM` は Netlify の **secret env**（`is_secret=true`）で
+**API / CLI / UI のいずれからも値を読み出せない**ため、キー経由の自動削除はできない。
+次回もダッシュボードで行うこと。
+
+#### 6. Airtable（2026-09-11 実施・ブラウザ）
+
+| 対象 | 識別 | 結果 |
+|---|---|---|
+| QA base | `keiba-intelligence QA - Stripe Test Mode`| ✅ **削除** |
+| QA PAT | `KI QA Stripe Test Mode`（スコープ 4 種が §3.2 と一致）| ✅ **失効**（トークン **20 → 19 件**）|
+
+🔴 **base の取り違えを防ぐため、名前ではなく id の sha256 で同定した。**
+ワークスペースには `keiba-intelligence` という名前の **production base が別に存在する**ため、
+名前での判断は危険。後片付け前スナップショットの branch-deploy `AIRTABLE_BASE_ID` の
+sha256（先頭 10 桁）と一致することを確認してから削除し、production base
+（`keiba-intelligence`）が**削除後も存在すること**を確認した。
+
+🟢 **QA base id / QA PAT は Netlify から先に消してしまうと UI での特定が難しくなる。**
+今回は後片付け前の env スナップショットを保持していたため id で同定できた。
+次回は **base を消してから env を消す**か、スナップショットを取ってから進めること。
+
+#### 🟡 範囲外として残したもの
+
+| 対象 | 理由 |
+|---|---|
+| Stripe Test の Customer `0510apolon@gmail.com` と**有効なサブスクリプション 1 件** | 本 QA（§3〜§4）で作成した `qa+…` の 2 会員ではない。`docs/progress.md`「🔴 cleanup / Live Mode — 承認境界（未実施）」§A-2 が扱う**別タスク**（2026-09-01 の E2E 残骸）に該当すると見られ、同節は**承認待ち**。本タスクの範囲外のため**独断で削除していない** |
+
+🟢 **§5 の 6 項目はすべて完了した。** QA base・QA PAT・Stripe の QA 資産・branch deploy・
+branch-deploy env・QA ブランチのいずれも残っていない。
 
 ---
 
