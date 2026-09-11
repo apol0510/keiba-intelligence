@@ -1,0 +1,9 @@
+uat
+恒久 UAT 環境の branch deploy を識別するためのマーカー。
+
+正本: docs/UAT_PERMANENT_ENV.md
+
+🔴 このファイルを main へ merge しない。
+🟢 このファイルがあるのは、main とツリーが完全一致していると Netlify が
+   "Canceled build due to no content change" でビルドをスキップしてしまうため。
+   uat ブランチを main へ追随させたあとも、このファイルは残すこと。
