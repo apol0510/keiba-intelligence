@@ -4965,6 +4965,50 @@ production の値を取りこぼすと**本番の全メールが止まる**う�
 
 ---
 
+## 2026-09-11 QA 環境の後片付け（runbook §5）— Netlify / ブランチは完了、Stripe / Airtable は未実施
+
+`docs/QA_STRIPE_TESTMODE_RUNBOOK.md` §5 に沿って Stripe Test Mode 隔離 QA 環境を撤去した。
+実測は同書 **§5'** が正本。ここでは判定と残件のみ記録する。
+
+### 判定
+
+| # | 対象 | 結果 |
+|---|---|---|
+| 1 | Netlify env（branch-deploy 7 値）| ✅ 削除 |
+| 2 | branch deploy 5 件 | ✅ 削除（残 0 件・QA ホスト 404）|
+| 3 | `allowed_branches` | ✅ `["main"]` へ復帰 |
+| 4 | ブランチ `qa-stripe-testmode` | ✅ remote / local とも削除（`1b7b4471`）|
+| 5 | Stripe Test の Customer / Subscription / Test Clock / Webhook 送信先 | 🔴 **未実施** |
+| 6 | Airtable QA base / QA PAT | 🔴 **未実施** |
+
+### 🔴 production 不変（実測）
+
+- production に注入される env **24 キー**の sha256 突き合わせ → **変化 0 件**。欠落・追加なし
+- `build_settings` は `allowed_branches` 以外 **差分 0 件**
+- 本番 `/` `/pricing` `/mypage` **200** / guest 予想 **302**
+- `origin/main` は `29ce9df1` のまま不変。QA の marker コミットは `main` へ入っていない（確認済み）
+
+### 設計判断
+
+- **`AIRTABLE_*` を `all` へ再統合しなかった。** §5 の指示は「`all` の 1 値へ戻す」だが、
+  それには `updateEnvVar` で **production の値レコードを書き換える**必要があり、§3.5 で最も危険と
+  位置付けた経路をもう一度通ることになる。`deleteEnvVarValue` で branch-deploy の値だけを消せば
+  production に触れずに同じ結果（注入値は `all` と等価）になるため、そちらを採った。
+  残る差は**構造上の見た目だけ**。再統合が必要なら別途、承認のうえで行う。
+- **`SESSION_SIGNING_SECRET` の branch-deploy 値は残した。** QA 開始前から存在したスコープで、
+  変換前の値は記録が無く復元できない。現在値は production と別値であり、残すほうが隔離を保てる。
+
+### 残件（いずれも仕様所有者の UI 作業）
+
+1. **Stripe（Test Mode ダッシュボード）**: Customer / Subscription / Test Clock / Webhook 送信先を削除。
+   Netlify の `STRIPE_*` は `is_secret=true` で**値を読み出せない**ため、キー経由の自動削除はできない。
+   識別子は runbook §4.G と本書「🔴 cleanup / Live Mode」§A-2。
+2. **Airtable UI**: QA base（例 `keiba-intelligence-QA`）の削除と QA PAT の失効。
+   **base 削除 API は存在しない**。
+
+🟢 残件が残っていても **Netlify から QA base へ到達する経路は無い**
+（branch-deploy の `AIRTABLE_*` 削除済み・branch deploy なし・`allowed_branches` は `["main"]`）。
+
 ## Open Questions
 
 ### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）
