@@ -36,6 +36,45 @@ describe('🔴 production への誤爆を防ぐ', () => {
     assert.equal(assertNotProduction('appQA123', 'appPROD'), null);
   });
 
+  // ── 🔴 fail-closed（2026-09-12）─────────────────────────────────
+  // 比較相手が無ければ誤爆かどうか判定できない。判定できないまま進まない。
+
+  test('🔴 ① production base（AIRTABLE_BASE_ID）が未設定なら即中止', () => {
+    for (const prod of [undefined, null, '', '   ', 0, false]) {
+      const msg = assertNotProduction('appQA123', prod);
+      assert.ok(msg, `production=${JSON.stringify(prod)} が素通りしている`);
+      assert.match(msg, /AIRTABLE_BASE_ID/);
+    }
+  });
+
+  test('🔴 ② 対象 base（AIRTABLE_QA_BASE_ID）が未設定なら即中止', () => {
+    for (const qa of [undefined, null, '', '   ', 0, false]) {
+      const msg = assertNotProduction(qa, 'appPROD123');
+      assert.ok(msg, `qa=${JSON.stringify(qa)} が素通りしている`);
+      assert.match(msg, /AIRTABLE_QA_BASE_ID/);
+    }
+  });
+
+  test('🔴 ③ QA ID が production ID と同じなら即中止', () => {
+    assert.match(assertNotProduction('appSAME123', 'appSAME123'), /production base と同じ/);
+    // 前後の空白で誤魔化せない
+    assert.match(assertNotProduction(' appSAME123 ', 'appSAME123'), /production base と同じ/);
+    assert.match(assertNotProduction('appSAME123', ' appSAME123 '), /production base と同じ/);
+  });
+
+  test('🔴 両方未設定でも当然中止（fail-open にしない）', () => {
+    assert.ok(assertNotProduction(undefined, undefined));
+    assert.ok(assertNotProduction('', ''));
+  });
+
+  test('🔴 安全弁を通らずに書き込む経路が無い（main で必ず呼ぶ）', () => {
+    const src = readFileSync(join(here, 'bootstrapQaBase.mjs'), 'utf8');
+    const iAssert = src.indexOf('assertNotProduction(QA, PROD)');
+    const iFetch = src.indexOf('await fetch(');
+    assert.ok(iAssert > 0, 'main() で assertNotProduction を呼んでいない');
+    assert.ok(iAssert < iFetch, '🔴 fetch より後に安全弁を呼んでいる');
+  });
+
   test('🔴 レコードを 1 件も書かない（作るのはテーブルと列だけ）', () => {
     const src = readFileSync(join(here, 'bootstrapQaBase.mjs'), 'utf8');
 

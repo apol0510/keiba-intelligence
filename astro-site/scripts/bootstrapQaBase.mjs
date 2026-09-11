@@ -334,11 +334,34 @@ export function validateCreateSchema(tables) {
   return problems;
 }
 
-/** 🔴 production への誤爆を防ぐ最重要チェック。 */
+/**
+ * 🔴 production への誤爆を防ぐ最重要チェック。**fail-closed。**
+ *
+ * 🔴 **比較相手（production の base id）が無ければ、誤爆かどうかを判定できない。**
+ *    判定できないまま進むのは「安全弁が無い状態で書き込む」のと同じなので、
+ *    その場合も**中止する**（2026-09-12 に fail-open だったのを修正）。
+ *
+ * 中止する条件:
+ *   1. `AIRTABLE_QA_BASE_ID` が未設定 / 形式不正
+ *   2. `AIRTABLE_BASE_ID`（production）が未設定 ← 🔴 これが fail-closed の要
+ *   3. 対象 base が production base と同じ
+ *
+ * @returns {string|null} 中止すべき理由。問題なければ null
+ */
 export function assertNotProduction(qaBaseId, prodBaseId) {
-  if (!qaBaseId) return '対象 base（AIRTABLE_QA_BASE_ID）が未設定';
-  if (!/^app[A-Za-z0-9]+$/.test(qaBaseId)) return '対象 base の形式が不正';
-  if (prodBaseId && qaBaseId === prodBaseId) return '🔴 対象が production base と同じ。中止する';
+  const qa = typeof qaBaseId === 'string' ? qaBaseId.trim() : '';
+  const prod = typeof prodBaseId === 'string' ? prodBaseId.trim() : '';
+
+  if (!qa) return '対象 base（AIRTABLE_QA_BASE_ID）が未設定';
+  if (!/^app[A-Za-z0-9]+$/.test(qa)) return '対象 base の形式が不正';
+
+  // 🔴 fail-closed: 比較相手が無い＝誤爆チェックが成立しない
+  if (!prod) {
+    return 'production base（AIRTABLE_BASE_ID）が未設定。'
+      + '誤爆チェックが成立しないので中止する（production と同じ base かどうか判定できない）';
+  }
+
+  if (qa === prod) return '対象が production base と同じ。中止する';
   return null;
 }
 

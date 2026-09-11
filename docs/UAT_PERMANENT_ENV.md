@@ -200,8 +200,15 @@ Claude は secret を入力欄へ入れない（値を見ない・持たない�
 **会員 1 行を先に作ると `--check` は exit 1 で落ちる。** 必ず上の順序で行う。
 
 🔴 **`AIRTABLE_BASE_ID`（production）を必ず export する。**
-誤爆チェックは `if (prodBaseId && qaBaseId === prodBaseId)` であり、
-**production 側が未設定だと素通りする**。
+`assertNotProduction()` は **fail-closed**（2026-09-12）。
+比較相手が無いと誤爆を判定できないため、**production 側が未設定なら中止する**。
+中止するのは次の 3 ケース:
+
+1. `AIRTABLE_QA_BASE_ID` が未設定 / 形式不正
+2. `AIRTABLE_BASE_ID`（production）が未設定
+3. 対象 base が production base と同じ
+
+いずれも**ネットワークへ出る前**に止まる。
 
 🟡 **Metadata API は「読み取り時の形」と「作成時に要求される形」が違う。**
 2026-09-11 に `dateTime` の `timeFormat` 欠落で 422

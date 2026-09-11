@@ -5139,10 +5139,30 @@ Customers を直しただけでは次で落ちていた。共通定数を直し�
 
 ### 維持したもの
 
-- production 誤爆の安全弁（`qaBaseId === prodBaseId` で中止）を**変更していない**
 - レコードの読み書きをしない（作るのはテーブルと列だけ。`--check` の件数確認のみ read）
 - 既定は dry-run
 - POST 先は Metadata API の**対象 base のみ**
+
+### 🔴 追加: `assertNotProduction()` を fail-closed にした（同日・仕様所有者の指示）
+
+従来は `if (prodBaseId && qaBaseId === prodBaseId)` で、**production 側の base id が
+未設定だと誤爆チェックが素通りしていた**（fail-open）。比較相手が無ければ
+「production と同じ base か」を判定できないので、**判定できない場合も中止する**よう変更した。
+
+中止する 3 ケース（いずれも**ネットワークへ出る前**に停止）:
+
+| # | 条件 | メッセージ |
+|---|---|---|
+| 1 | `AIRTABLE_QA_BASE_ID` 未設定 / 形式不正 | `対象 base（AIRTABLE_QA_BASE_ID）が未設定` |
+| 2 | `AIRTABLE_BASE_ID`（production）未設定 | `production base（AIRTABLE_BASE_ID）が未設定。誤爆チェックが成立しないので中止する` |
+| 3 | QA ID = production ID | `対象が production base と同じ。中止する` |
+
+前後の空白は `trim()` して扱う（空白だけの値は未設定と同じ扱い。空白で等値判定を
+すり抜けられないことをテストで固定）。
+
+実挙動でも 3 ケースすべて停止することを確認済み。
+`npm run test:qa-base` は **34 → 39 件すべて pass**。
+変異テストで有効性を確認: fail-closed 判定を削って fail-open に戻すと **1 件 fail**、戻すと全件 pass。
 
 🔴 **今回の未完成 UAT base には触っていない**（削除・再作成をしていない）。
 スクリプトは冪等（既にあるテーブルは作り直さない）なので、そのまま `--apply` を再実行できる。
