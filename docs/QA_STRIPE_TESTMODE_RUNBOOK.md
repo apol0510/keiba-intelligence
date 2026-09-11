@@ -11,6 +11,27 @@
 
 ---
 
+## 🔴 方針変更（2026-09-11）— 本書は「一回限りの QA」の記録
+
+**Stripe Test は恒久 UAT 環境として残すことになった。**
+常設運用の正本は **[`docs/UAT_PERMANENT_ENV.md`](./UAT_PERMANENT_ENV.md)** である。
+
+| | |
+|---|---|
+| 本書の役割 | 2026-09-10 に行った**一回限りの QA の記録**（隔離の設計・実測・経路 A / B の結果） |
+| 常設運用の正本 | `docs/UAT_PERMANENT_ENV.md` |
+
+🔴 **本書 §5「後片付け」を恒久 UAT 環境に対して実行しないこと。**
+§5 は一回限りの QA を畳むための手順であり、2026-09-11 に**実行済み**（§5'）。
+恒久 UAT で消してよいのは「使い戻しの効かない使い捨て資産」と「production 混入」だけで、
+その区別は `UAT_PERMANENT_ENV.md` §7 が正本。
+
+🔴 **ログイン方法が変わった。** 本書は「QA 専用 `SESSION_SIGNING_SECRET` で Cookie を手で発行」
+としているが、恒久 UAT では専用ログイン関数（`POST /.netlify/functions/uat-login`）を使う。
+契約は `UAT_PERMANENT_ENV.md` §5。
+
+---
+
 ## 0. なぜ隔離が要るか（前回 E2E との違い）
 
 2026-09 の Test Mode E2E は **`AIRTABLE_BASE_ID` と `SESSION_SIGNING_SECRET` を本番と共有**していた。
