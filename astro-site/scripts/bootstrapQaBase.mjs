@@ -139,13 +139,30 @@ export function fieldSignature(field) {
 /**
  * 期待するスキーマと実際のスキーマを突き合わせる（**純関数**）。
  *
- * 🔴 「本番に無い列」は落とさない（Airtable が既定で足す列があるため）。
- *    落とすのは **不足・型違い・primary 違い**だけ。
+ * 🔴 「本番に無い**列**」は落とさない（Airtable が既定で足す列があるため）。
+ *    落とすのは **不足・型違い・primary 違い**。
+ *
+ * 🔴 **「期待していない*テーブル*」があれば落とす**（2026-09-12 追加）。
+ *    UAT base は正本どおり **4 テーブルちょうど**であるべき。
+ *    Airtable の UI で base を作ると既定で `Table 1` が残るため、
+ *    これを見逃すと「5 テーブルあるのに PASS」になる（実際に起きた）。
+ *    列の extra とテーブルの extra は**扱いが違う**ので混同しないこと。
  */
 export function diffSchema(expectedTables, actualTables) {
   const actual = new Map(actualTables.map((t) => [t.name, t]));
   const problems = [];
   const report = [];
+
+  // 🔴 期待していないテーブル（正本は 4 テーブルちょうど）
+  const expectedNames = new Set(expectedTables.map((t) => t.name));
+  const extraTables = actualTables
+    .filter((t) => !expectedNames.has(t.name))
+    .map((t) => ({ name: t.name, id: t.id, fieldCount: (t.fields || []).length }));
+  if (extraTables.length) {
+    problems.push(
+      `期待していないテーブルがある → ${extraTables.map((t) => `${t.name}(${t.fieldCount} 列)`).join(' / ')}`,
+    );
+  }
 
   for (const want of expectedTables) {
     const got = actual.get(want.name);
@@ -180,7 +197,7 @@ export function diffSchema(expectedTables, actualTables) {
       extra: got.fields.filter((f) => !want.fields.some((w) => w.name === f.name)).map((f) => f.name),
     });
   }
-  return { ok: problems.length === 0, problems, report };
+  return { ok: problems.length === 0, problems, report, extraTables };
 }
 
 /**
@@ -386,7 +403,7 @@ async function main() {
   const existing = new Map(actualTables.map((t) => [t.name, t]));
 
   if (CHECK) {
-    const { ok, report } = diffSchema(TABLES, actualTables);
+    const { ok, report, extraTables } = diffSchema(TABLES, actualTables);
     console.log('   本番と同じ形か照合（read-only）\n');
     for (const r of report) {
       console.log(`  ${r.ok ? '✅' : '🔴'} ${r.table.padEnd(20)} primary=${r.primaryName ?? '(無)'}${r.primaryOk === false ? ` 🔴 期待 ${r.wantPrimary}` : ''}`);
@@ -396,6 +413,32 @@ async function main() {
     }
     console.log(`\n  テーブル ${TABLES.length} / 期待する列 合計 ${TABLES.reduce((s, t) => s + t.fields.length, 0)}`);
     console.log(`  実際のテーブル ${actualTables.length} / 列 合計 ${actualTables.reduce((s, t) => s + t.fields.length, 0)}`);
+
+    // 🔴 期待していないテーブルの素性を出す（read-only）。
+    //    削除してよいか判断するには name / id / 列 / レコード件数が要る。
+    if (extraTables.length) {
+      console.log(`\n  🔴 期待していないテーブル ${extraTables.length} 件（正本は ${TABLES.length} テーブルちょうど）`);
+      for (const t of extraTables) {
+        const actualT = actualTables.find((x) => x.name === t.name);
+        const fieldNames = (actualT?.fields || []).map((f) => `${f.name}:${f.type}`).join(' / ');
+        let recs = '不明';
+        try {
+          const rr = await fetch(`https://api.airtable.com/v0/${QA}/${encodeURIComponent(t.name)}?maxRecords=3`,
+            { headers: { Authorization: `Bearer ${KEY}` } });
+          if (rr.ok) {
+            const n = ((await rr.json()).records || []).length;
+            recs = n === 0 ? '0 件' : `${n} 件以上`;
+          } else {
+            recs = `確認できない (${rr.status})`;
+          }
+        } catch { /* 件数が取れなくても報告は続ける */ }
+        console.log(`     - name: ${t.name}`);
+        console.log(`       id  : ${t.id}`);
+        console.log(`       列  : ${t.fieldCount} 件 … ${fieldNames}`);
+        console.log(`       レコード: ${recs}`);
+      }
+      console.log('     🔴 このスクリプトはテーブルを削除しない。削除は承認のうえ手動で行うこと。');
+    }
 
     // 🔴 レコードが 0 件であることの確認（production を複製していないことの裏取り）
     let total = 0;

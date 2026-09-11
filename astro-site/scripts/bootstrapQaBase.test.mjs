@@ -94,15 +94,24 @@ describe('🔴 production への誤爆を防ぐ', () => {
     }
   });
 
-  test('🔴 レコードへのアクセスは --check の件数確認だけ（read-only）', () => {
+  test('🔴 レコードへのアクセスは件数確認だけ（すべて read-only）', () => {
     const src = readFileSync(join(here, 'bootstrapQaBase.mjs'), 'utf8');
     const recordCalls = [...src.matchAll(/https:\/\/api\.airtable\.com\/v0\/(?!meta\/)[^`\n]*/g)];
-    assert.equal(recordCalls.length, 1, '🔴 レコード API の呼び出しが想定より多い');
-    // 件数確認のみ。maxRecords を付けて、body も method も無い（＝GET）
-    assert.match(recordCalls[0][0], /maxRecords=\d+/, '🔴 全件取得しようとしている');
-    const around = src.slice(recordCalls[0].index, recordCalls[0].index + 220);
-    assert.equal(/method:/.test(around), false, '🔴 GET 以外でレコードへ行っている');
-    assert.equal(/body:/.test(around), false, '🔴 レコードへ body を送っている');
+    // 🔴 本数は固定しない（extra table の件数確認が増えたため）。
+    //    大事なのは「どの呼び出しも件数確認の GET であること」。
+    assert.ok(recordCalls.length >= 1, 'レコード件数の確認が無い');
+    for (const call of recordCalls) {
+      assert.match(call[0], /maxRecords=\d+/, '🔴 全件取得しようとしている');
+      const around = src.slice(call.index, call.index + 220);
+      assert.equal(/method:/.test(around), false, '🔴 GET 以外でレコードへ行っている');
+      assert.equal(/body:/.test(around), false, '🔴 レコードへ body を送っている');
+    }
+  });
+
+  test('🔴 テーブルを削除する経路が無い（DELETE を持たない）', () => {
+    const src = readFileSync(join(here, 'bootstrapQaBase.mjs'), 'utf8');
+    assert.equal(/method:\s*'DELETE'/.test(src), false, '🔴 削除リクエストがある');
+    assert.equal(src.includes('DELETE'), false, '🔴 DELETE の記述がある');
   });
 
   test('既定は dry-run（--apply が無ければ作らない）', () => {
@@ -184,6 +193,40 @@ describe('スキーマ照合（--check）', () => {
     const d = diffSchema(TABLES, asActual(TABLES).filter((t) => t.name !== 'AuthTokens'));
     assert.equal(d.ok, false);
     assert.match(d.problems.join(' '), /AuthTokens/);
+  });
+
+  // ── 🔴 期待していないテーブル（2026-09-12）────────────────────────
+  // UI で base を作ると既定の `Table 1` が残る。これを見逃して
+  // 「実際 5 テーブル / 58 列」なのに PASS していた。
+
+  test('🔴 期待していないテーブルがあれば落ちる（正本は 4 テーブルちょうど）', () => {
+    const a = asActual(TABLES);
+    a.push({ name: 'Table 1', id: 'tblEXTRA123', fields: [{ name: 'Name', type: 'singleLineText' }] });
+    const d = diffSchema(TABLES, a);
+    assert.equal(d.ok, false, '🔴 extra table が素通りしている');
+    assert.match(d.problems.join(' '), /期待していないテーブル/);
+    assert.match(d.problems.join(' '), /Table 1/);
+  });
+
+  test('extraTables に name / id / 列数 を載せる（削除判断に要る）', () => {
+    const a = asActual(TABLES);
+    a.push({ name: 'Table 1', id: 'tblEXTRA123', fields: [{ name: 'Name', type: 'singleLineText' }, { name: 'Notes', type: 'multilineText' }] });
+    const d = diffSchema(TABLES, a);
+    assert.deepEqual(d.extraTables, [{ name: 'Table 1', id: 'tblEXTRA123', fieldCount: 2 }]);
+  });
+
+  test('期待どおり 4 テーブルちょうどなら extraTables は空', () => {
+    const d = diffSchema(TABLES, asActual(TABLES));
+    assert.deepEqual(d.extraTables, []);
+    assert.equal(d.ok, true, d.problems.join(' / '));
+  });
+
+  test('🔴 テーブルの extra は落とすが、列の extra は従来どおり許容する', () => {
+    const a = asActual(TABLES);
+    a.find((t) => t.name === 'Customers').fields.push({ name: 'Airtable が足した列', type: 'singleLineText' });
+    const d = diffSchema(TABLES, a);
+    assert.equal(d.ok, true, `列の extra で落ちてはいけない: ${d.problems.join(' / ')}`);
+    assert.deepEqual(d.extraTables, []);
   });
 
   test('🔴 列が不足していれば落ちる', () => {
