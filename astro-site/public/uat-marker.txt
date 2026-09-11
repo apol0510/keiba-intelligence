@@ -7,3 +7,10 @@ uat
 🟢 このファイルがあるのは、main とツリーが完全一致していると Netlify が
    "Canceled build due to no content change" でビルドをスキップしてしまうため。
    uat ブランチを main へ追随させたあとも、このファイルは残すこと。
+
+--- 再デプロイ記録 ---
+2026-09-12: branch:uat スコープの env 8 キーと Stripe Test の webhook 送信先を
+反映させるための再デプロイ。Netlify は env を deploy 時に注入するため、
+env を足しただけでは既存 deploy に反映されない。
+🟢 空コミットだと "no content change" でスキップされるので、このファイルを更新して
+   確実にビルドを走らせる。
