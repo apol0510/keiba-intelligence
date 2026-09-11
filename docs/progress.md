@@ -5096,6 +5096,62 @@ branch-deploy env 9 キー / Stripe Test の webhook 送信先作成。
 
 🔴 `uat` ブランチは**本 PR が `main` に入ってから**作る（ログイン関数が含まれている必要がある）。
 
+## 2026-09-12 UAT base bootstrap の 422 を恒久修正（`dateTime` の `timeFormat` 欠落）
+
+`npm run qa-base:bootstrap -- --apply` が **Customers の作成で 422
+`INVALID_FIELD_TYPE_OPTIONS_FOR_CREATE`** で停止した。手動で schema を作らず、スクリプト側を直した。
+
+### 原因
+
+**`dateTime` は作成時に `timeFormat` が必須**だが、`isoTime` 定数が
+`{ dateFormat, timeZone }` だけで `timeFormat` を持っていなかった。
+正本: https://airtable.com/developers/web/api/field-model
+
+🔴 **読み取り時に返る形と、作成時に要求される形が違う**のが根本。
+TABLES は production から Metadata API で読んだ schema を元にしており、
+読み取り結果をそのまま送ると落ちる列がある。
+
+該当は Customers の **6 列**（`ExpirationDate` / `有効期限` / `CreatedAt` /
+`UnsubscribedAtAnalyticsKeiba` / `UnsubscribedAtKeibaIntelligence` /
+`LastNewsletterSentAt`）。AuthTokens の 2 列（`ExpiresAt` / `CreatedAt`）も同じ形なので、
+Customers を直しただけでは次で落ちていた。共通定数を直したので 8 列すべてが解消した。
+
+他の列は仕様上問題なしを確認:
+`number.precision`（0〜8・必須）/ `checkbox.icon`・`color`（`check`・`greenBright` は有効）/
+`singleSelect`・`multipleSelects` の `choices`（name のみ・作成時に id を付けない）/
+`date` は `dateFormat` のみ。
+
+### 修正
+
+| 内容 | |
+|---|---|
+| `isoTime` に `timeFormat: { name: '24hour' }` を追加 | 🔴 **表示設定であり保存値（ISO）は変わらない ＝ production の意味は変えない** |
+| `validateCreateField()` / `validateCreateSchema()` を新設 | 作成時 payload の妥当性を**送信前**に検証 |
+| `main()` で **fetch より前**に検証 | 「1 テーブル作った所で 422 で止まり base が中途半端に残る」事故を防ぐ |
+| 422 時のエラー本文を type + message で最大 300 字まで表示 | 従来は 60 字で切れて原因が読めなかった |
+
+`fieldSignature()` は `timeFormat` を見ないため、**`--check` の判定は変わらない**。
+
+### テスト
+
+`npm run test:qa-base` **13 → 34 件すべて pass**。
+変異テストで有効性を確認: `timeFormat` を削除して 422 当時の状態に戻すと **2 件 fail**、戻すと全件 pass。
+
+### 維持したもの
+
+- production 誤爆の安全弁（`qaBaseId === prodBaseId` で中止）を**変更していない**
+- レコードの読み書きをしない（作るのはテーブルと列だけ。`--check` の件数確認のみ read）
+- 既定は dry-run
+- POST 先は Metadata API の**対象 base のみ**
+
+🔴 **今回の未完成 UAT base には触っていない**（削除・再作成をしていない）。
+スクリプトは冪等（既にあるテーブルは作り直さない）なので、そのまま `--apply` を再実行できる。
+
+### 未実施
+
+仕様所有者による PAT 再入力 → dry-run → `--apply` → `--check`。
+`--check` の 403 は 4 テーブル未作成の段階のものなので、`--apply` 後に改めて判定する。
+
 ## Open Questions
 
 ### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）

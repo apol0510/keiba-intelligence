@@ -9,7 +9,10 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { TABLES, assertNotProduction, diffSchema, fieldSignature } from './bootstrapQaBase.mjs';
+import {
+  TABLES, assertNotProduction, diffSchema, fieldSignature,
+  validateCreateField, validateCreateSchema,
+} from './bootstrapQaBase.mjs';
 import {
   LEDGER_TABLE, LEDGER_FIELDS, REDEMPTION_TABLE, REDEMPTION_FIELDS, CUSTOMER_FIELDS,
 } from '../src/lib/membership/airtableStore.js';
@@ -193,5 +196,102 @@ describe('スキーマ照合（--check）', () => {
     assert.match(fieldSignature({ type: 'singleSelect', options: { choices: [{ name: 'a' }, { name: 'b' }] } }), /choices=a,b/);
     assert.match(fieldSignature({ type: 'date', options: { dateFormat: { name: 'iso' } } }), /dateFormat=iso/);
     assert.match(fieldSignature({ type: 'number', options: { precision: 0 } }), /precision=0/);
+  });
+});
+
+describe('🔴 作成時 payload の妥当性（2026-09-11 の 422 回帰防止）', () => {
+  // 2026-09-11: Customers の作成が 422 INVALID_FIELD_TYPE_OPTIONS_FOR_CREATE で失敗した。
+  // 原因は dateTime の options に timeFormat が無かったこと。
+  // 🔴 読み取り時に返る形と、作成時に要求される形は違う。
+  // 正本: https://airtable.com/developers/web/api/field-model
+
+  test('🔴 TABLES 全列が作成時 payload として妥当', () => {
+    const problems = validateCreateSchema(TABLES);
+    assert.deepEqual(problems, [], `作成できない列がある:\n${problems.join('\n')}`);
+  });
+
+  test('🔴 dateTime 列はすべて timeFormat を持つ（これが無いと 422）', () => {
+    let seen = 0;
+    for (const t of TABLES) {
+      for (const f of t.fields) {
+        if (f.type !== 'dateTime') continue;
+        seen += 1;
+        assert.ok(f.options?.timeFormat?.name, `${t.name}.${f.name} に timeFormat が無い`);
+        assert.ok(['12hour', '24hour'].includes(f.options.timeFormat.name));
+        assert.ok(f.options?.timeZone, `${t.name}.${f.name} に timeZone が無い`);
+        assert.equal(f.options.dateFormat.name, 'iso');
+      }
+    }
+    assert.ok(seen >= 8, `dateTime 列が少なすぎる（${seen}）`);
+  });
+
+  test('🔴 timeFormat 欠落を検証器が捕まえる（過去の実障害そのもの）', () => {
+    const bad = { name: 'ExpirationDate', type: 'dateTime', options: { dateFormat: { name: 'iso' }, timeZone: 'utc' } };
+    const msg = validateCreateField(bad);
+    assert.ok(msg && msg.includes('timeFormat'), `捕まえられていない: ${msg}`);
+  });
+
+  test('🔴 date 列に時刻系 options を付けたら落とす', () => {
+    assert.ok(validateCreateField({
+      name: 'D', type: 'date', options: { dateFormat: { name: 'iso' }, timeZone: 'utc' },
+    }));
+    assert.ok(validateCreateField({
+      name: 'D', type: 'date', options: { dateFormat: { name: 'iso' }, timeFormat: { name: '24hour' } },
+    }));
+    assert.equal(validateCreateField({ name: 'D', type: 'date', options: { dateFormat: { name: 'iso' } } }), null);
+  });
+
+  test('checkbox の icon / color を検証する', () => {
+    assert.equal(validateCreateField({ name: 'C', type: 'checkbox', options: { icon: 'check', color: 'greenBright' } }), null);
+    assert.ok(validateCreateField({ name: 'C', type: 'checkbox', options: { icon: 'check', color: 'green' } }));
+    assert.ok(validateCreateField({ name: 'C', type: 'checkbox', options: { icon: 'tick', color: 'greenBright' } }));
+    assert.ok(validateCreateField({ name: 'C', type: 'checkbox' }));
+  });
+
+  test('number の precision を検証する（0〜8 の整数）', () => {
+    assert.equal(validateCreateField({ name: 'N', type: 'number', options: { precision: 0 } }), null);
+    assert.ok(validateCreateField({ name: 'N', type: 'number' }));
+    assert.ok(validateCreateField({ name: 'N', type: 'number', options: { precision: 9 } }));
+    assert.ok(validateCreateField({ name: 'N', type: 'number', options: { precision: 1.5 } }));
+  });
+
+  test('🔴 text 系に options を付けたら落とす', () => {
+    assert.equal(validateCreateField({ name: 'T', type: 'singleLineText' }), null);
+    assert.ok(validateCreateField({ name: 'T', type: 'singleLineText', options: { precision: 0 } }));
+  });
+
+  test('選択肢は name 必須・作成時に id を付けない', () => {
+    assert.equal(validateCreateField({ name: 'S', type: 'singleSelect', options: { choices: [{ name: 'a' }] } }), null);
+    assert.ok(validateCreateField({ name: 'S', type: 'singleSelect', options: { choices: [] } }));
+    assert.ok(validateCreateField({ name: 'S', type: 'singleSelect', options: { choices: [{ name: 'a', id: 'sel123' }] } }));
+    assert.ok(validateCreateField({ name: 'S', type: 'singleSelect' }));
+  });
+
+  test('🔴 API で作成できない型を落とす（計算列・自動列）', () => {
+    for (const type of ['formula', 'rollup', 'lookup', 'createdTime', 'autoNumber', 'button']) {
+      assert.ok(validateCreateField({ name: 'X', type }), `${type} が素通りしている`);
+    }
+  });
+
+  test('🔴 primary field に使えない型を落とす', () => {
+    const problems = validateCreateSchema([
+      { name: 'T', fields: [{ name: 'Flag', type: 'checkbox', options: { icon: 'check', color: 'greenBright' } }] },
+    ]);
+    assert.ok(problems.some((p) => p.includes('primary field')), problems.join('\n'));
+  });
+
+  test('列名の重複を落とす', () => {
+    const problems = validateCreateSchema([
+      { name: 'T', fields: [{ name: 'A', type: 'singleLineText' }, { name: 'A', type: 'singleLineText' }] },
+    ]);
+    assert.ok(problems.some((p) => p.includes('重複')), problems.join('\n'));
+  });
+
+  test('🔴 検証はネットワークへ出る前に行う（送信前に落とす）', () => {
+    const src = readFileSync(join(here, 'bootstrapQaBase.mjs'), 'utf8');
+    const iValidate = src.indexOf('validateCreateSchema(TABLES)');
+    const iFetch = src.indexOf('await fetch(');
+    assert.ok(iValidate > 0, 'main() で validateCreateSchema を呼んでいない');
+    assert.ok(iValidate < iFetch, '🔴 fetch より後に検証している');
   });
 });

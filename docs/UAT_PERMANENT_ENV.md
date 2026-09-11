@@ -179,7 +179,7 @@ premium を直接発行できてしまうと、**確認したい体験そのも�
 |---|---|---|
 | 1 | UAT base の作成（空の base から。複製しない） | Airtable UI |
 | 2 | UAT 専用 PAT の発行（UAT base のみ。スコープ 4 種） | Airtable UI |
-| 3 | スキーマ作成 → `npm run qa-base:bootstrap` / `--check` で照合 | ターミナル |
+| 3 | スキーマ作成 → `npm run qa-base:bootstrap` / `-- --apply` / `-- --check` | ターミナル |
 | 4 | UAT 会員 1 行の作成（§4） | Airtable UI |
 | 5 | `uat` ブランチ作成（`main` ＋ `uat-marker.txt`） | git |
 | 6 | `allowed_branches` に `uat` を追加 | Netlify |
@@ -188,3 +188,23 @@ premium を直接発行できてしまうと、**確認したい体験そのも�
 
 🔴 3・7・8 は **PAT / secret / 合言葉の値そのもの**を扱う。
 Claude は secret を入力欄へ入れない（値を見ない・持たない）。
+
+### 🔴 スキーマ作成の順序と注意（2026-09-11 の 422 を踏まえて）
+
+1. `npm run qa-base:bootstrap`（dry-run。対象 base が UAT であることを目視）
+2. `npm run qa-base:bootstrap -- --apply`
+3. `npm run qa-base:bootstrap -- --check`
+4. **そのあとで** UAT 会員 1 行を作る（§4）
+
+🔴 **`--check` は「レコード 0 件」も合格条件**（production base を複製していないことの裏取り）。
+**会員 1 行を先に作ると `--check` は exit 1 で落ちる。** 必ず上の順序で行う。
+
+🔴 **`AIRTABLE_BASE_ID`（production）を必ず export する。**
+誤爆チェックは `if (prodBaseId && qaBaseId === prodBaseId)` であり、
+**production 側が未設定だと素通りする**。
+
+🟡 **Metadata API は「読み取り時の形」と「作成時に要求される形」が違う。**
+2026-09-11 に `dateTime` の `timeFormat` 欠落で 422
+`INVALID_FIELD_TYPE_OPTIONS_FOR_CREATE` を踏んだ。
+現在は `validateCreateField()` が**送信前に**検証して落とすため、
+同種の誤りはネットワークへ出る前に止まる（`npm run test:qa-base` が回帰を守る）。
