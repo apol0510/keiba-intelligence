@@ -175,16 +175,20 @@ premium を直接発行できてしまうと、**確認したい体験そのも�
 
 コード側（本書 §5）は実装済み。環境側は **secret を扱うため Claude は実行しない**。
 
-| # | 作業 | 場所 |
-|---|---|---|
-| 1 | UAT base の作成（空の base から。複製しない） | Airtable UI |
-| 2 | UAT 専用 PAT の発行（UAT base のみ。スコープ 4 種） | Airtable UI |
-| 3 | スキーマ作成 → `npm run qa-base:bootstrap` / `-- --apply` / `-- --check` | ターミナル |
-| 4 | UAT 会員 1 行の作成（§4） | Airtable UI |
-| 5 | `uat` ブランチ作成（`main` ＋ `uat-marker.txt`） | git |
-| 6 | `allowed_branches` に `uat` を追加 | Netlify |
-| 7 | branch-deploy スコープの env 9 キー（§3） | Netlify |
-| 8 | Stripe Test の webhook 送信先を UAT ホスト宛に作成 → `STRIPE_WEBHOOK_SECRET` を設定 | Stripe / Netlify |
+| # | 作業 | 場所 | 状態（2026-09-12）|
+|---|---|---|---|
+| 1 | UAT base の作成（空の base から。複製しない） | Airtable UI | ✅ 完了 |
+| 2 | UAT 専用 PAT の発行（UAT base のみ。スコープ 4 種） | Airtable UI | ✅ 完了 |
+| 3 | スキーマ作成 → `npm run qa-base:bootstrap` / `-- --apply` / `-- --check` | ターミナル | ✅ **完了**（4 テーブル / 57 列・全 0 件・extra なし・exit 0）|
+| 4 | UAT 会員 1 行の作成（§4） | Airtable UI | ✅ 完了 |
+| 5 | `uat` ブランチ作成（`main` ＋ `uat-marker.txt`） | git | ✅ 完了 |
+| 6 | `allowed_branches` に `uat` を追加 | Netlify | ✅ 完了（`["main","uat"]`）|
+| 7 | branch-deploy スコープの env（§3 の 9 キーのうち**残り 8 キー**。`SESSION_SIGNING_SECRET` は設定済み）| Netlify | 🔴 **未実施** |
+| 8 | Stripe Test の webhook 送信先を UAT ホスト宛に作成 → `STRIPE_WEBHOOK_SECRET` を設定 | Stripe / Netlify | 🔴 **未実施** |
+
+🟢 **UAT base は完成**（1〜4 完了）。`--check` は**再実行しない**。
+残るのは 7・8 の env と webhook 送信先だけ。それが入るまで UAT は fail-closed のままで、
+`uat-login` は UAT ホストで **503 `not_configured`**、本番では **404** を返す（いずれも実測済み）。
 
 🔴 3・7・8 は **PAT / secret / 合言葉の値そのもの**を扱う。
 Claude は secret を入力欄へ入れない（値を見ない・持たない）。
