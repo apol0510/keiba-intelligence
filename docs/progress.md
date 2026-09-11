@@ -4352,6 +4352,462 @@ E2E をここから先へ進めるには、**Stripe への外部 write が必要
 
 ---
 
+## 2026-09-10 Stripe Test Mode 隔離 QA 環境 — env 分離と初回 branch deploy（完了）
+
+管理者が **実会員と同じ決済後の会員クラブ進捗**を `/mypage` で目視するための、
+production から隔離された QA 環境。本日ぶんの実施記録。正本は
+[`docs/QA_STRIPE_TESTMODE_RUNBOOK.md`](./QA_STRIPE_TESTMODE_RUNBOOK.md)。
+
+### 実施したこと（仕様所有者の承認あり）
+
+| # | 作業 | 結果 |
+|---|---|---|
+| 1 | `AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` を `all` 1 値 → **コンテキスト別**へ分離 | ✅ **PASS** |
+| 2 | branch-deploy スコープの env 設定 | 🟡 **3 キー設定 / 3 キーは値が無く未設定 / 1 キーは意図的に未設定** |
+| 3 | `allowed_branches` へ `qa-stripe-testmode` を追加 | ✅ `["main"]` → `["main","qa-stripe-testmode"]` |
+| 4 | **初回 QA branch deploy** | ✅ **ready** |
+
+### 1 の検証（🔴 最も危険な作業だったため）
+
+`updateEnvVar` で 1 回の呼び出しに全コンテキストの値を載せ、**原子的に**置換した。
+
+- 変換前後の **全 25 env** を突き合わせ、**構造が変わったのは対象 2 件のみ**
+- 🔴 **production に注入される値が変化した env は 0 件**（sha256 で byte 一致を確認）
+- `AIRTABLE_*` に `all` の残存 **なし**
+- 本番 `/` `/pricing` `/mypage` = **200**、guest の `/prediction/{nankan,jra}` = **302**（fail-closed）
+- 🔴 **値はチャット・ログ・repo のいずれにも出していない**（照合は sha256 の先頭 10 桁のみ）
+
+### 4 の実測
+
+- URL: **`https://qa-stripe-testmode--keiba-intelligence.netlify.app`**
+- `/qa-marker.txt` `/` `/pricing` `/mypage` = **200** / guest 予想 = **302**
+- 🔴 **301 の罠を回避できていることを実測**: QA ホストへの **POST** は **503 `{"error":"not_configured"}`**
+  で **3xx ではない**。一方 `keiba-intelligence.netlify.app/mypage` は **301** を返す
+  （`netlify.toml` の 301 は `from` がホスト固定のため branch deploy には当たらない）
+- 本番は無傷（`/` `/pricing` `/mypage` = 200）
+
+🟢 `main` とツリーが完全一致していると Netlify が
+`Canceled build due to no content change` でビルドをスキップするため、
+QA ブランチに `astro-site/public/qa-marker.txt` を 1 ファイルだけ置いた。
+🔴 **この marker と空コミットを `main` へ merge しない。**
+
+### 🔴 値が無くて設定できていない 3 キー（仕様所有者の入力待ち）
+
+いずれも **fail-closed で正しく止まっている**。
+
+| キー | 必要な値 | 現在の挙動 |
+|---|---|---|
+| `AIRTABLE_API_KEY` | QA 専用 PAT | QA デプロイは **Airtable へ一切接続できない**（`MEMBERSHIP_WRITE_ENABLED=true` でも書けない）|
+| `STRIPE_SECRET_KEY` | Test の secret key | 決済導線は「準備中」 |
+| `STRIPE_PRICE_PREMIUM` | Test の Price id（既存の「KEIBA Intelligence プレミアム（テスト）」）| 同上 |
+
+🔴 **PAT / secret key は資格情報なので、Netlify の UI で仕様所有者が直接入力する。**
+値をチャット・repo・シェル履歴に載せない。
+
+### 🟡 `STRIPE_PORTAL_RETURN_URL` を意図的に未設定にした
+
+1. `netlify/functions/stripe-portal.js:69` の fallback は `${resolveSiteOrigin(headers)}/mypage`。
+   `src/lib/http/siteOrigin.js` の `isAllowedSiteHost()` が **`*.netlify.app` を許可**するため、
+   branch deploy では **設定した場合とまったく同じ URL** になる。
+2. 🔴 runbook に branch deploy の URL を文字列として書いてあり、Netlify の Secret Scanning は
+   **env の値と repo 内の文字列の一致**でビルドを落とす。同じ URL を env に入れると
+   **QA ビルドが `Exposed secrets detected` で red になる**（2026-09-10 に本番で 2 回発生した同じ罠）。
+
+**未設定のほうが安全で、挙動は同一。**
+
+### 次の承認境界
+
+1. Stripe Test の **webhook 送信先を 1 件作成**
+   （`https://qa-stripe-testmode--keiba-intelligence.netlify.app/.netlify/functions/stripe-webhook`）
+2. 発行された `STRIPE_WEBHOOK_SECRET` を branch-deploy へ設定
+3. Test Clock で 1 → 3 → 12 → 24 か月の E2E
+4. PR #125 の merge 判断（**現時点では未 merge**）
+
+---
+
+## 2026-09-10 QA E2E 実行前チェック（全項目 PASS・実行は承認待ち）
+
+Stripe Test の webhook 送信先（5 イベント / `status=enabled`）と `STRIPE_WEBHOOK_SECRET` を
+仕様所有者が設定。その後の実測。詳細は
+[`docs/QA_STRIPE_TESTMODE_RUNBOOK.md`](./QA_STRIPE_TESTMODE_RUNBOOK.md) §3.9。
+
+### env が関数へ入ったことの確認
+
+🔴 **Netlify の env は「次のビルド」から関数へ入る。** 設定しただけでは反映されない。
+
+| 時点 | QA ホストへの webhook POST |
+|---|---|
+| env 設定直後 | **503 `not_configured`** ＝ 未反映 |
+| QA 再デプロイ後 | ✅ **400 `invalid_signature`** ＝ 反映済み |
+
+### 🔴 Airtable の隔離は二重
+
+| 検証 | 結果 |
+|---|---|
+| QA base の 4 テーブル | **すべて 0 件** |
+| 🔴 **QA PAT で production base を読む** | **HTTP 403 到達不可** ✅ |
+| production 基準値（E2E 後の比較用）| `Customers` **81** / `AuthTokens` **696** / `RewardLedger` **2** / `RewardRedemptions` **0** |
+
+### production への影響
+
+- 本日の全作業後、**production に注入される env 値が変化した env は 0 件**（全 25 env を sha256 で突き合わせ）
+- env の増減なし（25 → 25）／本番 `/` `/pricing` `/mypage` = **200**／guest 予想 = **302**
+- Test イベントが誤って本番へ届いても、`STRIPE_WEBHOOK_SECRET` が別値なので **署名検証に失敗して 400**
+
+### 次の承認境界（E2E 本体）
+
+1. QA base の `Customers` に **QA 会員を 1 行 write**（QA Airtable への最初の書き込み）
+2. QA の `/pricing` から **Test Mode の Checkout** を通す
+3. **Test Clock** を進めて 1 → 3 → 12 → 24 か月の変化を `/mypage` で目視
+4. E2E 後に production の基準値（81 / 696 / 2 / 0）が**不変**であることを再確認
+
+---
+
+## 2026-09-10 🔴 Test Clock 経路の不整合を発見 — E2E を 2 経路へ分割（コード変更なし）
+
+仕様所有者が指摘し、コードで裏付けた。**production コード・auth 仕様は変更していない。**
+
+### 事実（コードで確認）
+
+`astro-site/netlify/functions/stripe-create-checkout.js:98` は Checkout Session に
+**`customer_email` だけ**を渡し、**`customer` を渡していない**。
+
+```js
+mode: 'subscription',
+line_items: [{ price: priceId, quantity: 1 }],
+customer_email: ent.email,        // 🔴 customer は渡していない
+client_reference_id: ent.email,
+```
+
+Stripe の仕様では、この場合 **Checkout が新しい Customer を作る**。
+そのため **事前に作った Test Clock Customer には Subscription が紐付かず**、
+時計を進めても請求が発生しない。当初の runbook §4.2 は
+「Test Clock 付き Customer を作る → `/pricing` から Checkout」という手順で、
+**この経路では成立しなかった**。
+
+### 対応 — 検証を 2 経路へ分ける（docs のみ）
+
+| 経路 | 何を通すか | 何を確かめるか |
+|---|---|---|
+| **A: 通常 Checkout（1 回）** | ✅ **実際の `stripe-create-checkout.js` を通る** | 本番の入口そのもの。`checkout.session.completed` / 初回 invoice / `MembershipStartedAt` / `ContractPrice*` 4 列 / **Bronze・1 か月・100pt** |
+| **B: Test Clock（1→3→12→24）** | 🔴 **`stripe-create-checkout.js` を通らない** | 月数・ランク・ポイントの推移のみ |
+
+経路 B は Test Clock Customer を先に作り、**その Customer ID を指定した
+Checkout Session を Stripe API で直接作る**。Price・metadata・`success_url` /
+`cancel_url` は **現行 production Checkout（`stripe-create-checkout.js:94-113`）と同じ契約**に
+合わせ、差分は `customer_email` → `customer` の **1 点だけ**にする。
+
+🔴 **`subscription_data.metadata` の 3 キー（`ki_plan` / `ki_email` / `ki_price_id`）は必須。**
+`stripe-webhook.js` の `emailFromInvoice()` は
+`invoice.parent.subscription_details.metadata.ki_email` を読むため、
+ここが空だと `invoice.customer_email` へ落ち、**台帳が会員へ積まれない**。
+
+🔴 **経路 B の結果をもって `stripe-create-checkout.js` を検証したとは記録しない。**
+入口の検証は **経路 A が正本**。runbook §7 の禁止事項へ明記した。
+
+### E2E の最後に必ず再確認する（§4.F）
+
+- QA base の 4 テーブルが**増えている**（＝ QA へ書けている）
+- 🔴 production base が**基準値から不変**: `Customers` **81** / `AuthTokens` **696** /
+  `RewardLedger` **2** / `RewardRedemptions` **0**
+- 🔴 QA PAT で production base を読むと **403** のまま
+- production に注入される env 値の変化 **0 件** / 本番 **200**・guest **302**
+
+---
+
+## 2026-09-10 経路 A を実行（カード入力の直前で停止）
+
+### 実施
+
+| # | 手順 | 結果 |
+|---|---|---|
+| 1 | QA `Customers` へ QA 会員を **1 件だけ**作成 | ✅ `qa+stripe-testmode@keiba-intelligence.jp` / `free-registered` / `active` / `AccessEnabled=✓`（`recmTcnATkdpQDNNV`）|
+| 2 | ログイン | ✅ **QA 専用 `SESSION_SIGNING_SECRET` でセッション発行**（tier=`free`）|
+| 3 | QA `/mypage` | ✅ **200**・QA 会員の Email を表示・「無料会員」「KI 会員クラブ」を含む |
+| 4 | 🔴 **実際の `stripe-create-checkout.js`** へ POST（`plan: premium`）| ✅ **200** と Checkout URL。id は **`cs_test_…`** ＝ Test Mode |
+| 5 | カード入力 | 🔴 **停止**（承認境界）|
+
+🔴 **magic link は使わなかった。** `SENDGRID_API_KEY` は `all` スコープのままなので、
+QA からマジックリンクを要求すると **production の SendGrid で実際にメールが飛ぶ**。
+外部送信は承認境界のため、QA 専用のセッション鍵で Cookie を発行した。
+**production の auth 仕様・コードは未変更。**
+
+### 実行直後の確認
+
+- QA `Customers` **1 件**（作成した 1 件のみ）／他 3 テーブルは 0 件
+- 🔴 production は **`Customers` 81 / `AuthTokens` 696 / `RewardLedger` 2 / `RewardRedemptions` 0 で不変**
+- 🔴 QA PAT で production base を読むと **403** のまま
+- 本番 `/` `/pricing` `/mypage` = **200** / guest 予想 = **302**
+
+### 🔴 過去の記述の訂正 — Stripe 3 キーの「別値確認」は成立していなかった
+
+2026-09-10 の先行報告で
+「`STRIPE_SECRET_KEY` / `STRIPE_PRICE_PREMIUM` / `STRIPE_WEBHOOK_SECRET` は
+production と別値であることを sha256 で確認」と書いたが、**これは誤り**。
+この 3 キーは Netlify で **`is_secret=true`** であり、API は値を `***` に
+マスクして返す。**比較していたのはマスク文字列**だった。
+
+実際に確認できるのは **挙動**のほう。
+
+| キー | 確認できたこと |
+|---|---|
+| `STRIPE_SECRET_KEY` | QA から作った Checkout Session の id が **`cs_test_…`**（live 鍵なら `cs_live_…`）＝ **Test Mode で動いている** |
+| `STRIPE_PRICE_PREMIUM` | Checkout が **200** を返した＝ Price が Test Mode に実在する |
+| `STRIPE_WEBHOOK_SECRET` | 署名なし POST が **`invalid_signature`** ＝ secret は入っている。**別値である保証は Stripe 側の仕様**（test / live は別、endpoint ごとに別）に依る |
+
+`AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` / `SESSION_SIGNING_SECRET` は `is_secret=false` で
+**値を読めるため、別値であることを実際に確認済み**（さらに QA PAT は production base へ **403**）。
+
+### 🔴 経路 B の実行主体（新たな制約）
+
+`STRIPE_SECRET_KEY` を読めないため、**Test Clock / Customer / Checkout Session を作る
+API 呼び出しは、鍵を持っている仕様所有者が実行する**。
+Test Clock と Customer は Stripe ダッシュボードでも作れるが、
+**Customer を指定した Checkout Session の作成は API / CLI が要る**。
+
+---
+
+## 2026-09-10 PR #127 本番反映 → QA ブランチ追随（経路 B の直前）
+
+### 本番反映
+
+- PR #127 squash merge → `main` = **`b3f09afc`** / production deploy **ready・published**（`10:00:02Z`）
+- read-only 確認: `/` `/pricing` `/mypage` `/register` **200** / guest 予想 **302**
+- `#126` の維持: `/mypage?checkout=success`（未ログイン）で
+  `/register` `無料登録` `無料会員登録` `無料会員に登録` **すべて 0 件**
+- webhook は **400 `invalid_signature`**（fail-closed のまま）
+
+### QA ブランチの追随
+
+- `qa-stripe-testmode` へ `origin/main` を **通常 merge**（🔴 rebase なし・2 parents）= **`519ac4b1`**
+- `main` との差分は `astro-site/public/qa-marker.txt` の **1 ファイルのみ**
+- QA branch deploy **ready**（`519ac4b1`）。`isFirstBillingInvoice` が QA 側のコードに入っていることを確認
+- QA の健全性: `/` `/pricing` `/mypage` **200** / guest **302** / webhook **400** /
+  `?checkout=success` の登録導線 **0 件**
+- production は無傷
+
+### 🔴 経路 B は別の QA 会員で行う（新たに判明）
+
+継続月数は `tenureMonthsFromLedger()` が**その会員の accrual の `periodMonths` を合算**する。
+経路 A の会員には既に **1 か月・100 pt** が積まれているため、同じアドレスで経路 B を始めると
+**1 → 3 → 12 → 24 が観測できない**（実際には 2 → 4 → 13 → 25 になる）。
+
+🔴 経路 B 用に**新しいアドレスの QA 会員を 1 件**作る。経路 A のレコード・台帳は**消さない**。
+🟢 新しい会員なら `MembershipStartedAt` も空から始まるので、
+**PR #127（初回請求だけ起点を書く）の検証もそのまま行える**。
+
+### 経路 B 用のツールを追加
+
+`astro-site/scripts/qaTestClock.mjs`。
+`stripe-create-checkout.js:94-113` と**同じ契約**で Session を組み立てる
+（差分は `customer_email` → `customer` の 1 点だけ）。
+🔴 `sk_test_` 以外の鍵と、branch deploy 以外の `QA_ORIGIN` は**受け付けずに中止**する。
+
+### 🔴 秘密値をコマンドラインに書かない（2026-09-10 確定）
+
+`STRIPE_SECRET_KEY=sk_test_... node ...` の形は **shell history にそのまま残る**ため **禁止**。
+
+- `read -s`（入力を画面に出さない）で環境変数へ入れ、**終わったら必ず `unset`** する
+- runbook §3.3（QA base の bootstrap）も同じ方式へ揃えた
+- 🔴 **鍵を stdout / stderr / ログへ出さない。**
+  Stripe のエラー本文は `Invalid API Key provided: sk_test_51****` のように
+  **鍵の一部を含めて返す**ので、`qaTestClock.mjs` に `redact()` を入れ、
+  `sk_` / `rk_` / `pk_` / `whsec_` 始まりと鍵そのものを `[REDACTED]` へ伏せる
+- 🔴 鍵・Price id を repo に書かない（Netlify の Secret Scanning でビルドが落ちる）
+- runbook §7 の禁止事項にも追記した
+
+---
+
+## 2026-09-10 経路 B: 専用 QA 会員を作成（カード入力の直前で停止）
+
+### 実施
+
+| # | 内容 | 結果 |
+|---|---|---|
+| 1 | QA `Customers` へ **経路 B 専用**の会員を 1 件だけ作成 | ✅ `qa+clock@keiba-intelligence.jp`（`reciXFkrrTlaIeRRK`）/ `free-registered` / `active` / `AccessEnabled=✓` / **`MembershipStartedAt` は空** |
+| 2 | 経路 A の会員・台帳 | ✅ **残してある**（`Customers` 2 件 / `RewardLedger` 1 件は経路 A のもの）|
+| 3 | 経路 B 会員の台帳 | ✅ **0 件**（これが 0 でないと 1→3→12→24 が観測できない）|
+
+🟢 `MembershipStartedAt` が空から始まるので、**PR #127（初回請求だけ起点を書く）の検証もそのまま行える**。
+
+### production への影響
+
+- 基準値から**不変**: `Customers` **81** / `AuthTokens` **696** / `RewardLedger` **2** / `RewardRedemptions` **0**
+- QA PAT で production base を読むと **403** のまま
+- 本番 `/` `/pricing` `/mypage` = **200**
+
+### 次（🔴 仕様所有者が実行する）
+
+`STRIPE_SECRET_KEY` は Netlify で `is_secret=true` のため読めない。
+`read -rs` で入力してもらい、`astro-site/scripts/qaTestClock.mjs start` で
+Test Clock ＋ Customer ＋ Checkout Session を作る。手順は runbook §4.B。
+
+---
+
+## 2026-09-10 経路 B: 1 か月時点の read-only 確認（🟢 PR #127 が効いていることを実測）
+
+決済は仕様所有者が完了。`qa+clock@keiba-intelligence.jp`。
+
+### QA セッションの発行（🔴 magic link / SendGrid を使わない）
+
+経路 A と同じ方法で、**QA 限定・当該会員限定**の署名付き Cookie をローカルで発行した。
+
+- 鍵は **branch-deploy スコープの `SESSION_SIGNING_SECRET`**。
+  🔴 production とは別値なので、**この Cookie は本番では通用しない**（実行前に照合）
+- `tier` は QA レコードの `PlanType` から復元（認可の判定は従来どおりサーバー側 entitlement）
+- 🔴 **production の auth / session の実装は一切変更していない**
+- token はローカルファイルへ書き出し、**チャット・ログには出していない**
+
+### 1 か月時点の実測
+
+| 項目 | 値 |
+|---|---|
+| `PlanType` | ✅ `free-registered` → **`premium`** |
+| `Status` | ✅ `active` |
+| 🟢 **`MembershipStartedAt`** | ✅ **`2026-09-10`（入った）** |
+| `ContractPriceYen` / `ContractPriceId` / `ContractCurrency` / `ContractStartedAt` | ✅ **4 列とも保存** |
+| `RewardLedger` | ✅ **1 件**・`accrual` / **100 pt** / `PeriodMonths=1` |
+| `/mypage` 会員ランク | ✅ **Bronze** |
+| `/mypage` 継続月数 | ✅ **1 か月** |
+| `/mypage` KIリワード残高 | ✅ **100 pt** |
+| `/mypage` 今月の積み上げ | ✅ **100 pt** |
+| `/mypage` 現在の契約価格 | ✅ **¥3,980** |
+| `/mypage` 継続価格ロック | ✅ **適用中** |
+
+🟢 **PR #127 が本番経路で効いていることの実測。**
+経路 A の会員（`#127` の反映**前**に決済）は `MembershipStartedAt` が**空のまま**、
+経路 B の会員（反映**後**に決済）は **入っている**。
+初回請求（`billing_reason = subscription_create`）でだけ書く実装が期待どおり動いた。
+
+### production への影響
+
+- 基準値から**不変**: `Customers` **81** / `AuthTokens` **696** / `RewardLedger` **2** / `RewardRedemptions` **0**
+- QA PAT で production base を読むと **403** のまま
+- 本番 `/` `/pricing` `/mypage` = **200**
+
+### 🔴 発見: QA から magic link を要求すると **production の SendGrid で実送信される**
+
+QA base の `AuthTokens` に 1 件（`2026-09-10T10:35:34Z` / `qa+clock@keiba-intelligence.jp`）。
+これは **QA branch deploy で magic link が要求された**記録。
+
+- `netlify/functions/send-magic-link.js` は
+  **AuthTokens へ挿入（:102）したあと `sgMail.send()`（:181）**する。
+  行が残っている＝**送信まで到達している**。
+- 🔴 **`SENDGRID_API_KEY` は `all` スコープのまま**なので、QA branch deploy は
+  **production の SendGrid アカウントで実際にメールを送る**。
+- 今回の宛先は**受信できないアドレス**なので、**バウンスが本番の送信者評価に付く**。
+- 🔴 **送信を止める env フラグは実装に無い**（`send-magic-link.js` に該当分岐なし）。
+
+**未確定（仕様所有者の判断待ち）**:
+1. branch-deploy スコープへ **ダミーの `SENDGRID_API_KEY`** を入れて QA から送れなくするか
+2. 送信を止める env フラグ（例: `MAIL_SEND_ENABLED`）を実装するか
+3. QA では magic link を**運用ルールとして使わない**（今回の Cookie 方式で通す）だけにするか
+
+🔴 いずれも env 変更・コード変更なので**未実施**。
+
+---
+
+## 2026-09-10 QA harness 修正: 請求境界ちょうどで止めない
+
+### 原因（仕様所有者が Stripe Test Mode を独立確認して確定）
+
+| invoice | status | `amount_paid` |
+|---|---|---|
+| 2026-09-10（初回）| `paid` | > 0 |
+| 2026-10-10（更新）| `paid` | > 0 |
+| **2026-11-10（更新）** | 🔴 **`draft`** | **0** |
+
+`2026-11-10` の invoice は **存在するが `draft`**。`automatically_finalizes_at` は
+**作成時刻 + 1 時間**。`qaTestClock.mjs` が請求境界**ちょうど**で停止して `ready` と判定するため、
+**自動 finalize の前に観測していた**。
+
+🔴 **webhook 不達ではない。** 台帳が 2 件 / 200 pt / Bronze だったのは正しい観測だった。
+
+### 修正（🔴 production コードは変更しない。PR #125 内の QA harness / runbook だけ）
+
+`astro-site/scripts/qaTestClock.mjs`:
+
+- `settle(clockId)` を追加。**未確定の invoice が無くなるまで**、
+  `automatically_finalizes_at` を過ぎるところまで Clock を進める
+- `advance` は **開始時**と**毎月の checkpoint** で必ず `settle()` を通してから ready とする
+- `settle` サブコマンドを追加（境界で止まっている現在位置を確定させる用）
+- 🔴 **手動 finalize / 手動 pay で回避しない**（本番と違う経路になり検証にならない）
+- 🔴 請求境界は **anchor** で数え、確定待ちに進めた時間を翌月へ繰り越さない
+  （毎月 `frozen_time + 1 か月` だと 1 時間ずつずれ、24 回で丸 1 日ずれる）
+- 支払い済み判定は `status === 'paid' && amount_paid > 0`
+
+runbook §4.B にも同じ内容を追記した。
+
+---
+
+## 2026-09-10 経路 B（Test Clock）1→3→12→24 か月 E2E 完了・**全 PASS**
+
+管理者が実会員と同じ決済後の会員クラブ進捗を `/mypage` で目視できる状態を、
+**production から完全に隔離した環境**で通しで確認した。
+
+| 時点 | 支払い済み invoice | 台帳 | 合計 pt | 継続月数 | ランク | `/mypage` |
+|---|---|---|---|---|---|---|
+| 1 か月 | 1 | 1 件 | **100** | 1 か月 | **Bronze** | ✅ Bronze / 1 か月 / 100 pt / ¥3,980 |
+| 3 か月 | 3 | 3 件 | **300** | 3 か月 | **Silver** | ✅ Silver / 3 か月 / 300 pt / ¥3,980 |
+| 12 か月 | 12 | 12 件 | **1,200** | 12 か月 | **Gold** | ✅ Gold / 12 か月 / 1,200 pt / ¥3,980 |
+| 24 か月 | 24 | 24 件 | **2,400** | 24 か月 | **Platinum** | ✅ Platinum / 24 か月 / 2,400 pt / ¥3,980 |
+
+- 各 accrual の `PeriodMonths` は**すべて 1**／`EntryId` の**重複なし**／`Points` は**全件 100**
+- 🔴 **`MembershipStartedAt` は `2026-09-10` から一度も動かない**（23 回の更新請求を経ても）
+- `ContractPrice*` **4 列とも初回値のまま**／`PlanType` `premium`・`Status` `active`／`RewardRedemptions` 0
+- 🔴 **production は全工程を通して `81 / 696 / 2 / 0` で不変**、QA PAT → production は常に **403**
+- 🟢 **表示だけの偽装をしていない**。本番と同じ
+  `stripe-webhook.js` → `RewardLedger` → `membershipView.js` を通した結果
+
+🟢 **PR #127 の対照実験になった。**
+経路 A（`#127` 反映**前**に決済）は `MembershipStartedAt` が**空のまま**、
+経路 B（反映**後**）は **`2026-09-10`** が入り、24 回の請求を通して動かなかった。
+
+---
+
+## 2026-09-11 QA 完全分離の総点検（メール以外は隔離済み・メールは PR #129 で解決）
+
+| 経路 | 隔離 | 根拠 |
+|---|---|---|
+| **Airtable** | ✅ **二重** | branch-deploy の base が QA ／ QA PAT は production base へ **403** |
+| **Stripe** | ✅ | branch-deploy は Test Mode 鍵（Session id が `cs_test_…`）。webhook も Test の別 endpoint |
+| **セッション Cookie** | ✅ | branch-deploy の `SESSION_SIGNING_SECRET` は production と**別値** |
+| **メール（SendGrid）** | 🟢 **PR #129 で解決** | `all` スコープのままだった。下記 |
+| production env | ✅ | 全 25 env で**注入値の変化 0 件** |
+| production のページ | ✅ | 全工程を通して **200 / 302** |
+| production の会員データ | ✅ **QA 由来 0 件** | 下記 |
+
+🔴 **メールだけが唯一の穴だった。**
+しかも magic link に限らず、送信する Netlify Function **8 つすべて**が QA から到達できた。
+PR #129（`fix/preview-mail-isolation`）で共有ガードを 8 つ全部へ入れて塞いだ。
+🔴 **`SENDGRID_API_KEY` の env 変換はしていない**（production の値を取りこぼすと
+本番の全メールが止まり、しかも Deploy Preview は塞げないため）。
+
+runbook §4.9 に総点検表を、§7 の禁止事項に
+「QA から magic link を要求しない」を追記した。
+
+### 🔴 件数の基準値は固定値ではない（2026-09-11 に判明）
+
+`Customers` 81 / `AuthTokens` 696 は **2026-09-10 時点のスナップショット**で、
+本番は**実ユーザーの登録で増える**。実際 2026-09-10 16:16Z に **82 / 697** へ増えた。
+中身は `Source=keiba-intelligence` / `free-registered` の**実ユーザーの新規登録 1 件**
+（＋その magic link トークン 1 件）で、QA 作業とは無関係
+（時刻も PR #129 の本番反映 `83fb5437` より前）。
+
+🔴 **「件数が基準値と一致すること」を隔離の判定に使わない。** 使うのは:
+
+1. **QA 由来の行が production に 0 件**（`qa+…` / `example.invalid` / `qa-stripe-testmode` を
+   全 4 テーブルで走査 → **実測 0 件**）
+2. `RewardLedger` に **QA の 25 件が混ざっていない**（実測 **2 件**のみ・どちらも実会員）
+
+### PR #129 の本番反映後の実測
+
+| 対象 | 結果 |
+|---|---|
+| QA の送信 8 関数すべて | **503 `mail_disabled_on_preview`** |
+| 本番 `send-magic-link`（空 body）| **400 `Email is required`** ＝ ガードで止まっていない |
+| QA の `/` `/pricing` `/mypage` / guest / webhook | **200 / 302 / 400**（従来どおり）|
+
 ## 2026-09-11 継続リワードの対象決済方式・移行時の引継ぎ・買い切り会員（仕様確定 → 実装）
 
 正本: `docs/MEMBERSHIP_REWARDS.md` §7.10 / `docs/decisions.md`（2026-09-11）/ `docs/spec.md`
@@ -4511,129 +4967,39 @@ production の値を取りこぼすと**本番の全メールが止まる**う�
 
 ## Open Questions
 
-0.1 🔴 **`@netlify/blobs` が `astro-site/package.json` の依存に無く、
-   `stripe-webhook.js` の `stripe-events` ストアが機能していない疑い（R-2・2026-09-03）。**
+### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）
 
-   `hasProcessed` / `markProcessed` は `import('@netlify/blobs')` の失敗を try/catch で
-   飲み込むため、**壊れていても静かに「重複なし」として通る**。
-   同一 deploy で同じ event id を 3 回再送しても `duplicate:true` が一度も出なかった。
+`CLAUDE.md`「🚨 プロジェクト識別ルール 🚨」は作業ディレクトリを
+**`/Users/apolon/Projects/keiba-intelligence/astro-site`** と書いているが、
+実際のチェックアウト先は **`/Users/user/Projects/keiba-intelligence/astro-site`**。
 
-   - データ破壊は起きていない（下流の冪等性で二重反映は防がれている。実測済み）
-   - ただし Test Mode E2E #6 の期待値 `duplicate:true` が満たせない
-   - 確認方法: 依存に `@netlify/blobs` を加える／関数ログで `eventStore()` の失敗を見る
+2026-09-10 に、この表記をそのまま使った実行コマンドを提示してしまい、
+仕様所有者から **`/Users/user/...` が正本**である旨の訂正を受けた。
+
+🔴 **本タスクの範囲外のため修正していない。** どちらへ寄せるかは仕様所有者の判断。
+（`CLAUDE.md` の他の記述・`git remote` 等との整合も併せて見る必要がある）
 
 
+### ✅ 解決済み — Stripe 経由で `MembershipStartedAt` が書かれなかった（**既知の実装欠落**）
 
-0. ~~**会員継続制度の未確定事項 TBD-1〜TBD-8**~~（2026-09-01 **確定**。`MEMBERSHIP_REWARDS.md` §7.1）。
-   ~~**法務確認 L-1〜L-9**~~（保守ライン内に設計を収めたため**確認待ちは解消**。§8）。
+🔴 **これは「未確定の仕様」ではなく「既知の実装欠落」だった。**
+起点の仕様は **2026-09-01 に TBD-9 として確定済み**（`docs/MEMBERSHIP_REWARDS.md` §7.6）:
+**Stripe ＝ 初回の支払い成功 / 銀行振込 ＝ 入金確認日**。
+確定した仕様に対して、**Stripe 側の実装だけが入っていなかった**。
 
-   残っているのは次の **2 件のみ**（2026-09-08 現在。詳細は本書
-   「Membership Phase の残件（2026-09-08 整理）」節）:
-
-   | # | 内容 | いつ必要か |
-   |---|---|---|
-   | ~~TBD-3b / 4b（品目）~~ | ~~景品の品目そのもの~~ | **2026-09-07 確定**（§7.8・米 / コーヒーの2択）|
-   | **TBD-3b / 4b（実行）** | **景品の仕入れの実行**（小分け・ラッピングの体制）| 最初の `approved` が出る前 |
-   | ~~TBD-9 / TBD-10~~ | ~~継続月数の起点 / 支払い失敗中の扱い~~ | **2026-09-01 確定**（§7.6 / §7.7）|
-   | ~~TBD-12~~ | ~~発送先住所の取得方法・保管期間~~ | **2026-09-07 確定**（§7.9）|
-   | **TBD-13** | **包装資材費**と、そこから決まる**景品価額 `valueYen`** | S-1 の自動検査を効かせたいとき |
-
-   継続的な確認事項は **決算期のポイントの会計処理（税理士）**のみ（§8.2 L-5）。
-
-0.5 ~~**`/mypage` の「利用できる機能」に『穴馬レポート・優先メルマガ』が残っている（2026-09-01 発見）。**~~
-   （2026-09-01 **解消**。仕様所有者の指示により削除した）
-
-   `docs/RENEWAL_2026_08.md` §6.1 が「実装が無いものを訴求しない」として
-   プレミアム限定コンテンツの訴求を廃止し `canSeePremiumExtras` ごと削除していたのに対し、
-   `src/pages/mypage.astro` の `FEATURES` 配列に該当行が残り、
-   プレミアム会員へ「✓」として表示されていた（**実装は無い**）。
-
-   → 該当行と、それだけに使われていた `isPremium` を削除。
-   併せて `membershipCopy.guard.test.mjs` に
-   「廃止済みの訴求（穴馬レポート / 優先メルマガ / 詳細レポート / `canSeePremiumExtras`）と
-   廃止済みの価格（¥88,000 / ¥66,000 / ¥12,000 / ¥6,600 / `venueAccess`）を UI に書かない」
-   静的ガードを追加し、**再混入を禁止**した。
-
-1. **`CLAUDE.md` の「メインレース10点ロジック」は F3・5点固定に完全に置き換わったのか、一部が併存しているのか。**
-   コードは F3（`umatanHit.js` の `reverseTopK`）が現行。ただし `CLAUDE.md` の 10 点節は削除されておらず、
-   「置き換えた」と明記した記録も見つからない。→ 仕様所有者の確認が必要。
-2. **`BET_POINT_LOGIC.md` の検証表の数値はいつ時点のものか。**
-   - `BET_POINT_LOGIC.md` 記載値（**時点の記載なし**）: 南関 217.1% / 公開的中 784 / ¥1,483,110、JRA 212.8% / 634 / ¥1,417,180
-   - **2026-07-20 に実測した時点値**: 南関 214.8% / 902 / ¥1,673,170、JRA 212.9% / 744 / ¥1,647,970
-
-   **両者とも archive の蓄積件数に依存する時点測定値であり、恒久的な仕様値ではない。**
-   archive に開催が追加されれば数値は変動するため、いずれの数値も「満たすべき基準」として扱わないこと。
-   テストは pass するため恒等式・冪等性の破綻ではなく、文書側がスナップショットである可能性が高いが明記がない。
-3. 🔴 **買い目の相手数が出走頭数を見ていない（2026-08-30 発見・仕様所有者へ報告済み）。**
-
-   「8頭立てなのに展開16点・推奨6点で違和感がある」という指摘から実測した結果、
-   **相手数が頭数に関係なく常に 6 頭固定**であることが判明した。
-
-   南関 2026-08-18 川崎（12R開催）:
-
-   | レース | 頭数 | 相手数 | 展開 | 推奨 |
-   |---|---|---|---|---|
-   | R1 / R2 / R3 / R8 / R10 | 12頭 | 6/6 | 16点 | 10点 |
-   | R4 | 10頭 | 6/6 | 16点 | 8点 |
-   | R5 / R7 | 11頭 | 6/6 | 16点 | 8点 |
-   | R9 | 9頭 | 6/6 | 16点 | 8点 |
-   | **R6 / R12** | **8頭** | **6/6** | 16点 | **6点（差10）** |
-   | R11（メイン） | 9頭 | 5 | 5点 | 5点（差0） |
-
-   JRA 2026-08-16（36レース）も `6/6` が 32 レース、`5` が 3、`5/5` が 1。
-
-   **8 頭立てでは軸を除く 7 頭のうち 6 頭を相手に取っている＝ほぼ全頭買い。**
-   そのため展開が常に 16 点になり、少頭数ほど推奨点数との差が開く。
-
-   原因は推奨点数のロジックではなく、**買い目生成側（`scripts/importPrediction.js` /
-   `importPredictionJra.js`）が出走頭数を見ていない**こと。
-
-   取り得る道:
-   - (a) **買い目生成を頭数連動にする** — 根本解決。ただし `importPrediction` の変更は
-     archive・的中判定・過去実績へ影響するため、影響範囲の確認が必要。
-   - (b) **推奨点数を展開点数にも連動させる** — 表示だけの変更で低リスク。
-
-   🔴 **依頼範囲外のため未着手。** 仕様所有者の指示待ち。
-   メインレースは `getTop5Challengers` で 5 頭に絞られているため、この問題は
-   **通常レースのみ**に出る。
-
-3. **`feat/fixed6-nearest150-recovery` は何のためのブランチで、生かすのか破棄するのか。**
-   対応 PR が存在せず、コミット意図を示す文書も見つからない。
-4. Workflow Phase 2（統合）は依然として実施する方針か、それとも 14 workflow の現状維持で確定したのか。
-5. lint / typecheck を導入しない判断は明示的になされたものか、単に未着手か。
-6. ~~**`CLAUDE.md` の「本番 URL 取り扱いルール」表と `astro-site/netlify.toml` の 301 が食い違う。**~~
-   （2026-08-05 発見 → **2026-08-09 解決**。本番 URL は `https://keiba-intelligence.jp/`）
-
-   仕様所有者が `keiba-intelligence.jp` を本番として提示したことで確定。
-   実装側の根拠（`netlify.toml` の 301 `force = true` / `sitemap.xml.js` の baseUrl /
-   `docs/spec.md`）とも一致し、`CLAUDE.md` だけが古かった。
-
-   併せて **canonical / og:url が「301 で転送される URL」を指していた**のを直した。
-   `astro.config.mjs` の `site` が `netlify.app` のままで、sitemap（`.jp`）と矛盾していた。
-   `results/[year]/[month]/[day].astro` の JSON-LD（image / organizer.url / offers.url）も同様。
-
-   🔴 **残る注意**: `netlify.app` 側へ POST してはいけない。301 でメソッドが GET へ
-   変換され、**フォーム送信が壊れる**（配信停止ページ等）。
-11. **JRA の過去走に上がり3F・通過順が無い。**（2026-08-28）
-    `src/data/horseHistories/jra/**` の全レコードで `last3f` / `passingOrder` が空のため、
-    JRA では脚質判定・上がり順位・展開予想が算出できない（南関は算出できている）。
-    KI は共有データの読み取り専用消費者であり、KI 側では補完できない。
-    → 上流（`keiba-data-shared-admin` / jv-link-cli）での取得可否の確認が必要。
-12. **`src/pages/free-prediction/jra/detail/[slug].astro` の去就。**（2026-08-28）
-    新レイアウトが過去走をインライン描画するため参照元が無くなった。
-    静的生成のコストはあるが害は無いため削除していない。→ 削除可否は要判断。
-13. **KMA 側に必要な未完の依存。**（2026-08-28。**別リポジトリのため本改修では実施しない**）
-    - `brands/index.js` の KI `contentUrls`（`loginUrl` / `unsubscribeUrlBase`）が `null`
-    - KI の `plans` が analytics-keiba 由来（`premium-combo` / `premium-tan`）のままで、
-      本改修の tier（`free` / `light` / `premium`）と一致しない
-    - `keiba-intelligence:signup-onboarding` の本文コンテンツが未作成
-    - `race` 設定（レース配信）が `null`
-    - 各自動化フラグが false（**有効化は高リスク境界。承認必須**）
-
-7. **配信停止で `recipientRef` を Customers レコードへ対応付ける方法が未確定。**（2026-08-05）
-   KMA 側 onboarding の `audience.adapterId` / `audience.mode` が未確定のため、
-   `astro-site/src/lib/unsubscribe/store.js` の本番 store は **既定で無効（fail-closed）**にしてある。
-   対応付けが確定するまで、実際の解除は確定できない（画面には「現在お手続きできません」と表示される）。
+- **発見**: 2026-09-10・QA の Test Mode E2E（経路 A）で実測。
+  決済後、`ContractPrice*` 4 列と初回 accrual は保存されたのに
+  **`MembershipStartedAt` が空のまま**だった。
+- **原因**: `stripe-webhook.js` が membership store の
+  `saveContractPrice()` と `appendEntry()` **しか呼んでいなかった**。
+  書いていたのは銀行振込経路の `bankTransfer.js` だけ。
+- 🟢 **表示は壊れていなかった**。`resolveTenureMonths()` は台帳を優先するため。
+  空だったのは**台帳が読めないときのフォールバック**。
+- **修正**: PR #127（`fix/stripe-membership-started-at`）。
+  `invoice.payment_succeeded` で台帳へ積んだあと `saveMembershipStart()` を呼ぶ。
+  起点は `status_transitions.paid_at`。**初回だけ書き、更新で動かさない。**
+- 🔴 **既存データの backfill はしていない**（§7.6「起点が不明な会員は空のまま・推測で埋めない」）。
+  本修正は **これ以降の初回支払いから**効く。
 
 ## High-risk Operations Not Yet Executed
 
