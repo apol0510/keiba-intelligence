@@ -818,6 +818,92 @@ QA 作業とは無関係（時刻も PR #129 の本番反映より前）。
 
 🟢 **production の env・base・会員には最初から触らない**ので、戻す作業は無い。
 
+### 5' 実施結果（2026-09-11）
+
+| # | 対象 | 状態 | 実測 |
+|---|---|---|---|
+| 1 | Netlify env（branch-deploy）| ✅ **完了** — 7 値を削除 | 下表 |
+| 2 | branch deploy | ✅ **完了** — **5 件**削除。ページングで **残 0 件**を再確認 | QA ホスト `/` `/qa-marker.txt` ともに **404** |
+| 3 | `allowed_branches` | ✅ **完了** — `["main","qa-stripe-testmode"]` → **`["main"]`** | 他の `build_settings` の差分 **0 件** |
+| 4 | ブランチ | ✅ **完了** — remote / local とも削除（`1b7b4471`）| `main` は `29ce9df1` のまま不変 |
+| 5 | Stripe | ✅ **完了** — Test Clock / Customer / Webhook 送信先を削除 | 下記 |
+| 6 | Airtable（QA base / QA PAT）| ✅ **完了** — QA base 削除・QA PAT 失効 | 下記 |
+
+#### 削除した branch-deploy の env（7 値）
+
+`AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` / `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` /
+`STRIPE_PRICE_PREMIUM` / `MEMBERSHIP_READ_ENABLED` / `MEMBERSHIP_WRITE_ENABLED`
+
+🟢 **`AIRTABLE_*` は「`all` の 1 値へ戻す」ではなく、`deleteEnvVarValue` で
+branch-deploy の値だけを削除した。** 理由:
+
+- `updateEnvVar` による `all` への再統合は、**production の値レコードを書き換える**。
+  §3.5 の 🔴（取りこぼすと本番のログイン・会員データが全部壊れる）が再び発生する経路になる。
+- `deleteEnvVarValue` は**指定した 1 つの値だけ**を消すため、production の値には触れない。
+- 残った `dev` / `deploy-preview` / `production` / `dev-server` は**すべて同一値**（sha256 一致）で、
+  注入結果は `all` と等価。**`all` への再統合は構造上の見た目だけの差**であり、機能差は無い。
+
+🟡 **`SESSION_SIGNING_SECRET` の branch-deploy 値は残した。**
+このキーは QA 開始**前から** branch-deploy スコープを持っており（§3.5）、QA では**値を差し替えた**だけ。
+変換前の値は記録されていないため復元できない。現在の値は **production と別値**（sha256 不一致を実測）なので、
+残しておくほうが「QA の Cookie が本番で通用しない」という隔離を保てる。削除すると branch deploy が
+全閲覧者 guest 扱いになるだけで、外部システムへの到達手段にはならない。
+
+#### 🔴 production 不変の実測（2026-09-11）
+
+| 検証 | 結果 |
+|---|---|
+| production に注入される env **24 キー**の sha256 突き合わせ（作業前後）| **変化 0 件** ✅ |
+| 欠落 / 追加されたキー | **なし** ✅ |
+| `build_settings`（`allowed_branches` 以外）| **差分 0 件** ✅ |
+| 本番 `/` `/pricing` `/mypage` | **200** ✅ |
+| 本番 guest `/prediction/nankan` `/prediction/jra` | **302**（fail-closed）✅ |
+| `origin/main` | `29ce9df1` のまま不変 ✅ |
+
+🟡 **production Airtable の行数・QA 由来行の走査は今回再確認していない。**
+本作業は branch-deploy スコープの値しか触っておらず、production base へは一度も接続していない。
+最後の実測は §4.9（2026-09-11・QA 由来行 **0 件**）。
+
+#### 5. Stripe Test Mode（2026-09-11 実施・ブラウザ）
+
+| 対象 | 識別 | 結果 |
+|---|---|---|
+| Test Clock | `KI QA membership tenure`（2026/09/10 19:29 作成・クロック 2028-08-10）| ✅ **完了（削除）**。紐づくテストサブスクは同時にキャンセル |
+| Customer（経路 B）| `qa+clock@keiba-intelligence.jp` | ✅ Test Clock の完了に伴い**消滅** |
+| Customer（経路 A）| `qa+stripe-testmode@keiba-intelligence.jp`（`cus_VEVRM…`）| ✅ **削除**（詳細画面に「この顧客のアカウントは完全に削除されました」・ログに `DELETE /v1/customers/… 200 OK`・サブスクは即時キャンセル）|
+| Webhook 送信先 | QA branch deploy 宛（`we_1UE1cW…`・5 イベント・アクティブ）| ✅ **削除**（送信先 0 件）|
+
+🔴 **Stripe ダッシュボード（Test Mode）で実施した。** `STRIPE_SECRET_KEY` /
+`STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_PREMIUM` は Netlify の **secret env**（`is_secret=true`）で
+**API / CLI / UI のいずれからも値を読み出せない**ため、キー経由の自動削除はできない。
+次回もダッシュボードで行うこと。
+
+#### 6. Airtable（2026-09-11 実施・ブラウザ）
+
+| 対象 | 識別 | 結果 |
+|---|---|---|
+| QA base | `keiba-intelligence QA - Stripe Test Mode`| ✅ **削除** |
+| QA PAT | `KI QA Stripe Test Mode`（スコープ 4 種が §3.2 と一致）| ✅ **失効**（トークン **20 → 19 件**）|
+
+🔴 **base の取り違えを防ぐため、名前ではなく id の sha256 で同定した。**
+ワークスペースには `keiba-intelligence` という名前の **production base が別に存在する**ため、
+名前での判断は危険。後片付け前スナップショットの branch-deploy `AIRTABLE_BASE_ID` の
+sha256（先頭 10 桁）と一致することを確認してから削除し、production base
+（`keiba-intelligence`）が**削除後も存在すること**を確認した。
+
+🟢 **QA base id / QA PAT は Netlify から先に消してしまうと UI での特定が難しくなる。**
+今回は後片付け前の env スナップショットを保持していたため id で同定できた。
+次回は **base を消してから env を消す**か、スナップショットを取ってから進めること。
+
+#### 🟡 範囲外として残したもの
+
+| 対象 | 理由 |
+|---|---|
+| Stripe Test の Customer `0510apolon@gmail.com` と**有効なサブスクリプション 1 件** | 本 QA（§3〜§4）で作成した `qa+…` の 2 会員ではない。`docs/progress.md`「🔴 cleanup / Live Mode — 承認境界（未実施）」§A-2 が扱う**別タスク**（2026-09-01 の E2E 残骸）に該当すると見られ、同節は**承認待ち**。本タスクの範囲外のため**独断で削除していない** |
+
+🟢 **§5 の 6 項目はすべて完了した。** QA base・QA PAT・Stripe の QA 資産・branch deploy・
+branch-deploy env・QA ブランチのいずれも残っていない。
+
 ---
 
 ## 6. rollback
