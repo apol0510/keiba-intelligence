@@ -309,6 +309,18 @@ cd "/Users/apolon/Projects/keiba-intelligence/astro-site"
 |------------|------|---------------|
 | **[docs/WORKFLOW_PHASE1_COMPLETION.md](./docs/WORKFLOW_PHASE1_COMPLETION.md)** | Workflow Phase 1完了記録、監視項目 | **Workflow変更時** |
 
+### 恒久 UAT 環境（Stripe Test Mode）
+
+| ドキュメント | 内容 | 参照タイミング |
+|------------|------|---------------|
+| **[docs/UAT_PERMANENT_ENV.md](./docs/UAT_PERMANENT_ENV.md)** | 恒久 UAT の**正本**。隔離契約・専用ログイン・定期確認手順・cleanup 方針 | **UAT を触る前に必読** |
+| **[docs/QA_STRIPE_TESTMODE_RUNBOOK.md](./docs/QA_STRIPE_TESTMODE_RUNBOOK.md)** | 2026-09-10 の一回限り QA の記録（**常設運用の正本ではない**）| 経緯を追うとき |
+
+🔴 **`QA_STRIPE_TESTMODE_RUNBOOK.md` §5「後片付け」を恒久 UAT に対して実行しない。**
+消してよいのは使い捨て資産と production 混入だけ（`UAT_PERMANENT_ENV.md` §7）。
+🔴 **UAT から magic link を要求しない**（本番 SendGrid で実送信される）。
+ログインは `POST /.netlify/functions/uat-login` のみ。
+
 ### プロジェクト情報
 
 | ドキュメント | 内容 |

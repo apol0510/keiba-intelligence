@@ -5031,6 +5031,71 @@ Stripe 側の後片付けは**ダッシュボードでしか実施できない**
 本作業は branch-deploy スコープの値と QA 側リソースしか触っておらず、production base へは
 一度も接続していない。最後の実測は §4.9（2026-09-11・QA 由来行 0 件）。
 
+## 2026-09-11 方針変更 — Stripe Test を恒久 UAT 環境にする（コード側を実装、環境側は承認待ち）
+
+**Stripe Test は一回限りの QA ではなく、管理者が実ユーザー体験を定期的に目視確認する
+恒久 UAT 環境として残す。** production と完全隔離した専用テスト会員・ログイン・決済・
+/mypage 確認経路を正本として固定した。
+
+正本: **`docs/UAT_PERMANENT_ENV.md`**。
+`docs/QA_STRIPE_TESTMODE_RUNBOOK.md` は「2026-09-10 の一回限り QA の記録」へ格下げし、
+冒頭に方針変更バナーを入れた（同書 §5 を恒久環境に対して実行しないこと）。
+
+### 実装した内容（コード）
+
+| ファイル | 役割 |
+|---|---|
+| `src/lib/auth/uatLogin.js` | 判定のみの純関数。I/O を持たない |
+| `netlify/functions/uat-login.js` | 薄いアダプタ。body から合言葉を取り、セッションを発行 |
+| `src/lib/auth/uatLogin.test.mjs` | 安全契約テスト 13 件 |
+| `src/lib/auth/uatLogin.guard.test.mjs` | 静的ガード 7 件（`npm run test:auth` に同梱） |
+
+### 🔴 ログイン経路の安全契約（7 つ）
+
+1. **本番ホストでは常に無効**（`isPreviewHost` が false なら**メソッドを問わず 404**）
+2. `UAT_LOGIN_KEY` 未設定なら **503**（fail-closed）
+3. **合言葉を URL に載せない。** 受け取りは **POST の body だけ**。
+   GET は合言葉を受け付けず入力フォームを返すだけ
+4. 照合は **timing-safe**
+5. 不一致は **404**（違うと教えない）
+6. 🔴 **固定 1 アドレスの `free` セッションしか発行できない。**
+   宛先も tier もリクエストから受け取らない。**有料 tier を発行できない**
+7. 合言葉を message / log / レスポンスに含めない
+
+🔴 **free 固定の理由**: premium を直接発行できると、確認したい体験そのもの
+（決済 → `stripe-webhook` → `refresh-session`）を迂回することになる。
+premium は Test Mode の実決済を通ってのみ成立する。
+
+🟢 **production の認証・magic link・SendGrid は一切変更していない。**
+`previewMailGuard`（PR #129）も緩めていない。UAT で magic link は使わない。
+
+### 設計判断
+
+- **トポロジは同一サイトの長寿命ブランチ `uat`**（branch-deploy スコープ）。
+  2026-09-11 の総点検で隔離 6 経路すべてが実測済みの方式であり、「最小構成」に合致する。
+  専用 Netlify サイトは作らない。
+- **セッション発行は共通モジュール（`signSession` / `serializeSessionCookie`）をそのまま使う。**
+  署名を自前実装しない（ガードテストで再実装を禁止）。
+- **`SESSION_SIGNING_SECRET` の branch-deploy 値を §5 の後片付けで残しておいたので、
+  恒久 UAT で再発行が不要になった。**
+
+### テスト
+
+`npm run test:auth` 相当 **173 → 180 件すべて pass**（新規 20 件を含む）。
+ガードの有効性を変異テストで確認: `UAT_LOGIN_TIER` を FREE → PREMIUM に書き換えると
+**2 件が失敗**し、戻すと全件 pass。
+
+### 🔴 未実施（仕様所有者の承認・作業が要る）
+
+`docs/UAT_PERMANENT_ENV.md` §9 の 8 項目。いずれも **PAT / secret / 合言葉の値そのもの**を
+扱うため Claude は実行しない（値を見ない・持たない）。
+
+UAT base 作成 / UAT 専用 PAT 発行 / スキーマ作成 / UAT 会員 1 行 /
+`uat` ブランチ作成（`main` ＋ `uat-marker.txt`）/ `allowed_branches` に `uat` 追加 /
+branch-deploy env 9 キー / Stripe Test の webhook 送信先作成。
+
+🔴 `uat` ブランチは**本 PR が `main` に入ってから**作る（ログイン関数が含まれている必要がある）。
+
 ## Open Questions
 
 ### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）
