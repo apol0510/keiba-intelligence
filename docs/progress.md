@@ -5096,6 +5096,110 @@ branch-deploy env 9 キー / Stripe Test の webhook 送信先作成。
 
 🔴 `uat` ブランチは**本 PR が `main` に入ってから**作る（ログイン関数が含まれている必要がある）。
 
+## 2026-09-12 UAT base bootstrap の 422 を恒久修正（`dateTime` の `timeFormat` 欠落）
+
+`npm run qa-base:bootstrap -- --apply` が **Customers の作成で 422
+`INVALID_FIELD_TYPE_OPTIONS_FOR_CREATE`** で停止した。手動で schema を作らず、スクリプト側を直した。
+
+### 原因
+
+**`dateTime` は作成時に `timeFormat` が必須**だが、`isoTime` 定数が
+`{ dateFormat, timeZone }` だけで `timeFormat` を持っていなかった。
+正本: https://airtable.com/developers/web/api/field-model
+
+🔴 **読み取り時に返る形と、作成時に要求される形が違う**のが根本。
+TABLES は production から Metadata API で読んだ schema を元にしており、
+読み取り結果をそのまま送ると落ちる列がある。
+
+該当は Customers の **6 列**（`ExpirationDate` / `有効期限` / `CreatedAt` /
+`UnsubscribedAtAnalyticsKeiba` / `UnsubscribedAtKeibaIntelligence` /
+`LastNewsletterSentAt`）。AuthTokens の 2 列（`ExpiresAt` / `CreatedAt`）も同じ形なので、
+Customers を直しただけでは次で落ちていた。共通定数を直したので 8 列すべてが解消した。
+
+他の列は仕様上問題なしを確認:
+`number.precision`（0〜8・必須）/ `checkbox.icon`・`color`（`check`・`greenBright` は有効）/
+`singleSelect`・`multipleSelects` の `choices`（name のみ・作成時に id を付けない）/
+`date` は `dateFormat` のみ。
+
+### 修正
+
+| 内容 | |
+|---|---|
+| `isoTime` に `timeFormat: { name: '24hour' }` を追加 | 🔴 **表示設定であり保存値（ISO）は変わらない ＝ production の意味は変えない** |
+| `validateCreateField()` / `validateCreateSchema()` を新設 | 作成時 payload の妥当性を**送信前**に検証 |
+| `main()` で **fetch より前**に検証 | 「1 テーブル作った所で 422 で止まり base が中途半端に残る」事故を防ぐ |
+| 422 時のエラー本文を type + message で最大 300 字まで表示 | 従来は 60 字で切れて原因が読めなかった |
+
+`fieldSignature()` は `timeFormat` を見ないため、**`--check` の判定は変わらない**。
+
+### テスト
+
+`npm run test:qa-base` **13 → 34 件すべて pass**。
+変異テストで有効性を確認: `timeFormat` を削除して 422 当時の状態に戻すと **2 件 fail**、戻すと全件 pass。
+
+### 維持したもの
+
+- レコードの読み書きをしない（作るのはテーブルと列だけ。`--check` の件数確認のみ read）
+- 既定は dry-run
+- POST 先は Metadata API の**対象 base のみ**
+
+### 🔴 追加: `assertNotProduction()` を fail-closed にした（同日・仕様所有者の指示）
+
+従来は `if (prodBaseId && qaBaseId === prodBaseId)` で、**production 側の base id が
+未設定だと誤爆チェックが素通りしていた**（fail-open）。比較相手が無ければ
+「production と同じ base か」を判定できないので、**判定できない場合も中止する**よう変更した。
+
+中止する 3 ケース（いずれも**ネットワークへ出る前**に停止）:
+
+| # | 条件 | メッセージ |
+|---|---|---|
+| 1 | `AIRTABLE_QA_BASE_ID` 未設定 / 形式不正 | `対象 base（AIRTABLE_QA_BASE_ID）が未設定` |
+| 2 | `AIRTABLE_BASE_ID`（production）未設定 | `production base（AIRTABLE_BASE_ID）が未設定。誤爆チェックが成立しないので中止する` |
+| 3 | QA ID = production ID | `対象が production base と同じ。中止する` |
+
+前後の空白は `trim()` して扱う（空白だけの値は未設定と同じ扱い。空白で等値判定を
+すり抜けられないことをテストで固定）。
+
+実挙動でも 3 ケースすべて停止することを確認済み。
+`npm run test:qa-base` は **34 → 39 件すべて pass**。
+変異テストで有効性を確認: fail-closed 判定を削って fail-open に戻すと **1 件 fail**、戻すと全件 pass。
+
+### 🔴 追加: `--check` が extra table を見逃していた（同日・実測で判明）
+
+`--apply` 後の `--check` が **「実際 5 テーブル / 58 列」なのに PASS** していた。
+正本は **4 テーブル / 57 列**なので不一致である。
+
+原因: `diffSchema()` は **期待するテーブルだけを走査**しており、
+`actualTables` にしか無いテーブルを見ていなかった。
+列の extra は「Airtable が既定で足す列があるため許容」という設計だが、
+**テーブルの extra まで同じ扱いになっていた**。
+Airtable の UI で base を作ると既定のテーブル（`Table 1` 等）が残るため、これを見逃す。
+
+修正:
+
+- `diffSchema()` が `extraTables`（`name` / `id` / `fieldCount`）を返し、
+  **1 件でもあれば `ok: false`**（＝ `--check` は exit 1）
+- 🔴 **列の extra は従来どおり許容**（テーブルの extra とは扱いが違う。テストで固定）
+- `--check` は extra table の **name / id / 列（名前:型）/ レコード件数**を出す
+  （削除してよいか判断するのに要るため。read-only）
+- 🔴 **このスクリプトはテーブルを削除しない。** `DELETE` を持たないことをテストで固定
+
+`npm run test:qa-base` **39 → 44 件すべて pass**。
+変異テストで有効性を確認: extra table の検出を削ると **1 件 fail**、戻すと全件 pass。
+
+既存ガード「レコードへのアクセスは --check の件数確認だけ」は
+呼び出し本数を 1 に固定していたが、extra table の件数確認が増えたため
+**本数固定をやめ、「どの呼び出しも `maxRecords` 付きの GET であること」を全件検証する形へ一般化**した
+（意図は維持・検証範囲はむしろ拡大）。
+
+🔴 **今回の未完成 UAT base には触っていない**（削除・再作成をしていない）。
+スクリプトは冪等（既にあるテーブルは作り直さない）なので、そのまま `--apply` を再実行できる。
+
+### 未実施
+
+仕様所有者による PAT 再入力 → dry-run → `--apply` → `--check`。
+`--check` の 403 は 4 テーブル未作成の段階のものなので、`--apply` 後に改めて判定する。
+
 ## Open Questions
 
 ### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）
