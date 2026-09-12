@@ -5366,7 +5366,115 @@ Bronze / 1 か月 / 100 pt を表示していた。これは**表示の不整合
 
 🔴 production には一切触れていない。Airtable の手動書換え・再決済もしていない。
 
+## 2026-09-12 Stripe webhook の失敗を通知する（静かに壊れるのをやめる）
+
+2026-09-12 の UAT 事故では、決済が成立しているのに webhook が
+**400 `invalid_signature` で 4 件すべて失敗**し、Airtable が更新されなかった。
+このとき**こちら側には何の通知も無かった**。気付けたのは、人が
+Stripe ダッシュボードのエラー率を見に行ったからである。
+
+🔴 この経路が壊れると「支払ったのに権限が開かない」になる。**黙って失敗させない。**
+
+### 設計（決済経路を壊さないための制約）
+
+| 制約 | どうしたか |
+|---|---|
+| 🔴 決済経路に SendGrid を持ち込まない | 送信は**既存の `send-alert`** に任せ、`stripe-webhook` からは HTTP で呼ぶ。`previewMailGuard` の適用対象（＝送信関数の集合）を増やさない |
+| 🔴 本番ホスト以外では送らない | `webhookAlert.js` が**本番の独自ドメインだと分かったときだけ**通知を許す（fail-closed）。UAT / Deploy Preview からは送らない（PR #129 の隔離契約） |
+| 🔴 未認証の入力でメールを撃たせない | 署名不正は誰でも起こせるため、**理由ごとに 6 時間で 1 通**だけ（Blobs で dedup） |
+| 🔴 通知に秘密値・リクエスト内容を含めない | 入れるのは「理由」と「次に確認すること」だけ。テストで `whsec_` / `sk_` / `email` / `amount` などの混入を禁止 |
+| 🔴 通知が失敗しても webhook の応答を変えない | 全体を try/catch で閉じ、`throw` しない。`AbortController` で 2.5 秒のタイムアウト |
+| 多重送信より送り漏れを選ぶ | **記録してから送る**（送信後に記録すると、落ちたとき何度も送る） |
+
+通知する理由は 2 つだけ: `invalid_signature` / `not_configured`。
+未知の理由では送らない。
+
+### 変更ファイル
+
+| ファイル | 内容 |
+|---|---|
+| `src/lib/billing/webhookAlert.js` | 判定と本文組み立て（**純関数**・I/O なし）|
+| `src/lib/billing/webhookAlert.test.mjs` | 15 件（本番ホスト限定 / dedup / 秘密値の非混入 / 決済経路の安全）|
+| `netlify/functions/stripe-webhook.js` | 失敗 2 経路から `notifyFailureOnce()` を呼ぶ |
+| `netlify/functions/send-alert.js` | `stripe_webhook_failed` のテンプレートを追加 |
+| `package.json` | `test:billing` に追加（`npm run build` に載る）|
+
+### テスト
+
+`test:billing` **76 pass**（新規 15 を含む）／ `test:mail-guard` **15 pass**
+（＝**送信関数の集合が変わっていない**ことの確認）／ `test:stripe` **63 + 17 + 6 pass**
+（webhook の実ハンドラに影響なし）／ `test:auth` 180 ／ `test:membership` 356 ／
+`astro build` 成功。
+
+変異テストで有効性を確認: 本番ホスト判定を外すと **1 件 fail**、
+時間窓の抑止を外すと **1 件 fail**。いずれも戻すと 15/15 pass。
+
+### 🔴 追加: `stripe_webhook_failed` を外部から発火できないようにした（同日）
+
+`send-alert` は認証を持たないため、**外部から `type: 'stripe_webhook_failed'` を
+直接 POST すれば、webhook 側の 6 時間 dedup を迂回してメールを撃たせられた**。
+通知を足したことで新しく開いた穴なので、同じ PR の中で閉じた。
+
+#### 方式: 単回使用 nonce（🔴 新しい production secret / env は増やさない）
+
+```
+stripe-webhook                                 send-alert
+  ① 本番ホスト判定 → ② 6h dedup 判定
+  ③ dedup を通ったときだけ nonce を発行
+     （乱数 32 バイト / Blobs `alert-nonces` に発行時刻を保存）
+  ④ nonce を添えて POST  ───────────────▶  ⑤ この type のときだけ nonce を検証
+                                              （形式 / 存在 / 5 分の有効期限 / 未来日時）
+                                           ⑥ NG なら 403・送信しない（理由は返さない）
+                                           ⑦ OK なら Blobs から削除（単回使用）→ 送信
+```
+
+- 🔴 **nonce を作れるのは webhook だけ**。しかも **dedup を通ったときしか作らない**ので、
+  外部から dedup を迂回することもできない
+- 🔴 **検証できなければ送らない**（nonce 無し / 不明 / 期限切れ / Blobs が読めない）
+- 🔴 **他の alert type には影響しない**（`requiresAlertNonce` が false のため素通り）
+- 🔴 **env を増やしていない**ので、production の secret 設定は不要
+
+#### テスト
+
+`webhookAlert.test.mjs` を **15 → 31 件**へ拡張。
+既存 type（`github_actions_failed` ほか 5 種）が **nonce 不要のまま**であることを明示的に固定。
+nonce 無し / 捏造 / 期限切れ / 未来日時 / 形式不正をすべて拒否することも固定。
+配線（発行は dedup の後・検証は送信の前・単回使用・両者が同じストア名・新 env なし）も静的に固定。
+
+`test:billing` **92 pass** / `test:mail-guard` 15 / `test:stripe` 63+17+6 /
+`test:auth` 180 / `test:membership` 356 / `test:refresh-session` 9 / `astro build` 成功。
+
+変異テストで有効性を確認:
+`requiresAlertNonce` を常に false にすると **6 件 fail**、
+Blobs に無い nonce を通すと **1 件 fail**、
+`send-alert` の 403 を外すと **1 件 fail**。いずれも戻すと 31/31 pass。
+
+### 🟡 通知の届かない範囲（意図的）
+
+**UAT / Deploy Preview では通知しない。** production の SendGrid を
+プレビュー系ホストから使わないという隔離契約（PR #129）を優先した。
+UAT の異常は **Stripe ダッシュボードの Webhook のエラー率**で見る運用とする。
+
 ## Open Questions
+
+### 🟡 `send-alert` は認証が無い（2026-09-12）
+
+`netlify/functions/send-alert.js` は **token 等の認証を持たず**、誰でも POST すれば
+`ALERT_EMAIL` 宛にメールを送らせられる。**既存の性質**である。
+
+🟢 **`stripe_webhook_failed` だけは閉じた**（同日・単回使用 nonce。下記の節を参照）。
+外部から直接この type を叩いても 403 になり、webhook 側の 6 時間 dedup も迂回できない。
+
+🔴 **残りの type（`github_actions_failed` / `hit_rate_zero` / `no_prediction_data` /
+`results_import_failed` / `results_auto_added` など）は従来どおり未認証で叩ける。**
+これらは GitHub Actions 等の既存呼び出し元が使っており、認証を足すと
+呼び出し元をすべて直す必要がある。実施は指示を待つ。
+
+対処するなら選択肢は次のあたり。
+
+- 共有トークン（env）を必須にする → 🔴 **新しい production secret が要る**（承認境界）
+- 呼び出し元ごとに nonce 方式を広げる（env を増やさずに済む。Blobs 依存が増える）
+- 送信レート制限（Blobs で全体の上限を持つ）
 
 ### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）
 

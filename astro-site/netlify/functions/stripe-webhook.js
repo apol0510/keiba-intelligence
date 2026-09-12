@@ -119,6 +119,21 @@ async function eventStore(event) {
   }
 }
 
+/**
+ * alert nonce 用のストアを開く。🔴 開けなければ null（通知を送らない側へ倒す）。
+ * `eventStore` と同じく **キャッシュしない**。
+ */
+async function openNonceStore(event, storeName) {
+  try {
+    const { getStore, connectLambda } = await import('@netlify/blobs');
+    if (event?.blobs && typeof connectLambda === 'function') connectLambda(event);
+    return getStore(storeName);
+  } catch (err) {
+    logBlobsFailure('getStore(alert-nonces)', err);
+    return null;
+  }
+}
+
 async function hasProcessed(event, eventId) {
   try {
     const store = await eventStore(event);
@@ -127,6 +142,86 @@ async function hasProcessed(event, eventId) {
   } catch (err) {
     logBlobsFailure('get', err);
     return false;
+  }
+}
+
+/**
+ * 🔴 webhook が「静かに失敗する」のを通知する（2026-09-12 の事故の再発防止）。
+ *
+ * 設計の制約:
+ *  - 🔴 **決済経路を絶対に壊さない。** 何が起きても throw しない・応答を変えない。
+ *  - 🔴 **SendGrid をここに持ち込まない。** 送信は既存の `send-alert` に任せる
+ *       （`previewMailGuard` の適用対象＝送信関数の集合を増やさない）。
+ *  - 🔴 **本番ホスト以外では送らない**。判定は `webhookAlert.js`（純関数）。
+ *  - 🔴 **同じ理由で繰り返さない**（署名不正は未認証の入力でも起こせるため）。
+ *  - 🔴 タイムアウトを付ける。通知のために応答を遅らせない。
+ */
+async function notifyFailureOnce(event, reason) {
+  try {
+    const [
+      { shouldNotifyWebhookFailure, buildWebhookAlertPayload, ALERT_NONCE_STORE },
+      { resolveSiteOrigin },
+      { randomBytes },
+    ] = await Promise.all([
+      import('../../src/lib/billing/webhookAlert.js'),
+      import('../../src/lib/http/siteOrigin.js'),
+      import('node:crypto'),
+    ]);
+
+    const store = await eventStore(event);
+    let lastNotifiedAtMs = null;
+    const probe = shouldNotifyWebhookFailure({ reason, headers: event.headers, env: process.env });
+    if (!probe.notify && probe.skip !== 'within_window') {
+      // 本番ホストでない／宛先が無い／未知の理由。ここで終わり（Blobs も触らない）
+      return;
+    }
+    const key = probe.dedupeKey || `webhook-alert:${reason}`;
+    if (store) {
+      const prev = await store.get(key);
+      const parsed = prev ? Date.parse(prev) : NaN;
+      if (Number.isFinite(parsed)) lastNotifiedAtMs = parsed;
+    }
+
+    const decision = shouldNotifyWebhookFailure({
+      reason, headers: event.headers, env: process.env, lastNotifiedAtMs,
+    });
+    if (!decision.notify) return;
+
+    // 先に記録する（送信が遅れても多重送信しない側へ倒す）
+    if (store) await store.set(key, new Date().toISOString());
+
+    /*
+     * 🔴 単回使用の nonce を発行する。
+     *    `send-alert` は認証を持たないため、これが無いと
+     *    `stripe_webhook_failed` を外部から直接叩けてしまい、
+     *    上の 6 時間 dedup を迂回してメールを撃たせられる。
+     *    nonce を作れるのはここだけ。置けなければ**送らない**（fail-closed）。
+     */
+    const nonceStore = await openNonceStore(event, ALERT_NONCE_STORE);
+    if (!nonceStore) {
+      console.warn('⚠️ stripe-webhook: alert nonce store unavailable — alert skipped');
+      return;
+    }
+    const nonce = randomBytes(32).toString('hex');
+    await nonceStore.set(nonce, new Date().toISOString());
+
+    const origin = resolveSiteOrigin(event.headers);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2500);
+    try {
+      await fetch(`${origin}/.netlify/functions/send-alert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...buildWebhookAlertPayload({ reason }), nonce }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+    console.log('🔔 stripe-webhook: failure alert sent:', reason);
+  } catch (err) {
+    // 🔴 通知できなくても webhook の応答は変えない
+    console.warn('⚠️ stripe-webhook: failure alert not sent:', err && err.message);
   }
 }
 
@@ -619,6 +714,7 @@ export async function handler(event) {
   if (!hasStripeSecret(process.env) || !webhookSecret) {
     // 🔴 無検証で書き込まない
     console.error('❌ stripe-webhook: not configured');
+    await notifyFailureOnce(event, 'not_configured');
     return { statusCode: 503, headers, body: JSON.stringify({ error: 'not_configured' }) };
   }
 
@@ -634,6 +730,7 @@ export async function handler(event) {
   } catch {
     // 🔴 署名不正は理由を返さない
     console.error('❌ stripe-webhook: signature verification failed');
+    await notifyFailureOnce(event, 'invalid_signature');
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'invalid_signature' }) };
   }
 
