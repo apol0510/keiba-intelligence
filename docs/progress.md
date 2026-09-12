@@ -5268,6 +5268,104 @@ baseline の観測から、**表示の意味づけ自体が誤っている**こ�
 UAT での **無料 → Test 決済 → プレミアム**の表示遷移確認。
 決済は仕様所有者の操作（合言葉・カード入力）が要るため未実施。
 
+## 2026-09-12 UAT 決済が Premium に反映されなかった件 — 根因・復旧・再発防止
+
+### 症状
+
+UAT で Test Mode の決済が成立（Checkout complete / paid / ¥3,980 / Subscription active）したのに、
+UAT Airtable の `Customers` は `PlanType=free-registered` のままで、
+`MembershipStartedAt` / `ContractPrice*` も空、`RewardLedger` も 0 件だった。
+
+### 🔴 根因 1: webhook の署名シークレット不一致（Airtable へ到達していなかった）
+
+Stripe の配信結果を read-only で確認したところ、**4 件すべて HTTP 400**、
+応答本文は **`{"error":"invalid_signature"}`**（＝**こちらの関数自身が返した JSON**）。
+エラー発生率 **100%**。処理は **Airtable に到達する前**に終わっていた。
+
+`handler_failed` / `membership_not_recorded` / `customer not found` /
+Airtable 401・403・422 は**いずれも発生していない**（そこまで進んでいないため）。
+
+🟢 **コード側の不具合ではない。** `stripe-webhook.js` は `isBase64Encoded` を判定して
+Buffer を `constructEvent` に渡しており、実装は正しい。
+原因は `STRIPE_WEBHOOK_SECRET`（`branch:uat`）が KI UAT エンドポイントの
+署名シークレットと一致していなかったこと。
+
+🔴 **env は deploy 時に注入される。** 値を直しただけでは既存 deploy に反映されない。
+必ず uat の再デプロイを通すこと（marker 更新で "no content change" のスキップを回避する）。
+
+### 復旧（再決済なし・手動書換えなし）
+
+シークレット修正 → uat 再デプロイ → Stripe で**既存イベントを再送**した。
+
+| 再送 | 結果 |
+|---|---|
+| `checkout.session.completed` | **200 OK** |
+| `invoice.payment_succeeded` | **200 OK** |
+
+Airtable（read-only 確認）: `PlanType=premium` / `MembershipStartedAt=2026-09-12` /
+`ContractPriceYen=3980` / `ContractPriceId=price_1UAsLM…` / `ContractCurrency=jpy` /
+`ContractStartedAt=2026-09-12` / `CancelledAt` 空。
+`RewardLedger` は **1 件のみ**（`accrual` / **100 pt** / `PeriodMonths=1`）。
+
+🔴 **配信 4 回 ＋ 再送 2 回を経ても台帳は 1 件＝二重付与なし。** 冪等性が実地で確認できた。
+
+🟡 Stripe の仕様で**再送できるのは各イベントの最新試行のみ**。古い試行からは再送できない。
+
+### 🔴 根因 2（症状の第 2 段）: セッション Cookie が古いまま
+
+復旧後も `/mypage` の上部は「無料会員」のままで、会員クラブだけが
+Bronze / 1 か月 / 100 pt を表示していた。これは**表示の不整合ではなく正しい挙動**だった。
+
+- 上部のプランと `isPaid` は **Cookie の tier** 由来 → free
+- 会員クラブの数値は **Airtable** 由来 → 実値
+- `notStarted` は会員履歴があるので false → 「未開始」ではなく実値を出す
+- 契約価格が「準備中」、価格ロックが「—」だったのも
+  `resolvePriceLock({isPaid:false})` → `not_applicable` の通りの結果
+
+🟢 **`refresh-session` にも不具合は無かった。** 決済時点では webhook が失敗していたため
+`changed:false` が正しく、その後 webhook を再送しても
+**`refresh-session` は自動では走らない**（`?checkout=success` のポーリングか手動ボタンで走る）。
+
+既存セッションのまま `/mypage` の「お支払い済みなのに反映されていない場合はこちら」を
+押したところ、**7 項目すべてが実値**になった。
+
+| 項目 | 実値 |
+|---|---|
+| 現在のプラン | **プレミアム** |
+| 現在の契約価格 | **¥3,980** |
+| 継続価格ロック | **適用中（ご契約中は加入時の価格を維持）** |
+| 会員ランク | **Bronze** |
+| 継続月数 | **1 か月** |
+| KIリワード残高 | **100 pt** |
+| 今月の積み上げ | **100 pt** |
+| 次のランク（Silver）まで | **あと 2 か月**（進捗バー表示）|
+
+予想ページも **プレミアム**表示になり、**馬単の買い目が実数値で解放**された
+（例: 軸 7 → 2・3・6・8・10・11）。
+
+### 🔴 再発防止: `refresh-session` の実ハンドラが未被覆だった
+
+調査中に判明した**本当の弱点**は、**`refresh-session` を実際に動かすテストが 1 つも無かった**こと。
+`refreshSession.guard.test.mjs` はソースを文字列として読む静的ガードで、実行はしていない。
+決済反映の鎖の**最後の 1 手**が未被覆だった。
+
+追加: `src/lib/auth/refreshSession.e2e.test.mjs`（**9 件**・`airtable` のみ差し替え、
+ハンドラの実コードを実行。ネットワーク不使用）。
+
+固定した鎖: **Airtable が premium（webhook が書いた状態）→ `refresh-session` が Cookie を
+出し直す → その Cookie で entitlement が premium → 買い目が開く**。
+
+あわせて次も固定した。
+セッションの寿命を延ばさない／Airtable がまだ free なら昇格しない（事故当時の状態）／
+レコードが無ければ降格しない／期限切れは free へ落とす／
+ログインの入口にしない（401）／署名鍵が無ければ Cookie を出し直さない／POST 以外は 405。
+
+`npm run test:refresh-session` を新設し、`npm run build` に組み込んだ。
+変異テストで有効性を確認: `changed:true` を潰すと **2 件 fail**、
+`PlanType` を見ないようにすると **3 件 fail**。いずれも戻すと 9/9 pass。
+
+🔴 production には一切触れていない。Airtable の手動書換え・再決済もしていない。
+
 ## Open Questions
 
 ### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）
