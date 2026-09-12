@@ -106,6 +106,70 @@ export function shouldNotifyWebhookFailure({
   return Object.freeze({ notify: true, dedupeKey: `webhook-alert:${reason}`, skip: null });
 }
 
+/* ------------------------------------------------------------------
+   🔴 この alert type を外部から発火させない（単回使用 nonce）
+
+   `send-alert` は認証を持たない（誰でも POST できる）。そのままだと
+   `type: 'stripe_webhook_failed'` を外部から直接叩けてしまい、
+   webhook 側の 6 時間 dedup を**迂回して**メールを撃たせられる。
+
+   そこで、この type だけは **`stripe-webhook` が発行した単回使用の nonce** を
+   必須にする。nonce は Blobs に置かれ、`send-alert` が**検証して消す**。
+
+   🔴 env を増やさない（新しい production secret を作らない）。
+   🔴 nonce を作れるのは webhook だけ。webhook は 6 時間 dedup を通ったときしか
+      発行しないので、**dedup の迂回もできない**。
+   🔴 検証できないとき（nonce 無し・見つからない・期限切れ・Blobs が読めない）は
+      **送らない**（fail-closed）。
+   ------------------------------------------------------------------ */
+
+/** 🔴 外部から直接発火させない alert type。 */
+export const INTERNAL_ALERT_TYPE = 'stripe_webhook_failed';
+
+/** nonce を置く Blobs ストア名。両方の関数で同じ名前を使う。 */
+export const ALERT_NONCE_STORE = 'alert-nonces';
+
+/** nonce の有効期間。発行から送信までは一瞬なので短くてよい。 */
+export const ALERT_NONCE_TTL_MS = 5 * 60 * 1000;
+
+/** この type は nonce の検証が要るか。 */
+export function requiresAlertNonce(type) {
+  return type === INTERNAL_ALERT_TYPE;
+}
+
+/** nonce の形（16 進 64 文字）。 */
+const NONCE_RE = /^[0-9a-f]{64}$/;
+
+export function isWellFormedNonce(nonce) {
+  return typeof nonce === 'string' && NONCE_RE.test(nonce);
+}
+
+/**
+ * nonce を検証する（**純関数**。Blobs の読み出し結果を渡す）。
+ *
+ * @param {object} o
+ * @param {string} o.type
+ * @param {string|null} o.nonce        リクエストで渡された nonce
+ * @param {string|null} o.storedAtIso  Blobs に入っていた発行時刻（無ければ null）
+ * @param {number} [o.nowMs]
+ * @returns {{ ok: boolean, reason: string|null }}
+ */
+export function verifyAlertNonce({ type, nonce, storedAtIso, nowMs = Date.now() } = {}) {
+  // この type 以外は対象外（既存の呼び出し元に影響させない）
+  if (!requiresAlertNonce(type)) return Object.freeze({ ok: true, reason: null });
+
+  if (!isWellFormedNonce(nonce)) return Object.freeze({ ok: false, reason: 'nonce_missing' });
+  if (typeof storedAtIso !== 'string' || !storedAtIso) {
+    return Object.freeze({ ok: false, reason: 'nonce_unknown' });
+  }
+  const issuedAtMs = Date.parse(storedAtIso);
+  if (!Number.isFinite(issuedAtMs)) return Object.freeze({ ok: false, reason: 'nonce_unreadable' });
+  if (nowMs - issuedAtMs > ALERT_NONCE_TTL_MS) return Object.freeze({ ok: false, reason: 'nonce_expired' });
+  if (issuedAtMs - nowMs > 60 * 1000) return Object.freeze({ ok: false, reason: 'nonce_future' });
+
+  return Object.freeze({ ok: true, reason: null });
+}
+
 /** 理由ごとの「次に何を確認するか」。🔴 秘密値は書かない。 */
 const NEXT_STEPS = Object.freeze({
   [WEBHOOK_ALERT_REASON.INVALID_SIGNATURE]: [

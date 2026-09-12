@@ -119,6 +119,21 @@ async function eventStore(event) {
   }
 }
 
+/**
+ * alert nonce 用のストアを開く。🔴 開けなければ null（通知を送らない側へ倒す）。
+ * `eventStore` と同じく **キャッシュしない**。
+ */
+async function openNonceStore(event, storeName) {
+  try {
+    const { getStore, connectLambda } = await import('@netlify/blobs');
+    if (event?.blobs && typeof connectLambda === 'function') connectLambda(event);
+    return getStore(storeName);
+  } catch (err) {
+    logBlobsFailure('getStore(alert-nonces)', err);
+    return null;
+  }
+}
+
 async function hasProcessed(event, eventId) {
   try {
     const store = await eventStore(event);
@@ -143,11 +158,15 @@ async function hasProcessed(event, eventId) {
  */
 async function notifyFailureOnce(event, reason) {
   try {
-    const [{ shouldNotifyWebhookFailure, buildWebhookAlertPayload }, { resolveSiteOrigin }] =
-      await Promise.all([
-        import('../../src/lib/billing/webhookAlert.js'),
-        import('../../src/lib/http/siteOrigin.js'),
-      ]);
+    const [
+      { shouldNotifyWebhookFailure, buildWebhookAlertPayload, ALERT_NONCE_STORE },
+      { resolveSiteOrigin },
+      { randomBytes },
+    ] = await Promise.all([
+      import('../../src/lib/billing/webhookAlert.js'),
+      import('../../src/lib/http/siteOrigin.js'),
+      import('node:crypto'),
+    ]);
 
     const store = await eventStore(event);
     let lastNotifiedAtMs = null;
@@ -171,6 +190,21 @@ async function notifyFailureOnce(event, reason) {
     // 先に記録する（送信が遅れても多重送信しない側へ倒す）
     if (store) await store.set(key, new Date().toISOString());
 
+    /*
+     * 🔴 単回使用の nonce を発行する。
+     *    `send-alert` は認証を持たないため、これが無いと
+     *    `stripe_webhook_failed` を外部から直接叩けてしまい、
+     *    上の 6 時間 dedup を迂回してメールを撃たせられる。
+     *    nonce を作れるのはここだけ。置けなければ**送らない**（fail-closed）。
+     */
+    const nonceStore = await openNonceStore(event, ALERT_NONCE_STORE);
+    if (!nonceStore) {
+      console.warn('⚠️ stripe-webhook: alert nonce store unavailable — alert skipped');
+      return;
+    }
+    const nonce = randomBytes(32).toString('hex');
+    await nonceStore.set(nonce, new Date().toISOString());
+
     const origin = resolveSiteOrigin(event.headers);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 2500);
@@ -178,7 +212,7 @@ async function notifyFailureOnce(event, reason) {
       await fetch(`${origin}/.netlify/functions/send-alert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildWebhookAlertPayload({ reason })),
+        body: JSON.stringify({ ...buildWebhookAlertPayload({ reason }), nonce }),
         signal: controller.signal,
       });
     } finally {

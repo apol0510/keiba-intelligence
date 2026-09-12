@@ -59,7 +59,7 @@ export async function handler(event, context) {
 
   try {
     // リクエストボディ解析
-    const { type, date, details, metadata } = JSON.parse(event.body);
+    const { type, date, details, metadata, nonce } = JSON.parse(event.body);
 
     // 必須パラメータチェック
     if (!type) {
@@ -68,6 +68,51 @@ export async function handler(event, context) {
         headers,
         body: JSON.stringify({ error: 'type is required' })
       };
+    }
+
+    /*
+     * 🔴 **外部から直接発火させない alert type の検証**（2026-09-12）。
+     *
+     *    この関数は認証を持たない。そのままだと `stripe_webhook_failed` を
+     *    誰でも POST でき、`stripe-webhook` 側の 6 時間 dedup を**迂回して**
+     *    メールを撃たせられる。
+     *
+     *    そこでこの type だけは、**`stripe-webhook` が発行した単回使用の nonce**
+     *    を必須にする。nonce は Blobs にあり、ここで**検証して消す**。
+     *
+     *    🔴 検証できないときは送らない（fail-closed）。
+     *    🔴 他の type の呼び出し元には影響しない（`requiresAlertNonce` が false）。
+     */
+    {
+      const { requiresAlertNonce, verifyAlertNonce, ALERT_NONCE_STORE } =
+        await import('../../src/lib/billing/webhookAlert.js');
+
+      if (requiresAlertNonce(type)) {
+        let storedAtIso = null;
+        let store = null;
+        try {
+          const { getStore, connectLambda } = await import('@netlify/blobs');
+          if (event?.blobs && typeof connectLambda === 'function') connectLambda(event);
+          store = getStore(ALERT_NONCE_STORE);
+          if (typeof nonce === 'string' && nonce) storedAtIso = await store.get(nonce);
+        } catch (err) {
+          console.error('❌ send-alert: nonce store unavailable:', err && err.message);
+        }
+
+        const verdict = verifyAlertNonce({ type, nonce, storedAtIso });
+        if (!verdict.ok) {
+          // 🔴 理由は返さない（当て推量の手掛かりを与えない）
+          console.warn('⚠️ send-alert: internal alert rejected:', verdict.reason);
+          return { statusCode: 403, headers, body: JSON.stringify({ error: 'forbidden' }) };
+        }
+
+        // 単回使用。消せなくても送信は続ける（多重送信は dedup 側で抑えている）
+        try {
+          if (store) await store.delete(nonce);
+        } catch (err) {
+          console.warn('⚠️ send-alert: nonce not consumed:', err && err.message);
+        }
+      }
     }
 
     // SendGrid API Key確認

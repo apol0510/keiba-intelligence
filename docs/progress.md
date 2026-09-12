@@ -5409,6 +5409,46 @@ Stripe ダッシュボードのエラー率を見に行ったからである。
 変異テストで有効性を確認: 本番ホスト判定を外すと **1 件 fail**、
 時間窓の抑止を外すと **1 件 fail**。いずれも戻すと 15/15 pass。
 
+### 🔴 追加: `stripe_webhook_failed` を外部から発火できないようにした（同日）
+
+`send-alert` は認証を持たないため、**外部から `type: 'stripe_webhook_failed'` を
+直接 POST すれば、webhook 側の 6 時間 dedup を迂回してメールを撃たせられた**。
+通知を足したことで新しく開いた穴なので、同じ PR の中で閉じた。
+
+#### 方式: 単回使用 nonce（🔴 新しい production secret / env は増やさない）
+
+```
+stripe-webhook                                 send-alert
+  ① 本番ホスト判定 → ② 6h dedup 判定
+  ③ dedup を通ったときだけ nonce を発行
+     （乱数 32 バイト / Blobs `alert-nonces` に発行時刻を保存）
+  ④ nonce を添えて POST  ───────────────▶  ⑤ この type のときだけ nonce を検証
+                                              （形式 / 存在 / 5 分の有効期限 / 未来日時）
+                                           ⑥ NG なら 403・送信しない（理由は返さない）
+                                           ⑦ OK なら Blobs から削除（単回使用）→ 送信
+```
+
+- 🔴 **nonce を作れるのは webhook だけ**。しかも **dedup を通ったときしか作らない**ので、
+  外部から dedup を迂回することもできない
+- 🔴 **検証できなければ送らない**（nonce 無し / 不明 / 期限切れ / Blobs が読めない）
+- 🔴 **他の alert type には影響しない**（`requiresAlertNonce` が false のため素通り）
+- 🔴 **env を増やしていない**ので、production の secret 設定は不要
+
+#### テスト
+
+`webhookAlert.test.mjs` を **15 → 31 件**へ拡張。
+既存 type（`github_actions_failed` ほか 5 種）が **nonce 不要のまま**であることを明示的に固定。
+nonce 無し / 捏造 / 期限切れ / 未来日時 / 形式不正をすべて拒否することも固定。
+配線（発行は dedup の後・検証は送信の前・単回使用・両者が同じストア名・新 env なし）も静的に固定。
+
+`test:billing` **92 pass** / `test:mail-guard` 15 / `test:stripe` 63+17+6 /
+`test:auth` 180 / `test:membership` 356 / `test:refresh-session` 9 / `astro build` 成功。
+
+変異テストで有効性を確認:
+`requiresAlertNonce` を常に false にすると **6 件 fail**、
+Blobs に無い nonce を通すと **1 件 fail**、
+`send-alert` の 403 を外すと **1 件 fail**。いずれも戻すと 31/31 pass。
+
 ### 🟡 通知の届かない範囲（意図的）
 
 **UAT / Deploy Preview では通知しない。** production の SendGrid を
@@ -5417,18 +5457,24 @@ UAT の異常は **Stripe ダッシュボードの Webhook のエラー率**で�
 
 ## Open Questions
 
-### 🟡 `send-alert` は認証が無い（2026-09-12 に確認・本タスクの範囲外）
+### 🟡 `send-alert` は認証が無い（2026-09-12）
 
 `netlify/functions/send-alert.js` は **token 等の認証を持たず**、誰でも POST すれば
-`ALERT_EMAIL` 宛にメールを送らせられる。webhook 失敗通知を足すにあたって確認したが、
-**既存の性質であり、本タスクでは変更していない**（範囲外のため記録にとどめる）。
+`ALERT_EMAIL` 宛にメールを送らせられる。**既存の性質**である。
 
-対処するなら選択肢は次のあたり。いずれも影響範囲が広いので、実施は指示を待つ。
+🟢 **`stripe_webhook_failed` だけは閉じた**（同日・単回使用 nonce。下記の節を参照）。
+外部から直接この type を叩いても 403 になり、webhook 側の 6 時間 dedup も迂回できない。
 
-- 共有トークン（env）を必須にする（既存の呼び出し元をすべて直す必要がある）
-- 呼び出し元を同一サイトに限る（Referer / 独自ヘッダーは偽装可能なので不十分）
+🔴 **残りの type（`github_actions_failed` / `hit_rate_zero` / `no_prediction_data` /
+`results_import_failed` / `results_auto_added` など）は従来どおり未認証で叩ける。**
+これらは GitHub Actions 等の既存呼び出し元が使っており、認証を足すと
+呼び出し元をすべて直す必要がある。実施は指示を待つ。
+
+対処するなら選択肢は次のあたり。
+
+- 共有トークン（env）を必須にする → 🔴 **新しい production secret が要る**（承認境界）
+- 呼び出し元ごとに nonce 方式を広げる（env を増やさずに済む。Blobs 依存が増える）
 - 送信レート制限（Blobs で全体の上限を持つ）
-
 
 ### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）
 

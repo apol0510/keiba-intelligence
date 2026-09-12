@@ -17,6 +17,8 @@ import { dirname, join } from 'node:path';
 import {
   shouldNotifyWebhookFailure, buildWebhookAlertPayload, isProductionHost, hostFromHeaders,
   WEBHOOK_ALERT_REASON, WEBHOOK_ALERT_WINDOW_MS, SKIP,
+  requiresAlertNonce, verifyAlertNonce, isWellFormedNonce,
+  INTERNAL_ALERT_TYPE, ALERT_NONCE_STORE, ALERT_NONCE_TTL_MS,
 } from './webhookAlert.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -154,5 +156,137 @@ describe('🔴 決済経路を壊さない', () => {
   test('失敗の 2 経路から呼ばれている', () => {
     assert.match(src, /notifyFailureOnce\(event, 'not_configured'\)/);
     assert.match(src, /notifyFailureOnce\(event, 'invalid_signature'\)/);
+  });
+});
+
+/* ==================================================================
+   🔴 この alert type を外部から発火させない（単回使用 nonce）
+
+   `send-alert` は認証を持たない。そのままだと `stripe_webhook_failed` を
+   外部から直接叩けてしまい、webhook 側の 6 時間 dedup を**迂回して**
+   メールを撃たせられる。
+   ================================================================== */
+describe('🔴 stripe_webhook_failed を未認証の外部入力から発火させない', () => {
+  const VALID = 'a'.repeat(64);
+  const nowMs = Date.UTC(2026, 8, 12, 12, 0, 0);
+  const iso = (ms) => new Date(ms).toISOString();
+
+  test('この type だけ nonce を要求する', () => {
+    assert.equal(requiresAlertNonce(INTERNAL_ALERT_TYPE), true);
+    assert.equal(INTERNAL_ALERT_TYPE, 'stripe_webhook_failed');
+  });
+
+  test('🔴 既存の alert type には影響しない（nonce 不要のまま）', () => {
+    for (const t of [
+      'github_actions_failed', 'hit_rate_zero', 'no_prediction_data',
+      'results_import_failed', 'results_auto_added', 'anything_else',
+    ]) {
+      assert.equal(requiresAlertNonce(t), false, `🔴 ${t} に nonce を要求している`);
+      // nonce が無くても通る
+      assert.equal(verifyAlertNonce({ type: t, nonce: null, storedAtIso: null, nowMs }).ok, true);
+    }
+  });
+
+  test('🔴 nonce が無ければ拒否（外部からの直叩き）', () => {
+    for (const nonce of [undefined, null, '', 'short', 'Z'.repeat(64), 'a'.repeat(63)]) {
+      const v = verifyAlertNonce({ type: INTERNAL_ALERT_TYPE, nonce, storedAtIso: iso(nowMs), nowMs });
+      assert.equal(v.ok, false, `🔴 nonce=${nonce} が通っている`);
+      assert.equal(v.reason, 'nonce_missing');
+    }
+  });
+
+  test('🔴 Blobs に無い nonce は拒否（推測・捏造）', () => {
+    const v = verifyAlertNonce({ type: INTERNAL_ALERT_TYPE, nonce: VALID, storedAtIso: null, nowMs });
+    assert.equal(v.ok, false);
+    assert.equal(v.reason, 'nonce_unknown');
+  });
+
+  test('🔴 期限切れの nonce は拒否（使い回し）', () => {
+    const v = verifyAlertNonce({
+      type: INTERNAL_ALERT_TYPE, nonce: VALID,
+      storedAtIso: iso(nowMs - ALERT_NONCE_TTL_MS - 1000), nowMs,
+    });
+    assert.equal(v.ok, false);
+    assert.equal(v.reason, 'nonce_expired');
+  });
+
+  test('未来日時の nonce も拒否（時刻の細工）', () => {
+    const v = verifyAlertNonce({
+      type: INTERNAL_ALERT_TYPE, nonce: VALID, storedAtIso: iso(nowMs + 10 * 60 * 1000), nowMs,
+    });
+    assert.equal(v.ok, false);
+    assert.equal(v.reason, 'nonce_future');
+  });
+
+  test('読めない発行時刻は拒否', () => {
+    const v = verifyAlertNonce({ type: INTERNAL_ALERT_TYPE, nonce: VALID, storedAtIso: 'not-a-date', nowMs });
+    assert.equal(v.ok, false);
+    assert.equal(v.reason, 'nonce_unreadable');
+  });
+
+  test('webhook が発行した直後の nonce は通る', () => {
+    const v = verifyAlertNonce({ type: INTERNAL_ALERT_TYPE, nonce: VALID, storedAtIso: iso(nowMs - 500), nowMs });
+    assert.equal(v.ok, true);
+  });
+
+  test('nonce の形は 16 進 64 文字', () => {
+    assert.equal(isWellFormedNonce(VALID), true);
+    assert.equal(isWellFormedNonce('abc'), false);
+    assert.equal(isWellFormedNonce(null), false);
+  });
+});
+
+describe('🔴 nonce の発行と検証の配線', () => {
+  const webhookSrc = read('netlify/functions/stripe-webhook.js');
+  const alertSrc = read('netlify/functions/send-alert.js');
+
+  test('🔴 nonce を作れるのは webhook だけ（乱数 32 バイト）', () => {
+    assert.match(webhookSrc, /randomBytes\(32\)\.toString\('hex'\)/);
+    assert.equal(/randomBytes/.test(alertSrc), false, '🔴 send-alert が nonce を作っている');
+  });
+
+  test('🔴 dedup を通ったあとに発行する（迂回させない）', () => {
+    const fn = webhookSrc.slice(
+      webhookSrc.indexOf('async function notifyFailureOnce'),
+      webhookSrc.indexOf('async function markProcessed'),
+    );
+    assert.ok(fn.length > 0, 'notifyFailureOnce を切り出せていない');
+    const iDedupe = fn.indexOf('if (!decision.notify) return;');
+    const iMint = fn.indexOf('randomBytes(32)');
+    assert.ok(iDedupe > 0 && iMint > 0, 'dedup 判定または nonce 発行が見つからない');
+    assert.ok(iDedupe < iMint, '🔴 dedup 判定より前に nonce を発行している');
+  });
+
+  test('🔴 nonce を置けなければ送らない（fail-closed）', () => {
+    assert.match(webhookSrc, /if \(!nonceStore\) \{[\s\S]{0,200}return;/);
+  });
+
+  test('🔴 send-alert は検証 NG なら 403 を返し、送信しない', () => {
+    assert.match(alertSrc, /if \(!verdict\.ok\) \{/);
+    assert.match(alertSrc, /statusCode: 403[\s\S]{0,80}forbidden/);
+    // 検証は SendGrid の送信より前
+    assert.ok(alertSrc.indexOf('verifyAlertNonce') < alertSrc.indexOf('sgMail.send'),
+      '🔴 送信してから検証している');
+  });
+
+  test('🔴 単回使用（検証後に消す）', () => {
+    assert.match(alertSrc, /store\.delete\(nonce\)/);
+    assert.ok(alertSrc.indexOf('verifyAlertNonce') < alertSrc.indexOf('store.delete(nonce)'));
+  });
+
+  test('両者が同じストア名を使う', () => {
+    assert.match(webhookSrc, /ALERT_NONCE_STORE/);
+    assert.match(alertSrc, /ALERT_NONCE_STORE/);
+    assert.equal(ALERT_NONCE_STORE, 'alert-nonces');
+  });
+
+  test('🔴 新しい production secret / env を増やしていない', () => {
+    // env 名の新規追加が無いこと（既存 ALERT_EMAIL 以外の env を要求しない）
+    const lib = read('src/lib/billing/webhookAlert.js');
+    for (const bad of ['ALERT_TOKEN', 'INTERNAL_TOKEN', 'WEBHOOK_ALERT_SECRET', 'ALERT_SECRET']) {
+      assert.equal(lib.includes(bad), false, `🔴 新しい env ${bad} を要求している`);
+      assert.equal(alertSrc.includes(bad), false, `🔴 新しい env ${bad} を要求している`);
+      assert.equal(webhookSrc.includes(bad), false, `🔴 新しい env ${bad} を要求している`);
+    }
   });
 });
