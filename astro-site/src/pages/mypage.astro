@@ -808,7 +808,7 @@ const expiresLabel = ent.expiresAtMs
   }
 
   /*
-   * 🔴 有料カードの枠は **プレミアム専用トークン `--grad-premium`**（青→紫→橙）。
+   * 🔴 有料カードの枠は **プレミアム専用トークン `--grad-premium`**（空→藤→桃）。
    *    もとは `2px solid var(--secondary-start)`（#f97316 単色）→ 一度 `--grad-action`
    *    （桃→橙）にしたが、桃と橙は色差が弱くプレミアム感が出なかった。
    *    ロゴ（#2563eb → #f97316）の並びに紫を挟んだ専用色へ移行した。
@@ -887,26 +887,28 @@ const expiresLabel = ent.expiresAtMs
   .mp-badge.tier-free { background: var(--success); }
   .mp-badge.tier-light { background: var(--primary-gradient); }
   /*
-   * 🔴 プレミアムは **専用トークン `--grad-premium`（青 → 紫 → 橙）＋ 白文字**。
+   * 🔴 プレミアムは **専用トークン `--grad-premium`（空 → 藤 → 桃）＋ 濃色文字**。
    *
-   *    経緯: `--secondary-gradient`（#f97316 → #fb923c）は両端ともオレンジで単色に見えた
-   *    → `--grad-action`（桃 #ec4899 → 橙 #f97316）へ → 桃と橙も色差が弱かった
-   *    → ロゴ（#2563eb → #f97316）の並びに紫を挟んだ `--grad-premium` へ。
+   *    経緯（いずれも実画面で差し戻している）:
+   *      `--secondary-gradient`（#f97316 → #fb923c）… 両端オレンジで単色に見えた
+   *      `--grad-action`（#ec4899 → #f97316）      … 桃と橙で色差が弱かった
+   *      暗色 3 色（#2563eb → #7c3aed → #c2410c）  … 終点が茶色く濁って見えた
+   *      → 明るい 3 色（#38bdf8 → #a78bfa → #f472b6）へ。
    *
    *    🔴 ボタン用トークン（`--grad-*-btn`）も `--grad-action` 自体も変えない。
-   *      押せる UI の配色は別契約で、文字も `--btn-ink` のまま。
+   *      押せる UI の配色は別契約。
    *    🔴 カード枠・進捗バーと**必ず同じ `--grad-premium`** を使う（3 箇所で一致させる）。
    *
-   * 🔴 このバッジの文字だけ `--text-inverse`（白）。濃色文字にしない。
-   *    実測（ランプ全体を 200 分割した**最小**コントラスト）:
-   *      白 #ffffff … **5.17 → AA（4.5:1）を満たす**
-   *      濃色 #0b1020 … 3.08 → AA に届かない
+   * 🔴 文字は `--btn-ink`。白文字にしない。
+   *    実測（ランプ全体を 400 分割した**最小**コントラスト。補間途中も含む）:
+   *      濃色 #0b1020 … **6.85 → AA（4.5:1）を満たす**
+   *      白  #ffffff … 2.14 → AA に届かない
    *    バッジは 0.72rem/800（約 11.5px）で WCAG の「大きな文字」に当たらないため、
    *    3:1 への緩和は使えない。
    */
   .mp-badge.tier-premium {
     background: var(--grad-premium);
-    color: var(--text-inverse);
+    color: var(--btn-ink);
   }
 
   .mp-status-meta {
