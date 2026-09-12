@@ -282,6 +282,35 @@ function generateAlertEmail(type, date, details, metadata) {
         `
       };
 
+    /*
+     * 🔴 Stripe webhook が静かに失敗している（2026-09-12 の事故の再発防止）。
+     *    決済は成立しているのに会員の権限が開かない状態なので、最優先で直す。
+     *    🔴 本文に秘密値・リクエスト内容は入れない（送る側で組み立て済み）。
+     */
+    case 'stripe_webhook_failed': {
+      const steps = Array.isArray(metadata?.nextSteps) ? metadata.nextSteps : [];
+      return {
+        subject: `🚨 [keiba-intelligence] Stripe webhook 失敗 (${metadata?.reason || 'unknown'})`,
+        html: `
+          <h2>🚨 Stripe webhook が失敗しています</h2>
+          <p><strong>日時:</strong> ${timestamp}</p>
+          <p><strong>理由:</strong> ${metadata?.reason || '不明'}</p>
+          <hr>
+          <p>${details || ''}</p>
+          <p style="background:#fff3cd;padding:10px;border-radius:4px;">
+            <strong>影響:</strong> 決済が成立していても、会員の権限が開きません。
+            Airtable の <code>PlanType</code> が更新されず、リワードも付きません。
+          </p>
+          <p><strong>次に確認すること:</strong></p>
+          <ul>${steps.map((s) => `<li>${s}</li>`).join('')}</ul>
+          <p style="color:#666;font-size:12px;margin-top:20px;">
+            同じ理由の通知は ${metadata?.windowHours ?? '—'} 時間に 1 通だけ送られます。
+            以後の状況は Stripe ダッシュボードの Webhook のエラー率で確認してください。
+          </p>
+        `
+      };
+    }
+
     default:
       return {
         subject: `🔔 [keiba-intelligence] アラート通知 (${date || 'N/A'})`,

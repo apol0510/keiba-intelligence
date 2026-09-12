@@ -5268,7 +5268,69 @@ baseline の観測から、**表示の意味づけ自体が誤っている**こ�
 UAT での **無料 → Test 決済 → プレミアム**の表示遷移確認。
 決済は仕様所有者の操作（合言葉・カード入力）が要るため未実施。
 
+## 2026-09-12 Stripe webhook の失敗を通知する（静かに壊れるのをやめる）
+
+2026-09-12 の UAT 事故では、決済が成立しているのに webhook が
+**400 `invalid_signature` で 4 件すべて失敗**し、Airtable が更新されなかった。
+このとき**こちら側には何の通知も無かった**。気付けたのは、人が
+Stripe ダッシュボードのエラー率を見に行ったからである。
+
+🔴 この経路が壊れると「支払ったのに権限が開かない」になる。**黙って失敗させない。**
+
+### 設計（決済経路を壊さないための制約）
+
+| 制約 | どうしたか |
+|---|---|
+| 🔴 決済経路に SendGrid を持ち込まない | 送信は**既存の `send-alert`** に任せ、`stripe-webhook` からは HTTP で呼ぶ。`previewMailGuard` の適用対象（＝送信関数の集合）を増やさない |
+| 🔴 本番ホスト以外では送らない | `webhookAlert.js` が**本番の独自ドメインだと分かったときだけ**通知を許す（fail-closed）。UAT / Deploy Preview からは送らない（PR #129 の隔離契約） |
+| 🔴 未認証の入力でメールを撃たせない | 署名不正は誰でも起こせるため、**理由ごとに 6 時間で 1 通**だけ（Blobs で dedup） |
+| 🔴 通知に秘密値・リクエスト内容を含めない | 入れるのは「理由」と「次に確認すること」だけ。テストで `whsec_` / `sk_` / `email` / `amount` などの混入を禁止 |
+| 🔴 通知が失敗しても webhook の応答を変えない | 全体を try/catch で閉じ、`throw` しない。`AbortController` で 2.5 秒のタイムアウト |
+| 多重送信より送り漏れを選ぶ | **記録してから送る**（送信後に記録すると、落ちたとき何度も送る） |
+
+通知する理由は 2 つだけ: `invalid_signature` / `not_configured`。
+未知の理由では送らない。
+
+### 変更ファイル
+
+| ファイル | 内容 |
+|---|---|
+| `src/lib/billing/webhookAlert.js` | 判定と本文組み立て（**純関数**・I/O なし）|
+| `src/lib/billing/webhookAlert.test.mjs` | 15 件（本番ホスト限定 / dedup / 秘密値の非混入 / 決済経路の安全）|
+| `netlify/functions/stripe-webhook.js` | 失敗 2 経路から `notifyFailureOnce()` を呼ぶ |
+| `netlify/functions/send-alert.js` | `stripe_webhook_failed` のテンプレートを追加 |
+| `package.json` | `test:billing` に追加（`npm run build` に載る）|
+
+### テスト
+
+`test:billing` **76 pass**（新規 15 を含む）／ `test:mail-guard` **15 pass**
+（＝**送信関数の集合が変わっていない**ことの確認）／ `test:stripe` **63 + 17 + 6 pass**
+（webhook の実ハンドラに影響なし）／ `test:auth` 180 ／ `test:membership` 356 ／
+`astro build` 成功。
+
+変異テストで有効性を確認: 本番ホスト判定を外すと **1 件 fail**、
+時間窓の抑止を外すと **1 件 fail**。いずれも戻すと 15/15 pass。
+
+### 🟡 通知の届かない範囲（意図的）
+
+**UAT / Deploy Preview では通知しない。** production の SendGrid を
+プレビュー系ホストから使わないという隔離契約（PR #129）を優先した。
+UAT の異常は **Stripe ダッシュボードの Webhook のエラー率**で見る運用とする。
+
 ## Open Questions
+
+### 🟡 `send-alert` は認証が無い（2026-09-12 に確認・本タスクの範囲外）
+
+`netlify/functions/send-alert.js` は **token 等の認証を持たず**、誰でも POST すれば
+`ALERT_EMAIL` 宛にメールを送らせられる。webhook 失敗通知を足すにあたって確認したが、
+**既存の性質であり、本タスクでは変更していない**（範囲外のため記録にとどめる）。
+
+対処するなら選択肢は次のあたり。いずれも影響範囲が広いので、実施は指示を待つ。
+
+- 共有トークン（env）を必須にする（既存の呼び出し元をすべて直す必要がある）
+- 呼び出し元を同一サイトに限る（Referer / 独自ヘッダーは偽装可能なので不十分）
+- 送信レート制限（Blobs で全体の上限を持つ）
+
 
 ### 🟡 `CLAUDE.md` の作業ディレクトリ表記が実体と違う（範囲外・未修正）
 
