@@ -5455,6 +5455,38 @@ Blobs に無い nonce を通すと **1 件 fail**、
 プレビュー系ホストから使わないという隔離契約（PR #129）を優先した。
 UAT の異常は **Stripe ダッシュボードの Webhook のエラー率**で見る運用とする。
 
+## 2026-09-12 マイページ「現在のプラン」カードの枠を 2 色グラデーションへ
+
+UAT の実画面で、有料カードの枠が **`2px solid #f97316`（単色オレンジ）** のまま残っており、
+同じカードに載るプレミアムバッジ（桃 #ec4899 → 橙 #f97316）と**色が喧嘩していた**。
+バッジと進捗バーだけを 2 色化した前回（PR #137）の積み残しである。
+
+### 変更
+
+`.mp-status.is-paid` を **`--grad-action`（桃→橙）のグラデーション枠**へ変更した。
+
+```
+border-color: transparent;
+background: linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
+            var(--grad-action) border-box;
+```
+
+🔴 **`border-image` は使わない。** 角丸（`--radius-xl`）に追従せず角が四角くなるため。
+padding-box に地色・border-box にグラデーションを敷く 2 枚重ねなら角丸に追従する。
+
+### 変えていないもの
+
+- 地色 `--bg-secondary` / 文字色 / コントラスト
+- **無料会員のカード**（`.mp-status` 単体＝`2px solid var(--border-color)`）は不変
+- `--grad-action` トークン自体 / バッジ / 進捗バー
+- entitlement・認可・会員計算・ポイント・価格ロック
+
+### 確認
+
+`astro build` 成功。ビルド出力の CSS で、有料カードがグラデーション枠に、
+無料カードが従来どおりであることを確認。PC / 390px の比較ハーネスで、
+角丸に追従し桃→橙の 2 色差が見えることを目視確認した。
+
 ## Open Questions
 
 ### 🟡 `send-alert` は認証が無い（2026-09-12）
