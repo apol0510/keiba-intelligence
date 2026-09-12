@@ -870,14 +870,21 @@ const expiresLabel = ent.expiresAtMs
   .mp-badge.tier-free { background: var(--success); }
   .mp-badge.tier-light { background: var(--primary-gradient); }
   /*
-   * 🔴 プレミアムは **明るい 2 色 ＋ 濃色文字**（正本 global.scss の「同系色の濃淡を使わない」）。
-   *    以前は `--secondary-gradient`（#f97316 → #fb923c）で、両端ともオレンジのため
+   * 🔴 プレミアムは **2 色 ＋ 濃色文字**（正本 global.scss の「同系色の濃淡を使わない」）。
+   *    もとは `--secondary-gradient`（#f97316 → #fb923c）で、両端ともオレンジのため
    *    グラデーションに見えず単色に見えていた。
-   *    正本トークン `--grad-action-btn`（桃 #f472b6 → 琥珀 #fbbf24）へ統一する。
-   * 🔴 文字は `--btn-ink`。白文字にしない（両端のコントラストは 7.15 / 11.34 で AAA 級）。
+   *
+   *    ここは**ボタンではなくバッジ**なので、ボタン用の淡い `--grad-action-btn` ではなく
+   *    強い 2 色の `--grad-action`（桃 #ec4899 → 橙 #f97316）を使う。
+   *    🔴 ボタン用トークン `--grad-action-btn` 自体は変えない（押せる UI の配色は別契約）。
+   *
+   * 🔴 文字は `--btn-ink`。白文字にしない。
+   *    コントラスト実測（#0b1020 を載せた場合）:
+   *      #ec4899 … 5.37 / #f97316 … 6.75 → いずれも **AA（4.5:1）を満たす**。
+   *    （白文字だと 3.53 / 2.80 で AA に届かないため、濃色文字を維持すること）
    */
   .mp-badge.tier-premium {
-    background: var(--grad-action-btn);
+    background: var(--grad-action);
     color: var(--btn-ink);
   }
 
@@ -1021,7 +1028,7 @@ const expiresLabel = ent.expiresAtMs
     display: block;
     height: 100%;
     /* 🔴 バッジと同じ 2 色に統一する（同系色の濃淡へ戻さない） */
-    background: var(--grad-action-btn);
+    background: var(--grad-action);
   }
 
   .mp-club-sub { padding-top: 14px; border-top: 1px solid var(--border-color); margin-top: 10px; }
