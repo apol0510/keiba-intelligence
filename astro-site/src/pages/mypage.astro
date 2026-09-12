@@ -807,7 +807,23 @@ const expiresLabel = ent.expiresAtMs
     box-shadow: var(--shadow-sm);
   }
 
-  .mp-status.is-paid { border-color: var(--secondary-start); }
+  /*
+   * 🔴 有料カードの枠は **2 色グラデーション**（正本 global.scss の「同系色・単色を使わない」）。
+   *    もとは `2px solid var(--secondary-start)`（#f97316 単色）で、
+   *    同じカードに載る 2 色のバッジ（桃→橙）と色が喧嘩していた。
+   *
+   *    バッジ・進捗バーと**同じ `--grad-action`**（桃 #ec4899 → 橙 #f97316）へそろえる。
+   *    🔴 角丸カードなので `border-image` は使わない（角丸に追従せず角が四角くなる）。
+   *      padding-box に地色、border-box にグラデーションを敷く 2 枚重ねで、
+   *      `--radius-xl` に追従したグラデーションの枠にする。
+   *    🔴 地色は `--bg-secondary` のまま。文字色・コントラストは変えない。
+   */
+  .mp-status.is-paid {
+    border-color: transparent;
+    background:
+      linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
+      var(--grad-action) border-box;
+  }
 
   .mp-status-top {
     display: flex;
