@@ -41,6 +41,29 @@ export const MEMBERSHIP_COPY = Object.freeze({
   historyLabel: '過去に受け取った特典',
   /** 🔴 未確定を出すときの唯一の表現 */
   pending: '準備中',
+  /**
+   * 🔴 **無料会員（制度が未開始）のときの表現。**「準備中」と混同しない。
+   *    「準備中」＝ こちらがデータを出せていない。
+   *    「未開始」＝ 会員がまだプレミアムではないので、制度が始まっていない。
+   *    前者はこちらの不具合に見えるが、後者は正常な状態である。
+   */
+  notStarted: 'プレミアム加入後に開始',
+  /** 該当しない項目（無料会員の契約価格・価格ロックなど）。 */
+  notApplicable: '—',
+});
+
+/**
+ * 表示ステータス。
+ *
+ * 🔴 `pending` と `not_started` を**同じ扱いにしない**（2026-09-12）。
+ *    無料会員に「準備中」を出していたため、こちらのデータ不備のように見えていた。
+ */
+export const MEMBERSHIP_STATUS = Object.freeze({
+  READY: 'ready',
+  /** データを読めない / 未確定（🔴 プレミアム会員にだけ出す） */
+  PENDING: 'pending',
+  /** まだプレミアムではないので制度が始まっていない（正常な状態） */
+  NOT_STARTED: 'not_started',
 });
 
 /**
@@ -163,36 +186,68 @@ export function buildMembershipView({
     currentListPriceYen,
   });
 
+  /**
+   * 🔴 **「制度が未開始」か「データが未確定」かを分ける**（2026-09-12）。
+   *
+   * 無料会員は「こちらがデータを出せていない」のではなく、
+   * **プレミアムを始めていないので制度が動いていない**だけ。
+   * ここを `pending`（準備中）にすると、正常な状態が不具合のように見える。
+   *
+   * 🔴 ただし **解約済みの会員を巻き込まない**。解約すると tier は無料に戻るが、
+   *    ポイントは 90 日間は生きており（§7.1）、残高・猶予の案内を出し続ける必要がある。
+   *    そこで「会員だった痕跡が 1 つも無い」ときだけ未開始とする。
+   *
+   * 🔴 これは**表示の分類だけ**。ポイント計算・ランク判定・認可には一切関与しない。
+   */
+  const hasMembershipHistory = Boolean(
+    profile?.membershipStartedAtIso
+    || profile?.contractPrice
+    || profile?.cancelledAtIso
+    || (Array.isArray(ledger) && ledger.length > 0),
+  );
+  const notStarted = !isPaid && !hasMembershipHistory;
+
+  /** 未開始なら `not_started`、それ以外は算出どおりの status を返す。 */
+  const statusOf = (computed) => (notStarted ? MEMBERSHIP_STATUS.NOT_STARTED : computed);
+
   return Object.freeze({
     /** 有料契約中か（会員クラブの主対象）。ランクは認可に使わない */
     isPaid,
     tier,
     tierLabel: entitlement?.tierLabel || null,
 
+    /**
+     * 🔴 **まだプレミアムではないので制度が始まっていない**（無料会員かつ会員履歴なし）。
+     *    画面はこのとき「準備中」ではなく「未開始」を出し、進捗は出さない。
+     */
+    notStarted,
+
     months: Object.freeze({
-      status: tenure.status,
-      value: tenure.months,
+      status: statusOf(tenure.status),
+      value: notStarted ? null : tenure.months,
       /** 'ledger'（支払い済み期間の累計）/ 'legacy'（起点からの経過）/ null */
-      source: tenure.source,
+      source: notStarted ? null : tenure.source,
     }),
 
     rank: Object.freeze({
-      status: rank.configured && rank.monthsKnown ? 'ready' : 'pending',
-      rank: rank.rank,
-      label: rank.rankLabel,
-      nextRank: rank.nextRank,
-      nextLabel: rank.nextRankLabel,
-      monthsToNext: rank.monthsToNext,
-      progressRatio: rank.progressRatio,
+      status: statusOf(rank.configured && rank.monthsKnown ? 'ready' : 'pending'),
+      rank: notStarted ? null : rank.rank,
+      label: notStarted ? null : rank.rankLabel,
+      /** 🔴 未開始なら「次のランク」を出さない（進捗を描かせない） */
+      nextRank: notStarted ? null : rank.nextRank,
+      nextLabel: notStarted ? null : rank.nextRankLabel,
+      monthsToNext: notStarted ? null : rank.monthsToNext,
+      progressRatio: notStarted ? null : rank.progressRatio,
+      /** ランクの並びは制度の説明なので未開始でも出してよい */
       ladder: RANK_LADDER,
     }),
 
     rewards: Object.freeze({
-      status: rewards.status,
+      status: statusOf(rewards.status),
       reason: rewards.reason,
-      /** 🔴 ポイント。円ではない */
-      balancePoints: rewards.balancePoints,
-      monthAccrualPoints: rewards.monthAccrualPoints,
+      /** 🔴 ポイント。円ではない。未開始なら数値を出さない（0 pt と言い切らない） */
+      balancePoints: notStarted ? null : rewards.balancePoints,
+      monthAccrualPoints: notStarted ? null : rewards.monthAccrualPoints,
       /** active / grace / expired（解約後 90 日） */
       pointsStatus: rewards.pointsStatus?.status || null,
       expiresAtMs: rewards.pointsStatus?.expiresAtMs || null,
@@ -200,14 +255,15 @@ export function buildMembershipView({
     }),
 
     gifts: Object.freeze({
-      status: exchange.status,
-      available: exchange.available,
+      status: statusOf(exchange.status),
+      available: notStarted ? [] : exchange.available,
       /**
        * 交換ラインごとの選択候補 `[{ costPoints, choices }]`。
        * 🔴 同じラインの候補は **会員がどちらかを選ぶ**もの。画面で 1 つに絞らない。
        */
-      availableChoices: exchange.availableChoices,
-      next: exchange.next,
+      availableChoices: notStarted ? [] : exchange.availableChoices,
+      /** 🔴 未開始なら「次のプレゼントまであと◯pt」を出さない */
+      next: notStarted ? null : exchange.next,
       /** 🔴 記念品の月は通常交換を出さない（保守ライン S-2） */
       blockedByMilestone: !!exchange.blockedByMilestone,
       isMilestoneMonth: isMilestoneMonth(months),
@@ -243,8 +299,8 @@ export function buildMembershipView({
     }),
 
     history: Object.freeze({
-      status: rewards.status,
-      items: rewards.redemptions,
+      status: statusOf(rewards.status),
+      items: notStarted ? [] : rewards.redemptions,
     }),
   });
 }

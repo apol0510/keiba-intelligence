@@ -916,6 +916,85 @@ describe('会員クラブの表示ビュー', () => {
     assert.equal(v.priceLock.status, LOCK_STATUS.NOT_APPLICABLE);
   });
 
+  /* ----------------------------------------------------------------
+     🔴 未開始（無料会員）と 準備中（プレミアムだがデータ未確定）の描き分け
+        2026-09-12: 無料会員に「準備中」「あと◯pt」を出していた不整合の修正。
+        無料会員は「データが無い」のではなく「制度が始まっていない」。
+     ---------------------------------------------------------------- */
+
+  test('🔴 無料会員（履歴なし）は not_started であって pending ではない', () => {
+    const v = buildMembershipView({ entitlement: ent(TIER.FREE), config: {} });
+    assert.equal(v.notStarted, true);
+    for (const [k, got] of [
+      ['months', v.months.status], ['rank', v.rank.status],
+      ['rewards', v.rewards.status], ['gifts', v.gifts.status], ['history', v.history.status],
+    ]) {
+      assert.equal(got, 'not_started', `${k} が not_started でない`);
+      assert.notEqual(got, 'pending', `🔴 ${k} が pending（準備中）になっている`);
+    }
+  });
+
+  test('🔴 未開始のときは進捗・数値を一切出さない（「あと◯pt」を出さない）', () => {
+    const v = buildMembershipView({ entitlement: ent(TIER.FREE), config: {} });
+    assert.equal(v.gifts.next, null, '🔴 次のプレゼント進捗が出ている');
+    assert.equal(v.rank.nextRank, null, '🔴 次ランクが出ている');
+    assert.equal(v.rank.monthsToNext, null);
+    assert.equal(v.rank.progressRatio, null);
+    assert.equal(v.rank.rank, null);
+    assert.equal(v.months.value, null);
+    assert.equal(v.rewards.balancePoints, null, '🔴 残高を 0 pt と言い切っている');
+    assert.equal(v.rewards.monthAccrualPoints, null);
+    assert.deepEqual(v.gifts.available, []);
+    assert.deepEqual(v.history.items, []);
+  });
+
+  test('guest も未開始として扱う', () => {
+    const v = buildMembershipView({});
+    assert.equal(v.notStarted, true);
+    assert.equal(v.rewards.status, 'not_started');
+  });
+
+  test('🔴 プレミアムでデータ未確定なら従来どおり pending（未開始にしない）', () => {
+    const v = buildMembershipView({ entitlement: ent(TIER.PREMIUM), config: {}, catalogSource: null });
+    assert.equal(v.notStarted, false);
+    assert.equal(v.months.status, 'pending');
+    assert.equal(v.rank.status, 'pending');
+    assert.equal(v.rewards.status, 'pending');
+  });
+
+  test('🔴 解約済み会員（無料に戻ったが履歴あり）を未開始にしない', () => {
+    const nowMs = Date.UTC(2026, 8, 12);
+    // 解約済み＝tier は無料だが、ポイントは 90 日間は生きている（§7.1）
+    const v = buildMembershipView({
+      entitlement: ent(TIER.FREE),
+      profile: { cancelledAtIso: isoDaysAgo(10, nowMs), membershipStartedAtIso: isoDaysAgo(200, nowMs) },
+      ledger: [],
+      config: { RANK_THRESHOLDS: JSON.stringify(TEST_THRESHOLDS), REWARD_ACCRUAL: JSON.stringify(TEST_ACCRUAL) },
+      nowMs,
+    });
+    assert.equal(v.isPaid, false);
+    assert.equal(v.notStarted, false, '🔴 解約済み会員を「未開始」にしてはいけない');
+    assert.notEqual(v.rewards.status, 'not_started');
+  });
+
+  test('🔴 台帳に履歴がある無料会員も未開始にしない', () => {
+    const nowMs = Date.UTC(2026, 8, 12);
+    const v = buildMembershipView({
+      entitlement: ent(TIER.FREE),
+      ledger: [{ type: 'accrual', points: 100, occurredAtIso: isoDaysAgo(30, nowMs), periodMonths: 1 }],
+      config: { RANK_THRESHOLDS: JSON.stringify(TEST_THRESHOLDS), REWARD_ACCRUAL: JSON.stringify(TEST_ACCRUAL) },
+      nowMs,
+    });
+    assert.equal(v.notStarted, false);
+  });
+
+  test('未開始の表現は「準備中」と別の文言である', () => {
+    assert.equal(MEMBERSHIP_COPY.pending, '準備中');
+    assert.ok(MEMBERSHIP_COPY.notStarted);
+    assert.notEqual(MEMBERSHIP_COPY.notStarted, MEMBERSHIP_COPY.pending);
+    assert.equal(MEMBERSHIP_COPY.notApplicable, '—');
+  });
+
   test('entitlement が無くても落ちない（guest 扱い）', () => {
     const v = buildMembershipView({});
     assert.equal(v.tier, TIER.GUEST);
