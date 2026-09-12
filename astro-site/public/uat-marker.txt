@@ -14,3 +14,8 @@ uat
 env を足しただけでは既存 deploy に反映されない。
 🟢 空コミットだと "no content change" でスキップされるので、このファイルを更新して
    確実にビルドを走らせる。
+
+2026-09-12(2): STRIPE_WEBHOOK_SECRET(branch:uat) の修正を反映するための再デプロイ。
+Stripe の配信が 4 件すべて 400 invalid_signature で失敗しており、
+署名シークレットの不一致が原因だった（コード側は isBase64Encoded を正しく処理しており不具合なし）。
+🔴 env を直しただけでは反映されない。必ずこの再デプロイを通すこと。
