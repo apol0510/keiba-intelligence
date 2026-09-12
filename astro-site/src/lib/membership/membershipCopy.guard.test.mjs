@@ -959,4 +959,46 @@ describe('KI は馬育成アプリを作らない', () => {
       }
     }
   });
+
+  /* ----------------------------------------------------------------
+     🔴 無料会員に「準備中」を出さない（2026-09-12）
+
+     無料会員は「こちらがデータを出せていない（準備中）」のではなく、
+     **プレミアムを始めていないので制度が動いていない（未開始）**。
+     ここを混同すると、正常な状態が不具合のように見える。
+     ---------------------------------------------------------------- */
+  describe('🔴 未開始（無料会員）と 準備中（データ未確定）を描き分ける', () => {
+    const src = read('src/pages/mypage.astro');
+
+    test('未開始と準備中の定数が両方あり、別物として使われている', () => {
+      assert.match(src, /const NOT_STARTED = MEMBERSHIP_COPY\.notStarted/);
+      assert.match(src, /const PENDING = MEMBERSHIP_COPY\.pending/);
+      assert.match(src, /const DASH = MEMBERSHIP_COPY\.notApplicable/);
+      // 未確定表示は unset() に集約し、未開始なら NOT_STARTED へ落とす
+      assert.match(src, /const unset = \([\s\S]{0,60}notStarted \? fallback : PENDING\)/);
+    });
+
+    test('🔴 会員クラブの各行が PENDING を直に使っていない（unset 経由）', () => {
+      // CLUB_ROWS 内で「: PENDING,」と直書きしていたら未開始でも準備中が出てしまう
+      const rows = src.slice(src.indexOf('const CLUB_ROWS'), src.indexOf('];', src.indexOf('const CLUB_ROWS')));
+      assert.equal(/:\s*PENDING,/.test(rows), false, '🔴 CLUB_ROWS が PENDING を直書きしている');
+      assert.match(rows, /unset\(/);
+    });
+
+    test('🔴 未開始のときは進捗ブロックを描かない', () => {
+      // notStarted で分岐し、進捗（mp-club-progress）は else 側にあること
+      const i = src.indexOf('{notStarted ? (');
+      assert.ok(i > 0, '🔴 notStarted による分岐が無い');
+      assert.ok(i < src.indexOf('mp-club-progress'), '🔴 進捗ブロックが未開始でも描かれる位置にある');
+    });
+
+    test('🔴 未開始のときはカタログのバッジ（あと◯pt / 準備中）を出さない', () => {
+      assert.match(src, /notStarted \? null : group\.affordable/);
+      assert.match(src, /\{notStarted\s*\?\s*null\s*:\s*group\.reached/);
+    });
+
+    test('🔴 契約価格は無料会員では「—」（準備中にしない）', () => {
+      assert.match(src, /billingPeriodSuffix\(club\.priceLock\.periodMonths\)\}`[\s\S]{0,200}unset\(DASH\)/);
+    });
+  });
 });
