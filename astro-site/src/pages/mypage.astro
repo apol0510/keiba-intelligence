@@ -869,7 +869,17 @@ const expiresLabel = ent.expiresAtMs
 
   .mp-badge.tier-free { background: var(--success); }
   .mp-badge.tier-light { background: var(--primary-gradient); }
-  .mp-badge.tier-premium { background: var(--secondary-gradient); }
+  /*
+   * 🔴 プレミアムは **明るい 2 色 ＋ 濃色文字**（正本 global.scss の「同系色の濃淡を使わない」）。
+   *    以前は `--secondary-gradient`（#f97316 → #fb923c）で、両端ともオレンジのため
+   *    グラデーションに見えず単色に見えていた。
+   *    正本トークン `--grad-action-btn`（桃 #f472b6 → 琥珀 #fbbf24）へ統一する。
+   * 🔴 文字は `--btn-ink`。白文字にしない（両端のコントラストは 7.15 / 11.34 で AAA 級）。
+   */
+  .mp-badge.tier-premium {
+    background: var(--grad-action-btn);
+    color: var(--btn-ink);
+  }
 
   .mp-status-meta {
     list-style: none;
@@ -1010,7 +1020,8 @@ const expiresLabel = ent.expiresAtMs
   .mp-prog-bar span {
     display: block;
     height: 100%;
-    background: var(--secondary-gradient, var(--primary-gradient));
+    /* 🔴 バッジと同じ 2 色に統一する（同系色の濃淡へ戻さない） */
+    background: var(--grad-action-btn);
   }
 
   .mp-club-sub { padding-top: 14px; border-top: 1px solid var(--border-color); margin-top: 10px; }
