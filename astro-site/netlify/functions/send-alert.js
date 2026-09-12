@@ -59,7 +59,7 @@ export async function handler(event, context) {
 
   try {
     // リクエストボディ解析
-    const { type, date, details, metadata } = JSON.parse(event.body);
+    const { type, date, details, metadata, nonce } = JSON.parse(event.body);
 
     // 必須パラメータチェック
     if (!type) {
@@ -68,6 +68,51 @@ export async function handler(event, context) {
         headers,
         body: JSON.stringify({ error: 'type is required' })
       };
+    }
+
+    /*
+     * 🔴 **外部から直接発火させない alert type の検証**（2026-09-12）。
+     *
+     *    この関数は認証を持たない。そのままだと `stripe_webhook_failed` を
+     *    誰でも POST でき、`stripe-webhook` 側の 6 時間 dedup を**迂回して**
+     *    メールを撃たせられる。
+     *
+     *    そこでこの type だけは、**`stripe-webhook` が発行した単回使用の nonce**
+     *    を必須にする。nonce は Blobs にあり、ここで**検証して消す**。
+     *
+     *    🔴 検証できないときは送らない（fail-closed）。
+     *    🔴 他の type の呼び出し元には影響しない（`requiresAlertNonce` が false）。
+     */
+    {
+      const { requiresAlertNonce, verifyAlertNonce, ALERT_NONCE_STORE } =
+        await import('../../src/lib/billing/webhookAlert.js');
+
+      if (requiresAlertNonce(type)) {
+        let storedAtIso = null;
+        let store = null;
+        try {
+          const { getStore, connectLambda } = await import('@netlify/blobs');
+          if (event?.blobs && typeof connectLambda === 'function') connectLambda(event);
+          store = getStore(ALERT_NONCE_STORE);
+          if (typeof nonce === 'string' && nonce) storedAtIso = await store.get(nonce);
+        } catch (err) {
+          console.error('❌ send-alert: nonce store unavailable:', err && err.message);
+        }
+
+        const verdict = verifyAlertNonce({ type, nonce, storedAtIso });
+        if (!verdict.ok) {
+          // 🔴 理由は返さない（当て推量の手掛かりを与えない）
+          console.warn('⚠️ send-alert: internal alert rejected:', verdict.reason);
+          return { statusCode: 403, headers, body: JSON.stringify({ error: 'forbidden' }) };
+        }
+
+        // 単回使用。消せなくても送信は続ける（多重送信は dedup 側で抑えている）
+        try {
+          if (store) await store.delete(nonce);
+        } catch (err) {
+          console.warn('⚠️ send-alert: nonce not consumed:', err && err.message);
+        }
+      }
     }
 
     // SendGrid API Key確認
@@ -281,6 +326,35 @@ function generateAlertEmail(type, date, details, metadata) {
           <p style="color: #666; font-size: 12px; margin-top: 20px;">このメールは自動送信されています。</p>
         `
       };
+
+    /*
+     * 🔴 Stripe webhook が静かに失敗している（2026-09-12 の事故の再発防止）。
+     *    決済は成立しているのに会員の権限が開かない状態なので、最優先で直す。
+     *    🔴 本文に秘密値・リクエスト内容は入れない（送る側で組み立て済み）。
+     */
+    case 'stripe_webhook_failed': {
+      const steps = Array.isArray(metadata?.nextSteps) ? metadata.nextSteps : [];
+      return {
+        subject: `🚨 [keiba-intelligence] Stripe webhook 失敗 (${metadata?.reason || 'unknown'})`,
+        html: `
+          <h2>🚨 Stripe webhook が失敗しています</h2>
+          <p><strong>日時:</strong> ${timestamp}</p>
+          <p><strong>理由:</strong> ${metadata?.reason || '不明'}</p>
+          <hr>
+          <p>${details || ''}</p>
+          <p style="background:#fff3cd;padding:10px;border-radius:4px;">
+            <strong>影響:</strong> 決済が成立していても、会員の権限が開きません。
+            Airtable の <code>PlanType</code> が更新されず、リワードも付きません。
+          </p>
+          <p><strong>次に確認すること:</strong></p>
+          <ul>${steps.map((s) => `<li>${s}</li>`).join('')}</ul>
+          <p style="color:#666;font-size:12px;margin-top:20px;">
+            同じ理由の通知は ${metadata?.windowHours ?? '—'} 時間に 1 通だけ送られます。
+            以後の状況は Stripe ダッシュボードの Webhook のエラー率で確認してください。
+          </p>
+        `
+      };
+    }
 
     default:
       return {
