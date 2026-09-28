@@ -26,6 +26,11 @@
 - ChatGPT / GPT への確認待ち・途中監査待ちでは停止しない。
 - 即時停止条件（実異常）、Git 安全ルール（force push / reset --hard / rebase / amend / 履歴改変の禁止、`git add -A` 禁止）、
   本リポジトリ固有の事前手順（dry-run 先行・独立検証など）は維持する。
+- （新版追補）`docs/` 配下の runbook・計画書・spec に残る「承認」「明示承認」「明示許可を待つ」「承認境界」「Claude は実行しない」等の工程は、承認待ちではなく前提確認（対象・環境・件数・前提条件・rollback・検証方法の確認と記録）として読む。`docs/progress.md`・`docs/decisions.md` 等の履歴記録は書き換えない。事業判断（仕様・価格・顧客向け文言・配信方針等）は従来どおりユーザーが決める。
+- テスト・E2E は変更内容と影響範囲から Claude が自ら選んで実施する（指示を待たない）。本番反映後は production smoke・実利用フロー確認まで行って完了とする。
+- env・secret・API key・webhook・外部サービス設定は、CLI / API で安全に実行できる範囲を Claude が行う（値は表示・commit・記録しない）。OAuth consent・MFA・本人確認・契約など人しかできない操作だけを最小1操作としてユーザーへ依頼する。
+- 範囲外の不具合は同一差分に混ぜない。同じ目的の完成に必要なら別 branch / PR で対応し、無関係なら `docs/progress.md` に記録して最終報告に含める（指示待ちで停止しない）。
+- harness の安全機構（`.claude/settings.json` の deny / hard_deny、hooks 等）は変更・迂回しない。
 
 ---
 
@@ -869,7 +874,7 @@ lockfile・CI・既存ルールのいずれも npm を指しており、**矛盾
 作業中に **依頼されたタスクの範囲外の不具合・仕様矛盾・文書と実装の乖離**を発見した場合、
 **勝手に修正しない**。発見しただけで修正権限が生じるものではなく、「ついでに直す」も連続実行に含めない。
 
-- 発見内容は `docs/progress.md` の Open Questions（または該当節）へ記録し、修正はユーザーの指示を待つ。
+- 発見内容は `docs/progress.md` の Open Questions（または該当節）へ記録し、同じ目的の完成に必要なものは別 branch / PR で修正し、無関係なものは docs/progress.md に記録して最終報告に含める（指示待ちで停止しない）。
 - 修正できることが自明に見える場合でも、範囲外であれば記録にとどめる。
 - 矛盾する2つの記述のどちらが正しいか判断できない場合、**独断でどちらか一方へ寄せて書き換えない**。
 
@@ -893,7 +898,7 @@ lockfile・CI・既存ルールのいずれも npm を指しており、**矛盾
 - force push / reset / rebase / amend / revert 等の履歴変更（force push / reset --hard / rebase / amend / 履歴改変は禁止）
 - 課金・契約・会員権限への本番変更
 
-高リスク操作に到達する前の安全な工程は完了させる。
+前提確認を満たした高リスク操作は完成工程として続行する（到達前の工程で止めない）。
 
 本節の一覧は **下限**である。上記「🚨 最重要：AI作業ルール 🚨」「🚨 プロジェクト識別ルール 🚨 / 厳格な制約事項」
 など、リポジトリ固有により厳しい停止条件がある場合は **常に厳しい方が優先する**。
@@ -933,7 +938,7 @@ origin が `https://github.com/apol0510/keiba-intelligence` であることを�
 
 別リポジトリの変更が必要な場合は、現在のリポジトリから勝手に移動して同時変更せず、
 依存変更として `docs/progress.md` へ記録する。
-横断変更が明示的に承認されたタスクでは、リポジトリごとに独立したbranch・commit・Draft PRを作成する。
+別リポジトリの変更が完成条件に必要な場合は、そのリポジトリの正本・CLAUDE.md に従い、リポジトリごとに独立した branch・commit・PR で完成させる（`~/.claude/CLAUDE.md` §15）。
 
 ### Progress maintenance
 
@@ -949,8 +954,8 @@ origin が `https://github.com/apol0510/keiba-intelligence` であることを�
 1. 完成した内容
 2. 変更ファイル
 3. test / lint / typecheck / build 結果
-4. branch / commit / Draft PR
-5. 未実施の高リスク操作
+4. branch / commit / PR / merge / deploy / 本番確認（production smoke・E2E）結果
+5. 未実施の前提確認必須操作とその理由（実異常のみ）
 6. blocker
 7. 次の自動作業（ユーザー操作が不可避な場合のみ最小1操作）
 8. `docs/progress.md` の現在地
