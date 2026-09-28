@@ -14,6 +14,21 @@
 
 ---
 
+## 全repo共通運用との関係（2026-09-28）
+
+本リポジトリは `~/.claude/CLAUDE.md`（全プロジェクト共通運用「完成まで自律実行」）に従う。
+本文書内の「承認」「明示承認後のみ」「高リスク承認境界」「次に必要な承認」等の人間承認ゲートは、
+承認待ちの停止点としては廃止する。
+
+- 列挙された高リスク操作は「実行前に対象・環境・件数・前提条件・rollback・検証方法の確認を必須とする操作」として扱う。
+  確認できれば、正本の完成条件に必要な範囲で PR merge・production deploy・本番 write 等を承認待ちせず自律実行する。
+  確認できない場合は実異常として停止する。
+- ChatGPT / GPT への確認待ち・途中監査待ちでは停止しない。
+- 即時停止条件（実異常）、Git 安全ルール（force push / reset --hard / rebase / amend / 履歴改変の禁止、`git add -A` 禁止）、
+  本リポジトリ固有の事前手順（dry-run 先行・独立検証など）は維持する。
+
+---
+
 ## 🚨 最重要：AI作業ルール 🚨
 
 ### 作業開始時に必ず明示すること
@@ -604,12 +619,13 @@ KMA_ADMIN_TOKEN=（KMA の ADMIN_API_TOKEN と同一値）
 
 ## 🔀 Git マージ規約 🔀
 
-### 🔴 PR は **承認後に squash merge** する
+### 🔴 PR は **CI green・前提確認後に squash merge** する
 
 - **必ず squash merge**（`gh pr merge <N> --squash`）。
   merge commit（`--merge`）も rebase merge（`--rebase`）も**使わない**。
-- merge は**仕様所有者の承認後**にのみ行う（高リスク境界。`main` は production branch であり、
-  merge した時点で本番デプロイが走る）。
+- merge は **CI green を確認し、「全repo共通運用との関係」の前提確認（対象・影響・rollback・検証方法）を
+  満たした後に自律で行う**（承認待ちはしない）。`main` は production branch であり、
+  merge した時点で本番デプロイが走ることに注意する。
 - `main` へ直接 push しない。変更は必ず branch → PR を経由する。
 
 🔴 **squash によって branch の commit SHA は `main` に残らない。**
@@ -846,7 +862,7 @@ lockfile・CI・既存ルールのいずれも npm を指しており、**矛盾
   許可するものではない。
 - 「テスト失敗の修正」は、本タスクの範囲内で原因が明確に特定でき、かつ後方互換性を壊さない場合に
   限る。原因不明・範囲外・互換性に影響する場合は停止する。
-- 「Draft PR 作成まで自律実行」は、PR merge および本番反映の事前承認を意味しない。
+- Draft PR 作成では停止しない。正本の完成条件に必要な PR merge・本番反映は、「全repo共通運用との関係」の前提確認を満たせば自律実行する。
 
 ### Out-of-scope defects
 
@@ -863,7 +879,9 @@ lockfile・CI・既存ルールのいずれも npm を指しており、**矛盾
 
 ### High-risk approval boundary
 
-次の操作は、直前でのみ停止し、実施内容・対象・影響・rollback手順・検証結果を一括報告する。
+（2026-09-28 改定）以下は承認待ちの停止点ではなく、実行前に前提確認を必須とする操作である。前提が確認できれば自律実行し、確認できない場合のみ停止する（「全repo共通運用との関係」参照）。
+
+次の操作は、直前に実施内容・対象・影響・rollback手順・検証方法を確認・記録してから実行する。
 
 - production deploy（Netlify 本番デプロイ）/ production環境変数またはsecret変更
 - 本番メール・メルマガ・アラート・通知の送信（SendGrid 経由、および LINE 等の外部通知チャネルを含む）
@@ -872,7 +890,7 @@ lockfile・CI・既存ルールのいずれも npm を指しており、**矛盾
 - package公開・registry公開（npm publish等）
 - production reader・transport・モデル・artifact・champion・datastoreの切替
 - PR merge / データ削除 / rollback困難なmigration
-- force push / reset / rebase / amend / revert 等の履歴変更
+- force push / reset / rebase / amend / revert 等の履歴変更（force push / reset --hard / rebase / amend / 履歴改変は禁止）
 - 課金・契約・会員権限への本番変更
 
 高リスク操作に到達する前の安全な工程は完了させる。
@@ -934,5 +952,7 @@ origin が `https://github.com/apol0510/keiba-intelligence` であることを�
 4. branch / commit / Draft PR
 5. 未実施の高リスク操作
 6. blocker
-7. 次に必要な承認
+7. 次の自動作業（ユーザー操作が不可避な場合のみ最小1操作）
 8. `docs/progress.md` の現在地
+
+末尾に「現在地: … / 異常: なし or … / 残り: …」の3行を付ける。
