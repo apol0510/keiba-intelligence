@@ -271,6 +271,52 @@ async function fetchRacebookPastRaces(date, category = 'jra', client) {
 }
 
 /**
+ * 会場ごとの racebook（出馬表）の有無と整合を索引にする（JRA 用）。
+ * 戻り値: Map<会場名, { date, races }>。racebook 配下が無ければ空 Map。
+ */
+export async function fetchRacebookVenueIndex(date, category = 'jra', client) {
+  const [year, month] = date.split('-');
+  const dirPath = `${category}/racebook/${year}/${month}`;
+  const index = new Map();
+  const entries = await client.listDirectory(dirPath, { ref: 'main', required: false });
+  if (!entries) return index;
+  for (const entry of entries.filter(e => e.name.startsWith(`${date}-`) && e.name.endsWith('.json'))) {
+    const rb = await client.fetchJsonFromEntry(entry, { ref: 'main', required: false });
+    if (rb === null) continue;
+    const name = rb.track || rb.venue || null;
+    if (!name) continue;
+    index.set(name, { date: rb.date ?? null, races: Array.isArray(rb.races) ? rb.races.length : 0 });
+  }
+  return index;
+}
+
+/**
+ * 【会場公開の必須条件】racebook が無い・整合しない会場は、その会場だけ公開しない（MK 決定 2026-09-30）。
+ *
+ * ⚠️ 2026-09-21: 中山が開催中止（9/22 へ順延）となり racebook は保存されなかったが、computer だけで
+ *   会場が成立し、中止の中山 12R が会員向けに公開された（keiba-data-shared-admin progress 2026-09-20）。
+ *   警告付きで出す方式にはしない。健全な他会場は継続して公開する（異常の範囲を会場単位に限定する）。
+ *
+ * @returns {{ kept: object[], excluded: Array<{ venue: string, reason: string }> }}
+ */
+export function gateVenuesByRacebook(venues, racebookIndex, date) {
+  const kept = [];
+  const excluded = [];
+  for (const v of venues) {
+    const name = v?.venue || v?.name || v?.track || null;
+    const rb = name ? racebookIndex.get(name) : undefined;
+    let reason = null;
+    if (!name) reason = 'venue_name_missing';
+    else if (!rb) reason = 'racebook_missing';
+    else if (rb.date && rb.date !== date) reason = `racebook_date_mismatch(${rb.date})`;
+    else if (rb.races === 0) reason = 'racebook_no_races';
+    if (reason) excluded.push({ venue: name ?? '(不明)', reason });
+    else kept.push(v);
+  }
+  return { kept, excluded };
+}
+
+/**
  * 予想データを取り込み（正規化 + 調整ルール適用）
  *
  * @param {string} date - 日付（YYYY-MM-DD）
@@ -299,6 +345,24 @@ export async function importPrediction(date, venue = 'jra', { client } = {}) {
   if (!sharedJSON) {
     console.log(`⏭️  予想データがないため、スキップします`);
     return null;
+  }
+
+  // 【会場公開の必須条件】racebook が無い・整合しない会場を除外する（会場単位・他会場は継続）
+  const racebookIndex = await fetchRacebookVenueIndex(date, venue, client);
+  const candidateVenues = Array.isArray(sharedJSON.venues) ? sharedJSON.venues : [sharedJSON];
+  const { kept, excluded } = gateVenuesByRacebook(candidateVenues, racebookIndex, date);
+  for (const x of excluded) {
+    console.warn(`🛑 [VENUE-GATE] ${date} ${x.venue}: 公開しない（${x.reason}）— racebook は会場公開の必須条件`);
+  }
+  if (kept.length === 0) {
+    console.warn(`🛑 [VENUE-GATE] ${date}: racebook と整合する会場が 0 のため、この日は公開しない（除外 ${excluded.length} 会場）`);
+    return null;
+  }
+  if (excluded.length > 0) {
+    console.log(`✅ [VENUE-GATE] ${date}: 公開 ${kept.length} 会場 / 除外 ${excluded.length} 会場（${excluded.map(x => x.venue).join(', ')}）`);
+  }
+  if (Array.isArray(sharedJSON.venues)) {
+    sharedJSON = { ...sharedJSON, venues: kept, totalVenues: kept.length };
   }
 
   // racebook pastRaces を取得してhorseDataMapを構築

@@ -7,6 +7,17 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-09-30 JRA 予想の会場公開は racebook を必須条件にする（MK 決定）
+
+- **事象**: 2026-09-21 中山が開催中止（9/22 へ順延）となり racebook は保存されなかったが、`importPredictionJra.js` の
+  優先順位2（computer）だけで会場が成立し、中止の中山 12R が会員向けに公開された（keiba-data-shared-admin progress 2026-09-20）。
+- **MK 決定**: racebook を会場公開の必須条件とする。racebook が無い・整合しない（中身 date 不一致・レース 0）会場は**その会場だけ公開しない**。
+  警告付きで出す方式にはしない。健全な他会場は継続して公開する（異常の範囲を会場単位に限定する）。
+- **実装**: `gateVenuesByRacebook` / `fetchRacebookVenueIndex`。取得元（統合ファイル・computer・racebook）に関係なく適用し、
+  除外会場と理由を `[VENUE-GATE]` でログに残す。整合する会場が 0 ならその日は公開しない。日ファイルは毎回丸ごと書き直すため、除外会場は再実行で消える。
+- **test**: `importPredictionJra.test.mjs` 17〜21（9/21 再現・全会場除外・date 不一致・統合ファイル経路・理由表）。
+- ⚠️ 既存の失敗（本件と無関係・origin/main でも再現）: test 16 `fetchJraResultDay: 429 → retry → 200`。別 task。
+
 ### 2026-09-02 購入導線の ReferenceError 修正（`3de357a7`）
 
 - **症状**: 未ログインで「このプランを申し込む」を押すと、メール確認フォームが出ず
