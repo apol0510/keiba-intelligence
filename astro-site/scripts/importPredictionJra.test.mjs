@@ -26,6 +26,7 @@ import {
   lookupPastRaceDistance,
   enrichRecentRacesDistance,
   clearResultsCache,
+  gateVenuesByRacebook,
 } from './importPredictionJra.js';
 import { createSharedClient, SHARED_FETCH_CODES } from './lib/sharedFetch.mjs';
 
@@ -86,6 +87,29 @@ function mkDirEntry(name, path) {
 // directory listing response
 function mkDirRes(entries) {
   return mkRes(200, entries);
+}
+
+// racebook（会場公開の必須条件・2026-09-30）
+function mkRb(track, date, races = 1) {
+  return {
+    date, track,
+    races: Array.from({ length: races }, (_, i) => ({
+      raceNumber: i + 1, raceClass: 'テストレース', distance: '2000m', startTime: '10:00', conditions: '',
+      horses: [{ number: 1, name: 'テスト馬A', totalScore: 90, marks: ['◎'], jockey: '騎手A', trainer: '調教師A', sexAge: '牡3', weight: 57, computerIndex: null }],
+    })),
+  };
+}
+const RB_CODE = { 東京: 'TOK', 中山: 'NAK', 阪神: 'HAN' };
+/** racebook 配下の応答（dir listing / raw）。該当しなければ null。 */
+function racebookResponder(url, init, date, rbs) {
+  if (!url.includes('/racebook/')) return null;
+  const [y, m] = date.split('-');
+  const byName = Object.fromEntries(rbs.map(rb => [`${date}-${RB_CODE[rb.track]}.json`, rb]));
+  if (init?.headers?.Accept === JSON_ACCEPT) {
+    return mkDirRes(Object.keys(byName).map(n => mkDirEntry(n, `jra/racebook/${y}/${m}/${n}`)));
+  }
+  const name = Object.keys(byName).find(n => url.includes(n));
+  return name ? mkRawRes(byName[name]) : mkRes(404, { message: 'Not Found' });
 }
 
 // JRA予想データ（単一会場形式）
@@ -158,6 +182,8 @@ test('5. sharedPrediction 200 → computer/racebook prediction source は呼ば�
 
   const { client, fetchImpl } = mkClientAndFetch((url, idx, init) => {
     const accept = init?.headers?.Accept;
+    const rb = racebookResponder(url, init, '2026-02-10', [mkRb('東京', '2026-02-10')]);
+    if (rb) return rb;
     if (url.includes('/predictions/') && accept !== JSON_ACCEPT) {
       // sharedPrediction ファイル (RAW_ACCEPT) → 200
       return mkRawRes(prediction);
@@ -186,6 +212,8 @@ test('6. sharedPrediction 404 → computer 200 → result 返る（第2候補成
       if (accept === JSON_ACCEPT) return mkDirRes([computerEntry]);
       return mkRawRes(venueData);
     }
+    const rb = racebookResponder(url, init, '2026-02-11', [mkRb('東京', '2026-02-11')]);
+    if (rb) return rb;
     return mkRes(404, { message: 'Not Found' });
   });
 
@@ -268,14 +296,16 @@ test('9. computer predictions 401 → AUTH_FAILED → fatal', async () => {
 // ───────────────────────────────────────────────
 // テスト 10: racebook pastRaces 404 → horseDataMap null でも正常終了
 // ───────────────────────────────────────────────
-test('10. racebook pastRaces 404 → horseDataMap null でも normalizedResult 返る', async () => {
+test('10. racebook に pastRaces が無くても（horseDataMap 空）normalizedResult 返る', async () => {
   const prediction = mkJraPrediction('東京');
-  let reqIndex = 0;
+  const rb = mkRb('東京', '2026-02-15');
+  for (const r of rb.races) for (const h of r.horses) delete h.pastRaces;
 
-  const client = mkClient(() => {
-    reqIndex++;
-    if (reqIndex === 1) return mkRawRes(prediction);   // sharedPrediction raw
-    return mkRes(404, { message: 'Not Found' });       // racebook pastRaces → 404
+  const client = mkClient((url, idx, init) => {
+    const res = racebookResponder(url, init, '2026-02-15', [rb]);
+    if (res) return res;
+    if (url.includes('/predictions/') && init?.headers?.Accept !== JSON_ACCEPT && !url.includes('/computer/')) return mkRawRes(prediction);
+    return mkRes(404, { message: 'Not Found' });
   });
 
   const result = await importPrediction('2026-02-15', 'jra', { client });
@@ -542,4 +572,69 @@ test('24. lookupPastRaceDistance: 函館 → HKD を使用（HAK 禁止）', asy
   assert.ok(capturedUrl !== null, 'fetch should be called');
   assert.ok(capturedUrl.includes('HKD'), `URL should contain HKD. Got: ${capturedUrl}`);
   assert.ok(!capturedUrl.includes('HAK'), `URL must NOT contain HAK. Got: ${capturedUrl}`);
+});
+
+// ───────────────────────────────────────────────
+// 会場公開の必須条件: racebook（MK 決定 2026-09-30）
+//   2026-09-21 中山は開催中止で racebook が保存されず、computer だけで 12R が公開された。
+// ───────────────────────────────────────────────
+function mkComputerVenue(venue, date) {
+  return { date, venue, venueCode: RB_CODE[venue], races: mkJraPrediction(venue).races };
+}
+function computerAndRacebookClient(date, computerVenues, rbs) {
+  const [y, m] = date.split('-');
+  const files = Object.fromEntries(computerVenues.map(v => [`${date}-${RB_CODE[v.venue]}.json`, v]));
+  return mkClientAndFetch((url, idx, init) => {
+    const rb = racebookResponder(url, init, date, rbs);
+    if (rb) return rb;
+    if (url.includes('/predictions/computer/')) {
+      if (init?.headers?.Accept === JSON_ACCEPT) return mkDirRes(Object.keys(files).map(n => mkDirEntry(n, `jra/predictions/computer/${y}/${m}/${n}`)));
+      const name = Object.keys(files).find(n => url.includes(n));
+      return name ? mkRawRes(files[name]) : mkRes(404, { message: 'Not Found' });
+    }
+    return mkRes(404, { message: 'Not Found' });
+  });
+}
+
+test('17. 9/21 再現: computer に阪神・中山、racebook は阪神だけ → 中山だけ公開しない・阪神は公開', async () => {
+  const date = '2026-09-21';
+  const { client } = computerAndRacebookClient(date, [mkComputerVenue('阪神', date), mkComputerVenue('中山', date)], [mkRb('阪神', date)]);
+  const result = await importPrediction(date, 'jra', { client });
+  assert.ok(result !== null);
+  assert.deepEqual(result.normalizedResult.venues.map(v => v.venue), ['阪神']);
+  assert.equal(result.normalizedResult.totalVenues, 1);
+});
+
+test('18. racebook と整合する会場が 0 → その日は公開しない（null）', async () => {
+  const date = '2026-09-21';
+  const { client } = computerAndRacebookClient(date, [mkComputerVenue('中山', date)], []);
+  assert.equal(await importPrediction(date, 'jra', { client }), null);
+});
+
+test('19. racebook の中身 date が違う会場は公開しない', async () => {
+  const date = '2026-09-21';
+  const { client } = computerAndRacebookClient(date, [mkComputerVenue('阪神', date), mkComputerVenue('中山', date)], [mkRb('阪神', date), mkRb('中山', '2026-09-22')]);
+  const result = await importPrediction(date, 'jra', { client });
+  assert.deepEqual(result.normalizedResult.venues.map(v => v.venue), ['阪神']);
+});
+
+test('20. 統合ファイル（第1候補）でも racebook の無い会場は公開しない', async () => {
+  const date = '2026-02-10';
+  const { client } = mkClientAndFetch((url, idx, init) => {
+    const rb = racebookResponder(url, init, date, []);
+    if (rb) return rb;
+    if (url.includes('/predictions/') && init?.headers?.Accept !== JSON_ACCEPT) return mkRawRes(mkJraPrediction('東京'));
+    return mkRes(404, { message: 'Not Found' });
+  });
+  assert.equal(await importPrediction(date, 'jra', { client }), null);
+});
+
+test('21. gateVenuesByRacebook: 理由つきで会場単位に分ける', () => {
+  const idx = new Map([['阪神', { date: '2026-09-21', races: 12 }], ['東京', { date: '2026-09-21', races: 0 }], ['京都', { date: '2026-09-20', races: 12 }]]);
+  const { kept, excluded } = gateVenuesByRacebook(
+    [{ venue: '阪神' }, { venue: '中山' }, { venue: '東京' }, { venue: '京都' }, {}], idx, '2026-09-21');
+  assert.deepEqual(kept.map(v => v.venue), ['阪神']);
+  assert.deepEqual(excluded.map(x => [x.venue, x.reason]), [
+    ['中山', 'racebook_missing'], ['東京', 'racebook_no_races'], ['京都', 'racebook_date_mismatch(2026-09-20)'], ['(不明)', 'venue_name_missing'],
+  ]);
 });
