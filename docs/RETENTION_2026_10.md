@@ -88,6 +88,8 @@
 - Stripe API の実挙動: Stripe サンドボックス（API 2026-08-26.dahlia・flexible 請求）で
   「期間末キャンセル予約 → `cancel_at=""` → 予約解除・次回請求 ¥3,980 復帰」を確認。テスト顧客は削除済み。
 - ブラウザ: localhost で premium セッション＋関数応答の差し替えにより、予約中表示 → 取り消し → 次回支払日表示・完了メッセージ・狭幅レイアウトを確認。
+- 本番反映後: `.github/workflows/post-deploy-billing-smoke.yml` が main への push（課金・マイページの変更のみ）で起動し、
+  本番反映を最大 15 分待ってから未ログインの 8 項目（401 / 405 / 400 / 200）を確かめる。失敗は failure(red)。secrets 不要・本番データに触れない。
 
 ---
 
