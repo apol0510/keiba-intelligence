@@ -122,9 +122,6 @@ const pageDescription = monthData.length > 0
                   <div class="day-stats">
                     <span class="stat">的中 {dayData.hitRaces}/{dayData.totalRaces}レース</span>
                     <span class="stat">的中率 {dayData.hitRate}%</span>
-                    {dayData.betPointsPerRace && (
-                      <span class="stat">購入点数 {(Number(dayData.totalRaces) || 0) * (Number(dayData.betPointsPerRace) || 0)}点</span>
-                    )}
                     {dayData.totalPayout > 0 && (
                       <span class="stat payout-yen">配当 ¥{dayData.totalPayout.toLocaleString()}</span>
                     )}

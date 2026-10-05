@@ -18,6 +18,16 @@
 - **test**: `importPredictionJra.test.mjs` 17〜21（9/21 再現・全会場除外・date 不一致・統合ファイル経路・理由表）。
 - ⚠️ 既存の失敗（本件と無関係・origin/main でも再現）: test 16 `fetchJraResultDay: 429 → retry → 200`。別 task。
 
+### 2026-10-06 買い目画面・成績ページから購入点数の表示を撤去（MK 決定）
+
+- **監査**（点数を出していた箇所）: 買い目パネルの見出し「推奨 N点 / ¥金額」（`RaceEntryTable.astro`）、
+  結果ページ回収率カードの「N点/R」、アーカイブ月ページの「購入点数 N点」。メール・配信文には無し（ログ出力のみ）。
+- **修正**: 上記 3 種を撤去。買い目パネルは「馬単 買い目」＋組み合わせ＋軸の内訳だけにした。`bettingPlan.points/amountYen` は内部値として残す。
+- **test**: `bettingPlan.test.mjs`（パネルに点数・購入額・「推奨」を出さない／成績ページに購入点数を出さない）、
+  `entitlementRoutes.test.mjs` の配色ガードを更新。`npm run build` green。localhost で premium の買い目パネルを目視。
+- **残置（事業判断）**: `/pricing` FAQ「1レースあたりの投資は5点固定」、成績ページ・FAQ・規約の「表示点数と集計上の基準点数」注記
+  （回収率の集計基準の方針＝docs/RETENTION_2026_10.md §4-1 と一体で決める）。
+
 ### 2026-09-02 購入導線の ReferenceError 修正（`3de357a7`）
 
 - **症状**: 未ログインで「このプランを申し込む」を押すと、メール確認フォームが出ず
