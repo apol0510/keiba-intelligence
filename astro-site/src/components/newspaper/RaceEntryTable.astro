@@ -92,8 +92,7 @@ const showTools = showRanked;
 
 /** 展開済みの買い目。有料 tier 以外では null（HTML に痕跡を残さない）。 */
 const plan = showRanked ? bettingPlan : null;
-const hasPlan = !!(plan && Array.isArray(plan.combos) && plan.combos.length);
-const yen = (n: number) => new Intl.NumberFormat('ja-JP').format(n);
+const hasPlan = !!(plan && (plan.skip || plan.pending || (Array.isArray(plan.combos) && plan.combos.length)));
 
 /**
  * 無料会員向けの印（馬番 → '◎◎○▲' のような文字列）。
@@ -200,38 +199,42 @@ const colCount = 3 // 枠 / 馬番 / 馬名
 
   {hasPlan && (
     <section class="ret-plan" id={`plan-${raceKey}`} hidden>
+      {/*
+        🔴 点数・金額を前面に出さない（2026-10-06 MK 決定）。
+           点数と金額の見出しは撤去した。組み合わせそのものだけを見せる。
+      */}
       <header class="rpl-head">
         <h4 class="rpl-title">
           <span class="rpl-type">{plan.betType}</span>
           買い目
           {plan.isMain && <span class="rpl-main">メインレース</span>}
         </h4>
-        <p class="rpl-figures">
-          <span class="rpl-reco">推奨</span>
-          <span class="rpl-fig"><b>{plan.points}</b><i>点</i></span>
-          <span class="rpl-sep" aria-hidden="true">/</span>
-          <span class="rpl-fig"><b>¥{yen(plan.amountYen)}</b></span>
-        </p>
       </header>
 
-      <ol class="rpl-combos">
-        {plan.combos.map((c: any, i: number) => (
-          <li class="rpl-combo" style={`--i:${Math.min(i, 15)}`}>
-            <span class="rpl-n rpl-1st">{c.first}</span>
-            <span class="rpl-arrow" aria-hidden="true">→</span>
-            <span class="rpl-n rpl-2nd">{c.second}</span>
-          </li>
-        ))}
-      </ol>
+      {plan.skip && <p class="rpl-note">このレースは見送りです。</p>}
+      {plan.pending && <p class="rpl-note">買い目は発走前に確定します。</p>}
+      {plan.combos.length > 0 && (
+        <ol class="rpl-combos">
+          {plan.combos.map((c: any, i: number) => (
+            <li class="rpl-combo" style={`--i:${Math.min(i, 15)}`}>
+              <span class="rpl-n rpl-1st">{c.first}</span>
+              <span class="rpl-arrow" aria-hidden="true">→</span>
+              <span class="rpl-n rpl-2nd">{c.second}</span>
+            </li>
+          ))}
+        </ol>
+      )}
 
-      <dl class="rpl-lines">
-        {plan.lines.map((l: any) => (
-          <>
-            <dt>軸 {l.axis}</dt>
-            <dd>{l.partners.join('・')}</dd>
-          </>
-        ))}
-      </dl>
+      {plan.lines.length > 0 && (
+        <dl class="rpl-lines">
+          {plan.lines.map((l: any) => (
+            <>
+              <dt>軸 {l.axis}</dt>
+              <dd>{l.partners.join('・')}</dd>
+            </>
+          ))}
+        </dl>
+      )}
 
       {plan.hold.length > 0 && (
         <p class="rpl-hold">
@@ -727,6 +730,12 @@ const colCount = 3 // 枠 / 馬番 / 馬名
 
   /* 軸の内訳と抑えは、組み合わせが出そろってから続けて出す */
   .rpl-lines,
+  .rpl-note {
+    margin: 4px 0 0;
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+  }
+
   .rpl-hold {
     animation: rpl-panel-in 260ms ease-out both;
     animation-delay: 820ms;
@@ -780,37 +789,6 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     font-weight: 800;
     font-family: var(--font-sans);
   }
-
-  .rpl-figures {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin: 0;
-  }
-
-  .rpl-reco {
-    align-self: center;
-    padding: 3px 8px;
-    border-radius: 999px;
-    background: var(--bg-muted, #f1f5f9);
-    color: var(--text-secondary);
-    font-size: 0.72rem;
-    font-weight: 800;
-  }
-
-  /* 推奨点数と購入額。数字そのものを 桃→橙 で塗る */
-  .rpl-fig b {
-    font-family: var(--font-num);
-    font-size: 1.5rem;
-    font-weight: 800;
-    background: var(--grad-action);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  .rpl-fig i { font-style: normal; font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-left: 2px; }
-  .rpl-sep { color: var(--border-color); }
 
   /* 組み合わせ。1 点 = 1 チップ */
   .rpl-combos {

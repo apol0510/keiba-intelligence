@@ -7,7 +7,7 @@
  *   1. 展開方向は F3 と同じ（メイン reverseTopK=0 / 通常 reverseTopK=3）
  *   2. 🔴 抑えは買わない（点数・購入額に算入しない）
  *   3. 同じ組み合わせを二重に数えない
- *   4. 🔴 見出しの **点数と購入額だけ**が推奨購入点数（頭数依存・**12 点を超えない**）
+ *   4. 🔴 `points` / `amountYen` は内部値（頭数依存・**12 点を超えない**）。🔴 画面には出さない（2026-10-06）
  *      🔴 **買い目そのものは減らさない**（組み合わせは展開した全点を表示する）
  *   5. 🔴 的中判定に流用していない（単一源は umatanHit.js）
  *   6. 🔴 パネル・ボタンは showBetting のときだけ描画する
@@ -238,7 +238,10 @@ test('🔴 ツールバーとパネルは showBetting のときだけ描画さ�
 
 test('🔴 RaceNewspaper は showBetting のときだけ買い目を展開する', () => {
   const src = read('src/components/newspaper/RaceNewspaper.astro');
-  assert.match(src, /const bettingPlan = showBetting && validBetting\.length/, 'free/guest へ買い目が渡っている');
+  // F3 の展開も AI 動的判定の読み込みも、有料 tier（showBetting）のときだけ
+  assert.match(src, /const exactaOn = showBetting && /, 'free/guest で AI 判定を読んでいる');
+  assert.match(src, /else if \(showBetting && validBetting\.length\)/, 'free/guest へ買い目が渡っている');
+  assert.match(src, /let bettingPlan = null;/, '既定で買い目を持っている');
 });
 
 test('メインレース判定が RaceDayBoard から渡っている', () => {
@@ -272,7 +275,33 @@ test('🔴 削除した注記が復活していない', () => {
   ]) {
     assert.ok(!src.includes(gone), `削除した注記が残っている: ${gone}`);
   }
-  assert.match(src, /rpl-reco/, '「推奨」であることを画面に出していない');
+});
+
+test('🔴 買い目画面に購入点数・購入額を出さない（2026-10-06 MK 決定）', () => {
+  const src = read('src/components/newspaper/RaceEntryTable.astro');
+  const markup = src.slice(src.indexOf('{hasPlan && ('), src.indexOf('<table class="ret-table">'));
+  assert.ok(markup.length > 100, '買い目パネルが見つからない');
+  for (const gone of ['plan.points', 'plan.amountYen', 'rpl-figures', 'rpl-reco', '推奨', '購入', '点</', '>点<']) {
+    assert.ok(!markup.includes(gone), `買い目パネルに点数・購入額の表示が残っている: ${gone}`);
+  }
+});
+
+test('🔴 料金ページで購入点数を訴求しない・回収率の算出根拠は残す', () => {
+  const src = read('src/pages/pricing.astro');
+  for (const gone of ['買い目は何点', '5点固定', '投資は5点']) {
+    assert.ok(!src.includes(gone), `料金ページに購入点数の訴求が残っている: ${gone}`);
+  }
+  // 🔴 点数を消しても、回収率の計算方法は分かるままにする
+  assert.match(src, /回収率はどう計算していますか？/);
+  assert.match(src, /払戻 ÷ 投資 × 100/);
+});
+
+test('🔴 成績ページに「購入点数」「N点/R」を出さない', () => {
+  for (const f of ['src/pages/results/[year]/[month]/[day].astro', 'src/pages/archive/nankan/[year]/[month]/index.astro', 'src/pages/archive/jra/[year]/[month]/index.astro']) {
+    const src = read(f);
+    assert.ok(!src.includes('購入点数 {'), `${f} に購入点数が残っている`);
+    assert.ok(!src.includes('点/R'), `${f} に N点/R が残っている`);
+  }
 });
 
 test('抽出の演出は控えめで、動きを減らす設定を尊重する', () => {

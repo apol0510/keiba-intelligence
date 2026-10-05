@@ -88,9 +88,11 @@ test('RaceNewspaper: 買い目は showBetting のときだけ組み立てる（C
   // 買い目は showBetting のときだけ展開して RaceEntryTable へ渡す
   assert.match(
     src,
-    /const bettingPlan = showBetting && validBetting\.length/,
+    /else if \(showBetting && validBetting\.length\)/,
     '買い目が showBetting で守られていない',
   );
+  // AI 動的判定（KAO D-160）の読み込みも showBetting で守る
+  assert.match(src, /const exactaOn = showBetting && /, 'AI 判定の読み込みが showBetting で守られていない');
   // 「隠すだけ」の実装が復活していないこと
   refute(/pro-user-only/, src, 'CSS で隠す旧方式のクラスが復活している');
 });
@@ -211,11 +213,12 @@ test('配色の役割分担（2026-08-31）: 青→紫=ナビ / 紫→桃=結論
     '買い目ボタンが 桃→橙 のグラデーションでない',
   );
   assert.match(lastRule(table, '.rpl-type'), /background: var\(--grad-action\)/, '馬単バッジが 桃→橙 でない');
-  assert.match(lastRule(table, '.rpl-fig b'), /background: var\(--grad-action\)/, '点数・金額が 桃→橙 でない');
+  // 🔴 点数・金額の見出し（.rpl-fig）は 2026-10-06 に撤去した（購入点数を前面に出さない・MK 決定）
+  assert.ok(!table.includes('.rpl-fig'), '撤去した点数・金額の見出しが戻っている');
   // 道具（並べ替え）はスレート
   assert.match(lastRule(table, '.ret-tool.is-on'), /background: var\(--(tool-gradient|grad-tool-btn)\)/, '並べ替えが 2 色でない');
   // 🔴 買い目まわりにブルーが戻っていない
-  for (const sel of ['.rpl-type', '.rpl-fig b', '.ret-tool.is-on']) {
+  for (const sel of ['.rpl-type', '.ret-tool.is-on']) {
     refute(/--primary-start/, lastRule(table, sel), `${sel} にブルーが戻っている`);
   }
   refute(/--primary-start/, lastRule(table, '.rpl-1st', 'color'), '1着の馬番にブルーが戻っている');

@@ -18,6 +18,17 @@
 - **test**: `importPredictionJra.test.mjs` 17〜21（9/21 再現・全会場除外・date 不一致・統合ファイル経路・理由表）。
 - ⚠️ 既存の失敗（本件と無関係・origin/main でも再現）: test 16 `fetchJraResultDay: 429 → retry → 200`。別 task。
 
+### 2026-10-06 買い目画面・成績ページから購入点数の表示を撤去（MK 決定）
+
+- **監査**（点数を出していた箇所）: 買い目パネルの見出し「推奨 N点 / ¥金額」（`RaceEntryTable.astro`）、
+  結果ページ回収率カードの「N点/R」、アーカイブ月ページの「購入点数 N点」。メール・配信文には無し（ログ出力のみ）。
+- **修正**: 上記 3 種を撤去。買い目パネルは「馬単 買い目」＋組み合わせ＋軸の内訳だけにした。`bettingPlan.points/amountYen` は内部値として残す。
+- **test**: `bettingPlan.test.mjs`（パネルに点数・購入額・「推奨」を出さない／成績ページに購入点数を出さない）、
+  `entitlementRoutes.test.mjs` の配色ガードを更新。`npm run build` green。localhost で premium の買い目パネルを目視。
+- **追加（MK 決定・購入点数は顧客向け画面で非表示）**: `/pricing` FAQ「買い目は何点ですか？（5点固定）」を撤去。
+  回収率の算出根拠（FAQ「払戻 ÷ 投資 × 100」・結果ページの投資額）は残す（テストで固定）。
+- **残置（別項目・事業判断）**: 成績ページ・FAQ・規約の「表示点数と集計上の基準点数」注記と公開回収率の整合。
+
 ### 2026-09-02 購入導線の ReferenceError 修正（`3de357a7`）
 
 - **症状**: 未ログインで「このプランを申し込む」を押すと、メール確認フォームが出ず
@@ -33,6 +44,13 @@
   `#pr-purchase-auth` が `hidden=false` になりフォームが表示され、入力欄にフォーカスが入る。
 - **未実施**: Test Mode の新規購入本体（確認メール送信以降）はユーザー操作待ちで停止。
 
+
+### 2026-10-06 AI 動的判定（KI_EXACTA）の表示準備（正本: KAO `docs/ki-dynamic-selection.md`・KAO D-160）
+
+- `src/lib/exacta/`: `ki_exacta_selection.v1` の検査（確率・オッズ・EV・stake を含む行は捨てる）・画面用 plan（組み合わせだけ / 見送り / 発走前に確定）・
+  1 単位（100 円）の成績計算（再現可能な唯一の定義）・Netlify Blobs `ki-exacta-selections` からの読み取り（失敗は空）。
+- 表示切替は市場ごと `KI_EXACTA_DISPLAY_MARKETS`（既定は空＝従来の F3 のまま）。切替後は F3 を出さない（方式を混ぜない）。
+- 🔴 切替そのもの・旧成績の扱い・選択の配送経路（Blobs への書き込み）は KAO §6 の MK 判断の後。
 
 ### 2026-09-02 購入導線: 502 send_failed の修正と CTA の 2 色化（`3d4e9317`）
 
