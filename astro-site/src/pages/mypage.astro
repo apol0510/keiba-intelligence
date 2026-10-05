@@ -597,7 +597,6 @@ const expiresLabel = ent.expiresAtMs
             {isPaid ? (
               <div class="mp-billing">
                 <p>お支払い方法の変更・プラン変更・解約は、お支払い管理ページから行えます。</p>
-                <p class="mp-billing-sub">解約はいつでも可能です。解約後も、お支払い済みの期間が終わるまではすべての機能をご利用いただけます。</p>
                 <button class="mp-btn mp-btn-ghost" type="button" id="mp-portal">お支払い管理ページを開く</button>
                 <p class="mp-billing-msg" id="mp-portal-msg" hidden></p>
               </div>
@@ -1371,12 +1370,6 @@ const expiresLabel = ent.expiresAtMs
     color: var(--text-secondary);
     margin-bottom: 14px;
     line-height: 1.7;
-  }
-
-  .mp-billing p.mp-billing-sub {
-    font-size: 0.8rem;
-    color: var(--text-tertiary);
-    margin-top: -6px;
   }
 
   /* 解約予約中（docs/RETENTION_2026_10.md）。🔴 警告色で煽らない。落ち着いた案内にする */

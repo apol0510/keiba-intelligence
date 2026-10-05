@@ -265,10 +265,14 @@ function cancelBlock() {
   return MYPAGE.slice(i, MYPAGE.indexOf('</div>', i));
 }
 
-test('🔴 「いつでも解約」を維持: ポータルボタンと解約の案内が残っている', () => {
+test('🔴 お支払い管理ページへの導線は維持する（解約もここから行える）', () => {
   assert.match(MYPAGE, /id="mp-portal"/);
   assert.match(MYPAGE, /お支払い方法の変更・プラン変更・解約は、お支払い管理ページから行えます。/);
-  assert.match(MYPAGE, /解約はいつでも可能です。/);
+});
+
+test('🔴 マイページで解約を想起させる追加文言を出さない（2026-10-06 MK 決定）', () => {
+  assert.equal(MYPAGE.includes('解約はいつでも可能'), false);
+  assert.equal(MYPAGE.includes('mp-billing-sub'), false);
 });
 
 test('🔴 解約予約の案内に値引き・期限煽り・成績訴求を入れない', () => {
