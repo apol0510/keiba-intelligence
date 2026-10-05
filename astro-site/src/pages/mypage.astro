@@ -207,6 +207,22 @@ const FEATURES = [
   //    「実装が無いものを訴求しない」として廃止済み。復活させない。
 ];
 
+/**
+ * 解約予約中に「終了すると使えなくなるもの」。FEATURES の有料分と同じ語を使う。
+ * 🔴 実装の無い特典を足さない。成績（回収率・的中率）を継続理由として出さない
+ *    （集計基準の扱いが未決のため。docs/RETENTION_2026_10.md §2）。
+ */
+const CANCEL_LOSES = FEATURES.filter((f) => f.open && ['AI指数の数値（無料はモザイク）', 'AI結論（推奨理由の解説）', '馬単の買い目'].includes(f.label))
+  .map((f) => f.label.replace('（無料はモザイク）', ''));
+
+/**
+ * 再開時に戻るもの（MEMBERSHIP_REWARDS §7.1 / decisions「90日以内なら元に戻る」）。
+ * 🔴 値が確定しているときだけ出す。推測の数字を出さない。
+ */
+const resumeCarryNote = club.rewards.status === 'ready' && club.rewards.balancePoints > 0
+  ? `${MEMBERSHIP_COPY.balanceLabel}（${pt(club.rewards.balancePoints)}）とご契約価格は、終了後90日以内に再開されるとそのまま戻ります。`
+  : null;
+
 // 🔴 2026-08-30: 会場で分ける概念を廃止。有料は常に南関東＋中央
 const venueLabel = '南関東＋中央競馬';
 
@@ -266,7 +282,36 @@ const expiresLabel = ent.expiresAtMs
             <ul class="mp-status-meta">
               <li>閲覧範囲: <b>{venueLabel}</b></li>
               {expiresLabel && <li>ログインの有効期限: <b>{expiresLabel}</b></li>}
+              {isPaid && <li id="mp-sub-renew" hidden>次回のお支払い: <b id="mp-sub-renew-date"></b></li>}
             </ul>
+
+            {/*
+              🔴 解約予約中の案内（docs/RETENTION_2026_10.md）
+                 - 状態は stripe-subscription（status）から取る。取れなければ何も出さない（従来どおり）
+                 - 「いつでも解約できる」は変えない。ここに出すのは **事実と取り消しボタンだけ**
+                 - 値引き・期限で煽る文言・罪悪感に訴える文言は出さない
+            */}
+            {isPaid && (
+              <div class="mp-sub-cancel" id="mp-sub-cancel" hidden>
+                <p class="mp-sub-cancel-title">解約のお手続きを受け付けています</p>
+                <p class="mp-sub-cancel-body" id="mp-sub-cancel-body"></p>
+                <p class="mp-sub-cancel-sub">終了すると、次の機能が使えなくなります。</p>
+                <ul class="mp-sub-lose">
+                  {CANCEL_LOSES.map((label) => <li>{label}</li>)}
+                </ul>
+                {resumeCarryNote && <p class="mp-sub-cancel-sub">{resumeCarryNote}</p>}
+                <button class="mp-btn mp-btn-primary" type="button" id="mp-resume">解約予約を取り消して継続する</button>
+                <p class="mp-sub-cancel-note">
+                  取り消さない場合も、終了日までは追加料金なしでそのままご利用いただけます。終了日以降の請求はありません。
+                </p>
+                <p class="mp-billing-msg" id="mp-resume-msg" hidden></p>
+              </div>
+            )}
+            {isPaid && (
+              <p class="mp-sub-resumed" id="mp-sub-resumed" role="status" hidden>
+                解約予約を取り消しました。引き続きご利用いただけます。
+              </p>
+            )}
             {!isPaid && (
               <button class="mp-refresh" id="mp-refresh" type="button">
                 お支払い済みなのに反映されていない場合はこちら
@@ -552,6 +597,7 @@ const expiresLabel = ent.expiresAtMs
             {isPaid ? (
               <div class="mp-billing">
                 <p>お支払い方法の変更・プラン変更・解約は、お支払い管理ページから行えます。</p>
+                <p class="mp-billing-sub">解約はいつでも可能です。解約後も、お支払い済みの期間が終わるまではすべての機能をご利用いただけます。</p>
                 <button class="mp-btn mp-btn-ghost" type="button" id="mp-portal">お支払い管理ページを開く</button>
                 <p class="mp-billing-msg" id="mp-portal-msg" hidden></p>
               </div>
@@ -724,11 +770,84 @@ const expiresLabel = ent.expiresAtMs
       });
     }
 
+    /**
+     * GA4 計測（docs/RETENTION_2026_10.md §5）。🔴 email・ID 等の個人情報は送らない。
+     * gtag が無い環境（広告ブロック等）では何もしない。
+     */
+    const track = (name, params = {}) => {
+      try { if (typeof window.gtag === 'function') window.gtag('event', name, params); } catch {}
+    };
+
+    const fmtDate = (iso) => new Date(iso).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+    const fmtDateTime = (iso) => new Date(iso).toLocaleString('ja-JP', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    const callSubscription = async (action) => {
+      const res = await fetch('/.netlify/functions/stripe-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'unavailable');
+      return data;
+    };
+
+    /** 契約状態を描く。🔴 取れなければ何も出さない（従来の表示のまま）。 */
+    const renderSubscription = (s) => {
+      const renew = document.getElementById('mp-sub-renew');
+      const cancel = document.getElementById('mp-sub-cancel');
+      if (renew) renew.hidden = true;
+      if (cancel) cancel.hidden = true;
+      if (s?.state === 'active' && s.renewsAt && renew) {
+        document.getElementById('mp-sub-renew-date').textContent = fmtDate(s.renewsAt);
+        renew.hidden = false;
+      }
+      if (s?.state === 'cancel_scheduled' && s.endsAt && cancel) {
+        const left = Number.isFinite(s.daysLeft) ? `（あと${s.daysLeft}日）` : '';
+        document.getElementById('mp-sub-cancel-body').textContent =
+          `${fmtDateTime(s.endsAt)}まで、すべての機能をこれまでどおりご利用いただけます${left}。`;
+        cancel.hidden = false;
+      }
+    };
+
+    if (document.getElementById('mp-sub-cancel')) {
+      callSubscription('status')
+        .then((s) => {
+          renderSubscription(s);
+          track('ki_subscription_state', { state: s.state || 'unknown' });
+        })
+        .catch(() => {});
+    }
+
+    const resumeBtn = document.getElementById('mp-resume');
+    const resumeMsg = document.getElementById('mp-resume-msg');
+    resumeBtn?.addEventListener('click', async () => {
+      resumeBtn.disabled = true;
+      if (resumeMsg) resumeMsg.hidden = true;
+      track('ki_resume_click');
+      try {
+        const s = await callSubscription('resume');
+        renderSubscription(s);
+        track('ki_resume_result', { result: s.state === 'active' ? 'resumed' : 'noop' });
+        const done = document.getElementById('mp-sub-resumed');
+        if (done && s.state === 'active') done.hidden = false;
+      } catch {
+        track('ki_resume_result', { result: 'error' });
+        if (resumeMsg) {
+          resumeMsg.hidden = false;
+          resumeMsg.textContent = '取り消しできませんでした。お支払い管理ページからも取り消せます。';
+        }
+      }
+      resumeBtn.disabled = false;
+    });
+
     const btn = document.getElementById('mp-portal');
     if (!btn) return;
     const msg = document.getElementById('mp-portal-msg');
 
     btn.addEventListener('click', async () => {
+      track('ki_portal_open');
       btn.disabled = true;
       if (msg) msg.hidden = true;
       try {
@@ -1252,6 +1371,33 @@ const expiresLabel = ent.expiresAtMs
     color: var(--text-secondary);
     margin-bottom: 14px;
     line-height: 1.7;
+  }
+
+  .mp-billing p.mp-billing-sub {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    margin-top: -6px;
+  }
+
+  /* 解約予約中（docs/RETENTION_2026_10.md）。🔴 警告色で煽らない。落ち着いた案内にする */
+  .mp-sub-cancel {
+    margin-top: 16px;
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+  }
+  .mp-sub-cancel-title { font-weight: 700; font-size: 0.95rem; margin: 0 0 6px; }
+  .mp-sub-cancel-body { font-size: 0.86rem; line-height: 1.7; margin: 0 0 10px; }
+  .mp-sub-cancel-sub { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.7; margin: 0 0 6px; }
+  .mp-sub-lose { margin: 0 0 12px; padding-left: 1.2em; font-size: 0.82rem; line-height: 1.8; }
+  .mp-sub-cancel-note { font-size: 0.76rem; color: var(--text-tertiary); line-height: 1.7; margin: 10px 0 0; }
+  .mp-sub-resumed {
+    margin: 14px 0 0;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: rgba(22, 163, 74, 0.1);
+    font-size: 0.84rem;
   }
 
   .mp-billing-msg {
