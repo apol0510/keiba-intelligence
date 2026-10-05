@@ -25,6 +25,8 @@ import PaceMap from './PaceMap.astro';
 import { buildRaceNarrativeBundle, normalizePastRaces } from '../../utils/raceNarrative.js';
 import { assignFreeMarks, sortByHorseNumber } from '../../utils/attentionMarks.js';
 import { buildBettingPlan } from '../../utils/bettingPlan.js';
+import { displayMarkets, planFromSelection, raceIdOf } from '../../lib/exacta/selection.js';
+import { loadSelectionsForDate } from '../../lib/exacta/source.js';
 import { markPolicyFor } from '../../utils/attentionMarkPolicy.js';
 
 interface Props {
@@ -94,9 +96,20 @@ const validBetting = Array.isArray(bettingLines) ? bettingLines.filter((l) => ty
  * 🔴 **有料 tier のときだけ**算出する。free/guest では null を渡す
  *    ＝出馬表の HTML に買い目の痕跡を残さない。
  */
-const bettingPlan = showBetting && validBetting.length
-  ? buildBettingPlan(validBetting, { isMain: !!isMain, betType, fieldSize: allHorses.length })
-  : null;
+/**
+ * 🔴 AI 動的判定（KAO D-160）への切替は市場ごと（`KI_EXACTA_DISPLAY_MARKETS`・既定は空＝切替なし）。
+ *    切り替えた市場では F3 の買い目を出さない（方式を混ぜない）。選択が無いレースは「発走前に確定」。
+ *    有料 tier 以外では何も読まない・何も出さない（従来どおり）。
+ */
+const exactaOn = showBetting && !!venue && displayMarkets(process.env).has(venue);
+let bettingPlan = null;
+if (exactaOn) {
+  const raceId = raceIdOf(venue, raceInfo?.date, raceInfo?.venue, raceInfo?.raceNumber);
+  const selections = raceId ? await loadSelectionsForDate(raceInfo.date) : new Map();
+  bettingPlan = planFromSelection(raceId ? selections.get(raceId) : null, { isMain: !!isMain, betType });
+} else if (showBetting && validBetting.length) {
+  bettingPlan = buildBettingPlan(validBetting, { isMain: !!isMain, betType, fieldSize: allHorses.length });
+}
 
 /**
  * 無料会員に **実際に描画する印**のポリシー（R-3・2026-09-07 改訂）。

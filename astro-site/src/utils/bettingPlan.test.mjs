@@ -238,7 +238,10 @@ test('🔴 ツールバーとパネルは showBetting のときだけ描画さ�
 
 test('🔴 RaceNewspaper は showBetting のときだけ買い目を展開する', () => {
   const src = read('src/components/newspaper/RaceNewspaper.astro');
-  assert.match(src, /const bettingPlan = showBetting && validBetting\.length/, 'free/guest へ買い目が渡っている');
+  // F3 の展開も AI 動的判定の読み込みも、有料 tier（showBetting）のときだけ
+  assert.match(src, /const exactaOn = showBetting && /, 'free/guest で AI 判定を読んでいる');
+  assert.match(src, /else if \(showBetting && validBetting\.length\)/, 'free/guest へ買い目が渡っている');
+  assert.match(src, /let bettingPlan = null;/, '既定で買い目を持っている');
 });
 
 test('メインレース判定が RaceDayBoard から渡っている', () => {

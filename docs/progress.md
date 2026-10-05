@@ -45,6 +45,13 @@
 - **未実施**: Test Mode の新規購入本体（確認メール送信以降）はユーザー操作待ちで停止。
 
 
+### 2026-10-06 AI 動的判定（KI_EXACTA）の表示準備（正本: KAO `docs/ki-dynamic-selection.md`・KAO D-160）
+
+- `src/lib/exacta/`: `ki_exacta_selection.v1` の検査（確率・オッズ・EV・stake を含む行は捨てる）・画面用 plan（組み合わせだけ / 見送り / 発走前に確定）・
+  1 単位（100 円）の成績計算（再現可能な唯一の定義）・Netlify Blobs `ki-exacta-selections` からの読み取り（失敗は空）。
+- 表示切替は市場ごと `KI_EXACTA_DISPLAY_MARKETS`（既定は空＝従来の F3 のまま）。切替後は F3 を出さない（方式を混ぜない）。
+- 🔴 切替そのもの・旧成績の扱い・選択の配送経路（Blobs への書き込み）は KAO §6 の MK 判断の後。
+
 ### 2026-09-02 購入導線: 502 send_failed の修正と CTA の 2 色化（`3d4e9317`）
 
 - **症状**: 「確認メールを送れませんでした」が必ず出る（`start-purchase` が 502 `send_failed`）。

@@ -88,9 +88,11 @@ test('RaceNewspaper: 買い目は showBetting のときだけ組み立てる（C
   // 買い目は showBetting のときだけ展開して RaceEntryTable へ渡す
   assert.match(
     src,
-    /const bettingPlan = showBetting && validBetting\.length/,
+    /else if \(showBetting && validBetting\.length\)/,
     '買い目が showBetting で守られていない',
   );
+  // AI 動的判定（KAO D-160）の読み込みも showBetting で守る
+  assert.match(src, /const exactaOn = showBetting && /, 'AI 判定の読み込みが showBetting で守られていない');
   // 「隠すだけ」の実装が復活していないこと
   refute(/pro-user-only/, src, 'CSS で隠す旧方式のクラスが復活している');
 });
