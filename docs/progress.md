@@ -17,6 +17,8 @@
   解約導線と「いつでも解約」は不変。値引きなし。
 - **検証**: `stripeSubscription.test.mjs` 19 件、`npm run build` green、Stripe サンドボックスで `cancel_at=""` の予約解除を実測（テスト顧客削除済み）、localhost ブラウザ確認。
 - **Open**: 公開成績の投資基準（RETENTION §4-1）/ セッション 7 日の再ログイン負担 / 評価期間 2026-11-30 まで。
+- **現在地**: PR #146（branch `feat/mypage-retention-2026-10-06`）CI green・mergeable。billing 変更のため owner の merge 待ち
+  （KAO mediumHandoff は billing を対象外とする）。merge 後は `post-deploy-billing-smoke.yml` が本番を自動確認する。
 
 ### 2026-09-30 JRA 予想の会場公開は racebook を必須条件にする（MK 決定）
 
