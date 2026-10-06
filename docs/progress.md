@@ -29,8 +29,11 @@
 - **Open**: (1) 再契約直後に旧契約の deleted が遅れて届くと Airtable を free に戻しうる（既存挙動。本件で悪化はしない）
   (2) `/free-prediction/nankan` が 375px で横スクロール（427px。本件と無関係・既存）
   (3) terms 第4条・tokushoho の「お支払いは銀行振込」表記が Stripe 月額と不一致（既存・事業文言）。
-- **現在地**: branch `feat/immediate-withdrawal`。billing 変更のため merge は owner（KAO mediumHandoff 対象外）。
+- **現在地**: PR #152（branch `feat/immediate-withdrawal`）mergeable・Deploy Preview で関数（resume=400 / withdraw 未ログイン 401）と
+  pricing / terms / tokushoho の文言を確認済み。billing 変更のため merge は owner（KAO mediumHandoff 対象外）。
   merge 後は `post-deploy-billing-smoke.yml` が本番を自動確認する。
+- **merge 後の残り（順序厳守）**: 本番反映を確認してから、アカウント既定ポータル構成の解約を無効化する
+  （先に無効化すると、新しい退会導線が本番に出る前に解約手段が無くなる）。
 
 ### 2026-10-06 解約監査とマイページ継続導線（正本: `docs/RETENTION_2026_10.md`）
 
