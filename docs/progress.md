@@ -20,6 +20,16 @@
 - **現在地**: PR #146（branch `feat/mypage-retention-2026-10-06`）CI green・mergeable。billing 変更のため owner の merge 待ち
   （KAO mediumHandoff は billing を対象外とする）。merge 後は `post-deploy-billing-smoke.yml` が本番を自動確認する。
 
+### 2026-10-06 表示買い目の凍結と、表示買い目基準の回収率の再計算（水面下・顧客には未表示）
+
+- **凍結**: `scripts/freezeDisplayedBets.mjs`（`npm run freeze:displayed`）。予想公開時（import workflow 内）に、会員に表示した馬単の組み合わせ
+  （`buildBettingPlan` と同じ規則・抑えは含めない・メインレースは表示と同じ判定）を `src/data/displayedBets/{nankan,jra}/` へ保存。**最初の版が勝つ**（上書きしない・後の変更は drift ログ）。
+- **backfill**: 過去 389 開催（2026-01〜10-05）を凍結。結果取込済みのレースは archive に残った買い目を使う（2026 年前半は予想ファイルが後で書き換わった例あり）。
+- **再計算**: `scripts/recomputeDisplayedReturn.mjs` → `src/data/stats/displayedReturn.json`（内部）。全期間で **回収率 71.7%**（南関 72.0%・JRA 71.4%）・的中率 54.3%。
+  着順と払戻の組が食い違う 21 レースは推測せず除外（`dataConflicts`）。
+- **検証**: `test:displayed-bets`（凍結の先勝ち・drift・規則一致・archive isHit との一致）を build に組込。
+- **未定（MK 判断）**: 表示買い目基準の回収率を顧客に出すか・いつ・どの期間から（旧 5 点基準は撤去済み）。
+
 ### 2026-09-30 JRA 予想の会場公開は racebook を必須条件にする（MK 決定）
 
 - **事象**: 2026-09-21 中山が開催中止（9/22 へ順延）となり racebook は保存されなかったが、`importPredictionJra.js` の
