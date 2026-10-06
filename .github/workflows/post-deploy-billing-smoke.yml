@@ -76,5 +76,5 @@ jobs:
           chk "/mypage"                           200 ""             "$BASE/mypage"
           chk "/"                                 200 ""             "$BASE/"
           chk "/pricing"                          200 "退会はマイページから" "$BASE/pricing"
-          chk "/terms（退会は即時）"              200 "残り期間の有料機能はご利用いただけません" "$BASE/terms"
+          chk "/terms（退会は即時）"              200 "残り期間の有料機能はご利用いただけません" "$BASE/terms/"
           exit $fail
