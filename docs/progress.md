@@ -7,6 +7,20 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-10-07 退会（即時のみ）の本番反映と Stripe 側の設定
+
+- **本番反映**: PR #152 を 2026-10-06 14:41 UTC に squash merge。`post-deploy-billing-smoke` が 14:43 に新版を検出し 10 項目すべて PASS
+  （resume=400 / withdraw 未ログイン 401 / portal 401 / mypage・トップ・pricing・terms の文言）。
+- **既存の予約停止契約（Stripe ダッシュボード・live・read-only）**: 有効 **7 件中 4 件が解約予約中**（終了日 10/15・10/19・10/27・10/28）。
+  10-06 監査の 8 件 / 5 件から 1 件が期間末で終了済み。🔴 いずれも変更していない（終了日まで利用可）。
+- **アカウント既定のポータル構成**: 「キャンセル（期間末）」が ON だったため **OFF に変更・保存**（再読み込みで確認）。
+  請求書・顧客情報・決済手段の設定は触っていない。ノーコードのログインリンクは無効のまま。顧客向け Billing メール設定も未変更。
+  KI 管理の構成（`ki_portal=no-cancel-v1`）は、本番で最初にお支払い管理ページが開かれたときに関数が作る。
+- **運用スクリプト**: ローカルの `netlify dev:exec --context production` では STRIPE_SECRET_KEY が Stripe に拒否された（StripeAuthenticationError）。
+  実行例に `--` が抜けていた誤りも修正（`netlify dev:exec --context production -- node …`）。今後の確認は Stripe ダッシュボードで行う。
+- **未確認**: 本番での実際の退会操作（実顧客の契約を終了させることになるため行っていない）。次に実際の退会が起きたとき、
+  webhook 200・Airtable free・退会記録を Stripe / Netlify のログで確認する。
+
 ### 2026-10-06 退会は即時のみ（MK 確定。正本: `docs/WITHDRAWAL_2026_10.md`）
 
 - **仕様**: 期間末解約・予約停止・予約取り消し・ポータル解約を廃止。マイページ「アカウント管理」→「退会する」→ 確認画面 →
@@ -24,8 +38,7 @@
   - Stripe Test Mode 実 API での E2E: Test の鍵がローカルに無く、本番 env からの鍵取得は harness が拒否（credential materialization）。
     Stripe の振る舞いはモックで固定。UAT（`uat--…`）は `uat` branch への反映と UAT ログイン合言葉が要る。
   - 本番の予約停止件数の再確認・アカウント既定ポータル構成の解約無効化: 同じ理由で未実施。
-    `netlify dev:exec --context production node scripts/stripeWithdrawalAudit.mjs`（read-only）→ 必要なら `--apply-default-no-cancel`。
-    直近の確認値は 2026-10-06 監査の **予約中 5 件 / 有効 8 件**（RETENTION §1）。
+    → **2026-10-07 に Stripe ダッシュボードで実施済み**（下記）。ローカルの `netlify dev:exec` 経由は鍵が Stripe に拒否されて使えなかった。
 - **Open**: (1) 再契約直後に旧契約の deleted が遅れて届くと Airtable を free に戻しうる（既存挙動。本件で悪化はしない）
   (2) `/free-prediction/nankan` が 375px で横スクロール（427px。本件と無関係・既存）
   (3) terms 第4条・tokushoho の「お支払いは銀行振込」表記が Stripe 月額と不一致（既存・事業文言）。

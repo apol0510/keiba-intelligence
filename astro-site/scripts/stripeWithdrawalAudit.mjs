@@ -11,8 +11,14 @@
  *   🔴 既存の契約・予約には一切書き込まない。
  *
  * 実行（鍵は表示しない。Netlify の production env を注入して実行する）:
- *   cd astro-site && netlify dev:exec --context production node scripts/stripeWithdrawalAudit.mjs
- *   cd astro-site && netlify dev:exec --context production node scripts/stripeWithdrawalAudit.mjs --apply-default-no-cancel
+ *   cd astro-site && netlify dev:exec --context production -- node scripts/stripeWithdrawalAudit.mjs
+ *   cd astro-site && netlify dev:exec --context production -- node scripts/stripeWithdrawalAudit.mjs --apply-default-no-cancel
+ *   （🔴 `--` が無いと `--apply-default-no-cancel` を netlify CLI が自分のオプションとして拒否する）
+ *
+ * 🟡 2026-10-07 実測: ローカルの `netlify dev:exec --context production` で注入される
+ *    STRIPE_SECRET_KEY は Stripe に拒否された（StripeAuthenticationError）。本番の秘密値は
+ *    ローカルへ取り出せない前提で、同じ確認・設定は Stripe ダッシュボードで行う
+ *    （サブスク一覧の「アクティブ」/ 設定 → Billing → カスタマーポータル → キャンセル）。
  *
  * 🔴 出力に email・顧客 ID・サブスク ID を出さない（件数と日付だけ）。
  */
