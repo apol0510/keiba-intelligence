@@ -565,7 +565,7 @@ describe('/terms が確定仕様と一致している', () => {
   });
 
   test('最終更新日が更新されている', () => {
-    assert.match(read(TERMS), /最終更新日: 2026年9月1日/);
+    assert.match(read(TERMS), /最終更新日: 2026年10月6日/);
   });
 });
 

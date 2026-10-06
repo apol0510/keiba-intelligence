@@ -674,7 +674,7 @@ KI の印は `adjustPrediction.js` の独自ロジックで生成したものだ
 |---|---|
 | チェックアウト開始 | `netlify/functions/stripe-create-checkout.js`（Checkout Session を作成） |
 | Webhook | `netlify/functions/stripe-webhook.js`（署名検証 → Airtable の PlanType 更新） |
-| 顧客ポータル | `netlify/functions/stripe-portal.js`（解約・カード変更） |
+| 顧客ポータル | `netlify/functions/stripe-portal.js`（カード変更・請求履歴。🔴 2026-10-06〜 解約はできない。退会はマイページから即時のみ＝`docs/WITHDRAWAL_2026_10.md`） |
 | 価格表示 | `netlify/functions/stripe-prices.js`（公開 Price を返す。請求額の正本） |
 
 Webhook が扱うイベント:

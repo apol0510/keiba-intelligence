@@ -18,6 +18,7 @@ import {
 } from './tiers.js';
 import { verifySession, readSessionToken } from './session.js';
 import { applyPreview } from './previewMode.js';
+import { readRevocation, tierAfterRevocation, isPaidTier } from './revocation.js';
 
 export { TIER } from './tiers.js';
 
@@ -35,6 +36,7 @@ function guestEntitlement(reason) {
     showMarks: false,
     showBetting: false,
     expiresAtMs: null,
+    issuedAtMs: null,
   });
 }
 
@@ -83,6 +85,7 @@ export function resolveEntitlement({ cookieHeader, env, nowMs = Date.now() } = {
       showMarks: canSeeMarks(tier),
       showBetting: canSeeBetting(tier),
       expiresAtMs: s.expiresAtMs,
+      issuedAtMs: s.issuedAtMs,
     });
   } catch {
     // 例外の内容は握りつぶす（secret を含みうるため）。必ず guest へ倒す。
@@ -116,6 +119,39 @@ export function entitlementFromAstro(Astro, { nowMs } = {}) {
     searchParams: Astro?.url?.searchParams || null,
     env,
   });
+}
+
+/**
+ * entitlement に退会記録を当てる（docs/WITHDRAWAL_2026_10.md §4）。
+ *
+ * 🔴 有料 tier のときだけ Blobs を読む（guest / free には追加の I/O を発生させない）。
+ * 🔴 降格しかしない。退会時刻以前に発行された有料セッションは free として扱う。
+ * 🔴 Deploy Preview の見え方プレビュー（`preview`）は本番ホストでは成立しないので対象外。
+ *
+ * @param {object} ent  resolveEntitlement / entitlementFromAstro の戻り値
+ * @param {object} [o]
+ * @param {object} [o.event]  v1 関数の event（Blobs 環境の接続に使う）
+ * @param {object} [o.store]  テスト用
+ */
+export async function applyRevocation(ent, { event, store } = {}) {
+  if (!ent || ent.preview || !ent.email || !isPaidTier(ent.tier)) return ent;
+  const { revocation } = await readRevocation(ent.email, { event, store });
+  const tier = tierAfterRevocation({ tier: ent.tier, issuedAtMs: ent.issuedAtMs }, revocation);
+  if (tier === ent.tier) return ent;
+  return Object.freeze({
+    ...ent,
+    tier,
+    tierLabel: tierLabel(tier),
+    authenticated: tierAtLeast(tier, TIER.FREE),
+    reason: 'revoked',
+    showMarks: canSeeMarks(tier),
+    showBetting: canSeeBetting(tier),
+  });
+}
+
+/** Astro ページ用（有料の描画・有料ページの入場判定はこれを使う）。 */
+export async function checkedEntitlementFromAstro(Astro, opts = {}) {
+  return applyRevocation(entitlementFromAstro(Astro, opts));
 }
 
 /**

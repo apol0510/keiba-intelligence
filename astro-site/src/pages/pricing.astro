@@ -23,12 +23,12 @@
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { publicPlans, BANK_YEARLY_PRICE_YEN } from '../lib/billing/plans.js';
-import { entitlementFromAstro, viewFlags } from '../lib/auth/entitlement.js';
+import { checkedEntitlementFromAstro, viewFlags } from '../lib/auth/entitlement.js';
 import { PRICING_BENEFITS, RANK_LADDER } from '../lib/membership/membershipView.js';
 
 export const prerender = false;
 
-const entitlement = entitlementFromAstro(Astro);
+const entitlement = await checkedEntitlementFromAstro(Astro);
 const view = viewFlags(entitlement);
 
 // 🔴 サーバー側では Price ID の有無だけを見る（金額は取得しない＝ページを速く返す）
@@ -102,7 +102,7 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     <!-- 月額プラン -->
     <section class="pr-plans">
       <h2 class="pr-h2">月額プラン</h2>
-      <p class="pr-plans-note">いつでも解約できます。解約後も無料会員として印までご覧いただけます。</p>
+      <p class="pr-plans-note">退会はマイページからいつでも行えます。退会するとその時点で有料機能はご利用いただけなくなり、退会後も無料会員として印までご覧いただけます。</p>
 
       <div class="pr-plan-grid pr-plan-single">
         {plans.map((plan) => (
@@ -179,7 +179,7 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
 
       {view.showBetting && (
         <p class="pr-manage">
-          <button class="pr-link-btn" type="button" id="pr-portal">お支払い方法の変更・解約はこちら</button>
+          <button class="pr-link-btn" type="button" id="pr-portal">お支払い方法の変更・請求履歴はこちら</button>
         </p>
       )}
     </section>
@@ -252,8 +252,8 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       <details><summary>無料でどこまで見られますか？</summary>
         <p>登録なしで、全レースの馬柱・過去走・AI短評・レース展望・展開予想・特徴量をご覧いただけます。無料会員登録をすると、これに印（◎○▲△）が加わります。1頭に複数の印が付き、該当しない馬は空欄です。AI指数の数値・AI結論・買い目は月額プレミアムです。</p>
       </details>
-      <details><summary>解約はできますか？</summary>
-        <p>いつでも解約できます。解約手続きはマイページから行えます。解約後も無料会員として印までご覧いただけます。</p>
+      <details><summary>解約（退会）はできますか？</summary>
+        <p>いつでも退会できます。マイページの「アカウント管理」から「退会する」を選び、確認画面で「退会を確定する」を押すと手続きが完了します。退会すると、現在の利用期限を待たずにすぐ有料機能をご利用いただけなくなります（残り期間分の返金・日割り精算はありません）。残り期間の利用を希望する場合は、退会手続きを行わずそのままご利用ください。退会後も無料会員として印までご覧いただけます。</p>
       </details>
       <details><summary>KIリワードとは何ですか？</summary>
         <p>プレミアムを続けていただくと毎月100ptずつ自動で積み上がる、会員特典のポイントです。ログインや操作は必要ありません。600ptと1,200ptの2段階でプレゼントとお引き換えいただけます。抽選はありません。現金・預金ではなく、換金・払い戻し・第三者への譲渡はできません。プレゼントの品目は準備中です。</p>

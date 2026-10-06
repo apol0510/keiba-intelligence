@@ -55,7 +55,7 @@ test('対象の予想経路がすべて存在する（経路を減らして「�
 for (const route of PREDICTION_ROUTES) {
   test(`${route}: サーバー側 entitlement で tier を決めている`, () => {
     const src = read(route);
-    assert.match(src, /entitlementFromAstro\s*\(/, 'entitlementFromAstro を呼んでいない');
+    assert.match(src, /await checkedEntitlementFromAstro\s*\(/, '退会記録を見る checkedEntitlementFromAstro を呼んでいない');
     // 無料ページは `freePageViewFlags`（買い目を落とす版）を使う。どちらでもよい
     assert.match(src, /(?:freePageV|v)iewFlags\s*\(/, 'viewFlags 系を使っていない');
     assert.match(src, /export const prerender = false/, 'SSR でないと閲覧者ごとの判定ができない');

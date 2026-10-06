@@ -12,7 +12,7 @@
  */
 
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { entitlementFromAstro } from '../lib/auth/entitlement.js';
+import { checkedEntitlementFromAstro } from '../lib/auth/entitlement.js';
 import { TIER, tierAtLeast } from '../lib/auth/tiers.js';
 import { buildMembershipView, MEMBERSHIP_COPY } from '../lib/membership/membershipView.js';
 import { LOCK_STATUS } from '../lib/membership/priceLock.js';
@@ -23,7 +23,7 @@ import rewardCatalogSource from '../data/membership/rewardCatalog.json';
 
 export const prerender = false;
 
-const ent = entitlementFromAstro(Astro);
+const ent = await checkedEntitlementFromAstro(Astro);
 
 const isPaid = tierAtLeast(ent.tier, TIER.LIGHT);
 
@@ -208,20 +208,23 @@ const FEATURES = [
 ];
 
 /**
- * 解約予約中に「終了すると使えなくなるもの」。FEATURES の有料分と同じ語を使う。
- * 🔴 実装の無い特典を足さない。成績（回収率・的中率）を継続理由として出さない
+ * 退会すると「すぐに使えなくなるもの」。FEATURES の有料分と同じ語を使う。
+ * 🔴 実装の無い特典を足さない。成績（回収率・的中率）を引き止めに使わない
  *    （集計基準の扱いが未決のため。docs/RETENTION_2026_10.md §2）。
  */
-const CANCEL_LOSES = FEATURES.filter((f) => f.open && ['AI指数の数値（無料はモザイク）', 'AI結論（推奨理由の解説）', '馬単の買い目'].includes(f.label))
+const WITHDRAW_LOSES = FEATURES.filter((f) => f.open && ['AI指数の数値（無料はモザイク）', 'AI結論（推奨理由の解説）', '馬単の買い目'].includes(f.label))
   .map((f) => f.label.replace('（無料はモザイク）', ''));
 
 /**
  * 再開時に戻るもの（MEMBERSHIP_REWARDS §7.1 / decisions「90日以内なら元に戻る」）。
  * 🔴 値が確定しているときだけ出す。推測の数字を出さない。
  */
-const resumeCarryNote = club.rewards.status === 'ready' && club.rewards.balancePoints > 0
-  ? `${MEMBERSHIP_COPY.balanceLabel}（${pt(club.rewards.balancePoints)}）とご契約価格は、終了後90日以内に再開されるとそのまま戻ります。`
+const reentryNote = club.rewards.status === 'ready' && club.rewards.balancePoints > 0
+  ? `${MEMBERSHIP_COPY.balanceLabel}（${pt(club.rewards.balancePoints)}）とご契約価格は、退会後90日以内に再度お申し込みいただくとそのまま戻ります。`
   : null;
+
+/** 退会完了の案内（stripe-subscription の withdraw 成功後に ?withdrawn=1 で戻ってくる） */
+const justWithdrawn = ent.authenticated && !isPaid && Astro.url.searchParams.get('withdrawn') === '1';
 
 // 🔴 2026-08-30: 会場で分ける概念を廃止。有料は常に南関東＋中央
 const venueLabel = '南関東＋中央競馬';
@@ -266,6 +269,12 @@ const expiresLabel = ent.expiresAtMs
                `refresh-session` で出し直してから読み込み直す。
                ここは表示だけで、権限そのものはサーバー側の entitlement が決める。
           */}
+          {justWithdrawn && (
+            <p class="mp-withdrawn" id="mp-withdrawn" role="status">
+              退会手続きが完了しました。有料機能のご利用は終了しました。無料会員として引き続き印までご覧いただけます。
+            </p>
+          )}
+
           <p class="mp-syncing" id="mp-syncing" hidden>
             お支払いを確認しています。数秒お待ちください…
           </p>
@@ -286,31 +295,16 @@ const expiresLabel = ent.expiresAtMs
             </ul>
 
             {/*
-              🔴 解約予約中の案内（docs/RETENTION_2026_10.md）
-                 - 状態は stripe-subscription（status）から取る。取れなければ何も出さない（従来どおり）
-                 - 「いつでも解約できる」は変えない。ここに出すのは **事実と取り消しボタンだけ**
-                 - 値引き・期限で煽る文言・罪悪感に訴える文言は出さない
+              🔴 既存の解約予約（2026-10-06 以前にポータルで期間末キャンセルされた契約）の表示だけ。
+                 docs/WITHDRAWAL_2026_10.md §6
+                 - 予約は勝手に即時終了へ変えない。終了日まで利用できる事実を出す
+                 - 🔴 予約の取り消しボタンは置かない（取り消し機能は廃止）
             */}
             {isPaid && (
               <div class="mp-sub-cancel" id="mp-sub-cancel" hidden>
-                <p class="mp-sub-cancel-title">解約のお手続きを受け付けています</p>
+                <p class="mp-sub-cancel-title">ご契約の終了日が決まっています</p>
                 <p class="mp-sub-cancel-body" id="mp-sub-cancel-body"></p>
-                <p class="mp-sub-cancel-sub">終了すると、次の機能が使えなくなります。</p>
-                <ul class="mp-sub-lose">
-                  {CANCEL_LOSES.map((label) => <li>{label}</li>)}
-                </ul>
-                {resumeCarryNote && <p class="mp-sub-cancel-sub">{resumeCarryNote}</p>}
-                <button class="mp-btn mp-btn-primary" type="button" id="mp-resume">解約予約を取り消して継続する</button>
-                <p class="mp-sub-cancel-note">
-                  取り消さない場合も、終了日までは追加料金なしでそのままご利用いただけます。終了日以降の請求はありません。
-                </p>
-                <p class="mp-billing-msg" id="mp-resume-msg" hidden></p>
               </div>
-            )}
-            {isPaid && (
-              <p class="mp-sub-resumed" id="mp-sub-resumed" role="status" hidden>
-                解約予約を取り消しました。引き続きご利用いただけます。
-              </p>
             )}
             {!isPaid && (
               <button class="mp-refresh" id="mp-refresh" type="button">
@@ -596,7 +590,7 @@ const expiresLabel = ent.expiresAtMs
             <h2 class="mp-h2">お支払い</h2>
             {isPaid ? (
               <div class="mp-billing">
-                <p>お支払い方法の変更・プラン変更・解約は、お支払い管理ページから行えます。</p>
+                <p>お支払い方法の変更・請求履歴の確認は、お支払い管理ページから行えます。</p>
                 <button class="mp-btn mp-btn-ghost" type="button" id="mp-portal">お支払い管理ページを開く</button>
                 <p class="mp-billing-msg" id="mp-portal-msg" hidden></p>
               </div>
@@ -607,6 +601,49 @@ const expiresLabel = ent.expiresAtMs
               </div>
             )}
           </section>
+
+          {/*
+            🔴 アカウント管理: 退会（docs/WITHDRAWAL_2026_10.md §3。2026-10-06 MK 確定）
+               - 退会は **即時のみ**。押しただけでは確定しない（確認画面 → 退会を確定する）
+               - 退会すると残り期間があってもすぐに使えなくなることを、確定ボタンの前に必ず示す
+               - 引き止めの値引き・期限煽り・成績訴求は出さない
+               - Stripe の契約がある人にだけ出す（status で確認できたときだけ表示）
+          */}
+          {isPaid && (
+            <section class="mp-block" id="mp-account" hidden>
+              <h2 class="mp-h2">アカウント管理</h2>
+              <div class="mp-withdraw">
+                <p>有料プランの退会はこちらから行えます。</p>
+                <button class="mp-btn mp-btn-quiet" type="button" id="mp-withdraw-open"
+                        aria-expanded="false" aria-controls="mp-withdraw-confirm">退会する</button>
+
+                <div class="mp-withdraw-confirm" id="mp-withdraw-confirm" role="region"
+                     aria-labelledby="mp-withdraw-title" hidden>
+                  <h3 class="mp-withdraw-title" id="mp-withdraw-title">退会の確認</h3>
+                  <p class="mp-withdraw-key">
+                    退会すると、現在の利用期限を待たずにすぐ利用できなくなります。<br>
+                    残り期間の利用を希望する場合は、退会手続きを行わずそのままご利用ください。
+                  </p>
+                  <p class="mp-withdraw-body">
+                    契約上の利用期間・請求期間が残っていても、退会を確定した時点で次の機能はご利用いただけなくなります。
+                  </p>
+                  <ul class="mp-sub-lose">
+                    {WITHDRAW_LOSES.map((label) => <li>{label}</li>)}
+                  </ul>
+                  <p class="mp-withdraw-body">残り期間分の返金・日割り精算はありません。以後の請求はありません。</p>
+                  <p class="mp-withdraw-body">
+                    退会後も無料会員として印までご覧いただけます。再度ご利用になる場合は、料金プランから改めてお申し込みください。
+                  </p>
+                  {reentryNote && <p class="mp-withdraw-body">{reentryNote}</p>}
+                  <div class="mp-withdraw-actions">
+                    <button class="mp-btn mp-btn-ghost" type="button" id="mp-withdraw-back">退会しない（戻る）</button>
+                    <button class="mp-btn mp-btn-danger" type="button" id="mp-withdraw-submit">退会を確定する</button>
+                  </div>
+                  <p class="mp-billing-msg" id="mp-withdraw-msg" role="alert" hidden></p>
+                </div>
+              </div>
+            </section>
+          )}
 
           <div class="mp-logout">
             <form method="POST" action="/.netlify/functions/logout">
@@ -805,9 +842,12 @@ const expiresLabel = ent.expiresAtMs
       if (s?.state === 'cancel_scheduled' && s.endsAt && cancel) {
         const left = Number.isFinite(s.daysLeft) ? `（あと${s.daysLeft}日）` : '';
         document.getElementById('mp-sub-cancel-body').textContent =
-          `${fmtDateTime(s.endsAt)}まで、すべての機能をこれまでどおりご利用いただけます${left}。`;
+          `${fmtDateTime(s.endsAt)}にご契約が終了します。それまではこれまでどおりご利用いただけます${left}。`;
         cancel.hidden = false;
       }
+      // 退会はStripe の契約がある人だけ（銀行振込・契約なしには出さない）
+      const account = document.getElementById('mp-account');
+      if (account) account.hidden = !(s?.state === 'active' || s?.state === 'cancel_scheduled');
     };
 
     if (document.getElementById('mp-sub-cancel')) {
@@ -819,26 +859,82 @@ const expiresLabel = ent.expiresAtMs
         .catch(() => {});
     }
 
-    const resumeBtn = document.getElementById('mp-resume');
-    const resumeMsg = document.getElementById('mp-resume-msg');
-    resumeBtn?.addEventListener('click', async () => {
-      resumeBtn.disabled = true;
-      if (resumeMsg) resumeMsg.hidden = true;
-      track('ki_resume_click');
+    /*
+      退会（docs/WITHDRAWAL_2026_10.md §3）
+      🔴 2 段階: 「退会する」で確認画面を開くだけ → 「退会を確定する」で初めて送る
+      🔴 二重押し: 送信中フラグとボタン無効化。サーバー側も冪等（同じ契約に 2 回終了要求を出さない）
+      🔴 成功したら ?withdrawn=1 で読み込み直す（Cookie は応答で free に差し替わっている）
+    */
+    const wOpen = document.getElementById('mp-withdraw-open');
+    const wPanel = document.getElementById('mp-withdraw-confirm');
+    const wBack = document.getElementById('mp-withdraw-back');
+    const wSubmit = document.getElementById('mp-withdraw-submit');
+    const wMsg = document.getElementById('mp-withdraw-msg');
+    let withdrawing = false;
+
+    const WITHDRAW_ERROR = {
+      login_required: 'ログインが切れています。再度ログインしてから退会してください。',
+      no_active_subscription: '退会できるご契約が見つかりませんでした。お問い合わせください。',
+      multiple_subscriptions: 'ご契約の確認が必要です。お手数ですがお問い合わせください。',
+      ownership_mismatch: 'ご契約の確認が必要です。お手数ですがお問い合わせください。',
+    };
+
+    wOpen?.addEventListener('click', () => {
+      if (!wPanel) return;
+      wPanel.hidden = false;
+      wOpen.setAttribute('aria-expanded', 'true');
+      wOpen.hidden = true;
+      track('ki_withdraw_open');
+      wPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    wBack?.addEventListener('click', () => {
+      if (withdrawing || !wPanel || !wOpen) return;
+      wPanel.hidden = true;
+      wOpen.hidden = false;
+      wOpen.setAttribute('aria-expanded', 'false');
+      if (wMsg) wMsg.hidden = true;
+      track('ki_withdraw_back');
+      wOpen.focus();
+    });
+
+    wSubmit?.addEventListener('click', async () => {
+      if (withdrawing) return;
+      withdrawing = true;
+      wSubmit.disabled = true;
+      if (wBack) wBack.disabled = true;
+      if (wMsg) wMsg.hidden = true;
+      wSubmit.textContent = '退会手続き中…';
+      track('ki_withdraw_confirm');
       try {
-        const s = await callSubscription('resume');
-        renderSubscription(s);
-        track('ki_resume_result', { result: s.state === 'active' ? 'resumed' : 'noop' });
-        const done = document.getElementById('mp-sub-resumed');
-        if (done && s.state === 'active') done.hidden = false;
+        const res = await fetch('/.netlify/functions/stripe-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ action: 'withdraw', confirm: true }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.withdrawn) {
+          track('ki_withdraw_result', { result: data.already ? 'already' : 'withdrawn' });
+          window.location.replace(window.location.pathname + '?withdrawn=1');
+          return;
+        }
+        track('ki_withdraw_result', { result: data.error || 'error' });
+        if (wMsg) {
+          wMsg.hidden = false;
+          wMsg.textContent = WITHDRAW_ERROR[data.error] || '退会できませんでした。時間をおいてもう一度お試しください。';
+        }
       } catch {
-        track('ki_resume_result', { result: 'error' });
-        if (resumeMsg) {
-          resumeMsg.hidden = false;
-          resumeMsg.textContent = '取り消しできませんでした。お支払い管理ページからも取り消せます。';
+        track('ki_withdraw_result', { result: 'network' });
+        if (wMsg) {
+          wMsg.hidden = false;
+          wMsg.textContent = '通信に失敗しました。時間をおいてもう一度お試しください。';
         }
       }
-      resumeBtn.disabled = false;
+      withdrawing = false;
+      wSubmit.disabled = false;
+      if (wBack) wBack.disabled = false;
+      wSubmit.textContent = '退会を確定する';
     });
 
     const btn = document.getElementById('mp-portal');
@@ -1384,15 +1480,36 @@ const expiresLabel = ent.expiresAtMs
   .mp-sub-cancel-body { font-size: 0.86rem; line-height: 1.7; margin: 0 0 10px; }
   .mp-sub-cancel-sub { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.7; margin: 0 0 6px; }
   .mp-sub-lose { margin: 0 0 12px; padding-left: 1.2em; font-size: 0.82rem; line-height: 1.8; }
-  .mp-sub-cancel-note { font-size: 0.76rem; color: var(--text-tertiary); line-height: 1.7; margin: 10px 0 0; }
-  .mp-sub-resumed {
-    margin: 14px 0 0;
-    padding: 10px 12px;
-    border-radius: var(--radius-md);
-    background: rgba(22, 163, 74, 0.1);
-    font-size: 0.84rem;
+  /* 退会（docs/WITHDRAWAL_2026_10.md §3）。🔴 煽らない・隠さない。確定前の注意だけははっきり示す */
+  .mp-withdraw p { margin: 0 0 10px; font-size: 0.88rem; line-height: 1.7; }
+  .mp-withdraw-confirm {
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg, 12px);
+    background: var(--bg-secondary);
   }
-
+  .mp-withdraw-title { font-size: 1rem; font-weight: 700; margin: 0 0 10px; }
+  .mp-withdraw-key {
+    font-weight: 700;
+    padding: 10px 12px;
+    border-left: 4px solid #c2410c;
+    background: rgba(194, 65, 12, 0.08);
+    border-radius: 6px;
+  }
+  .mp-withdraw .mp-withdraw-body { font-size: 0.84rem; color: var(--text-secondary); }
+  .mp-withdraw-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .mp-btn-danger { background: #b91c1c; color: #fff; border: 1px solid #b91c1c; }
+  .mp-btn-danger:disabled { opacity: 0.6; cursor: progress; }
+  .mp-withdrawn {
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    font-size: 0.88rem;
+    line-height: 1.7;
+  }
   .mp-billing-msg {
     margin: 12px 0 0;
     padding: 10px 12px;

@@ -1,6 +1,6 @@
 ---
 import AIChat from '../components/AIChat.astro';
-import { entitlementFromAstro } from '../lib/auth/entitlement.js';
+import { checkedEntitlementFromAstro } from '../lib/auth/entitlement.js';
 
 interface Props {
   title: string;
@@ -41,7 +41,7 @@ const {
  * 🔴 静的ページ（`prerender = true`）では Cookie を読めないので guest として描画し、
  *    読み込み後に `get-session`（Cookie が正本）で上書きする。
  */
-const navEnt = entitlementFromAstro(Astro);
+const navEnt = await checkedEntitlementFromAstro(Astro);
 const navAuthed = navEnt.authenticated === true;
 
 const siteTitle = `${title} | KEIBA Intelligence`;

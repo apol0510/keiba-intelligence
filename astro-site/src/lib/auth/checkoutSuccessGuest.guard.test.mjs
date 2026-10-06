@@ -106,7 +106,7 @@ describe('fail-closed の維持', () => {
     const assigns = mypage.match(/\bisPaid\s*=[^=]/g) || [];
     assert.equal(assigns.length, 1, '🔴 isPaid が宣言以外で代入されている');
     // 認可の正本は従来どおり entitlement
-    assert.match(mypage, /const ent = entitlementFromAstro\(Astro\);/);
+    assert.match(mypage, /const ent = await checkedEntitlementFromAstro\(Astro\);/);
     assert.match(mypage, /const isPaid = tierAtLeast\(ent\.tier, TIER\.LIGHT\);/);
   });
 

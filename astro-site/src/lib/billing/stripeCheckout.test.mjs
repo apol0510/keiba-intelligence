@@ -28,7 +28,9 @@ const ALICE = 'alice@example.com';
 const NOW = Date.parse('2026-09-01T00:00:00Z');
 
 /** Stripe へ渡された内容を記録する。 */
-const calls = { checkout: [], customers: [], portal: [] };
+const calls = { checkout: [], customers: [], portal: [], portalConfigs: [] };
+/** Stripe 側に存在するポータル構成（テストごとに差し替える）。 */
+const portalState = { configs: [] };
 const behavior = { checkoutUrl: 'https://checkout.stripe.test/s/1', customers: [], portalUrl: 'https://portal.stripe.test/p/1', throwOn: null };
 
 before(() => {
@@ -54,6 +56,21 @@ before(() => {
         },
       };
       billingPortal = {
+        configurations: {
+          list: async () => ({ data: portalState.configs.filter((c) => c.active) }),
+          create: async (params) => {
+            calls.portalConfigs.push({ op: 'create', params });
+            const c = { id: `bpc_${portalState.configs.length + 1}`, active: true, login_page: { enabled: false }, ...params };
+            portalState.configs.push(c);
+            return c;
+          },
+          update: async (id, params) => {
+            calls.portalConfigs.push({ op: 'update', id, params });
+            const c = portalState.configs.find((x) => x.id === id);
+            Object.assign(c, params);
+            return c;
+          },
+        },
         sessions: {
           create: async (params) => {
             calls.portal.push(params);
@@ -78,7 +95,8 @@ before(() => {
 const PORTAL_RETURN_URL_FIXTURE = 'https://portal-return.invalid/mypage';
 
 beforeEach(() => {
-  calls.checkout = []; calls.customers = []; calls.portal = [];
+  calls.checkout = []; calls.customers = []; calls.portal = []; calls.portalConfigs = [];
+  portalState.configs = [];
   behavior.checkoutUrl = 'https://checkout.stripe.test/s/1';
   behavior.customers = [];
   behavior.portalUrl = 'https://portal.stripe.test/p/1';
@@ -251,7 +269,7 @@ test('許可外の Origin へ CORS を開かない', async () => {
   assert.equal(res.headers['Access-Control-Allow-Origin'], 'https://keiba-intelligence.jp');
 });
 
-/* ---------- Customer Portal（解約導線） ---------- */
+/* ---------- Customer Portal（カード変更・請求履歴。🔴 解約はできない） ---------- */
 
 test('🔴 未ログインではポータルを開けない', async () => {
   const res = await portal({ cookie: null });
@@ -259,7 +277,7 @@ test('🔴 未ログインではポータルを開けない', async () => {
   assert.equal(calls.customers.length, 0);
 });
 
-test('E2E: 有料会員はポータル URL を受け取れる（解約導線）', async () => {
+test('E2E: 有料会員はポータル URL を受け取れる（解約できない構成で開く）', async () => {
   behavior.customers = [{ id: 'cus_alice' }];
   const res = await portal({ cookie: cookieFor(ALICE, TIER.PREMIUM) });
   assert.equal(res.statusCode, 200);
@@ -269,6 +287,62 @@ test('E2E: 有料会員はポータル URL を受け取れる（解約導線）'
   assert.deepEqual(calls.customers[0], { email: ALICE, limit: 1 });
   assert.equal(calls.portal[0].customer, 'cus_alice');
   assert.equal(calls.portal[0].return_url, PORTAL_RETURN_URL_FIXTURE);
+
+  // 🔴 KI 管理の構成（解約・プラン変更・メール変更なし）で開く
+  const cfg = portalState.configs.find((c) => c.id === calls.portal[0].configuration);
+  assert.ok(cfg, 'ポータルを構成なし（アカウント既定）で開いた');
+  assert.equal(cfg.features.subscription_cancel.enabled, false);
+  assert.equal(cfg.features.subscription_update.enabled, false);
+  assert.equal(cfg.features.payment_method_update.enabled, true);
+  assert.equal(cfg.features.invoice_history.enabled, true);
+  assert.ok(!cfg.features.customer_update.allowed_updates.includes('email'));
+});
+
+test('🔴 ポータル構成は作り直さない（2 回目以降は既存を使う）', async () => {
+  behavior.customers = [{ id: 'cus_alice' }];
+  await portal({ cookie: cookieFor(ALICE, TIER.PREMIUM) });
+  await portal({ cookie: cookieFor(ALICE, TIER.PREMIUM) });
+  assert.equal(calls.portalConfigs.filter((c) => c.op === 'create').length, 1);
+  assert.equal(calls.portal[0].configuration, calls.portal[1].configuration);
+});
+
+test('🔴 KI の構成が解約可能に変えられていたら、開く前に解約不可へ戻す', async () => {
+  behavior.customers = [{ id: 'cus_alice' }];
+  portalState.configs = [{
+    id: 'bpc_tampered', active: true, login_page: { enabled: false },
+    metadata: { ki_portal: 'no-cancel-v1' },
+    features: { subscription_cancel: { enabled: true, mode: 'at_period_end' }, subscription_update: { enabled: false }, customer_update: { enabled: false, allowed_updates: [] } },
+  }];
+  const res = await portal({ cookie: cookieFor(ALICE, TIER.PREMIUM) });
+  assert.equal(res.statusCode, 200);
+  assert.equal(calls.portalConfigs[0].op, 'update');
+  assert.equal(portalState.configs[0].features.subscription_cancel.enabled, false);
+  assert.equal(calls.portal[0].configuration, 'bpc_tampered');
+});
+
+test('🔴 解約可能な構成しか用意できなければポータルを開かない（502）', async () => {
+  behavior.customers = [{ id: 'cus_alice' }];
+  portalState.configs = [{
+    id: 'bpc_stuck', active: true, login_page: { enabled: false },
+    metadata: { ki_portal: 'no-cancel-v1' },
+    features: { subscription_cancel: { enabled: true } },
+  }];
+  // update しても直らない Stripe を再現
+  const orig = portalState.configs[0];
+  Object.defineProperty(orig, 'features', { get: () => ({ subscription_cancel: { enabled: true } }), set: () => {} });
+  const res = await portal({ cookie: cookieFor(ALICE, TIER.PREMIUM) });
+  assert.equal(res.statusCode, 502);
+  assert.equal(calls.portal.length, 0, '解約できる構成でポータルを開いた');
+});
+
+test('🔴 アカウント既定の構成（KI の印なし）は使わない', async () => {
+  behavior.customers = [{ id: 'cus_alice' }];
+  portalState.configs = [{
+    id: 'bpc_default', active: true, is_default: true, login_page: { enabled: true }, metadata: {},
+    features: { subscription_cancel: { enabled: true } },
+  }];
+  await portal({ cookie: cookieFor(ALICE, TIER.PREMIUM) });
+  assert.notEqual(calls.portal[0].configuration, 'bpc_default');
 });
 
 test('🔴 Stripe 顧客が無ければ 404（他人の顧客を開かせない）', async () => {

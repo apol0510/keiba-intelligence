@@ -24,7 +24,8 @@ import Stripe from 'stripe';
 
 import { TIER, planTypeToTier, applyExpiry } from '../auth/tiers.js';
 import { signSession, SESSION_COOKIE_NAME } from '../auth/session.js';
-import { resolveEntitlement, viewFlags } from '../auth/entitlement.js';
+import { resolveEntitlement, viewFlags, applyRevocation, paidPageRedirect } from '../auth/entitlement.js';
+import { revocationKey, updateRevocation } from '../auth/revocation.js';
 
 /* ------------------------------------------------------------------
    テスト用の env（🔴 本番の値は一切使わない）
@@ -460,6 +461,84 @@ test('E2E: subscription.deleted でも free へ戻る', async () => {
   assert.equal(res.statusCode, 200);
   assert.deepEqual(updatesFor(ALICE).at(-1).fields, { PlanType: TIER.FREE, Status: 'inactive', AccessEnabled: false });
   assert.equal(viewOf(ALICE).view.showBetting, false);
+});
+
+/* ---------- 退会（即時終了）と全端末の権限停止（docs/WITHDRAWAL_2026_10.md §4） ---------- */
+
+/** webhook と同じ Blobs（テストの Map）を直接読む store。 */
+const directStore = { get: async (k) => blobs.store.get(k) ?? null, set: async (k, v) => { blobs.store.set(k, v); } };
+
+/** 退会前から別の端末で使っていた premium の Cookie を、有料ページの入場判定にかける。 */
+async function otherDeviceAccess(email, issuedAtMs) {
+  const s = signSession({ email, tier: TIER.PREMIUM, secret: SESSION_SECRET, nowMs: issuedAtMs });
+  const ent = await applyRevocation(resolveEntitlement({
+    cookieHeader: `${SESSION_COOKIE_NAME}=${encodeURIComponent(s.token)}`,
+    env: { SESSION_SIGNING_SECRET: SESSION_SECRET },
+    nowMs: issuedAtMs + 1000,
+  }), { store: directStore });
+  return paidPageRedirect(viewFlags(ent), '/free-prediction/nankan');
+}
+
+test('🔴 subscription.deleted: 期限が残る別端末の premium セッションも即時に有料ページへ入れない', async () => {
+  await post(checkoutCompleted(ALICE));
+  const issuedBefore = Date.now() - 60_000;
+  assert.equal(await otherDeviceAccess(ALICE, issuedBefore), null, '前提: 終了前は入れる');
+
+  const res = await post(subDeleted(ALICE));
+  assert.equal(res.statusCode, 200);
+  const rec = JSON.parse(blobs.store.get(revocationKey(ALICE)));
+  assert.equal(rec.confirmed, true);
+  assert.equal(rec.subscriptionId, 'sub_test_1');
+  assert.ok(!JSON.stringify(rec).includes(ALICE), '記録に email を入れない');
+  assert.equal(await otherDeviceAccess(ALICE, issuedBefore), '/free-prediction/nankan');
+  // 他の会員には影響しない
+  assert.equal(await otherDeviceAccess(BOB, issuedBefore), null);
+});
+
+test('🔴 updated(canceled) でも同じく全端末で止まる', async () => {
+  await post(checkoutCompleted(ALICE));
+  const issuedBefore = Date.now() - 60_000;
+  await post(subUpdated(ALICE, 'canceled'));
+  assert.equal(await otherDeviceAccess(ALICE, issuedBefore), '/free-prediction/nankan');
+});
+
+test('🔴 マイページの退会記録（未反映）→ webhook で反映済みになる。時刻は退会時のまま', async () => {
+  await updateRevocation(ALICE, { kind: 'withdraw', nowMs: 1_000, subscriptionId: 'sub_test_1' }, { store: directStore });
+  await post(subDeleted(ALICE));
+  assert.deepEqual(JSON.parse(blobs.store.get(revocationKey(ALICE))), { revokedAtMs: 1_000, confirmed: true, subscriptionId: 'sub_test_1' });
+});
+
+test('🔴 webhook 再送でも冪等（同じ event は 1 回だけ・記録も変わらない）', async () => {
+  await post(checkoutCompleted(ALICE));
+  const evt = subDeleted(ALICE, 'evt_withdraw_dup');
+  await post(evt);
+  const first = blobs.store.get(revocationKey(ALICE));
+  const nUpdates = updatesFor(ALICE).length;
+  const again = await post(evt);
+  assert.equal(JSON.parse(again.body).duplicate, true);
+  assert.equal(blobs.store.get(revocationKey(ALICE)), first);
+  assert.equal(updatesFor(ALICE).length, nUpdates);
+});
+
+test('🔴 退会記録が書けなければ 500（processed にせず再送で書き直す）', async () => {
+  await post(checkoutCompleted(ALICE));
+  blobs.broken = true;
+  const res = await post(subDeleted(ALICE, 'evt_withdraw_noblobs'));
+  assert.equal(res.statusCode, 500);
+  // 認可（Airtable）は先に free へ反映済み（不整合側＝有料が残る側には倒れない）
+  assert.deepEqual(updatesFor(ALICE).at(-1).fields, { PlanType: TIER.FREE, Status: 'inactive', AccessEnabled: false });
+  blobs.broken = false;
+  const retry = await post(subDeleted(ALICE, 'evt_withdraw_noblobs'));
+  assert.equal(retry.statusCode, 200);
+  assert.ok(blobs.store.get(revocationKey(ALICE)));
+});
+
+test('🔴 再契約: Checkout 完了で記録は反映済みになり、再契約後のセッションは有料のまま', async () => {
+  await updateRevocation(ALICE, { kind: 'withdraw', nowMs: 1_000, subscriptionId: 'sub_old' }, { store: directStore });
+  const res = await post(checkoutCompleted(ALICE));
+  assert.equal(res.statusCode, 200);
+  assert.equal(JSON.parse(blobs.store.get(revocationKey(ALICE))).confirmed, true);
+  assert.equal(await otherDeviceAccess(ALICE, Date.now()), null, '再契約後に発行されたセッションが落ちた');
 });
 
 test('E2E: subscription.updated(active / trialing) で付与、その他の状態は無視', async () => {

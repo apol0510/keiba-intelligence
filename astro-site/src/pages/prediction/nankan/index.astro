@@ -21,11 +21,11 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 import RaceDayBoard from '../../../components/newspaper/RaceDayBoard.astro';
 import TierRibbon from '../../../components/newspaper/TierRibbon.astro';
 import { loadNankanRaceDay } from '../../../lib/prediction/loadRaceDay.js';
-import { entitlementFromAstro, viewFlags, paidPageRedirect } from '../../../lib/auth/entitlement.js';
+import { checkedEntitlementFromAstro, viewFlags, paidPageRedirect } from '../../../lib/auth/entitlement.js';
 
 export const prerender = false;
 
-const entitlement = entitlementFromAstro(Astro, { venue: 'nankan' });
+const entitlement = await checkedEntitlementFromAstro(Astro, { venue: 'nankan' });
 const view = viewFlags(entitlement);
 
 // 🔴 有料ページは買い目を出せない tier を入れない（fail-closed）。

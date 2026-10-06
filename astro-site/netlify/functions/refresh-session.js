@@ -27,6 +27,7 @@ import { planTypeToTier, applyExpiry } from '../../src/lib/auth/tiers.js';
 import { signSession, serializeSessionCookie } from '../../src/lib/auth/session.js';
 import { resolveEntitlement } from '../../src/lib/auth/entitlement.js';
 import { resolveSiteOrigin } from '../../src/lib/http/siteOrigin.js';
+import { readRevocation, tierForNewSession } from '../../src/lib/auth/revocation.js';
 
 function isLocalHost(event) {
   const host = event?.headers?.host || '';
@@ -83,11 +84,14 @@ export async function handler(event) {
     }
 
     const customer = customers[0].fields;
-    const tier = applyExpiry(
+    // 🔴 退会直後で webhook の反映前（Airtable がまだ premium）なら有料を出さない
+    //    （docs/WITHDRAWAL_2026_10.md §4）
+    const { revocation } = await readRevocation(ent.email, { event });
+    const tier = tierForNewSession(applyExpiry(
       planTypeToTier(customer.PlanType || 'free-registered'),
       customer.ExpirationDate || customer['有効期限'] || null,
       nowMs,
-    );
+    ), revocation);
 
     if (tier === ent.tier) {
       return { statusCode: 200, headers, body: JSON.stringify({ tier, changed: false }) };

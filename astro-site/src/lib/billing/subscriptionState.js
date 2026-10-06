@@ -1,7 +1,7 @@
 /**
  * subscriptionState — Stripe のサブスクを「マイページに出す状態」へ写す（純粋関数）
  *
- * 正本: docs/RETENTION_2026_10.md
+ * 正本: docs/WITHDRAWAL_2026_10.md（退会）/ docs/RETENTION_2026_10.md（状態表示の経緯）
  *
  * 🔴 マイページへ返すのは **状態と日付だけ**。顧客 ID・email・金額の内訳・
  *    解約理由は返さない（呼び出し元はブラウザ）。
@@ -18,7 +18,11 @@ export const ACTIVE_STATUSES = new Set(['active', 'trialing']);
 export const SUB_STATE = Object.freeze({
   /** 継続中（次回更新あり） */
   ACTIVE: 'active',
-  /** 解約予約中（期間末まで利用可・次回請求なし） */
+  /**
+   * 解約予約中（期間末まで利用可・次回請求なし）。
+   * 🔴 2026-10-06 以降、KI は新しい予約を作らない（ポータルの解約も無効）。
+   *    既存の予約を **表示するためだけ**に残している。取り消し機能は無い。
+   */
   CANCEL_SCHEDULED: 'cancel_scheduled',
   /** 有効なサブスクが無い（銀行振込・未加入・終了済み） */
   NONE: 'none',
@@ -51,7 +55,7 @@ export function isCancelScheduled(sub) {
 /**
  * 有効なサブスク一覧から、マイページに出す 1 件を選ぶ。
  * 🔴 KI のプレミアムは 1 人 1 契約。複数あれば「継続中」を優先し、
- *    次に期間末が遅いものを選ぶ（取り消し対象を取り違えないよう決定的に選ぶ）。
+ *    次に期間末が遅いものを選ぶ（表示を決定的にする）。
  */
 export function pickSubscription(subs) {
   const active = (subs || []).filter((s) => s && ACTIVE_STATUSES.has(s.status));
@@ -82,15 +86,55 @@ export function summarizeSubscription(sub, nowMs = Date.now()) {
 }
 
 /**
- * 解約予約を取り消すための update パラメータ。取り消す対象でなければ null。
+ * 退会（即時終了）の対象を決める（純関数）。docs/WITHDRAWAL_2026_10.md §3
  *
- * 🔴 予約の表現に合わせて戻す（両方立っていれば両方戻す）。
- *    `cancel_at: ''` は Stripe API で「未設定に戻す」の意味（Emptyable）。
+ * 🔴 本人の契約だけを対象にする:
+ *    - 候補は **セッションの email で検索した Stripe 顧客**のサブスクだけ（呼び出し側）
+ *    - さらにサブスクの `metadata.ki_email` がセッションの email と一致すること
+ *      （webhook が会員状態を反映するときの鍵と同じ。一致しなければ反映先を取り違える）
+ * 🔴 識別できないときは **終了しない**（fail-closed）:
+ *    - 有効な契約が 2 件以上 → `multiple_subscriptions`
+ *    - ki_email が無い・一致しない → `ownership_mismatch`
+ * 🔴 解約予約中（既存の期間末キャンセル）も、本人が退会を確定したときだけ対象にする。
+ *    予約を勝手に即時終了へ変換する処理はどこにも無い。
+ *
+ * @returns {{ ok: true, sub: object } | { ok: false, error: string, already?: boolean }}
  */
-export function resumeParams(sub) {
-  if (!isCancelScheduled(sub)) return null;
-  const params = {};
-  if (sub.cancel_at_period_end === true) params.cancel_at_period_end = false;
-  if (Number.isFinite(sub.cancel_at) && sub.cancel_at > 0) params.cancel_at = '';
-  return params;
+export function withdrawalTarget(subs, email) {
+  const norm = (v) => String(v || '').trim().toLowerCase();
+  const me = norm(email);
+  const list = (subs || []).filter(Boolean);
+  const active = list.filter((s) => ACTIVE_STATUSES.has(s.status));
+  if (active.length === 0) {
+    // 二重押し・再送: すでに KI の退会操作で終了済みなら成功として扱う（書き込まない）
+    const done = list.some((s) => s.status === 'canceled'
+      && s.cancellation_details?.comment === WITHDRAW_COMMENT
+      && norm(s.metadata?.ki_email) === me);
+    return done ? { ok: false, error: 'already_withdrawn', already: true } : { ok: false, error: 'no_active_subscription' };
+  }
+  if (active.length > 1) return { ok: false, error: 'multiple_subscriptions' };
+  const sub = active[0];
+  if (!me || norm(sub.metadata?.ki_email) !== me) return { ok: false, error: 'ownership_mismatch' };
+  return { ok: true, sub };
+}
+
+/** Stripe の解約記録に残す印（KI のマイページから本人が退会したこと）。 */
+export const WITHDRAW_COMMENT = 'ki_mypage_immediate_withdrawal';
+
+/**
+ * 即時終了のパラメータ。
+ * 🔴 日割りの返金・クレジットは作らない（prorate=false）。未請求分の即時請求もしない（invoice_now=false）。
+ *    料金・返金の扱いは利用規約 第4条のまま変えない。
+ */
+export function withdrawCancelParams() {
+  return {
+    prorate: false,
+    invoice_now: false,
+    cancellation_details: { comment: WITHDRAW_COMMENT },
+  };
+}
+
+/** 二重押し・再送で 2 回目の終了要求にならないよう、契約ごとに 1 キー。 */
+export function withdrawIdempotencyKey(sub) {
+  return `ki-withdraw-${sub.id}`;
 }

@@ -7,6 +7,34 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-10-06 退会は即時のみ（MK 確定。正本: `docs/WITHDRAWAL_2026_10.md`）
+
+- **仕様**: 期間末解約・予約停止・予約取り消し・ポータル解約を廃止。マイページ「アカウント管理」→「退会する」→ 確認画面 →
+  「退会を確定する」で Stripe 契約を即時終了し、残り期間があっても有料権限を **全端末で即時停止**。返金・日割りなし。
+  確認画面に MK 指定文言「退会すると、現在の利用期限を待たずにすぐ利用できなくなります。残り期間の利用を希望する場合は、
+  退会手続きを行わずそのままご利用ください。」。既存の予約停止契約は変更しない。退会完了メールは新設しない。
+- **実装**: `stripe-subscription`（status / withdraw。resume は 400）・退会記録（Blobs `ki-entitlement-revocations`、
+  有料ページ / ナビ / get-session / gemini / magic-link / refresh-session に適用）・webhook で記録を反映済みに・
+  ポータルは KI 管理の解約不可構成でのみ開く・pricing / terms（最終更新 2026-10-06）/ tokushoho の文言・
+  smoke workflow（新版判定を resume=400 に）・運用スクリプト `scripts/stripeWithdrawalAudit.mjs`（既定 read-only）。
+- **検証**: `npm run build` green（stripe 63+21+69+6・refresh-session 12・audit 3 ほか全 suite）。
+  localhost ブラウザ（Playwright・Stripe 関数のみ差し替え）desktop/375px: 2 段階・指定文言・戻るで送信なし・二重クリック 1 回・
+  完了表示・free 表示・`/prediction/nankan` 直打ち → 無料版へ。
+- **未実施（理由）**:
+  - Stripe Test Mode 実 API での E2E: Test の鍵がローカルに無く、本番 env からの鍵取得は harness が拒否（credential materialization）。
+    Stripe の振る舞いはモックで固定。UAT（`uat--…`）は `uat` branch への反映と UAT ログイン合言葉が要る。
+  - 本番の予約停止件数の再確認・アカウント既定ポータル構成の解約無効化: 同じ理由で未実施。
+    `netlify dev:exec --context production node scripts/stripeWithdrawalAudit.mjs`（read-only）→ 必要なら `--apply-default-no-cancel`。
+    直近の確認値は 2026-10-06 監査の **予約中 5 件 / 有効 8 件**（RETENTION §1）。
+- **Open**: (1) 再契約直後に旧契約の deleted が遅れて届くと Airtable を free に戻しうる（既存挙動。本件で悪化はしない）
+  (2) `/free-prediction/nankan` が 375px で横スクロール（427px。本件と無関係・既存）
+  (3) terms 第4条・tokushoho の「お支払いは銀行振込」表記が Stripe 月額と不一致（既存・事業文言）。
+- **現在地**: PR #152（branch `feat/immediate-withdrawal`）mergeable・Deploy Preview で関数（resume=400 / withdraw 未ログイン 401）と
+  pricing / terms / tokushoho の文言を確認済み。billing 変更のため merge は owner（KAO mediumHandoff 対象外）。
+  merge 後は `post-deploy-billing-smoke.yml` が本番を自動確認する。
+- **merge 後の残り（順序厳守）**: 本番反映を確認してから、アカウント既定ポータル構成の解約を無効化する
+  （先に無効化すると、新しい退会導線が本番に出る前に解約手段が無くなる）。
+
 ### 2026-10-06 解約監査とマイページ継続導線（正本: `docs/RETENTION_2026_10.md`）
 
 - **監査**: 有効 8 件中 5 件が解約予約、1 件は予約→自力取り消し。全件カスタマーポータル経由の本人操作で、webhook 200・Airtable 正常。
