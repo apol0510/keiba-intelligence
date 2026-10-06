@@ -28,7 +28,19 @@
      "08>06",
      "04>06"
     ],
-    "linesHash": "b132b58fabff45d11b8b54fdcc6171f87754d850e3576bfbae05038d51acbcbf"
+    "linesHash": "b132b58fabff45d11b8b54fdcc6171f87754d850e3576bfbae05038d51acbcbf",
+    "fieldSize": 9,
+    "top": [
+     "03>06",
+     "03>08",
+     "03>04",
+     "03>05",
+     "03>09",
+     "03>02",
+     "06>03",
+     "08>03"
+    ],
+    "topRule": "ki-top-v1"
    },
    {
     "raceNumber": 2,
@@ -51,7 +63,19 @@
      "01>12",
      "09>12"
     ],
-    "linesHash": "6c3a6f5e1235e1edec58687f8a9d3a6bafbbeac39720b8e870f4054349bfbea2"
+    "linesHash": "6c3a6f5e1235e1edec58687f8a9d3a6bafbbeac39720b8e870f4054349bfbea2",
+    "fieldSize": 12,
+    "top": [
+     "10>12",
+     "10>01",
+     "10>09",
+     "10>05",
+     "10>06",
+     "10>02",
+     "12>10",
+     "01>10"
+    ],
+    "topRule": "ki-top-v1"
    },
    {
     "raceNumber": 3,
@@ -74,7 +98,19 @@
      "01>06",
      "05>06"
     ],
-    "linesHash": "eb6bb9f1d5f17ae6bfb0065feaa9d53dcba53770fd9090a095827316dfdd139b"
+    "linesHash": "eb6bb9f1d5f17ae6bfb0065feaa9d53dcba53770fd9090a095827316dfdd139b",
+    "fieldSize": 12,
+    "top": [
+     "10>06",
+     "10>01",
+     "10>05",
+     "10>12",
+     "10>09",
+     "10>02",
+     "06>10",
+     "01>10"
+    ],
+    "topRule": "ki-top-v1"
    },
    {
     "raceNumber": 4,
@@ -93,7 +129,17 @@
      "01>05",
      "02>05"
     ],
-    "linesHash": "6ee73bbbbc9ca0fe1c151509afaa745850994d332409d0971203dbe0ca72a67a"
+    "linesHash": "6ee73bbbbc9ca0fe1c151509afaa745850994d332409d0971203dbe0ca72a67a",
+    "fieldSize": 6,
+    "top": [
+     "03>05",
+     "03>01",
+     "03>02",
+     "03>06",
+     "05>03",
+     "01>03"
+    ],
+    "topRule": "ki-top-v1"
    },
    {
     "raceNumber": 5,
@@ -116,7 +162,19 @@
      "05>08",
      "14>08"
     ],
-    "linesHash": "0a0b1cef8de97479b6b2624c0f98c97ca5969c4f48102e1637f53959e6a2b19e"
+    "linesHash": "0a0b1cef8de97479b6b2624c0f98c97ca5969c4f48102e1637f53959e6a2b19e",
+    "fieldSize": 14,
+    "top": [
+     "04>08",
+     "04>05",
+     "04>14",
+     "04>02",
+     "04>06",
+     "04>07",
+     "08>04",
+     "05>04"
+    ],
+    "topRule": "ki-top-v1"
    },
    {
     "raceNumber": 6,
@@ -139,7 +197,19 @@
      "11>03",
      "05>03"
     ],
-    "linesHash": "7847122b3aaa5cee7054d4a6ada35348ef83a241d63a38d38556179a2a2e916d"
+    "linesHash": "7847122b3aaa5cee7054d4a6ada35348ef83a241d63a38d38556179a2a2e916d",
+    "fieldSize": 14,
+    "top": [
+     "13>03",
+     "13>11",
+     "13>05",
+     "13>01",
+     "13>09",
+     "13>10",
+     "03>13",
+     "11>13"
+    ],
+    "topRule": "ki-top-v1"
    },
    {
     "raceNumber": 7,
@@ -160,7 +230,17 @@
      "04>06",
      "05>06"
     ],
-    "linesHash": "19c765e1a51ae4e09dced205d2e6332e76b54bb0accf75c62501a11209c384f0"
+    "linesHash": "19c765e1a51ae4e09dced205d2e6332e76b54bb0accf75c62501a11209c384f0",
+    "fieldSize": 8,
+    "top": [
+     "01>06",
+     "01>04",
+     "01>05",
+     "01>07",
+     "01>03",
+     "06>01"
+    ],
+    "topRule": "ki-top-v1"
    },
    {
     "raceNumber": 8,
@@ -183,7 +263,19 @@
      "05>04",
      "11>04"
     ],
-    "linesHash": "081f336639fcf8ac98c0699dbdfd5b09f231c625f708158cc6ee48b5c2ece46c"
+    "linesHash": "081f336639fcf8ac98c0699dbdfd5b09f231c625f708158cc6ee48b5c2ece46c",
+    "fieldSize": 11,
+    "top": [
+     "07>04",
+     "07>05",
+     "07>11",
+     "07>03",
+     "07>01",
+     "07>06",
+     "04>07",
+     "05>07"
+    ],
+    "topRule": "ki-top-v1"
    },
    {
     "raceNumber": 9,
@@ -206,7 +298,19 @@
      "11>08",
      "04>08"
     ],
-    "linesHash": "8a0224dae816b39810097e751cea173bd1c0694e3d8a6bb739a46497c06293b0"
+    "linesHash": "8a0224dae816b39810097e751cea173bd1c0694e3d8a6bb739a46497c06293b0",
+    "fieldSize": 11,
+    "top": [
+     "06>08",
+     "06>11",
+     "06>04",
+     "06>05",
+     "06>10",
+     "06>01",
+     "08>06",
+     "11>06"
+    ],
+    "topRule": "ki-top-v1"
    },
    {
     "raceNumber": 10,
@@ -229,7 +333,19 @@
      "11>03",
      "07>03"
     ],
-    "linesHash": "6bb37993750993c293519f6db156b1a98413e4656262313b35734b91b0e842fa"
+    "linesHash": "6bb37993750993c293519f6db156b1a98413e4656262313b35734b91b0e842fa",
+    "fieldSize": 11,
+    "top": [
+     "04>03",
+     "04>11",
+     "04>07",
+     "04>09",
+     "04>01",
+     "04>10",
+     "03>04",
+     "11>04"
+    ],
+    "topRule": "ki-top-v1"
    },
    {
     "raceNumber": 11,
@@ -248,7 +364,19 @@
      "09>10",
      "09>04"
     ],
-    "linesHash": "ff0164209629b500d9f23c794d9aac8d54cb2d9eb1dce09618cf18bb44db1b0e"
+    "linesHash": "ff0164209629b500d9f23c794d9aac8d54cb2d9eb1dce09618cf18bb44db1b0e",
+    "fieldSize": 12,
+    "top": [
+     "12>09",
+     "12>01",
+     "12>05",
+     "12>11",
+     "12>10",
+     "12>04",
+     "09>12",
+     "09>01"
+    ],
+    "topRule": "ki-top-v1"
    },
    {
     "raceNumber": 12,
@@ -271,9 +399,22 @@
      "07>15",
      "09>15"
     ],
-    "linesHash": "f8ad78d69b948f9b45bc9bb7f178a9db527eb78682bd1174edaf6a45346a1e6b"
+    "linesHash": "f8ad78d69b948f9b45bc9bb7f178a9db527eb78682bd1174edaf6a45346a1e6b",
+    "fieldSize": 15,
+    "top": [
+     "05>15",
+     "05>07",
+     "05>09",
+     "05>11",
+     "05>08",
+     "05>01",
+     "15>05",
+     "07>05"
+    ],
+    "topRule": "ki-top-v1"
    }
   ],
-  "recordHash": "9a3c4606560412a0c2ad8ec691055bf171d04f71b768715fc0e3d8195f816d5e"
+  "recordHash": "3412996c7ccb0362d4e98be7cd7c8ee8b92668d3ab6ad1900fc60f16a873baeb",
+  "topAugmentedAt": "2026-10-06T03:09:39.437Z"
  }
 ]

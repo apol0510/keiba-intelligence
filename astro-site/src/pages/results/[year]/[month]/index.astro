@@ -184,7 +184,7 @@ const description = `${monthName}のAI予想結果。${combinedStats ? `${combin
           <h3>南関競馬</h3>
           <div class="results-list">
             {nankan.map((entry) => (
-              <a href={`/results/${year}/${month}/${entry.date.split('-')[2]}`} class="result-item">
+              <a href={`/results/${year}/${month}/${entry.date.split('-')[2]}#nankan`} class="result-item">
                 <div class="result-date">{entry.date}</div>
                 <div class="result-venue">{entry.venue}</div>
                 <div class="result-stats">
@@ -202,7 +202,7 @@ const description = `${monthName}のAI予想結果。${combinedStats ? `${combin
           <h3>中央競馬</h3>
           <div class="results-list">
             {jra.map((entry) => (
-              <a href={`/results/${year}/${month}/${entry.date.split('-')[2]}`} class="result-item">
+              <a href={`/results/${year}/${month}/${entry.date.split('-')[2]}#jra`} class="result-item">
                 <div class="result-date">{entry.date}</div>
                 <div class="result-venue">{entry.venue}</div>
                 <div class="result-stats">

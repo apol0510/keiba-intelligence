@@ -1,8 +1,7 @@
 {
- "schema": "ki_displayed_return.v1",
- "generatedAt": "2026-10-06T01:37:19.241Z",
+ "schema": "ki_displayed_return.v2",
  "unitYen": 100,
- "note": "凍結した表示組み合わせを各 100 円で買った場合（内部集計・顧客には表示しない）",
+ "note": "凍結した表示組み合わせを各 100 円で買った場合（AI全選定 / AI上位表示）。顧客向けは displayedSummary.json",
  "dataConflicts": [
   "nankan 2026-05-22 大井 7R",
   "nankan 2026-03-27 大井 9R",
@@ -35,9 +34,19 @@
    "hits": 0,
    "stake": 0,
    "payout": 0,
+   "combos": 0,
    "unsettled": 12,
+   "top": {
+    "races": 0,
+    "hits": 0,
+    "stake": 0,
+    "payout": 0,
+    "returnRate": null,
+    "hitRate": null
+   },
+   "backfilled": true,
    "returnRate": null,
-   "backfilled": true
+   "hitRate": null
   },
   {
    "market": "nankan",
@@ -47,9 +56,19 @@
    "hits": 6,
    "stake": 17200,
    "payout": 4430,
+   "combos": 172,
    "unsettled": 1,
+   "top": {
+    "races": 11,
+    "hits": 5,
+    "stake": 8400,
+    "payout": 3510,
+    "returnRate": 41.8,
+    "hitRate": 45.5
+   },
+   "backfilled": true,
    "returnRate": 25.8,
-   "backfilled": true
+   "hitRate": 54.5
   },
   {
    "market": "nankan",
@@ -59,9 +78,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 8220,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9400,
+    "payout": 8220,
+    "returnRate": 87.4,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 43.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -71,9 +100,19 @@
    "hits": 5,
    "stake": 13800,
    "payout": 7430,
+   "combos": 138,
    "unsettled": 3,
+   "top": {
+    "races": 9,
+    "hits": 3,
+    "stake": 7000,
+    "payout": 4030,
+    "returnRate": 57.6,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 53.8,
-   "backfilled": true
+   "hitRate": 55.6
   },
   {
    "market": "nankan",
@@ -83,9 +122,19 @@
    "hits": 4,
    "stake": 14400,
    "payout": 5440,
+   "combos": 144,
    "unsettled": 3,
+   "top": {
+    "races": 9,
+    "hits": 4,
+    "stake": 7200,
+    "payout": 5440,
+    "returnRate": 75.6,
+    "hitRate": 44.4
+   },
+   "backfilled": true,
    "returnRate": 37.8,
-   "backfilled": true
+   "hitRate": 44.4
   },
   {
    "market": "nankan",
@@ -95,9 +144,19 @@
    "hits": 5,
    "stake": 15600,
    "payout": 5350,
+   "combos": 156,
    "unsettled": 2,
+   "top": {
+    "races": 10,
+    "hits": 5,
+    "stake": 8000,
+    "payout": 5350,
+    "returnRate": 66.9,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 34.3,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -107,9 +166,19 @@
    "hits": 8,
    "stake": 18200,
    "payout": 8530,
+   "combos": 182,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9400,
+    "payout": 7720,
+    "returnRate": 82.1,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 46.9,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -119,9 +188,19 @@
    "hits": 6,
    "stake": 10800,
    "payout": 4120,
+   "combos": 108,
    "unsettled": 5,
+   "top": {
+    "races": 7,
+    "hits": 6,
+    "stake": 5600,
+    "payout": 4120,
+    "returnRate": 73.6,
+    "hitRate": 85.7
+   },
+   "backfilled": true,
    "returnRate": 38.1,
-   "backfilled": true
+   "hitRate": 85.7
   },
   {
    "market": "jra",
@@ -131,9 +210,19 @@
    "hits": 0,
    "stake": 0,
    "payout": 0,
+   "combos": 0,
    "unsettled": 12,
+   "top": {
+    "races": 0,
+    "hits": 0,
+    "stake": 0,
+    "payout": 0,
+    "returnRate": null,
+    "hitRate": null
+   },
+   "backfilled": true,
    "returnRate": null,
-   "backfilled": true
+   "hitRate": null
   },
   {
    "market": "jra",
@@ -143,9 +232,19 @@
    "hits": 0,
    "stake": 0,
    "payout": 0,
+   "combos": 0,
    "unsettled": 12,
+   "top": {
+    "races": 0,
+    "hits": 0,
+    "stake": 0,
+    "payout": 0,
+    "returnRate": null,
+    "hitRate": null
+   },
+   "backfilled": true,
    "returnRate": null,
-   "backfilled": true
+   "hitRate": null
   },
   {
    "market": "jra",
@@ -155,9 +254,19 @@
    "hits": 0,
    "stake": 0,
    "payout": 0,
+   "combos": 0,
    "unsettled": 12,
+   "top": {
+    "races": 0,
+    "hits": 0,
+    "stake": 0,
+    "payout": 0,
+    "returnRate": null,
+    "hitRate": null
+   },
+   "backfilled": true,
    "returnRate": null,
-   "backfilled": true
+   "hitRate": null
   },
   {
    "market": "nankan",
@@ -167,9 +276,19 @@
    "hits": 5,
    "stake": 12400,
    "payout": 11090,
+   "combos": 124,
    "unsettled": 4,
+   "top": {
+    "races": 8,
+    "hits": 4,
+    "stake": 6400,
+    "payout": 8510,
+    "returnRate": 133,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 89.4,
-   "backfilled": true
+   "hitRate": 62.5
   },
   {
    "market": "nankan",
@@ -179,9 +298,19 @@
    "hits": 4,
    "stake": 18800,
    "payout": 13000,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9600,
+    "payout": 5640,
+    "returnRate": 58.8,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 69.1,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "nankan",
@@ -191,9 +320,19 @@
    "hits": 6,
    "stake": 19000,
    "payout": 6400,
+   "combos": 190,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9600,
+    "payout": 5100,
+    "returnRate": 53.1,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 33.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -203,9 +342,19 @@
    "hits": 3,
    "stake": 18800,
    "payout": 12350,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9600,
+    "payout": 12350,
+    "returnRate": 128.6,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 65.7,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "nankan",
@@ -215,9 +364,19 @@
    "hits": 10,
    "stake": 18400,
    "payout": 26650,
+   "combos": 184,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 8,
+    "stake": 9400,
+    "payout": 13930,
+    "returnRate": 148.2,
+    "hitRate": 66.7
+   },
+   "backfilled": true,
    "returnRate": 144.8,
-   "backfilled": true
+   "hitRate": 83.3
   },
   {
    "market": "jra",
@@ -227,9 +386,19 @@
    "hits": 0,
    "stake": 0,
    "payout": 0,
+   "combos": 0,
    "unsettled": 0,
+   "top": {
+    "races": 0,
+    "hits": 0,
+    "stake": 0,
+    "payout": 0,
+    "returnRate": null,
+    "hitRate": null
+   },
+   "backfilled": true,
    "returnRate": null,
-   "backfilled": true
+   "hitRate": null
   },
   {
    "market": "jra",
@@ -239,9 +408,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 10000,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9600,
+    "payout": 7870,
+    "returnRate": 82,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 53.2,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -251,9 +430,19 @@
    "hits": 3,
    "stake": 18800,
    "payout": 6390,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9600,
+    "payout": 6390,
+    "returnRate": 66.6,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 34,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "jra",
@@ -263,9 +452,19 @@
    "hits": 6,
    "stake": 18600,
    "payout": 8240,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9400,
+    "payout": 6200,
+    "returnRate": 66,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 44.3,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -275,9 +474,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 22320,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9600,
+    "payout": 5470,
+    "returnRate": 57,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 118.7,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -287,9 +496,19 @@
    "hits": 5,
    "stake": 17200,
    "payout": 14780,
+   "combos": 172,
    "unsettled": 1,
+   "top": {
+    "races": 11,
+    "hits": 1,
+    "stake": 8600,
+    "payout": 2210,
+    "returnRate": 25.7,
+    "hitRate": 9.1
+   },
+   "backfilled": true,
    "returnRate": 85.9,
-   "backfilled": true
+   "hitRate": 45.5
   },
   {
    "market": "jra",
@@ -299,9 +518,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 11790,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9600,
+    "payout": 10080,
+    "returnRate": 105,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 62.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -311,9 +540,19 @@
    "hits": 0,
    "stake": 0,
    "payout": 0,
+   "combos": 0,
    "unsettled": 12,
+   "top": {
+    "races": 0,
+    "hits": 0,
+    "stake": 0,
+    "payout": 0,
+    "returnRate": null,
+    "hitRate": null
+   },
+   "backfilled": true,
    "returnRate": null,
-   "backfilled": true
+   "hitRate": null
   },
   {
    "market": "nankan",
@@ -323,9 +562,19 @@
    "hits": 12,
    "stake": 18800,
    "payout": 31150,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9600,
+    "payout": 6050,
+    "returnRate": 63,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 165.7,
-   "backfilled": true
+   "hitRate": 100
   },
   {
    "market": "nankan",
@@ -335,9 +584,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 12660,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9600,
+    "payout": 11270,
+    "returnRate": 117.4,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 67.3,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -347,9 +606,19 @@
    "hits": 7,
    "stake": 18600,
    "payout": 6910,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9600,
+    "payout": 6910,
+    "returnRate": 72,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 37.2,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -359,9 +628,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 14830,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9600,
+    "payout": 6290,
+    "returnRate": 65.5,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 78.9,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -371,9 +650,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 33270,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9400,
+    "payout": 3760,
+    "returnRate": 40,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 177,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -383,9 +672,19 @@
    "hits": 3,
    "stake": 18800,
    "payout": 3610,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9600,
+    "payout": 3610,
+    "returnRate": 37.6,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 19.2,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "jra",
@@ -395,9 +694,19 @@
    "hits": 4,
    "stake": 18400,
    "payout": 13890,
+   "combos": 184,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9400,
+    "payout": 11840,
+    "returnRate": 126,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 75.5,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -407,9 +716,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 12300,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9400,
+    "payout": 9030,
+    "returnRate": 96.1,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 65.4,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -419,9 +738,19 @@
    "hits": 3,
    "stake": 18800,
    "payout": 9140,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9600,
+    "payout": 1490,
+    "returnRate": 15.5,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 48.6,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "jra",
@@ -431,9 +760,19 @@
    "hits": 9,
    "stake": 18800,
    "payout": 21760,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9600,
+    "payout": 11070,
+    "returnRate": 115.3,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 115.7,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "jra",
@@ -443,9 +782,19 @@
    "hits": 10,
    "stake": 18600,
    "payout": 113040,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9400,
+    "payout": 9550,
+    "returnRate": 101.6,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 607.7,
-   "backfilled": true
+   "hitRate": 83.3
   },
   {
    "market": "nankan",
@@ -455,9 +804,19 @@
    "hits": 4,
    "stake": 18800,
    "payout": 12380,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9600,
+    "payout": 7280,
+    "returnRate": 75.8,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 65.9,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "nankan",
@@ -467,9 +826,19 @@
    "hits": 5,
    "stake": 18800,
    "payout": 5740,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 5280,
+    "returnRate": 55,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 30.5,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -479,9 +848,19 @@
    "hits": 4,
    "stake": 18800,
    "payout": 3820,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9600,
+    "payout": 1150,
+    "returnRate": 12,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 20.3,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "nankan",
@@ -491,9 +870,19 @@
    "hits": 9,
    "stake": 18800,
    "payout": 12780,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 4820,
+    "returnRate": 50.2,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 68,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "jra",
@@ -503,9 +892,19 @@
    "hits": 8,
    "stake": 18600,
    "payout": 10440,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9400,
+    "payout": 6990,
+    "returnRate": 74.4,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 56.1,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -515,9 +914,19 @@
    "hits": 2,
    "stake": 18800,
    "payout": 8500,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 0,
+    "stake": 9600,
+    "payout": 0,
+    "returnRate": 0,
+    "hitRate": 0
+   },
+   "backfilled": true,
    "returnRate": 45.2,
-   "backfilled": true
+   "hitRate": 16.7
   },
   {
    "market": "nankan",
@@ -527,9 +936,19 @@
    "hits": 4,
    "stake": 18400,
    "payout": 2480,
+   "combos": 184,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9400,
+    "payout": 1800,
+    "returnRate": 19.1,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 13.5,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -539,9 +958,19 @@
    "hits": 8,
    "stake": 18800,
    "payout": 9490,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 8,
+    "stake": 9600,
+    "payout": 9490,
+    "returnRate": 98.9,
+    "hitRate": 66.7
+   },
+   "backfilled": true,
    "returnRate": 50.5,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -551,9 +980,19 @@
    "hits": 9,
    "stake": 18800,
    "payout": 9970,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 9,
+    "stake": 9400,
+    "payout": 9970,
+    "returnRate": 106.1,
+    "hitRate": 75
+   },
+   "backfilled": true,
    "returnRate": 53,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "jra",
@@ -563,9 +1002,19 @@
    "hits": 4,
    "stake": 18800,
    "payout": 3630,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 3630,
+    "returnRate": 37.8,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 19.3,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -575,9 +1024,19 @@
    "hits": 7,
    "stake": 18400,
    "payout": 15090,
+   "combos": 184,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9200,
+    "payout": 12970,
+    "returnRate": 141,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 82,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -587,9 +1046,19 @@
    "hits": 6,
    "stake": 18200,
    "payout": 10210,
+   "combos": 182,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9200,
+    "payout": 8840,
+    "returnRate": 96.1,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 56.1,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -599,9 +1068,19 @@
    "hits": 5,
    "stake": 18600,
    "payout": 7190,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9600,
+    "payout": 7190,
+    "returnRate": 74.9,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 38.7,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -611,9 +1090,19 @@
    "hits": 5,
    "stake": 18600,
    "payout": 10540,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9400,
+    "payout": 3120,
+    "returnRate": 33.2,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 56.7,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -623,9 +1112,19 @@
    "hits": 8,
    "stake": 18800,
    "payout": 17920,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9600,
+    "payout": 5890,
+    "returnRate": 61.4,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 95.3,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -635,9 +1134,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 5290,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9000,
+    "payout": 1500,
+    "returnRate": 16.7,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 28.1,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -647,9 +1156,19 @@
    "hits": 5,
    "stake": 18800,
    "payout": 5670,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9600,
+    "payout": 2680,
+    "returnRate": 27.9,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 30.2,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -659,9 +1178,19 @@
    "hits": 8,
    "stake": 18800,
    "payout": 15110,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9400,
+    "payout": 6630,
+    "returnRate": 70.5,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 80.4,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -671,9 +1200,19 @@
    "hits": 4,
    "stake": 18800,
    "payout": 4140,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 4140,
+    "returnRate": 43.1,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 22,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -683,9 +1222,19 @@
    "hits": 7,
    "stake": 18600,
    "payout": 7230,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9400,
+    "payout": 3930,
+    "returnRate": 41.8,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 38.9,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -695,9 +1244,19 @@
    "hits": 0,
    "stake": 0,
    "payout": 0,
+   "combos": 0,
    "unsettled": 12,
+   "top": {
+    "races": 0,
+    "hits": 0,
+    "stake": 0,
+    "payout": 0,
+    "returnRate": null,
+    "hitRate": null
+   },
+   "backfilled": true,
    "returnRate": null,
-   "backfilled": true
+   "hitRate": null
   },
   {
    "market": "nankan",
@@ -707,9 +1266,19 @@
    "hits": 0,
    "stake": 0,
    "payout": 0,
+   "combos": 0,
    "unsettled": 12,
+   "top": {
+    "races": 0,
+    "hits": 0,
+    "stake": 0,
+    "payout": 0,
+    "returnRate": null,
+    "hitRate": null
+   },
+   "backfilled": true,
    "returnRate": null,
-   "backfilled": true
+   "hitRate": null
   },
   {
    "market": "nankan",
@@ -719,9 +1288,19 @@
    "hits": 5,
    "stake": 18600,
    "payout": 12700,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9400,
+    "payout": 2920,
+    "returnRate": 31.1,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 68.3,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -731,9 +1310,19 @@
    "hits": 8,
    "stake": 18800,
    "payout": 26330,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9400,
+    "payout": 5370,
+    "returnRate": 57.1,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 140.1,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -743,9 +1332,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 14570,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9400,
+    "payout": 10780,
+    "returnRate": 114.7,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 77.5,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -755,9 +1354,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 10040,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 3920,
+    "returnRate": 40.8,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 53.4,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -767,9 +1376,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 8380,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9400,
+    "payout": 4400,
+    "returnRate": 46.8,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 44.6,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -779,9 +1398,19 @@
    "hits": 5,
    "stake": 18800,
    "payout": 24770,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9200,
+    "payout": 11970,
+    "returnRate": 130.1,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 131.8,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -791,9 +1420,19 @@
    "hits": 8,
    "stake": 18600,
    "payout": 8470,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9400,
+    "payout": 6080,
+    "returnRate": 64.7,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 45.5,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -803,9 +1442,19 @@
    "hits": 10,
    "stake": 17000,
    "payout": 9790,
+   "combos": 170,
    "unsettled": 1,
+   "top": {
+    "races": 11,
+    "hits": 8,
+    "stake": 8200,
+    "payout": 6240,
+    "returnRate": 76.1,
+    "hitRate": 72.7
+   },
+   "backfilled": true,
    "returnRate": 57.6,
-   "backfilled": true
+   "hitRate": 90.9
   },
   {
    "market": "jra",
@@ -815,9 +1464,19 @@
    "hits": 5,
    "stake": 18800,
    "payout": 23230,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9600,
+    "payout": 9740,
+    "returnRate": 101.5,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 123.6,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -827,9 +1486,19 @@
    "hits": 5,
    "stake": 18800,
    "payout": 12080,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 9100,
+    "returnRate": 94.8,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 64.3,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -839,9 +1508,19 @@
    "hits": 4,
    "stake": 18800,
    "payout": 4600,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9400,
+    "payout": 4140,
+    "returnRate": 44,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 24.5,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -851,9 +1530,19 @@
    "hits": 8,
    "stake": 18800,
    "payout": 19640,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 7550,
+    "returnRate": 78.6,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 104.5,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -863,9 +1552,19 @@
    "hits": 4,
    "stake": 18800,
    "payout": 6910,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 1,
+    "stake": 9600,
+    "payout": 410,
+    "returnRate": 4.3,
+    "hitRate": 8.3
+   },
+   "backfilled": true,
    "returnRate": 36.8,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -875,9 +1574,19 @@
    "hits": 4,
    "stake": 18400,
    "payout": 9420,
+   "combos": 184,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 1,
+    "stake": 9400,
+    "payout": 3430,
+    "returnRate": 36.5,
+    "hitRate": 8.3
+   },
+   "backfilled": true,
    "returnRate": 51.2,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "nankan",
@@ -887,9 +1596,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 9380,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9600,
+    "payout": 2830,
+    "returnRate": 29.5,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 49.9,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -899,9 +1618,19 @@
    "hits": 7,
    "stake": 18200,
    "payout": 9060,
+   "combos": 182,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9200,
+    "payout": 1380,
+    "returnRate": 15,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 49.8,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -911,9 +1640,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 18560,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9600,
+    "payout": 2840,
+    "returnRate": 29.6,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 98.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -923,9 +1662,19 @@
    "hits": 5,
    "stake": 18600,
    "payout": 5050,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9400,
+    "payout": 5050,
+    "returnRate": 53.7,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 27.2,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -935,9 +1684,19 @@
    "hits": 9,
    "stake": 18800,
    "payout": 15180,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9600,
+    "payout": 6090,
+    "returnRate": 63.4,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 80.7,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "jra",
@@ -947,9 +1706,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 7250,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9600,
+    "payout": 7250,
+    "returnRate": 75.5,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 38.6,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -959,9 +1728,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 17030,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9600,
+    "payout": 2990,
+    "returnRate": 31.1,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 90.6,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -971,9 +1750,19 @@
    "hits": 4,
    "stake": 18400,
    "payout": 8910,
+   "combos": 184,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9400,
+    "payout": 2300,
+    "returnRate": 24.5,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 48.4,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -983,9 +1772,19 @@
    "hits": 5,
    "stake": 18800,
    "payout": 11800,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9600,
+    "payout": 2610,
+    "returnRate": 27.2,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 62.8,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -995,9 +1794,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 21510,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9400,
+    "payout": 4370,
+    "returnRate": 46.5,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 114.4,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -1007,9 +1816,19 @@
    "hits": 6,
    "stake": 18400,
    "payout": 11160,
+   "combos": 184,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9400,
+    "payout": 5670,
+    "returnRate": 60.3,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 60.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -1019,9 +1838,19 @@
    "hits": 10,
    "stake": 17800,
    "payout": 30760,
+   "combos": 178,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9200,
+    "payout": 16070,
+    "returnRate": 174.7,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 172.8,
-   "backfilled": true
+   "hitRate": 83.3
   },
   {
    "market": "nankan",
@@ -1031,9 +1860,19 @@
    "hits": 8,
    "stake": 18600,
    "payout": 23350,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9600,
+    "payout": 6990,
+    "returnRate": 72.8,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 125.5,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -1043,9 +1882,19 @@
    "hits": 9,
    "stake": 18000,
    "payout": 13980,
+   "combos": 180,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9200,
+    "payout": 8210,
+    "returnRate": 89.2,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 77.7,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -1055,9 +1904,19 @@
    "hits": 3,
    "stake": 18400,
    "payout": 3860,
+   "combos": 184,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9200,
+    "payout": 2360,
+    "returnRate": 25.7,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 21,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "nankan",
@@ -1067,9 +1926,19 @@
    "hits": 8,
    "stake": 16600,
    "payout": 5560,
+   "combos": 166,
    "unsettled": 1,
+   "top": {
+    "races": 11,
+    "hits": 7,
+    "stake": 8400,
+    "payout": 4870,
+    "returnRate": 58,
+    "hitRate": 63.6
+   },
+   "backfilled": true,
    "returnRate": 33.5,
-   "backfilled": true
+   "hitRate": 72.7
   },
   {
    "market": "jra",
@@ -1079,9 +1948,19 @@
    "hits": 5,
    "stake": 18800,
    "payout": 25780,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9600,
+    "payout": 19340,
+    "returnRate": 201.5,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 137.1,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -1091,9 +1970,19 @@
    "hits": 8,
    "stake": 18800,
    "payout": 14770,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9600,
+    "payout": 10440,
+    "returnRate": 108.8,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 78.6,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -1103,9 +1992,19 @@
    "hits": 10,
    "stake": 18200,
    "payout": 16920,
+   "combos": 182,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9200,
+    "payout": 4840,
+    "returnRate": 52.6,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 93,
-   "backfilled": true
+   "hitRate": 83.3
   },
   {
    "market": "jra",
@@ -1115,9 +2014,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 7740,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9400,
+    "payout": 6020,
+    "returnRate": 64,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 41.2,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -1127,9 +2036,19 @@
    "hits": 5,
    "stake": 18800,
    "payout": 9150,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9400,
+    "payout": 4010,
+    "returnRate": 42.7,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 48.7,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -1139,9 +2058,19 @@
    "hits": 3,
    "stake": 18600,
    "payout": 3060,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 1,
+    "stake": 9400,
+    "payout": 280,
+    "returnRate": 3,
+    "hitRate": 8.3
+   },
+   "backfilled": true,
    "returnRate": 16.5,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "nankan",
@@ -1151,9 +2080,19 @@
    "hits": 5,
    "stake": 18800,
    "payout": 5190,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9600,
+    "payout": 1650,
+    "returnRate": 17.2,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 27.6,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -1163,9 +2102,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 22230,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 14220,
+    "returnRate": 148.1,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 118.2,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -1175,9 +2124,19 @@
    "hits": 4,
    "stake": 18200,
    "payout": 9900,
+   "combos": 182,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9400,
+    "payout": 2610,
+    "returnRate": 27.8,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 54.4,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "nankan",
@@ -1187,9 +2146,19 @@
    "hits": 2,
    "stake": 18200,
    "payout": 3300,
+   "combos": 182,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 1,
+    "stake": 9400,
+    "payout": 1140,
+    "returnRate": 12.1,
+    "hitRate": 8.3
+   },
+   "backfilled": true,
    "returnRate": 18.1,
-   "backfilled": true
+   "hitRate": 16.7
   },
   {
    "market": "nankan",
@@ -1199,9 +2168,19 @@
    "hits": 6,
    "stake": 18400,
    "payout": 13740,
+   "combos": 184,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9400,
+    "payout": 2440,
+    "returnRate": 26,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 74.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -1211,9 +2190,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 21150,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 7770,
+    "returnRate": 80.9,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 112.5,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -1223,9 +2212,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 8460,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9600,
+    "payout": 8460,
+    "returnRate": 88.1,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 45,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -1235,9 +2234,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 9880,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9400,
+    "payout": 7080,
+    "returnRate": 75.3,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 52.6,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -1247,9 +2256,19 @@
    "hits": 0,
    "stake": 0,
    "payout": 0,
+   "combos": 0,
    "unsettled": 12,
+   "top": {
+    "races": 0,
+    "hits": 0,
+    "stake": 0,
+    "payout": 0,
+    "returnRate": null,
+    "hitRate": null
+   },
+   "backfilled": true,
    "returnRate": null,
-   "backfilled": true
+   "hitRate": null
   },
   {
    "market": "nankan",
@@ -1259,9 +2278,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 14190,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9600,
+    "payout": 3150,
+    "returnRate": 32.8,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 75.5,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -1271,9 +2300,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 11330,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9600,
+    "payout": 11330,
+    "returnRate": 118,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 60.3,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -1283,9 +2322,19 @@
    "hits": 8,
    "stake": 18600,
    "payout": 8110,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9400,
+    "payout": 4920,
+    "returnRate": 52.3,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 43.6,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -1295,9 +2344,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 10770,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9600,
+    "payout": 9110,
+    "returnRate": 94.9,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 57.3,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -1307,9 +2366,19 @@
    "hits": 8,
    "stake": 18600,
    "payout": 13370,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9200,
+    "payout": 7190,
+    "returnRate": 78.2,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 71.9,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -1319,9 +2388,19 @@
    "hits": 8,
    "stake": 18400,
    "payout": 10400,
+   "combos": 184,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9400,
+    "payout": 5030,
+    "returnRate": 53.5,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 56.5,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -1331,9 +2410,19 @@
    "hits": 3,
    "stake": 18800,
    "payout": 4750,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9600,
+    "payout": 2390,
+    "returnRate": 24.9,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 25.3,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "jra",
@@ -1343,9 +2432,19 @@
    "hits": 8,
    "stake": 18600,
    "payout": 9600,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9400,
+    "payout": 7560,
+    "returnRate": 80.4,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 51.6,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -1355,9 +2454,19 @@
    "hits": 2,
    "stake": 18800,
    "payout": 770,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 0,
+    "stake": 9600,
+    "payout": 0,
+    "returnRate": 0,
+    "hitRate": 0
+   },
+   "backfilled": true,
    "returnRate": 4.1,
-   "backfilled": true
+   "hitRate": 16.7
   },
   {
    "market": "jra",
@@ -1367,9 +2476,19 @@
    "hits": 4,
    "stake": 18800,
    "payout": 7270,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9600,
+    "payout": 2680,
+    "returnRate": 27.9,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 38.7,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -1379,9 +2498,19 @@
    "hits": 2,
    "stake": 18800,
    "payout": 3370,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9600,
+    "payout": 3370,
+    "returnRate": 35.1,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 17.9,
-   "backfilled": true
+   "hitRate": 16.7
   },
   {
    "market": "nankan",
@@ -1391,9 +2520,19 @@
    "hits": 9,
    "stake": 18800,
    "payout": 17190,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9600,
+    "payout": 6110,
+    "returnRate": 63.6,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 91.4,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -1403,9 +2542,19 @@
    "hits": 8,
    "stake": 18800,
    "payout": 15650,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9600,
+    "payout": 6920,
+    "returnRate": 72.1,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 83.2,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -1415,9 +2564,19 @@
    "hits": 8,
    "stake": 18800,
    "payout": 9430,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9600,
+    "payout": 3960,
+    "returnRate": 41.3,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 50.2,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -1427,9 +2586,19 @@
    "hits": 5,
    "stake": 18600,
    "payout": 7950,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 3810,
+    "returnRate": 39.7,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 42.7,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -1439,9 +2608,19 @@
    "hits": 7,
    "stake": 18600,
    "payout": 5100,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9400,
+    "payout": 5100,
+    "returnRate": 54.3,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 27.4,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -1451,9 +2630,19 @@
    "hits": 0,
    "stake": 18600,
    "payout": 0,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 0,
+    "stake": 9400,
+    "payout": 0,
+    "returnRate": 0,
+    "hitRate": 0
+   },
+   "backfilled": true,
    "returnRate": 0,
-   "backfilled": true
+   "hitRate": 0
   },
   {
    "market": "jra",
@@ -1463,9 +2652,19 @@
    "hits": 3,
    "stake": 18800,
    "payout": 9490,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9400,
+    "payout": 6800,
+    "returnRate": 72.3,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 50.5,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "jra",
@@ -1475,9 +2674,19 @@
    "hits": 9,
    "stake": 18400,
    "payout": 16030,
+   "combos": 184,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9400,
+    "payout": 9100,
+    "returnRate": 96.8,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 87.1,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "jra",
@@ -1487,9 +2696,19 @@
    "hits": 4,
    "stake": 18600,
    "payout": 5130,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9400,
+    "payout": 2950,
+    "returnRate": 31.4,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 27.6,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -1499,9 +2718,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 12910,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9600,
+    "payout": 10980,
+    "returnRate": 114.4,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 68.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -1511,9 +2740,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 12540,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9400,
+    "payout": 1980,
+    "returnRate": 21.1,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 66.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -1523,9 +2762,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 12020,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 6230,
+    "returnRate": 64.9,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 63.9,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -1535,9 +2784,19 @@
    "hits": 5,
    "stake": 18800,
    "payout": 7150,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9400,
+    "payout": 2180,
+    "returnRate": 23.2,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 38,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -1547,9 +2806,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 11040,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9600,
+    "payout": 4080,
+    "returnRate": 42.5,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 58.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -1559,9 +2828,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 16250,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 8210,
+    "returnRate": 85.5,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 86.4,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -1571,9 +2850,19 @@
    "hits": 9,
    "stake": 18600,
    "payout": 14590,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9200,
+    "payout": 10560,
+    "returnRate": 114.8,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 78.4,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "jra",
@@ -1583,9 +2872,19 @@
    "hits": 6,
    "stake": 18600,
    "payout": 14040,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9400,
+    "payout": 4060,
+    "returnRate": 43.2,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 75.5,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -1595,9 +2894,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 6920,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9400,
+    "payout": 2260,
+    "returnRate": 24,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 36.8,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -1607,9 +2916,19 @@
    "hits": 0,
    "stake": 18800,
    "payout": 0,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 0,
+    "stake": 9600,
+    "payout": 0,
+    "returnRate": 0,
+    "hitRate": 0
+   },
+   "backfilled": true,
    "returnRate": 0,
-   "backfilled": true
+   "hitRate": 0
   },
   {
    "market": "jra",
@@ -1619,9 +2938,19 @@
    "hits": 5,
    "stake": 18800,
    "payout": 18720,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9600,
+    "payout": 10330,
+    "returnRate": 107.6,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 99.6,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -1631,9 +2960,19 @@
    "hits": 7,
    "stake": 18800,
    "payout": 10590,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9400,
+    "payout": 6130,
+    "returnRate": 65.2,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 56.3,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -1643,9 +2982,19 @@
    "hits": 4,
    "stake": 18800,
    "payout": 34920,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 0,
+    "stake": 9600,
+    "payout": 0,
+    "returnRate": 0,
+    "hitRate": 0
+   },
+   "backfilled": true,
    "returnRate": 185.7,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "nankan",
@@ -1655,9 +3004,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 16300,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9600,
+    "payout": 7190,
+    "returnRate": 74.9,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 86.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -1667,9 +3026,19 @@
    "hits": 9,
    "stake": 18800,
    "payout": 16970,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 8,
+    "stake": 9400,
+    "payout": 9070,
+    "returnRate": 96.5,
+    "hitRate": 66.7
+   },
+   "backfilled": true,
    "returnRate": 90.3,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -1679,9 +3048,19 @@
    "hits": 4,
    "stake": 18800,
    "payout": 6350,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9400,
+    "payout": 2410,
+    "returnRate": 25.6,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 33.8,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "nankan",
@@ -1691,9 +3070,19 @@
    "hits": 9,
    "stake": 18800,
    "payout": 10530,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 9,
+    "stake": 9600,
+    "payout": 10530,
+    "returnRate": 109.7,
+    "hitRate": 75
+   },
+   "backfilled": true,
    "returnRate": 56,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -1703,9 +3092,19 @@
    "hits": 7,
    "stake": 18200,
    "payout": 7170,
+   "combos": 182,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8800,
+    "payout": 4550,
+    "returnRate": 51.7,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 39.4,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -1715,9 +3114,19 @@
    "hits": 8,
    "stake": 18800,
    "payout": 14470,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9600,
+    "payout": 6390,
+    "returnRate": 66.6,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 77,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -1727,9 +3136,19 @@
    "hits": 8,
    "stake": 18800,
    "payout": 52750,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 7810,
+    "returnRate": 81.4,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 280.6,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -1739,9 +3158,19 @@
    "hits": 8,
    "stake": 18800,
    "payout": 8500,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9400,
+    "payout": 4800,
+    "returnRate": 51.1,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 45.2,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -1751,9 +3180,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 26460,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9400,
+    "payout": 24940,
+    "returnRate": 265.3,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 140.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -1763,9 +3202,19 @@
    "hits": 6,
    "stake": 18800,
    "payout": 9230,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 5410,
+    "returnRate": 56.4,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 49.1,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -1775,9 +3224,19 @@
    "hits": 3,
    "stake": 18800,
    "payout": 4420,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 0,
+    "stake": 9600,
+    "payout": 0,
+    "returnRate": 0,
+    "hitRate": 0
+   },
+   "backfilled": true,
    "returnRate": 23.5,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "nankan",
@@ -1787,9 +3246,19 @@
    "hits": 8,
    "stake": 18800,
    "payout": 25800,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 2760,
+    "returnRate": 28.8,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 137.2,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -1799,9 +3268,19 @@
    "hits": 8,
    "stake": 18800,
    "payout": 19120,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 8,
+    "stake": 9600,
+    "payout": 19120,
+    "returnRate": 199.2,
+    "hitRate": 66.7
+   },
+   "backfilled": true,
    "returnRate": 101.7,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -1811,9 +3290,19 @@
    "hits": 8,
    "stake": 18800,
    "payout": 21100,
+   "combos": 188,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9600,
+    "payout": 3390,
+    "returnRate": 35.3,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 112.2,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -1823,9 +3312,19 @@
    "hits": 10,
    "stake": 18600,
    "payout": 22410,
+   "combos": 186,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 8,
+    "stake": 9400,
+    "payout": 7470,
+    "returnRate": 79.5,
+    "hitRate": 66.7
+   },
+   "backfilled": true,
    "returnRate": 120.5,
-   "backfilled": true
+   "hitRate": 83.3
   },
   {
    "market": "nankan",
@@ -1835,9 +3334,19 @@
    "hits": 7,
    "stake": 17100,
    "payout": 16990,
+   "combos": 171,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8700,
+    "payout": 7330,
+    "returnRate": 84.3,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 99.4,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -1847,9 +3356,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 20440,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 1,
+    "stake": 8900,
+    "payout": 8270,
+    "returnRate": 92.9,
+    "hitRate": 8.3
+   },
+   "backfilled": true,
    "returnRate": 112.9,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -1859,9 +3378,19 @@
    "hits": 4,
    "stake": 18100,
    "payout": 10970,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9300,
+    "payout": 2990,
+    "returnRate": 32.2,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 60.6,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -1871,9 +3400,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 7160,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9100,
+    "payout": 5080,
+    "returnRate": 55.8,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 39.6,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -1883,9 +3422,19 @@
    "hits": 4,
    "stake": 18100,
    "payout": 4210,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9300,
+    "payout": 2940,
+    "returnRate": 31.6,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 23.3,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -1895,9 +3444,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 16910,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 14040,
+    "returnRate": 151,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 93.4,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -1907,9 +3466,19 @@
    "hits": 2,
    "stake": 18100,
    "payout": 3820,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 0,
+    "stake": 9300,
+    "payout": 0,
+    "returnRate": 0,
+    "hitRate": 0
+   },
+   "backfilled": true,
    "returnRate": 21.1,
-   "backfilled": true
+   "hitRate": 16.7
   },
   {
    "market": "nankan",
@@ -1919,9 +3488,19 @@
    "hits": 8,
    "stake": 17700,
    "payout": 13350,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9100,
+    "payout": 7100,
+    "returnRate": 78,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 75.4,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -1931,9 +3510,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 14890,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9100,
+    "payout": 8240,
+    "returnRate": 90.5,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 82.3,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -1943,9 +3532,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 22610,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9300,
+    "payout": 9250,
+    "returnRate": 99.5,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 124.9,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -1955,9 +3554,19 @@
    "hits": 6,
    "stake": 17300,
    "payout": 8090,
+   "combos": 173,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8900,
+    "payout": 8090,
+    "returnRate": 90.9,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 46.8,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -1967,9 +3576,19 @@
    "hits": 10,
    "stake": 17500,
    "payout": 23700,
+   "combos": 175,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 8,
+    "stake": 8900,
+    "payout": 14100,
+    "returnRate": 158.4,
+    "hitRate": 66.7
+   },
+   "backfilled": true,
    "returnRate": 135.4,
-   "backfilled": true
+   "hitRate": 83.3
   },
   {
    "market": "jra",
@@ -1979,9 +3598,19 @@
    "hits": 9,
    "stake": 17700,
    "payout": 24440,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9100,
+    "payout": 7440,
+    "returnRate": 81.8,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 138.1,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "jra",
@@ -1991,9 +3620,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 15960,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 7600,
+    "returnRate": 81.7,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 88.2,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -2003,9 +3642,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 14810,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 8490,
+    "returnRate": 93.3,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 81.8,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -2015,9 +3664,19 @@
    "hits": 4,
    "stake": 18100,
    "payout": 9900,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9100,
+    "payout": 5830,
+    "returnRate": 64.1,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 54.7,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -2027,9 +3686,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 16840,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 6450,
+    "returnRate": 69.4,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 93,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -2039,9 +3708,19 @@
    "hits": 8,
    "stake": 17900,
    "payout": 13320,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 8900,
+    "payout": 12050,
+    "returnRate": 135.4,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 74.4,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -2051,9 +3730,19 @@
    "hits": 7,
    "stake": 16500,
    "payout": 31000,
+   "combos": 165,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8700,
+    "payout": 23270,
+    "returnRate": 267.5,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 187.9,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -2063,9 +3752,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 17000,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9300,
+    "payout": 1090,
+    "returnRate": 11.7,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 93.9,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -2075,9 +3774,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 14470,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 11580,
+    "returnRate": 124.5,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 79.9,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -2087,9 +3796,19 @@
    "hits": 11,
    "stake": 18100,
    "payout": 11820,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 9,
+    "stake": 9300,
+    "payout": 9040,
+    "returnRate": 97.2,
+    "hitRate": 75
+   },
+   "backfilled": true,
    "returnRate": 65.3,
-   "backfilled": true
+   "hitRate": 91.7
   },
   {
    "market": "nankan",
@@ -2099,9 +3818,19 @@
    "hits": 6,
    "stake": 16500,
    "payout": 5950,
+   "combos": 165,
    "unsettled": 1,
+   "top": {
+    "races": 11,
+    "hits": 4,
+    "stake": 8500,
+    "payout": 3770,
+    "returnRate": 44.4,
+    "hitRate": 36.4
+   },
+   "backfilled": true,
    "returnRate": 36.1,
-   "backfilled": true
+   "hitRate": 54.5
   },
   {
    "market": "jra",
@@ -2111,9 +3840,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 12000,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9300,
+    "payout": 7450,
+    "returnRate": 80.1,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 66.3,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -2123,9 +3862,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 13480,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9300,
+    "payout": 5500,
+    "returnRate": 59.1,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 74.5,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -2135,9 +3884,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 10760,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 4450,
+    "returnRate": 47.8,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 59.4,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -2147,9 +3906,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 15540,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 7030,
+    "returnRate": 75.6,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 85.9,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -2159,9 +3928,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 13720,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 4760,
+    "returnRate": 51.2,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 75.8,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -2171,9 +3950,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 6890,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 3750,
+    "returnRate": 40.3,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 38.1,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -2183,9 +3972,19 @@
    "hits": 5,
    "stake": 17500,
    "payout": 7100,
+   "combos": 175,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 8900,
+    "payout": 4920,
+    "returnRate": 55.3,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 40.6,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -2195,9 +3994,19 @@
    "hits": 7,
    "stake": 17700,
    "payout": 6240,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9100,
+    "payout": 6240,
+    "returnRate": 68.6,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 35.3,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -2207,9 +4016,19 @@
    "hits": 6,
    "stake": 17900,
    "payout": 13960,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9100,
+    "payout": 5440,
+    "returnRate": 59.8,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 78,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -2219,9 +4038,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 9280,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9300,
+    "payout": 6500,
+    "returnRate": 69.9,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 51.3,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -2231,9 +4060,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 6240,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9300,
+    "payout": 6240,
+    "returnRate": 67.1,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 34.5,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -2243,9 +4082,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 3190,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 3190,
+    "returnRate": 34.3,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 17.6,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -2255,9 +4104,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 22470,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 7660,
+    "returnRate": 82.4,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 124.1,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -2267,9 +4126,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 6360,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9100,
+    "payout": 6360,
+    "returnRate": 69.9,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 35.1,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -2279,9 +4148,19 @@
    "hits": 9,
    "stake": 18100,
    "payout": 14570,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9300,
+    "payout": 10470,
+    "returnRate": 112.6,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 80.5,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -2291,9 +4170,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 15530,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 7820,
+    "returnRate": 84.1,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 85.8,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -2303,9 +4192,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 16440,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9300,
+    "payout": 13410,
+    "returnRate": 144.2,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 90.8,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -2315,9 +4214,19 @@
    "hits": 4,
    "stake": 17900,
    "payout": 10530,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8900,
+    "payout": 10530,
+    "returnRate": 118.3,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 58.8,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "nankan",
@@ -2327,9 +4236,19 @@
    "hits": 6,
    "stake": 17700,
    "payout": 3950,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8900,
+    "payout": 3950,
+    "returnRate": 44.4,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 22.3,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -2339,9 +4258,19 @@
    "hits": 4,
    "stake": 17300,
    "payout": 4590,
+   "combos": 173,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 8900,
+    "payout": 1340,
+    "returnRate": 15.1,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 26.5,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -2351,9 +4280,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 9820,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 8,
+    "stake": 9100,
+    "payout": 9820,
+    "returnRate": 107.9,
+    "hitRate": 66.7
+   },
+   "backfilled": true,
    "returnRate": 54.3,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -2363,9 +4302,19 @@
    "hits": 5,
    "stake": 17900,
    "payout": 10360,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 9220,
+    "returnRate": 101.3,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 57.9,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -2375,9 +4324,19 @@
    "hits": 4,
    "stake": 18100,
    "payout": 14570,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9100,
+    "payout": 4430,
+    "returnRate": 48.7,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 80.5,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -2387,9 +4346,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 14710,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9300,
+    "payout": 2280,
+    "returnRate": 24.5,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 81.3,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -2399,9 +4368,19 @@
    "hits": 7,
    "stake": 16100,
    "payout": 13470,
+   "combos": 161,
    "unsettled": 0,
+   "top": {
+    "races": 11,
+    "hits": 5,
+    "stake": 8300,
+    "payout": 6430,
+    "returnRate": 77.5,
+    "hitRate": 45.5
+   },
+   "backfilled": true,
    "returnRate": 83.7,
-   "backfilled": true
+   "hitRate": 63.6
   },
   {
    "market": "nankan",
@@ -2411,9 +4390,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 15840,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9300,
+    "payout": 3740,
+    "returnRate": 40.2,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 87.5,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -2423,9 +4412,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 4610,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 3270,
+    "returnRate": 35.2,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 25.5,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -2435,9 +4434,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 17690,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9300,
+    "payout": 6670,
+    "returnRate": 71.7,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 97.7,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -2447,9 +4456,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 16930,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9300,
+    "payout": 13350,
+    "returnRate": 143.5,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 93.5,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -2459,9 +4478,19 @@
    "hits": 3,
    "stake": 17900,
    "payout": 4790,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9100,
+    "payout": 3800,
+    "returnRate": 41.8,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 26.8,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "jra",
@@ -2471,9 +4500,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 8500,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 5920,
+    "returnRate": 65.1,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 47,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -2483,9 +4522,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 14850,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 8,
+    "stake": 9300,
+    "payout": 14850,
+    "returnRate": 159.7,
+    "hitRate": 66.7
+   },
+   "backfilled": true,
    "returnRate": 82,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -2495,9 +4544,19 @@
    "hits": 3,
    "stake": 18100,
    "payout": 8470,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9100,
+    "payout": 3860,
+    "returnRate": 42.4,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 46.8,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "jra",
@@ -2507,9 +4566,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 9120,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8900,
+    "payout": 6550,
+    "returnRate": 73.6,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 50.4,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -2519,9 +4588,19 @@
    "hits": 3,
    "stake": 18100,
    "payout": 3620,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9100,
+    "payout": 2660,
+    "returnRate": 29.2,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 20,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "nankan",
@@ -2531,9 +4610,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 16030,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9100,
+    "payout": 13490,
+    "returnRate": 148.2,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 88.6,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -2543,9 +4632,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 13530,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9300,
+    "payout": 7950,
+    "returnRate": 85.5,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 74.8,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -2555,9 +4654,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 14490,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8700,
+    "payout": 2530,
+    "returnRate": 29.1,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 80.1,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -2567,9 +4676,19 @@
    "hits": 7,
    "stake": 17300,
    "payout": 12570,
+   "combos": 173,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8900,
+    "payout": 7560,
+    "returnRate": 84.9,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 72.7,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -2579,9 +4698,19 @@
    "hits": 6,
    "stake": 17300,
    "payout": 5840,
+   "combos": 173,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8700,
+    "payout": 4180,
+    "returnRate": 48,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 33.8,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -2591,9 +4720,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 7710,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9100,
+    "payout": 2360,
+    "returnRate": 25.9,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 42.6,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -2603,9 +4742,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 10410,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 10410,
+    "returnRate": 111.9,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 57.5,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -2615,9 +4764,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 6380,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 6380,
+    "returnRate": 68.6,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 35.2,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -2627,9 +4786,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 21110,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 6700,
+    "returnRate": 72,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 116.6,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -2639,9 +4808,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 10430,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 6980,
+    "returnRate": 75.1,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 57.6,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -2651,9 +4830,19 @@
    "hits": 5,
    "stake": 17900,
    "payout": 11220,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 8900,
+    "payout": 4220,
+    "returnRate": 47.4,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 62.7,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -2663,9 +4852,19 @@
    "hits": 10,
    "stake": 16900,
    "payout": 14450,
+   "combos": 169,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 7500,
+    "payout": 5570,
+    "returnRate": 74.3,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 85.5,
-   "backfilled": true
+   "hitRate": 83.3
   },
   {
    "market": "nankan",
@@ -2675,9 +4874,19 @@
    "hits": 10,
    "stake": 17500,
    "payout": 27790,
+   "combos": 175,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 9,
+    "stake": 8700,
+    "payout": 7070,
+    "returnRate": 81.3,
+    "hitRate": 75
+   },
+   "backfilled": true,
    "returnRate": 158.8,
-   "backfilled": true
+   "hitRate": 83.3
   },
   {
    "market": "nankan",
@@ -2687,9 +4896,19 @@
    "hits": 6,
    "stake": 17900,
    "payout": 23320,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 8900,
+    "payout": 2920,
+    "returnRate": 32.8,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 130.3,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -2699,9 +4918,19 @@
    "hits": 7,
    "stake": 17700,
    "payout": 20750,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 1,
+    "stake": 8500,
+    "payout": 870,
+    "returnRate": 10.2,
+    "hitRate": 8.3
+   },
+   "backfilled": true,
    "returnRate": 117.2,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -2711,9 +4940,19 @@
    "hits": 5,
    "stake": 17900,
    "payout": 8380,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8700,
+    "payout": 8380,
+    "returnRate": 96.3,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 46.8,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -2723,9 +4962,19 @@
    "hits": 9,
    "stake": 18100,
    "payout": 15580,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9100,
+    "payout": 7380,
+    "returnRate": 81.1,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 86.1,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "jra",
@@ -2735,9 +4984,19 @@
    "hits": 7,
    "stake": 17700,
    "payout": 11270,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8700,
+    "payout": 6470,
+    "returnRate": 74.4,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 63.7,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -2747,9 +5006,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 5460,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 2900,
+    "returnRate": 31.2,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 30.2,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -2759,9 +5028,19 @@
    "hits": 6,
    "stake": 17700,
    "payout": 8330,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 8900,
+    "payout": 1180,
+    "returnRate": 13.3,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 47.1,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -2771,9 +5050,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 10360,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 6220,
+    "returnRate": 68.4,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 57.2,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -2783,9 +5072,19 @@
    "hits": 8,
    "stake": 17500,
    "payout": 22090,
+   "combos": 175,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9100,
+    "payout": 15440,
+    "returnRate": 169.7,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 126.2,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -2795,9 +5094,19 @@
    "hits": 8,
    "stake": 17100,
    "payout": 18730,
+   "combos": 171,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8500,
+    "payout": 8910,
+    "returnRate": 104.8,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 109.5,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -2807,9 +5116,19 @@
    "hits": 8,
    "stake": 17900,
    "payout": 7280,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9100,
+    "payout": 4330,
+    "returnRate": 47.6,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 40.7,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -2819,9 +5138,19 @@
    "hits": 7,
    "stake": 16900,
    "payout": 7630,
+   "combos": 169,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8100,
+    "payout": 2050,
+    "returnRate": 25.3,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 45.1,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -2831,9 +5160,19 @@
    "hits": 11,
    "stake": 17500,
    "payout": 11920,
+   "combos": 175,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 9,
+    "stake": 8900,
+    "payout": 8390,
+    "returnRate": 94.3,
+    "hitRate": 75
+   },
+   "backfilled": true,
    "returnRate": 68.1,
-   "backfilled": true
+   "hitRate": 91.7
   },
   {
    "market": "nankan",
@@ -2843,9 +5182,19 @@
    "hits": 9,
    "stake": 18100,
    "payout": 14330,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9300,
+    "payout": 10820,
+    "returnRate": 116.3,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 79.2,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -2855,9 +5204,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 7540,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 7540,
+    "returnRate": 81.1,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 41.7,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -2867,9 +5226,19 @@
    "hits": 9,
    "stake": 17700,
    "payout": 18420,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8700,
+    "payout": 6790,
+    "returnRate": 78,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 104.1,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -2879,9 +5248,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 10030,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9300,
+    "payout": 7410,
+    "returnRate": 79.7,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 55.4,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -2891,9 +5270,19 @@
    "hits": 9,
    "stake": 15900,
    "payout": 16720,
+   "combos": 159,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8300,
+    "payout": 9000,
+    "returnRate": 108.4,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 105.2,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "jra",
@@ -2903,9 +5292,19 @@
    "hits": 6,
    "stake": 17100,
    "payout": 15870,
+   "combos": 171,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8700,
+    "payout": 14120,
+    "returnRate": 162.3,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 92.8,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -2915,9 +5314,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 21270,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 3810,
+    "returnRate": 41,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 117.5,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -2927,9 +5336,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 18110,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9100,
+    "payout": 7840,
+    "returnRate": 86.2,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 100.1,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -2939,9 +5358,19 @@
    "hits": 6,
    "stake": 16500,
    "payout": 6140,
+   "combos": 165,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8100,
+    "payout": 3540,
+    "returnRate": 43.7,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 37.2,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -2951,9 +5380,19 @@
    "hits": 5,
    "stake": 17700,
    "payout": 4300,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8900,
+    "payout": 3200,
+    "returnRate": 36,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 24.3,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -2963,9 +5402,19 @@
    "hits": 4,
    "stake": 18100,
    "payout": 6610,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9100,
+    "payout": 3100,
+    "returnRate": 34.1,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 36.5,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -2975,9 +5424,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 25460,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 14680,
+    "returnRate": 157.8,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 140.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -2987,9 +5446,19 @@
    "hits": 9,
    "stake": 17900,
    "payout": 12990,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8700,
+    "payout": 2740,
+    "returnRate": 31.5,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 72.6,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -2999,9 +5468,19 @@
    "hits": 6,
    "stake": 17900,
    "payout": 11760,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 7620,
+    "returnRate": 83.7,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 65.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -3011,9 +5490,19 @@
    "hits": 4,
    "stake": 18100,
    "payout": 2400,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 2400,
+    "returnRate": 25.8,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 13.3,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "nankan",
@@ -3023,9 +5512,19 @@
    "hits": 9,
    "stake": 16700,
    "payout": 17190,
+   "combos": 167,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8300,
+    "payout": 10500,
+    "returnRate": 126.5,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 102.9,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -3035,9 +5534,19 @@
    "hits": 10,
    "stake": 17100,
    "payout": 9550,
+   "combos": 171,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 8700,
+    "payout": 4350,
+    "returnRate": 50,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 55.8,
-   "backfilled": true
+   "hitRate": 83.3
   },
   {
    "market": "jra",
@@ -3047,9 +5556,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 5740,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9100,
+    "payout": 5740,
+    "returnRate": 63.1,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 31.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3059,9 +5578,19 @@
    "hits": 4,
    "stake": 18100,
    "payout": 22480,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 1,
+    "stake": 9300,
+    "payout": 1340,
+    "returnRate": 14.4,
+    "hitRate": 8.3
+   },
+   "backfilled": true,
    "returnRate": 124.2,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -3071,9 +5600,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 14570,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 6940,
+    "returnRate": 74.6,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 80.5,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -3083,9 +5622,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 10050,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 3730,
+    "returnRate": 41,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 55.5,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -3095,9 +5644,19 @@
    "hits": 9,
    "stake": 18100,
    "payout": 14130,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9100,
+    "payout": 8310,
+    "returnRate": 91.3,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 78.1,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "jra",
@@ -3107,9 +5666,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 8850,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 4400,
+    "returnRate": 47.3,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 48.9,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -3119,9 +5688,19 @@
    "hits": 7,
    "stake": 17900,
    "payout": 12220,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8900,
+    "payout": 8940,
+    "returnRate": 100.4,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 68.3,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -3131,9 +5710,19 @@
    "hits": 6,
    "stake": 17500,
    "payout": 10200,
+   "combos": 175,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8900,
+    "payout": 7870,
+    "returnRate": 88.4,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 58.3,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -3143,9 +5732,19 @@
    "hits": 9,
    "stake": 18100,
    "payout": 15390,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 4970,
+    "returnRate": 53.4,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 85,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -3155,9 +5754,19 @@
    "hits": 7,
    "stake": 17900,
    "payout": 19060,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 8220,
+    "returnRate": 90.3,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 106.5,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -3167,9 +5776,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 6120,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 6120,
+    "returnRate": 65.8,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 33.8,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -3179,9 +5798,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 9030,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9100,
+    "payout": 9030,
+    "returnRate": 99.2,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 49.9,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -3191,9 +5820,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 10700,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8900,
+    "payout": 5500,
+    "returnRate": 61.8,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 59.1,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -3203,9 +5842,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 11960,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9300,
+    "payout": 6400,
+    "returnRate": 68.8,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 66.1,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3215,9 +5864,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 8910,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9100,
+    "payout": 2420,
+    "returnRate": 26.6,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 49.2,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3227,9 +5886,19 @@
    "hits": 4,
    "stake": 17900,
    "payout": 10390,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 1,
+    "stake": 8900,
+    "payout": 2400,
+    "returnRate": 27,
+    "hitRate": 8.3
+   },
+   "backfilled": true,
    "returnRate": 58,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -3239,9 +5908,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 12360,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9300,
+    "payout": 12360,
+    "returnRate": 132.9,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 68.3,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -3251,9 +5930,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 4760,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8900,
+    "payout": 4250,
+    "returnRate": 47.8,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 26.3,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -3263,9 +5952,19 @@
    "hits": 6,
    "stake": 17900,
    "payout": 7710,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9100,
+    "payout": 4310,
+    "returnRate": 47.4,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 43.1,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -3275,9 +5974,19 @@
    "hits": 11,
    "stake": 18100,
    "payout": 17360,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 10,
+    "stake": 9100,
+    "payout": 16160,
+    "returnRate": 177.6,
+    "hitRate": 83.3
+   },
+   "backfilled": true,
    "returnRate": 95.9,
-   "backfilled": true
+   "hitRate": 91.7
   },
   {
    "market": "nankan",
@@ -3287,9 +5996,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 4700,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 3390,
+    "returnRate": 36.5,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 26,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -3299,9 +6018,19 @@
    "hits": 7,
    "stake": 13700,
    "payout": 26190,
+   "combos": 137,
    "unsettled": 2,
+   "top": {
+    "races": 10,
+    "hits": 6,
+    "stake": 7300,
+    "payout": 5670,
+    "returnRate": 77.7,
+    "hitRate": 60
+   },
+   "backfilled": true,
    "returnRate": 191.2,
-   "backfilled": true
+   "hitRate": 70
   },
   {
    "market": "jra",
@@ -3311,9 +6040,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 11870,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 8050,
+    "returnRate": 88.5,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 65.6,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3323,9 +6062,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 22500,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 5640,
+    "returnRate": 62,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 124.3,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -3335,9 +6084,19 @@
    "hits": 6,
    "stake": 17500,
    "payout": 7900,
+   "combos": 175,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8700,
+    "payout": 6760,
+    "returnRate": 77.7,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 45.1,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3347,9 +6106,19 @@
    "hits": 6,
    "stake": 17900,
    "payout": 13380,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9100,
+    "payout": 3880,
+    "returnRate": 42.6,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 74.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3359,9 +6128,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 14110,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 7990,
+    "returnRate": 85.9,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 78,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3371,9 +6150,19 @@
    "hits": 5,
    "stake": 17700,
    "payout": 10960,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8900,
+    "payout": 9480,
+    "returnRate": 106.5,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 61.9,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -3383,9 +6172,19 @@
    "hits": 10,
    "stake": 17200,
    "payout": 17520,
+   "combos": 172,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8400,
+    "payout": 3530,
+    "returnRate": 42,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 101.9,
-   "backfilled": true
+   "hitRate": 83.3
   },
   {
    "market": "nankan",
@@ -3395,9 +6194,19 @@
    "hits": 8,
    "stake": 17500,
    "payout": 24060,
+   "combos": 175,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8700,
+    "payout": 7220,
+    "returnRate": 83,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 137.5,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -3407,9 +6216,19 @@
    "hits": 7,
    "stake": 17900,
    "payout": 16570,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 8700,
+    "payout": 1360,
+    "returnRate": 15.6,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 92.6,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -3419,9 +6238,19 @@
    "hits": 6,
    "stake": 17900,
    "payout": 5720,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8900,
+    "payout": 4860,
+    "returnRate": 54.6,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 32,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -3431,9 +6260,19 @@
    "hits": 9,
    "stake": 17700,
    "payout": 10910,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 8900,
+    "payout": 5940,
+    "returnRate": 66.7,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 61.6,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "jra",
@@ -3443,9 +6282,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 8210,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9300,
+    "payout": 2480,
+    "returnRate": 26.7,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 45.4,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -3455,9 +6304,19 @@
    "hits": 3,
    "stake": 18100,
    "payout": 4730,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 1,
+    "stake": 9100,
+    "payout": 1390,
+    "returnRate": 15.3,
+    "hitRate": 8.3
+   },
+   "backfilled": true,
    "returnRate": 26.1,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "jra",
@@ -3467,9 +6326,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 10560,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 8900,
+    "payout": 3000,
+    "returnRate": 33.7,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 58.3,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3479,9 +6348,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 9150,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9100,
+    "payout": 6680,
+    "returnRate": 73.4,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 50.6,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3491,9 +6370,19 @@
    "hits": 3,
    "stake": 18100,
    "payout": 6150,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9300,
+    "payout": 4810,
+    "returnRate": 51.7,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 34,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "jra",
@@ -3503,9 +6392,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 10870,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9300,
+    "payout": 10870,
+    "returnRate": 116.9,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 60.1,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -3515,9 +6414,19 @@
    "hits": 5,
    "stake": 17500,
    "payout": 5430,
+   "combos": 175,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8900,
+    "payout": 2750,
+    "returnRate": 30.9,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 31,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -3527,9 +6436,19 @@
    "hits": 8,
    "stake": 17900,
    "payout": 12900,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9100,
+    "payout": 6050,
+    "returnRate": 66.5,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 72.1,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -3539,9 +6458,19 @@
    "hits": 9,
    "stake": 17700,
    "payout": 9490,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 8500,
+    "payout": 6000,
+    "returnRate": 70.6,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 53.6,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -3551,9 +6480,19 @@
    "hits": 9,
    "stake": 16700,
    "payout": 11820,
+   "combos": 167,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8300,
+    "payout": 6930,
+    "returnRate": 83.5,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 70.8,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -3563,9 +6502,19 @@
    "hits": 7,
    "stake": 16900,
    "payout": 6880,
+   "combos": 169,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 8100,
+    "payout": 6880,
+    "returnRate": 84.9,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 40.7,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -3575,9 +6524,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 8640,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9100,
+    "payout": 8640,
+    "returnRate": 94.9,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 47.7,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -3587,9 +6546,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 8420,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 8700,
+    "payout": 5690,
+    "returnRate": 65.4,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 46.5,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -3599,9 +6568,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 15080,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9300,
+    "payout": 7440,
+    "returnRate": 80,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 83.3,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -3611,9 +6590,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 15460,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9100,
+    "payout": 12540,
+    "returnRate": 137.8,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 85.4,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3623,9 +6612,19 @@
    "hits": 7,
    "stake": 17900,
    "payout": 6160,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8900,
+    "payout": 2960,
+    "returnRate": 33.3,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 34.4,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -3635,9 +6634,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 6380,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9100,
+    "payout": 5240,
+    "returnRate": 57.6,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 35.2,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3647,9 +6656,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 12470,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9100,
+    "payout": 7680,
+    "returnRate": 84.4,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 68.9,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -3659,9 +6678,19 @@
    "hits": 7,
    "stake": 17700,
    "payout": 19110,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8900,
+    "payout": 9470,
+    "returnRate": 106.4,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 108,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -3671,9 +6700,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 13440,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 8900,
+    "payout": 13440,
+    "returnRate": 151,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 74.3,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -3683,9 +6722,19 @@
    "hits": 7,
    "stake": 14100,
    "payout": 16950,
+   "combos": 141,
    "unsettled": 0,
+   "top": {
+    "races": 10,
+    "hits": 6,
+    "stake": 7300,
+    "payout": 6320,
+    "returnRate": 86.6,
+    "hitRate": 60
+   },
+   "backfilled": true,
    "returnRate": 120.2,
-   "backfilled": true
+   "hitRate": 70
   },
   {
    "market": "nankan",
@@ -3695,9 +6744,19 @@
    "hits": 9,
    "stake": 17900,
    "payout": 11660,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 9,
+    "stake": 9100,
+    "payout": 11660,
+    "returnRate": 128.1,
+    "hitRate": 75
+   },
+   "backfilled": true,
    "returnRate": 65.1,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -3707,9 +6766,19 @@
    "hits": 7,
    "stake": 14900,
    "payout": 15850,
+   "combos": 149,
    "unsettled": 0,
+   "top": {
+    "races": 10,
+    "hits": 5,
+    "stake": 7500,
+    "payout": 6080,
+    "returnRate": 81.1,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 106.4,
-   "backfilled": true
+   "hitRate": 70
   },
   {
    "market": "nankan",
@@ -3719,9 +6788,19 @@
    "hits": 5,
    "stake": 14900,
    "payout": 7900,
+   "combos": 149,
    "unsettled": 0,
+   "top": {
+    "races": 10,
+    "hits": 5,
+    "stake": 7500,
+    "payout": 7900,
+    "returnRate": 105.3,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 53,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3731,9 +6810,19 @@
    "hits": 7,
    "stake": 17900,
    "payout": 11570,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8900,
+    "payout": 8090,
+    "returnRate": 90.9,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 64.6,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -3743,9 +6832,19 @@
    "hits": 8,
    "stake": 14300,
    "payout": 8620,
+   "combos": 143,
    "unsettled": 0,
+   "top": {
+    "races": 10,
+    "hits": 7,
+    "stake": 7500,
+    "payout": 7680,
+    "returnRate": 102.4,
+    "hitRate": 70
+   },
+   "backfilled": true,
    "returnRate": 60.3,
-   "backfilled": true
+   "hitRate": 80
   },
   {
    "market": "jra",
@@ -3755,9 +6854,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 22360,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9300,
+    "payout": 11850,
+    "returnRate": 127.4,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 123.5,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -3767,9 +6876,19 @@
    "hits": 9,
    "stake": 18100,
    "payout": 18050,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9100,
+    "payout": 9700,
+    "returnRate": 106.6,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 99.7,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "jra",
@@ -3779,9 +6898,19 @@
    "hits": 4,
    "stake": 17900,
    "payout": 12380,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 1,
+    "stake": 8900,
+    "payout": 3020,
+    "returnRate": 33.9,
+    "hitRate": 8.3
+   },
+   "backfilled": true,
    "returnRate": 69.2,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "nankan",
@@ -3791,9 +6920,19 @@
    "hits": 8,
    "stake": 14700,
    "payout": 14450,
+   "combos": 147,
    "unsettled": 0,
+   "top": {
+    "races": 10,
+    "hits": 6,
+    "stake": 7500,
+    "payout": 7770,
+    "returnRate": 103.6,
+    "hitRate": 60
+   },
+   "backfilled": true,
    "returnRate": 98.3,
-   "backfilled": true
+   "hitRate": 80
   },
   {
    "market": "jra",
@@ -3803,9 +6942,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 16580,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 7890,
+    "returnRate": 84.8,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 91.6,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3815,9 +6964,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 24230,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 8340,
+    "returnRate": 91.6,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 133.9,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -3827,9 +6986,19 @@
    "hits": 8,
    "stake": 14900,
    "payout": 11010,
+   "combos": 149,
    "unsettled": 0,
+   "top": {
+    "races": 10,
+    "hits": 6,
+    "stake": 7100,
+    "payout": 9080,
+    "returnRate": 127.9,
+    "hitRate": 60
+   },
+   "backfilled": true,
    "returnRate": 73.9,
-   "backfilled": true
+   "hitRate": 80
   },
   {
    "market": "nankan",
@@ -3839,9 +7008,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 16310,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8900,
+    "payout": 11460,
+    "returnRate": 128.8,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 90.1,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -3851,9 +7030,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 5700,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 8900,
+    "payout": 4280,
+    "returnRate": 48.1,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 31.5,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -3863,9 +7052,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 10900,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 9180,
+    "returnRate": 98.7,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 60.2,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -3875,9 +7074,19 @@
    "hits": 9,
    "stake": 18100,
    "payout": 11920,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9100,
+    "payout": 3620,
+    "returnRate": 39.8,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 65.9,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "jra",
@@ -3887,9 +7096,19 @@
    "hits": 5,
    "stake": 17900,
    "payout": 9320,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 8900,
+    "payout": 2920,
+    "returnRate": 32.8,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 52.1,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -3899,9 +7118,19 @@
    "hits": 6,
    "stake": 17900,
    "payout": 14680,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 4300,
+    "returnRate": 47.3,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 82,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3911,9 +7140,19 @@
    "hits": 7,
    "stake": 17700,
    "payout": 13350,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9100,
+    "payout": 9600,
+    "returnRate": 105.5,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 75.4,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -3923,9 +7162,19 @@
    "hits": 6,
    "stake": 17900,
    "payout": 12990,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8700,
+    "payout": 5640,
+    "returnRate": 64.8,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 72.6,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -3935,9 +7184,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 14610,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 9110,
+    "returnRate": 98,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 80.7,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -3947,9 +7206,19 @@
    "hits": 6,
    "stake": 17900,
    "payout": 14820,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 6620,
+    "returnRate": 72.7,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 82.8,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -3959,9 +7228,19 @@
    "hits": 10,
    "stake": 17500,
    "payout": 29060,
+   "combos": 175,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 8900,
+    "payout": 5130,
+    "returnRate": 57.6,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 166.1,
-   "backfilled": true
+   "hitRate": 83.3
   },
   {
    "market": "nankan",
@@ -3971,9 +7250,19 @@
    "hits": 7,
    "stake": 17900,
    "payout": 7640,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8900,
+    "payout": 6560,
+    "returnRate": 73.7,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 42.7,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -3983,9 +7272,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 8960,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 1760,
+    "returnRate": 19.3,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 49.5,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -3995,9 +7294,19 @@
    "hits": 6,
    "stake": 17700,
    "payout": 8060,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8900,
+    "payout": 4720,
+    "returnRate": 53,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 45.5,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -4007,9 +7316,19 @@
    "hits": 6,
    "stake": 16900,
    "payout": 6800,
+   "combos": 169,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 8300,
+    "payout": 1910,
+    "returnRate": 23,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 40.2,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -4019,9 +7338,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 5720,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 5720,
+    "returnRate": 61.5,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 31.6,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -4031,9 +7360,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 11350,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 10140,
+    "returnRate": 109,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 62.7,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -4043,9 +7382,19 @@
    "hits": 3,
    "stake": 18100,
    "payout": 4000,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9300,
+    "payout": 1820,
+    "returnRate": 19.6,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 22.1,
-   "backfilled": true
+   "hitRate": 25
   },
   {
    "market": "jra",
@@ -4055,9 +7404,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 8350,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 3460,
+    "returnRate": 37.2,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 46.1,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -4067,9 +7426,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 10490,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9100,
+    "payout": 8720,
+    "returnRate": 95.8,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 58,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -4079,9 +7448,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 29530,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 8160,
+    "returnRate": 89.7,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 163.1,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -4091,9 +7470,19 @@
    "hits": 7,
    "stake": 17300,
    "payout": 38370,
+   "combos": 173,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8900,
+    "payout": 11270,
+    "returnRate": 126.6,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 221.8,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -4103,9 +7492,19 @@
    "hits": 9,
    "stake": 17700,
    "payout": 13730,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8900,
+    "payout": 4700,
+    "returnRate": 52.8,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 77.6,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -4115,9 +7514,19 @@
    "hits": 4,
    "stake": 18100,
    "payout": 7460,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9100,
+    "payout": 2120,
+    "returnRate": 23.3,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 41.2,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "nankan",
@@ -4127,9 +7536,19 @@
    "hits": 11,
    "stake": 18100,
    "payout": 27560,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9100,
+    "payout": 10800,
+    "returnRate": 118.7,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 152.3,
-   "backfilled": true
+   "hitRate": 91.7
   },
   {
    "market": "nankan",
@@ -4139,9 +7558,19 @@
    "hits": 8,
    "stake": 17300,
    "payout": 6350,
+   "combos": 173,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8500,
+    "payout": 4480,
+    "returnRate": 52.7,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 36.7,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -4151,9 +7580,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 15840,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9100,
+    "payout": 4030,
+    "returnRate": 44.3,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 87.5,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -4163,9 +7602,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 4900,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 4900,
+    "returnRate": 52.7,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 27.1,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -4175,9 +7624,19 @@
    "hits": 4,
    "stake": 17300,
    "payout": 9920,
+   "combos": 173,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 8900,
+    "payout": 2100,
+    "returnRate": 23.6,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 57.3,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -4187,9 +7646,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 11090,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9100,
+    "payout": 6100,
+    "returnRate": 67,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 61.3,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -4199,9 +7668,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 11200,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9300,
+    "payout": 6440,
+    "returnRate": 69.2,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 61.9,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -4211,9 +7690,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 28970,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 6460,
+    "returnRate": 71,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 160.1,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -4223,9 +7712,19 @@
    "hits": 8,
    "stake": 17300,
    "payout": 7720,
+   "combos": 173,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8700,
+    "payout": 5670,
+    "returnRate": 65.2,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 44.6,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -4235,9 +7734,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 21570,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 1,
+    "stake": 8900,
+    "payout": 640,
+    "returnRate": 7.2,
+    "hitRate": 8.3
+   },
+   "backfilled": true,
    "returnRate": 119.2,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -4247,9 +7756,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 14110,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9100,
+    "payout": 3440,
+    "returnRate": 37.8,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 78,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -4259,9 +7778,19 @@
    "hits": 10,
    "stake": 18100,
    "payout": 13440,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 8,
+    "stake": 9300,
+    "payout": 9020,
+    "returnRate": 97,
+    "hitRate": 66.7
+   },
+   "backfilled": true,
    "returnRate": 74.3,
-   "backfilled": true
+   "hitRate": 83.3
   },
   {
    "market": "nankan",
@@ -4271,9 +7800,19 @@
    "hits": 8,
    "stake": 17100,
    "payout": 10440,
+   "combos": 171,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8500,
+    "payout": 7650,
+    "returnRate": 90,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 61.1,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -4283,9 +7822,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 22400,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 15270,
+    "returnRate": 164.2,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 123.8,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -4295,9 +7844,19 @@
    "hits": 8,
    "stake": 17700,
    "payout": 19290,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8500,
+    "payout": 15140,
+    "returnRate": 178.1,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 109,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -4307,9 +7866,19 @@
    "hits": 4,
    "stake": 18100,
    "payout": 13360,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 1,
+    "stake": 9300,
+    "payout": 2040,
+    "returnRate": 21.9,
+    "hitRate": 8.3
+   },
+   "backfilled": true,
    "returnRate": 73.8,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -4319,9 +7888,19 @@
    "hits": 7,
    "stake": 17500,
    "payout": 9250,
+   "combos": 175,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8900,
+    "payout": 8320,
+    "returnRate": 93.5,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 52.9,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -4331,9 +7910,19 @@
    "hits": 9,
    "stake": 18100,
    "payout": 13460,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9300,
+    "payout": 10310,
+    "returnRate": 110.9,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 74.4,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "nankan",
@@ -4343,9 +7932,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 9210,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 8,
+    "stake": 9100,
+    "payout": 9210,
+    "returnRate": 101.2,
+    "hitRate": 66.7
+   },
+   "backfilled": true,
    "returnRate": 50.9,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -4355,9 +7954,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 10550,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9100,
+    "payout": 8470,
+    "returnRate": 93.1,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 58.3,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -4367,9 +7976,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 12070,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 8900,
+    "payout": 10700,
+    "returnRate": 120.2,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 66.7,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -4379,9 +7998,19 @@
    "hits": 7,
    "stake": 17100,
    "payout": 6570,
+   "combos": 171,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 8700,
+    "payout": 6570,
+    "returnRate": 75.5,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 38.4,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -4391,9 +8020,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 12790,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9100,
+    "payout": 11990,
+    "returnRate": 131.8,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 70.7,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -4403,9 +8042,19 @@
    "hits": 4,
    "stake": 17500,
    "payout": 7600,
+   "combos": 175,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 8700,
+    "payout": 1090,
+    "returnRate": 12.5,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 43.4,
-   "backfilled": true
+   "hitRate": 33.3
   },
   {
    "market": "jra",
@@ -4415,9 +8064,19 @@
    "hits": 6,
    "stake": 18100,
    "payout": 12240,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 10430,
+    "returnRate": 112.2,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 67.6,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -4427,9 +8086,19 @@
    "hits": 8,
    "stake": 17900,
    "payout": 10650,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 9100,
+    "payout": 6640,
+    "returnRate": 73,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 59.5,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -4439,9 +8108,19 @@
    "hits": 9,
    "stake": 18100,
    "payout": 36300,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9100,
+    "payout": 32850,
+    "returnRate": 361,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 200.6,
-   "backfilled": true
+   "hitRate": 75
   },
   {
    "market": "jra",
@@ -4451,9 +8130,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 7500,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9100,
+    "payout": 4310,
+    "returnRate": 47.4,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 41.4,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -4463,9 +8152,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 12830,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 3,
+    "stake": 9300,
+    "payout": 4580,
+    "returnRate": 49.2,
+    "hitRate": 25
+   },
+   "backfilled": true,
    "returnRate": 70.9,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -4475,9 +8174,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 5460,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 4850,
+    "returnRate": 52.2,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 30.2,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -4487,9 +8196,19 @@
    "hits": 10,
    "stake": 17700,
    "payout": 12100,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 8900,
+    "payout": 7260,
+    "returnRate": 81.6,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 68.4,
-   "backfilled": true
+   "hitRate": 83.3
   },
   {
    "market": "nankan",
@@ -4499,9 +8218,19 @@
    "hits": 6,
    "stake": 16900,
    "payout": 11680,
+   "combos": 169,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8700,
+    "payout": 3180,
+    "returnRate": 36.6,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 69.1,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "jra",
@@ -4511,9 +8240,19 @@
    "hits": 7,
    "stake": 17700,
    "payout": 14780,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 8700,
+    "payout": 7010,
+    "returnRate": 80.6,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 83.5,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -4523,9 +8262,19 @@
    "hits": 8,
    "stake": 17900,
    "payout": 13150,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8900,
+    "payout": 4480,
+    "returnRate": 50.3,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 73.5,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -4535,9 +8284,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 38330,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9100,
+    "payout": 7930,
+    "returnRate": 87.1,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 211.8,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -4547,9 +8306,19 @@
    "hits": 6,
    "stake": 17900,
    "payout": 9050,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8900,
+    "payout": 7010,
+    "returnRate": 78.8,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 50.6,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -4559,9 +8328,19 @@
    "hits": 6,
    "stake": 17900,
    "payout": 13940,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 8900,
+    "payout": 4290,
+    "returnRate": 48.2,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 77.9,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -4571,9 +8350,19 @@
    "hits": 8,
    "stake": 18100,
    "payout": 12280,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9300,
+    "payout": 8620,
+    "returnRate": 92.7,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 67.8,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "nankan",
@@ -4583,9 +8372,19 @@
    "hits": 10,
    "stake": 18100,
    "payout": 33070,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 7,
+    "stake": 9300,
+    "payout": 6470,
+    "returnRate": 69.6,
+    "hitRate": 58.3
+   },
+   "backfilled": true,
    "returnRate": 182.7,
-   "backfilled": true
+   "hitRate": 83.3
   },
   {
    "market": "nankan",
@@ -4595,9 +8394,19 @@
    "hits": 5,
    "stake": 17700,
    "payout": 16720,
+   "combos": 177,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 8900,
+    "payout": 1450,
+    "returnRate": 16.3,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 94.5,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "nankan",
@@ -4607,9 +8416,19 @@
    "hits": 8,
    "stake": 17100,
    "payout": 11810,
+   "combos": 171,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 6,
+    "stake": 8900,
+    "payout": 7930,
+    "returnRate": 89.1,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 69.1,
-   "backfilled": true
+   "hitRate": 66.7
   },
   {
    "market": "jra",
@@ -4619,9 +8438,19 @@
    "hits": 5,
    "stake": 18100,
    "payout": 16540,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9100,
+    "payout": 2370,
+    "returnRate": 26,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 91.4,
-   "backfilled": true
+   "hitRate": 41.7
   },
   {
    "market": "jra",
@@ -4631,9 +8460,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 7020,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 4,
+    "stake": 9300,
+    "payout": 3900,
+    "returnRate": 41.9,
+    "hitRate": 33.3
+   },
+   "backfilled": true,
    "returnRate": 38.8,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "jra",
@@ -4643,9 +8482,19 @@
    "hits": 6,
    "stake": 17900,
    "payout": 7890,
+   "combos": 179,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 2,
+    "stake": 9100,
+    "payout": 2850,
+    "returnRate": 31.3,
+    "hitRate": 16.7
+   },
+   "backfilled": true,
    "returnRate": 44.1,
-   "backfilled": true
+   "hitRate": 50
   },
   {
    "market": "nankan",
@@ -4655,9 +8504,19 @@
    "hits": 5,
    "stake": 11700,
    "payout": 4430,
+   "combos": 117,
    "unsettled": 0,
+   "top": {
+    "races": 8,
+    "hits": 4,
+    "stake": 5900,
+    "payout": 3550,
+    "returnRate": 60.2,
+    "hitRate": 50
+   },
+   "backfilled": true,
    "returnRate": 37.9,
-   "backfilled": true
+   "hitRate": 62.5
   },
   {
    "market": "jra",
@@ -4667,9 +8526,19 @@
    "hits": 7,
    "stake": 18100,
    "payout": 26110,
+   "combos": 181,
    "unsettled": 0,
+   "top": {
+    "races": 12,
+    "hits": 5,
+    "stake": 9300,
+    "payout": 4610,
+    "returnRate": 49.6,
+    "hitRate": 41.7
+   },
+   "backfilled": true,
    "returnRate": 144.3,
-   "backfilled": true
+   "hitRate": 58.3
   },
   {
    "market": "nankan",
@@ -4679,9 +8548,19 @@
    "hits": 4,
    "stake": 14900,
    "payout": 6170,
+   "combos": 149,
    "unsettled": 0,
+   "top": {
+    "races": 10,
+    "hits": 2,
+    "stake": 7500,
+    "payout": 3220,
+    "returnRate": 42.9,
+    "hitRate": 20
+   },
+   "backfilled": true,
    "returnRate": 41.4,
-   "backfilled": true
+   "hitRate": 40
   },
   {
    "market": "nankan",
@@ -4691,9 +8570,19 @@
    "hits": 0,
    "stake": 0,
    "payout": 0,
+   "combos": 0,
    "unsettled": 12,
+   "top": {
+    "races": 0,
+    "hits": 0,
+    "stake": 0,
+    "payout": 0,
+    "returnRate": null,
+    "hitRate": null
+   },
+   "backfilled": true,
    "returnRate": null,
-   "backfilled": true
+   "hitRate": null
   }
  ],
  "totals": {
@@ -4702,24 +8591,60 @@
    "hits": 1332,
    "stake": 3370900,
    "payout": 2427360,
+   "combos": 33709,
+   "from": "2026-01-23",
+   "to": "2026-10-05",
+   "top": {
+    "races": 2238,
+    "hits": 975,
+    "stake": 1703700,
+    "payout": 1233000,
+    "returnRate": 72.4,
+    "hitRate": 43.6
+   },
    "returnRate": 72,
-   "hitRate": 59.5
+   "hitRate": 59.5,
+   "avgCombos": 15.1
   },
   "jra": {
    "races": 2267,
    "hits": 1116,
    "stake": 3450200,
    "payout": 2462880,
+   "combos": 34502,
+   "from": "2026-02-14",
+   "to": "2026-10-04",
+   "top": {
+    "races": 2267,
+    "hits": 736,
+    "stake": 1748400,
+    "payout": 1211110,
+    "returnRate": 69.3,
+    "hitRate": 32.5
+   },
    "returnRate": 71.4,
-   "hitRate": 49.2
+   "hitRate": 49.2,
+   "avgCombos": 15.2
   },
   "all": {
    "races": 4505,
    "hits": 2448,
    "stake": 6821100,
    "payout": 4890240,
+   "combos": 68211,
+   "from": "2026-01-23",
+   "to": "2026-10-05",
+   "top": {
+    "races": 4505,
+    "hits": 1711,
+    "stake": 3452100,
+    "payout": 2444110,
+    "returnRate": 70.8,
+    "hitRate": 38
+   },
    "returnRate": 71.7,
-   "hitRate": 54.3
+   "hitRate": 54.3,
+   "avgCombos": 15.1
   }
  }
 }

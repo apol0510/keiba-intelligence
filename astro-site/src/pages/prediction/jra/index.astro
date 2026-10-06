@@ -9,6 +9,7 @@
  *    旧実装の監査事項 A-1 / A-5（買い目のサーバー描画・認証ハードコード）を是正済み。
  */
 
+import DisplayedBasisStats from '../../../components/stats/DisplayedBasisStats.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import RaceDayBoard from '../../../components/newspaper/RaceDayBoard.astro';
 import TierRibbon from '../../../components/newspaper/TierRibbon.astro';
@@ -37,6 +38,7 @@ const description = '中央競馬（JRA）全10場の全レース馬柱・過去
 <BaseLayout title={title} description={description}>
   <div class="container prediction-page">
     <TierRibbon view={view} />
+    <DisplayedBasisStats markets={['jra']} compact />
     <RaceDayBoard day={day} view={view} category="jra" />
 
     <section class="pp-foot">

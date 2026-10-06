@@ -1,7 +1,8 @@
 /**
  * oldBasisCopy.guard.test.mjs — 旧 5 点基準の回収率・投資額・払戻額・収支を顧客向け画面に出さない（2026-10-06 MK）
  *
- * 🔴 KI の公開成績は、表示買い目を基準にした再計算ができるまで「的中率 / ○レース的中」だけを出す。
+ * 🔴 回収率は**表示買い目基準**（公開時に凍結した AI全選定 × 確定払戻・lib/stats/displayedBets）だけを出す。
+ *    出してよいのは DISPLAYED_BASIS のファイルだけで、そこでも archive 由来（旧 5 点基準）の値は参照しない。
  *    的中は、表示した馬単の組み合わせに確定した組み合わせが含まれたレースを数える（全 4,526 レースで一致を確認済み）。
  * 🔴 例外: NankanHorseStatsPanel（馬の戦績 DB の回収率＝KI の成績ではない）・AIBettingSection（どのページからも使っていない）。
  */
@@ -13,6 +14,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const EXEMPT = new Set(['src/components/NankanHorseStatsPanel.astro', 'src/components/AIBettingSection.astro']);
+/** 表示買い目基準の回収率を出すファイル（data/stats/displayed* だけを読む）。 */
+const DISPLAYED_BASIS = new Set(['src/components/stats/DisplayedBasisStats.astro', 'src/pages/results/[year]/[month]/[day].astro']);
 
 function walk(dir) {
   return readdirSync(dir).flatMap((n) => {
@@ -37,6 +40,14 @@ test('🔴 顧客向け画面に旧基準の回収率・投資額・払戻額・
   for (const f of files) {
     const src = readFileSync(join(ROOT, f), 'utf8');
     const body = src.includes('---') ? src.slice(src.indexOf('---', 3) + 3) : src;   // frontmatter の計算は対象外
+    if (DISPLAYED_BASIS.has(f)) {
+      assert.match(src, /data\/stats\/displayed(Summary|Return)\.json/, `${f}: 表示買い目基準のデータを読んでいない`);
+      for (const line of visibleLines(body)) {
+        if (/\bentry\.(returnRate|recoveryRate|totalPayout|betAmount|totalInvestment|profit)\b/.test(line)) bad.push(`${f}: ${line.trim()}`);
+        if (/(投資額|払戻額|合計配当|プラス収支)/.test(line)) bad.push(`${f}: ${line.trim()}`);
+      }
+      continue;
+    }
     for (const line of visibleLines(body)) {
       if (/\{[^}]*\b(returnRate|recoveryRate|totalPayout|betAmount|totalInvestment|profit)\b[^}]*\}/.test(line)) bad.push(`${f}: ${line.trim()}`);
       if (/(回収率|投資額|払戻額|合計配当|プラス収支)/.test(line) && !/AIChat|msg\.includes/.test(line)) bad.push(`${f}: ${line.trim()}`);

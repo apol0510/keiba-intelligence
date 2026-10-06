@@ -11,6 +11,7 @@
  *   - 価格をトップに書かない（金額の正本は Stripe。docs/RENEWAL_2026_08.md §6.1）。
  */
 
+import DisplayedBasisStats from '../components/stats/DisplayedBasisStats.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import archiveNankan from '../data/archiveResults.json';
 import archiveJra from '../data/archiveResultsJra.json';
@@ -82,6 +83,7 @@ const totals = combinedTotals(archiveNankan, archiveJra);
           公開しているアーカイブ全件から算出しています。的中は、AI全選定（会員に表示した馬単の組み合わせのすべて）に、確定した馬単の組み合わせが含まれていたレースを数えています。
           <a href="/archive">内訳を見る →</a>
         </p>
+        <DisplayedBasisStats markets={['jra', 'nankan']} />
       </div>
     </div>
   </section>
