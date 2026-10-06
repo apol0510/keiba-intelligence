@@ -65,6 +65,10 @@ const returnRate          = betAmount > 0 ? (totalPayout / betAmount) * 100 : 0;
 
 > 注: レース単位の `betPoints`（=5）は**回収率計算上の投資基準**であり、
 > 表示買い目の実点数（メイン=一方向5点／通常=前進全頭+上位3逆方向）とは分離した概念。
+>
+> 🔴 **2026-10-06 以降、公開ページの的中率・回収率はこの 5 点基準を使わない。**
+> 公開表示は「表示した組を全点各 100 円」で `src/lib/stats/performance.js` が算出する（正本 `docs/PERFORMANCE_STATS.md`）。
+> 本書の `betAmount` / `returnRate` は archive の内部値として残る（取込・検証の恒等式は不変）。
 
 ## 計算例
 

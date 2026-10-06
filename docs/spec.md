@@ -12,6 +12,7 @@
 > | プロジェクト全体のスコープ・境界・完成条件 | **`docs/spec.md`（本書）** | 正本 |
 > | 運用ルール・AI作業ルール | `CLAUDE.md` → 詳細は `docs/AI_RULES.md` | 参照のみ |
 > | 買い目点数・的中判定（馬単F3・5点固定） | `BET_POINT_LOGIC.md` | 参照のみ（複製しない） |
+> | **公開ページの的中率・回収率の算定**（基準・除外規則・代表値） | **`docs/PERFORMANCE_STATS.md`** | 参照のみ。実装の単一源は `src/lib/stats/performance.js` |
 > | archiveResults の JSON フォーマット | `docs/DATA_FORMAT.md` | 参照のみ |
 > | 結果システム全体設計 | `docs/RESULTS_SYSTEM_ARCHITECTURE.md` / `docs/MULTI_VENUE_CHECK.md` | 参照のみ |
 > | 予想画面の表示仕様 | `docs/INTELLIGENCE_DISPLAY_SPEC.md` / `docs/ui-cross-plan-regression-policy.md` | 参照のみ |
@@ -192,6 +193,8 @@ devDependency: `netlify-cli ^23.5.0`。Node は `netlify.toml` で `NODE_VERSION
 3. **買い目・回収率フィールド契約**
    `betPointsPerRace` / `betAmount` / `totalPayout` / `returnRate` / `race.betType` / `race.betPoints`。
    恒等式 `returnRate = totalPayout / betAmount × 100` は `scripts/umatanHit.test.mjs` が検証する。
+   🔴 これらは **archive の内部値（5 点基準）** であり、公開ページの的中率・回収率には使わない（2026-10-06）。
+   公開表示は `src/lib/stats/performance.js` だけが算出する（正本 `docs/PERFORMANCE_STATS.md`・`npm run test:performance`）。
 4. **的中判定の単一源**
    `checkUmatanHit` は `importResults.js` と `importResultsJra.js` の両方から共通利用する。判定ロジックを複製・分岐しない。
 5. **URL 契約**
@@ -272,6 +275,7 @@ devDependency: `netlify-cli ^23.5.0`。Node は `netlify.toml` で `NODE_VERSION
 | computerIndex 契約 | `npm run test:computer-index` | 不要 | 偽値の総合pt/role 混入を fail-closed に固定 |
 | ワークフロー静的監査 | `node --test scripts/utils/workflowStaticAudit.test.mjs` | 不要 | yml の env/secret 配線を構造検証 |
 | ビルド | `npm run build` | **要**（依存インストール） | `validate:archive && test:nankan && astro build` |
+| 公開実績の単一源 | `npm run test:performance` | 不要 | 算定式・isHit 一致・原データ不変・旧固定値／AK／「厳選」の不在 |
 | 共有同期検証 | `npm run verify:sync` | **要**（`KEIBA_DATA_SHARED_TOKEN`） | 外部 API を叩くため無条件実行しない |
 
 - **lint / typecheck の専用スクリプトは存在しない**（`package.json` に該当なし。`tsconfig.json` は存在するが `tsc` 実行スクリプトは未定義）。

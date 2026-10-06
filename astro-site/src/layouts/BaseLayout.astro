@@ -26,7 +26,7 @@ interface Props {
 
 const {
   title,
-  description = 'AI-Powered Intelligence Dashboard for 南関・中央競馬。的中率71%、回収率186%を誇る競馬予想プラットフォーム。南関4場とJRA全10場に対応。',
+  description = 'AI-Powered Intelligence Dashboard for 南関・中央競馬。南関4場とJRA全10場の馬柱・AI短評・AI予想と、公開した全レースの結果を掲載しています。',
   ogImage = '/og-image.png',
   canonicalPath,
   hideFreeRegisterCta = false
@@ -170,16 +170,9 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
             <span class="footer-logo-text">KEIBA Intelligence</span>
           </a>
           <p class="footer-tagline">AI-Powered Intelligence Dashboard<br>for 南関・中央競馬</p>
-          <div class="footer-stats">
-            <div class="footer-stat">
-              <span class="footer-stat-value">71.1%</span>
-              <span class="footer-stat-label">的中率（回収含む）</span>
-            </div>
-            <div class="footer-stat">
-              <span class="footer-stat-value">186.4%</span>
-              <span class="footer-stat-label">回収率</span>
-            </div>
-          </div>
+          <!-- 🔴 2026-10-06: 出典不明の固定の的中率・回収率を撤去。成績の数値は
+               lib/stats/performance.js（単一源）から出すページだけに載せる（docs/PERFORMANCE_STATS.md） -->
+          <a href="/archive/" class="footer-results-link">公開した全レースの結果を見る →</a>
           {!hideFreeRegisterCta && (
             <a href="/register" class="footer-cta" data-auth-out hidden={navAuthed}>無料会員登録 →</a>
           )}
@@ -566,24 +559,14 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
       max-width: 280px;
       margin-bottom: var(--spacing-md);
     }
-    .footer-stats {
-      display: flex;
-      gap: var(--spacing-lg);
+    .footer-results-link {
+      display: inline-block;
       margin-bottom: var(--spacing-md);
-    }
-    .footer-stat { display: flex; flex-direction: column; gap: 2px; }
-    .footer-stat-value {
-      font-size: 1.65rem;
-      font-weight: 800;
-      background: var(--primary-gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      line-height: 1.1;
-    }
-    .footer-stat-label {
-      font-size: 0.72rem;
-      color: var(--text-tertiary, rgba(255, 255, 255, 0.55));
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.85);
+      text-decoration: underline;
+      text-underline-offset: 3px;
     }
     .footer-cta {
       display: inline-flex;
@@ -707,9 +690,7 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
       .footer-brand { max-width: none; margin-bottom: 4px; }
       .footer-logo { margin-bottom: 16px; }
       .footer-tagline { margin-bottom: 16px; max-width: 100%; }
-      .footer-stats { gap: 32px; margin-bottom: 16px; }
-      .footer-stat-value { font-size: 1.75rem; }
-      .footer-stat-label { font-size: 0.7rem; }
+      .footer-results-link { margin-bottom: 16px; }
       .footer-cta {
         height: 42px;
         max-width: 230px;

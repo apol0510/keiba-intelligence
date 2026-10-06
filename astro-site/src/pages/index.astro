@@ -8,18 +8,20 @@
  *   - 訴求を「無料でどこまで見えるか」に変えた（改修の最重要目的）。
  *   - 的中率・回収率は **archive の実測値をビルド時に集計**して表示する。
  *     旧実装の「的中率71%・回収率186%・会員数1,000+」は出典が確認できない固定値だったため撤去した。
+ *   - 🔴 2026-10-06: 集計は `lib/stats/performance.js`（単一源）。基準は「表示した買い目の全組を各100円」。
+ *     旧 5 点基準（archive の betAmount / returnRate）は使わない。正本 docs/PERFORMANCE_STATS.md。
  *   - 価格をトップに書かない（金額の正本は Stripe。docs/RENEWAL_2026_08.md §6.1）。
  */
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 import archiveNankan from '../data/archiveResults.json';
 import archiveJra from '../data/archiveResultsJra.json';
-import { combinedTotals, formatPercent, formatCount } from '../lib/stats/archiveTotals.js';
+import { combinedSummary, formatPercent, formatCount } from '../lib/stats/performance.js';
 
 export const prerender = true;
 
 // ⚠️ archive の蓄積に依存する時点値。恒久的な保証値ではない。
-const totals = combinedTotals(archiveNankan, archiveJra);
+const totals = combinedSummary(archiveNankan, archiveJra);
 ---
 
 <BaseLayout
@@ -84,7 +86,8 @@ const totals = combinedTotals(archiveNankan, archiveJra);
           </div>
         </div>
         <p class="stats-note">
-          公開しているアーカイブ全件から算出した実測値です（払戻÷投資×100）。高配当を除外していません。
+          公開した全レースについて、買い目に表示した組み合わせを<b>すべて各100円で購入した場合</b>の実測値です（回収率 = 払戻 ÷ 投資 × 100）。高配当を除外していません。
+          <span class="stats-note-split">南関 的中率 {formatPercent(totals.nankan.hitRate)}・回収率 {formatPercent(totals.nankan.returnRate)} ／ 中央 的中率 {formatPercent(totals.jra.hitRate)}・回収率 {formatPercent(totals.jra.returnRate)}</span>
           <a href="/archive">内訳を見る →</a>
         </p>
       </div>
@@ -658,6 +661,11 @@ const totals = combinedTotals(archiveNankan, archiveJra);
       color: var(--text-secondary);
       text-align: center;
       line-height: 1.7;
+    }
+
+    .stats-note-split {
+      display: block;
+      font-weight: 600;
     }
 
     .tier-cards {

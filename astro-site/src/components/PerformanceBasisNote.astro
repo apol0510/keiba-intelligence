@@ -1,0 +1,25 @@
+---
+/**
+ * 成績（的中率・回収率）を載せるページ共通の算定基準の注記。
+ * 文言の単一源は `lib/stats/performance.js` の `BASIS_NOTE_LINES`（正本 docs/PERFORMANCE_STATS.md）。
+ */
+import { BASIS_NOTE_LINES } from '../lib/stats/performance.js';
+---
+
+<div class="performance-basis-note">
+  {BASIS_NOTE_LINES.map((line) => <p>{line}</p>)}
+</div>
+
+<style>
+  .performance-basis-note {
+    margin-top: 2rem;
+    padding: 1rem 1.25rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+  }
+  .performance-basis-note p {
+    font-size: 0.75rem;
+    color: var(--text-secondary, rgba(100, 116, 139, 0.9));
+    line-height: 1.7;
+    margin: 0;
+  }
+</style>
