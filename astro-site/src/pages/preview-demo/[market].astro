@@ -1,0 +1,42 @@
+---
+/**
+ * /preview-demo/{jra,nankan} — Deploy Preview 専用のデモ Premium 画面（本番には生成しない）
+ *
+ * 正本: lib/preview/demoPages.js。実際の紙面（RaceDayBoard → RaceEntryTable の買い目パネル）をそのまま使う。
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import RaceDayBoard from '../../components/newspaper/RaceDayBoard.astro';
+import TierRibbon from '../../components/newspaper/TierRibbon.astro';
+import { loadJraRaceDayByDate, loadNankanRaceDayBySlug } from '../../lib/prediction/loadRaceDay.js';
+import { DEMO_DAYS, DEMO_VIEW, demoPaths } from '../../lib/preview/demoPages.js';
+
+export const prerender = true;
+export function getStaticPaths() {
+  return demoPaths();
+}
+
+const { market } = Astro.params as { market: 'jra' | 'nankan' };
+const cfg = (DEMO_DAYS as any)[market];
+const day = market === 'jra' ? loadJraRaceDayByDate(cfg.date, process.cwd()) : loadNankanRaceDayBySlug(cfg.slug, process.cwd());
+const other = market === 'jra' ? 'nankan' : 'jra';
+---
+
+<BaseLayout title={`デモ Premium 画面（${cfg.label}）`} description="Deploy Preview 専用のデモ画面です。">
+  <div class="container prediction-page">
+    <div class="demo-banner" role="note">
+      <p><b>Deploy Preview 専用のデモ画面</b>（本番には存在しません）。結果が確定した過去の開催日 {cfg.label} を、Premium 会員と同じ表示で出しています。</p>
+      <p>
+        各レースの買い目パネルで「AI選定 ○組」「AI上位表示」と「すべてのAI選定を見る」を確認できます。
+        <a href={`/preview-demo/${other}`}>{(DEMO_DAYS as any)[other].label}のデモへ</a>
+      </p>
+    </div>
+    <TierRibbon view={DEMO_VIEW} />
+    <RaceDayBoard day={day} view={DEMO_VIEW} category={market} />
+  </div>
+</BaseLayout>
+
+<style>
+  .demo-banner { margin: 1rem 0; padding: 0.9rem 1.1rem; border-radius: 10px; border: 2px dashed #d97706; background: #fffbeb; color: #78350f; font-size: 0.9rem; line-height: 1.6; }
+  .demo-banner p { margin: 0.2rem 0; }
+  .demo-banner a { color: #b45309; font-weight: 700; }
+</style>

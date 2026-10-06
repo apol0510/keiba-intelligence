@@ -7,8 +7,8 @@
  *   - 🔴 「抑え」は表示上の参考馬で、組み合わせ（＝判定・集計の対象）に入れない（表示パネルと同じ）。
  *   - 🔴 凍結は**最初に見た版が勝つ**（公開後に予想ファイルが書き換わっても、凍結済みの組み合わせは変えない）。
  *
- * 顧客向けの「表示買い目基準回収率」は `PUBLIC_FROM` 以降の AI全選定 で出す（data/stats/displayedSummary.json・2026-10-06 MK）。
- * AI上位表示（top）の成績は内部集計（将来、別々に評価するため）。
+ * 🔴 回収率は**内部計測のみ**（顧客画面に出さない・2026-10-06 MK）。data/stats/displayedSummary.json も内部 KPI。
+ * 顧客画面が使うのは的中・AI選定の組数・判定だけ。AI上位表示（top）の成績も内部集計（将来、別々に評価するため）。
  */
 
 import { createHash } from 'node:crypto';
@@ -17,8 +17,8 @@ import { linesOf, tiersForVenue } from '../../utils/displayedSelection.js';
 export const SCHEMA = 'ki_displayed_bets.v1';
 export const UNIT_YEN = 100;
 /**
- * 顧客向けに「表示買い目基準」の成績を出す起点。買い目パネル（展開した組の表示）の公開日（2026-08-30・63345ab6/4128c731）。
- * それより前は組み合わせとして表示していないため、内部集計だけに使う。
+ * 内部 KPI（displayedSummary）の集計起点。買い目パネル（展開した組の表示）の公開日（2026-08-30・63345ab6/4128c731）。
+ * それより前は組み合わせとして表示していないため、全期間の日別（displayedReturn）にだけ含める。
  */
 export const PUBLIC_FROM = '2026-08-30';
 

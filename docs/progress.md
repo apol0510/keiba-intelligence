@@ -41,6 +41,17 @@
 - **test**: `importPredictionJra.test.mjs` 17〜21（9/21 再現・全会場除外・date 不一致・統合ファイル経路・理由表）。
 - ⚠️ 既存の失敗（本件と無関係・origin/main でも再現）: test 16 `fetchJraResultDay: 429 → retry → 200`。別 task。
 
+### 2026-10-06 回収率は内部計測に戻す・結果画面は的中率中心・Deploy Preview 専用デモ Premium 画面（MK 決定・#150）
+
+- 🔴 **MK 決定: 顧客向けにマイナス収支となる回収率を主要 KPI として公開しない。** 表示買い目基準の回収率は中央・南関・日別すべて**内部計測のみ**。旧 186.4% 等も復活させない。
+  → トップ・予想ページの成績ブロック（DisplayedBasisStats）を削除。結果ページ（日）の回収率カードと注記を削除。
+  → guard（oldBasisCopy）: 回収率はどの基準でも顧客画面に出さない・`displayedSummary` を顧客画面から読まない。
+  → `displayedReturn.json` / `displayedSummary.json`（`visibility: internal_only`）は内部 KPI として生成を継続。
+- 結果画面（日）: **的中率・的中レース数**が中心。AI選定は日合計を出さず「AI選定：平均○組/レース」。各レースの「AI選定○組」「的中（AI上位表示 / AI全選定）」は維持。
+- **デモ Premium 画面** `/preview-demo/jra`・`/preview-demo/nankan`（`lib/preview/demoPages.js`）:
+  build 時に `CONTEXT === 'deploy-preview'` のときだけ静的生成（production / branch-deploy / ローカル build では 0 ページ＝404・ローカルは `KI_PREVIEW_DEMO=1`）。
+  認証・Cookie・entitlement に触れない。結果確定済みの過去日（2026-10-04 中央 / 大井）だけ。実際の RaceDayBoard の 2 段階買い目 UI をそのまま使う。test: `demoPages.test.mjs`（test:results-copy）。
+
 ### 2026-10-06 表示買い目基準の回収率を再表示・結果ページの南関/中央 URL 衝突を修正（MK 指示・#150）
 
 - **原因（10/4 で「AI選定○組」が見えない）**: 南関と中央が同じ日にあると `/results/Y/M/D` が重なり、中央だけが生成されていた（南関の日別ページに辿り着けない日が 8 日: 2026-02-28・06-28・07-04・08-02・08-15・08-16・09-22・10-04）。

@@ -7,7 +7,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { hitTier } from '../../../../utils/displayedSelection.js';
 import displayedReturn from '../../../../data/stats/displayedReturn.json';
-import { PUBLIC_FROM } from '../../../../lib/stats/displayedBets.js';
 
 export const prerender = true;
 
@@ -84,14 +83,16 @@ for (const { entry: e, type: market } of entries) {
     }
   }
 }
-/** 日・市場ごとの表示買い目基準の成績（displayedReturn の日別を会場合算）。回収率は PUBLIC_FROM 以降だけ出す。 */
+/**
+ * 日・市場ごとの的中と AI選定の組数（displayedReturn の日別を会場合算）。
+ * 🔴 回収率は顧客画面に出さない（内部計測のみ・2026-10-06 MK）。ここでも読まない。
+ */
 function dayStats(market: string, date: string) {
   const ds = ((displayedReturn as any).days || []).filter((d: any) => d.market === market && d.date === date && d.races > 0);
   if (!ds.length) return null;
   const sum = (k: string) => ds.reduce((a: number, d: any) => a + d[k], 0);
-  const races = sum('races'); const hits = sum('hits'); const stake = sum('stake'); const payout = sum('payout'); const combos = sum('combos');
-  return { races, hits, combos, hitRate: Math.round((hits / races) * 1000) / 10,
-    returnRate: date >= PUBLIC_FROM && stake > 0 ? Math.round((payout / stake) * 1000) / 10 : null };
+  const races = sum('races'); const hits = sum('hits'); const combos = sum('combos');
+  return { races, hits, hitRate: Math.round((hits / races) * 1000) / 10, avgCombos: Math.round((combos / races) * 10) / 10 };
 }
 
 for (const { entry, type } of entries) try {
@@ -237,28 +238,18 @@ const jsonLd = {
       <section class="market-block" id={type}>
         {entries.length > 1 && <h2 class="market-title">{marketLabel(type)}（{entry.venue}）</h2>}
 
-        <!-- 統計サマリー（🔴 公開時に凍結した表示買い目＝AI全選定が基準。旧 5 点基準は撤去済み） -->
+        {/* 統計サマリー（的中率・的中レース数が中心。🔴 回収率は出さない＝内部計測のみ・2026-10-06 MK） */}
         <section class="stats-summary">
           <div class="stat-card">
             <div class="stat-label">的中率</div>
             <div class="stat-value">{st ? st.hitRate : entry.hitRate}%</div>
-            <div class="stat-detail">{st ? `${st.hits}/${st.races}` : `${entry.hitRaces}/${entry.totalRaces}`}レース</div>
           </div>
-          {st && (
-            <div class="stat-card">
-              <div class="stat-label">AI選定</div>
-              <div class="stat-value">{st.combos}組</div>
-              <div class="stat-detail">1レース平均 {Math.round((st.combos / st.races) * 10) / 10}組</div>
-            </div>
-          )}
-          {st && st.returnRate != null && (
-            <div class="stat-card">
-              <div class="stat-label">表示買い目基準 回収率</div>
-              <div class="stat-value">{st.returnRate}%</div>
-              <div class="stat-detail">AI全選定を各100円</div>
-            </div>
-          )}
+          <div class="stat-card">
+            <div class="stat-label">的中レース数</div>
+            <div class="stat-value">{st ? st.hits : entry.hitRaces}<span class="stat-unit">/{st ? st.races : entry.totalRaces}レース</span></div>
+          </div>
         </section>
+        {st && <p class="stats-sub">AI選定：平均{st.avgCombos}組/レース</p>}
 
         <!-- レース別結果 -->
         <section class="races-section">
@@ -396,7 +387,6 @@ const jsonLd = {
     <!-- 注意事項 -->
     <section class="results-notice">
       <p>※ 的中は、そのレースでAI全選定（会員に表示した馬単の組み合わせのすべて）に、確定した馬単の組み合わせが含まれていた場合に数えています。</p>
-      <p>※ 表示買い目基準の回収率は、公開時に記録したAI全選定の各組を100円ずつ購入したと仮定した払戻÷購入額です（{PUBLIC_FROM.replace(/-/g, '/')} 以降の日に表示）。着順と払戻の記録が食い違うレース・結果未確定のレースは含めません。</p>
       <p>※ 過去の実績は将来の結果を保証するものではありません。馬券購入は自己責任でお願いいたします。</p>
     </section>
   </main>
@@ -456,6 +446,8 @@ const jsonLd = {
 .market-block { scroll-margin-top: 160px; }
 .market-block + .market-block { margin-top: 2.5rem; }
 .market-title { font-size: 1.4rem; margin: 1.5rem 0 1rem; }
+.stat-unit { font-size: 0.5em; font-weight: 600; margin-left: 0.15em; opacity: 0.75; }
+.stats-sub { margin: -2rem 0 2.5rem; text-align: center; font-size: 0.9rem; opacity: 0.8; }
 .stats-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

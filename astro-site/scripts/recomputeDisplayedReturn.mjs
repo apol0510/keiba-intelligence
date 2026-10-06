@@ -5,7 +5,8 @@
  * 入力: src/data/displayedBets/**（凍結）× src/data/archiveResults*.json（確定した馬単の組と 100 円払戻）
  * 出力:
  *   - src/data/stats/displayedReturn.json（内部・全期間・日別・AI全選定と AI上位表示）
- *   - src/data/stats/displayedSummary.json（顧客向け表示の正本・PUBLIC_FROM 以降の AI全選定・市場別）
+ *   - src/data/stats/displayedSummary.json（内部 KPI・PUBLIC_FROM 以降の AI全選定・市場別）
+ * 🔴 回収率は内部計測のみ。顧客画面には出さない（2026-10-06 MK・oldBasisCopy.guard で固定）。
  * 🔴 出力は入力だけで決まる（実行時刻を書かない）。build の前に毎回走らせる。
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
@@ -26,10 +27,10 @@ const { results, conflicts } = resultsFromArchive([['nankan', read('archiveResul
 const full = displayedReturn(frozen, results);
 const pub = displayedReturn(frozen, results, { from: PUBLIC_FROM });
 const out = { schema: 'ki_displayed_return.v2', unitYen: UNIT_YEN,
-  note: '凍結した表示組み合わせを各 100 円で買った場合（AI全選定 / AI上位表示）。顧客向けは displayedSummary.json', dataConflicts: conflicts, ...full };
+  note: '凍結した表示組み合わせを各 100 円で買った場合（AI全選定 / AI上位表示）。内部計測のみ・顧客画面に出さない', dataConflicts: conflicts, ...full };
 const pick = (t) => ({ from: t.from, to: t.to, races: t.races, hits: t.hits, hitRate: t.hitRate, avgCombos: t.avgCombos,
   stake: t.stake, payout: t.payout, returnRate: t.returnRate });
-const summary = { schema: 'ki_displayed_summary.v1', basis: 'ai_all_selection', unitYen: UNIT_YEN, publicFrom: PUBLIC_FROM,
+const summary = { schema: 'ki_displayed_summary.v1', basis: 'ai_all_selection', visibility: 'internal_only', unitYen: UNIT_YEN, publicFrom: PUBLIC_FROM,
   nankan: pick(pub.totals.nankan), jra: pick(pub.totals.jra) };
 mkdirSync(join(ROOT, 'src', 'data', 'stats'), { recursive: true });
 writeFileSync(join(ROOT, 'src', 'data', 'stats', 'displayedReturn.json'), JSON.stringify(out, null, 1) + '\n');

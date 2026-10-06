@@ -50,7 +50,7 @@
     "test:mail-guard": "node --test src/lib/mail/previewMailGuard.test.mjs",
     "test:unsubscribe": "node --test src/lib/unsubscribe/unsubscribe.test.mjs",
     "test:refresh-session": "node --experimental-test-module-mocks --test src/lib/auth/refreshSession.e2e.test.mjs",
-    "test:results-copy": "node --test src/lib/stats/oldBasisCopy.guard.test.mjs"
+    "test:results-copy": "node --test src/lib/stats/oldBasisCopy.guard.test.mjs src/lib/preview/demoPages.test.mjs"
   },
   "dependencies": {
     "@astrojs/netlify": "^6.5.8",

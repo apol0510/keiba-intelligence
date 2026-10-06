@@ -17,7 +17,6 @@
  *     light+  … ＋ 馬単買い目
  */
 
-import DisplayedBasisStats from '../../../components/stats/DisplayedBasisStats.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import RaceDayBoard from '../../../components/newspaper/RaceDayBoard.astro';
 import TierRibbon from '../../../components/newspaper/TierRibbon.astro';
@@ -46,7 +45,6 @@ const description = '南関東4競馬場（大井・川崎・船橋・浦和）�
 <BaseLayout title={title} description={description}>
   <div class="container prediction-page">
     <TierRibbon view={view} />
-    <DisplayedBasisStats markets={['nankan']} compact />
     <RaceDayBoard day={day} view={view} category="nankan" />
 
     <section class="pp-foot">
