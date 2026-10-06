@@ -18,6 +18,7 @@
 import Airtable from 'airtable';
 import { planTypeToTier, applyExpiry, TIER } from '../../src/lib/auth/tiers.js';
 import { signSession, serializeSessionCookie, SESSION_TTL_SECONDS } from '../../src/lib/auth/session.js';
+import { readRevocation, tierForNewSession } from '../../src/lib/auth/revocation.js';
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -115,7 +116,10 @@ export async function handler(event) {
 
     // 4. tier を決めて署名付きセッションを発行
     const nowMs = Date.now();
-    const tier = applyExpiry(planTypeToTier(currentPlanType), planExpiresAt, nowMs);
+    // 🔴 退会直後で webhook の反映前（Airtable がまだ premium）なら有料を出さない
+    //    （docs/WITHDRAWAL_2026_10.md §4）
+    const { revocation } = await readRevocation(customer.Email, { event });
+    const tier = tierForNewSession(applyExpiry(planTypeToTier(currentPlanType), planExpiresAt, nowMs), revocation);
 
     const signed = signSession({
       email: customer.Email,

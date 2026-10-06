@@ -17,6 +17,7 @@
 > | 予想画面の表示仕様 | `docs/INTELLIGENCE_DISPLAY_SPEC.md` / `docs/ui-cross-plan-regression-policy.md` | 参照のみ |
 > | 2026-08 大改修（無料開放 / 新聞レイアウト / 文章化 / Stripe / KMA / デザイン） | **`docs/RENEWAL_2026_08.md`** | 本書の下位正本。改修範囲についてのみ正本 |
 > | 会員継続制度（継続価格ロック / KIリワード / 会員ランク / プレゼント） | **`docs/MEMBERSHIP_REWARDS.md`** | 本書の下位正本。制度についてのみ正本。移行案は `docs/MEMBERSHIP_DATA_MIGRATION.md` |
+> | 退会・解約（Stripe 月額。即時退会のみ・予約停止なし・ポータル解約なし） | **`docs/WITHDRAWAL_2026_10.md`** | 本書の下位正本（2026-10-06 MK 確定） |
 > | 初期設計（2026-01-09 時点） | `DESIGN.md` | **歴史的資料**。決済・自動化スタック等は現状と乖離あり。現行仕様の根拠に使わない |
 >
 > 本書は上記ドメイン文書を **置き換えない**。ドメインの詳細は各正本を読むこと。
@@ -82,8 +83,11 @@
   （`docs/MEMBERSHIP_REWARDS.md` §1）。
 - **リワードの換金・出金・譲渡**: 実装しない。KIリワードは現金・預金ではない（同 §3.3 / §8 L-8）。
 - **決済処理そのもの**: カード情報の保持・与信・請求の実行・請求額の決定は **Stripe が行う**。
-  本リポジトリが持つのは Checkout の開始 / webhook の受信 / Customer Portal への誘導 / 価格の表示のみ
-  （`netlify/functions/stripe-*.js`）。
+  本リポジトリが持つのは Checkout の開始 / webhook の受信 / Customer Portal への誘導（カード変更・請求履歴のみ）/
+  マイページからの退会（即時終了）/ 価格の表示のみ（`netlify/functions/stripe-*.js`）。
+  🔴 **退会は即時のみ**（2026-10-06 MK 確定）: 期間末解約・予約停止・予約取り消し・ポータルからの解約は提供しない。
+  退会確定で Stripe 契約を即時終了し、残り期間があっても有料権限を即時に止める（全端末）。既存の予約停止契約は変更しない。
+  正本は `docs/WITHDRAWAL_2026_10.md`。
   🔴 **請求額の正本は Stripe の Price**。`src/lib/billing/plans.js` の金額は **表示用**であり、
   Checkout へは Price ID だけを送る（`unit_amount` をコードから送らない）。
   正本は `docs/RENEWAL_2026_08.md` §6。

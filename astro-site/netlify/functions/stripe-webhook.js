@@ -39,6 +39,7 @@ import { notifyKma, buildEventId } from '../../src/lib/kma/client.js';
 import { resolveMembershipStore, isWriteEnabled, STORE_RESULT } from '../../src/lib/membership/store.js';
 import { contractPriceFromCheckoutSession } from '../../src/lib/membership/priceLock.js';
 import { buildPaidPeriodEntry, PERIOD_MONTHS } from '../../src/lib/membership/rewards.js';
+import { updateRevocation } from '../../src/lib/auth/revocation.js';
 import { CUSTOMER_FIELDS, toAirtableDate } from '../../src/lib/membership/airtableStore.js';
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
@@ -703,6 +704,22 @@ function identityFromSubscription(sub) {
   return { plan, email };
 }
 
+/**
+ * 退会記録（docs/WITHDRAWAL_2026_10.md §4）。
+ *   - 契約終了: 発行済みの有料セッションを全端末で無効にする（confirmed=true）
+ *   - 新規契約: 退会直後の「有料を発行しない」状態を解く（Airtable が正に戻る）
+ * 🔴 書けなければ throw する（呼び出し側の catch で 500 → Stripe の再送で書き直す）。
+ *    認可（Airtable）は先に反映済みで、再送時は同じ値で冪等に上書きされる。
+ */
+async function recordRevocation(event, email, kind, subscriptionId = null) {
+  try {
+    await updateRevocation(email, { kind, nowMs: Date.now(), subscriptionId }, { event });
+  } catch (err) {
+    console.error('❌ stripe-webhook: revocation not recorded:', kind, err?.name || 'error');
+    throw err;
+  }
+}
+
 export async function handler(event) {
   const headers = { 'Cache-Control': 'no-store' };
 
@@ -763,6 +780,10 @@ export async function handler(event) {
           accessEnabled: true,
         });
         console.log('✅ stripe-webhook: plan granted:', plan.id);
+        // 🔴 新規契約側は失敗しても止めない（決済の付与を巻き込まない）。
+        //    記録が残るのは退会直後〜webhook 反映前だけで、その間も Blobs が読めなければ
+        //    発行側は Airtable の tier をそのまま使うため、再契約者を free に閉じ込めない。
+        await recordRevocation(event, email, 'started').catch(() => {});
 
         // 🔴 ここから下は会員継続制度。既定では実行されない（フラグ off）
         track(await recordContractPrice(email, session));
@@ -803,6 +824,7 @@ export async function handler(event) {
             accessEnabled: false,
           });
           console.log('✅ stripe-webhook: subscription ended, downgraded to free');
+          await recordRevocation(event, email, 'ended', sub.id);
           track(await recordCancellation(email, stripeEventTimeIso(stripeEvent)));
         } else {
           console.log('ℹ️ stripe-webhook: subscription status ignored:', sub.status);
@@ -823,6 +845,7 @@ export async function handler(event) {
           accessEnabled: false,
         });
         console.log('✅ stripe-webhook: downgraded to free');
+        await recordRevocation(event, email, 'ended', sub.id);
         track(await recordCancellation(email, stripeEventTimeIso(stripeEvent)));
 
         await notifyKma({

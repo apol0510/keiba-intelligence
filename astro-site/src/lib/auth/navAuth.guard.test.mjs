@@ -37,7 +37,7 @@ describe('ナビのログイン表示', () => {
     assert.match(layout, /action="\/\.netlify\/functions\/logout"[\s\S]{0,80}data-auth-in/);
     // サーバー描画でも初期状態を合わせる
     assert.match(layout, /data-auth=\{navAuthed \? 'in' : 'out'\}/);
-    assert.match(layout, /entitlementFromAstro\(Astro\)/);
+    assert.match(layout, /await checkedEntitlementFromAstro\(Astro\)/);
   });
 
   test('🔴 ログイン中に「無料会員登録」を出し続けない', () => {

@@ -34,6 +34,7 @@ import assert from 'node:assert/strict';
 import { TIER } from './tiers.js';
 import { signSession, verifySession, SESSION_COOKIE_NAME } from './session.js';
 import { resolveEntitlement, viewFlags } from './entitlement.js';
+import { revocationKey } from './revocation.js';
 
 const SESSION_SECRET = 'session-secret-for-test-only';
 /** 🔴 実在しないドメイン。本番・UAT のアドレスを使わない。 */
@@ -53,6 +54,9 @@ const db = {
 };
 
 let handler;
+
+/** 退会記録（Netlify Blobs）の差し替え。docs/WITHDRAWAL_2026_10.md §4 */
+const blobs = { store: new Map() };
 
 before(async () => {
   process.env.AIRTABLE_API_KEY = 'key_test';
@@ -79,11 +83,21 @@ before(async () => {
     },
   });
 
+  mock.module('@netlify/blobs', {
+    namedExports: {
+      connectLambda() {},
+      getStore() {
+        return { get: async (k) => blobs.store.get(k) ?? null, set: async (k, v) => { blobs.store.set(k, v); } };
+      },
+    },
+  });
+
   ({ handler } = await import('../../../netlify/functions/refresh-session.js'));
 });
 
 beforeEach(() => {
   db.reset();
+  blobs.store = new Map();
   process.env.SESSION_SIGNING_SECRET = SESSION_SECRET;
 });
 
@@ -232,5 +246,38 @@ describe('🔴 決済反映の最後の 1 手（refresh-session の実ハンド�
   test('POST 以外は受けない', async () => {
     const res = await handler({ httpMethod: 'GET', headers: { host: HOST }, body: '' });
     assert.equal(res.statusCode, 405);
+  });
+});
+
+describe('🔴 退会直後（webhook 反映前）に有料を出し直さない（docs/WITHDRAWAL_2026_10.md §4）', () => {
+  test('🔴 退会記録が未反映なら、Airtable がまだ premium でも free の Cookie を premium にしない', async () => {
+    const nowMs = Date.now();
+    db.rows[0].fields.PlanType = 'premium'; // webhook がまだ free へ戻していない
+    blobs.store.set(revocationKey(MEMBER), JSON.stringify({ revokedAtMs: nowMs - 1000, confirmed: false, subscriptionId: 'sub_x' }));
+    const { header } = loggedInCookie(TIER.FREE, { nowMs });
+    const res = await callRefresh(header);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.json.changed, false);
+    assert.equal(res.headers['Set-Cookie'], undefined);
+  });
+
+  test('🔴 退会前の premium Cookie（別端末）は、webhook 反映後の refresh で free へ落ちる', async () => {
+    const nowMs = Date.now();
+    db.rows[0].fields.PlanType = 'free-registered';
+    blobs.store.set(revocationKey(MEMBER), JSON.stringify({ revokedAtMs: nowMs - 1000, confirmed: true, subscriptionId: 'sub_x' }));
+    const { header } = loggedInCookie(TIER.PREMIUM, { nowMs: nowMs - 60_000 });
+    const res = await callRefresh(header);
+    assert.equal(res.json.tier, TIER.FREE);
+    assert.equal(res.json.changed, true);
+  });
+
+  test('再契約: 記録が反映済みで Airtable が premium なら、従来どおり premium を出す', async () => {
+    const nowMs = Date.now();
+    db.rows[0].fields.PlanType = 'premium';
+    blobs.store.set(revocationKey(MEMBER), JSON.stringify({ revokedAtMs: nowMs - DAY, confirmed: true, subscriptionId: 'sub_old' }));
+    const { header } = loggedInCookie(TIER.FREE, { nowMs });
+    const res = await callRefresh(header);
+    assert.equal(res.json.tier, TIER.PREMIUM);
+    assert.equal(res.json.changed, true);
   });
 });

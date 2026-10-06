@@ -102,7 +102,7 @@ invoice.payment_failed
 
 ### 3. Customer Portal
 
-Test Mode の 設定 → 請求 → カスタマーポータルを有効化。解約とカード変更を許可する。
+Test Mode の 設定 → 請求 → カスタマーポータルを有効化。🔴 **解約は許可しない**（2026-10-06〜。KI はコードで解約不可の構成を使う。既定構成でも解約を無効にする。`docs/WITHDRAWAL_2026_10.md` §5）。カード変更・請求履歴は許可する。
 
 ### 4. 環境変数（🔴 **Branch deploys** スコープのみ）
 
@@ -165,7 +165,7 @@ E2E 後に **Deploy Preview スコープの env とテスト行を削除**する
 
 | # | 操作 | 期待 |
 |---|---|---|
-| 13 | `/mypage` からポータル → 解約 | `customer.subscription.updated(canceled)` が 200 |
+| 13 | `/mypage`「アカウント管理」→「退会する」→ 確認画面 →「退会を確定する」（2026-10-06〜。ポータルでは解約できない。`docs/WITHDRAWAL_2026_10.md`） | 即時に `customer.subscription.deleted` が 200・その場で free 表示 |
 | 14 | 予想ページを再読込 | 買い目が閉じる／**印は見える**（無料会員へ戻る）|
 | 15 | `Customers` のテスト会員 | `CancelledAt` に解約日が入る |
 | 16 | `/mypage` | ポイントは残る（解約後 90 日は保持）|

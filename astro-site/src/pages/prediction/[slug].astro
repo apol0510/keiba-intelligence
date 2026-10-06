@@ -18,13 +18,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import RaceDayBoard from '../../components/newspaper/RaceDayBoard.astro';
 import TierRibbon from '../../components/newspaper/TierRibbon.astro';
 import { loadNankanRaceDayBySlug } from '../../lib/prediction/loadRaceDay.js';
-import { entitlementFromAstro, viewFlags, paidPageRedirect } from '../../lib/auth/entitlement.js';
+import { checkedEntitlementFromAstro, viewFlags, paidPageRedirect } from '../../lib/auth/entitlement.js';
 
 export const prerender = false;
 
 const { slug } = Astro.params;
 
-const entitlement = entitlementFromAstro(Astro);
+const entitlement = await checkedEntitlementFromAstro(Astro);
 const view = viewFlags(entitlement);
 
 // 🔴 有料ページは買い目を出せない tier を入れない（fail-closed）。

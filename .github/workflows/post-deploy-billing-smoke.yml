@@ -1,6 +1,6 @@
 # 課金・マイページまわりの変更が main に入ったあと、本番を外から確かめる（read-only）
 #
-# 正本: docs/RETENTION_2026_10.md §2.2
+# 正本: docs/WITHDRAWAL_2026_10.md §8（退会・即時のみ）/ docs/RETENTION_2026_10.md §2.2
 #
 # 🔴 本番へ送るのは GET と「未ログインの POST」だけ。Cookie・秘密値は使わない（secrets 不要）。
 #    課金・会員状態には一切触れない（未ログインは関数の入口で 401 になる）。
@@ -17,6 +17,9 @@ on:
       - 'astro-site/netlify/functions/stripe-*.js'
       - 'astro-site/src/lib/billing/**'
       - 'astro-site/src/pages/mypage.astro'
+      - 'astro-site/src/pages/pricing.astro'
+      - 'astro-site/src/pages/terms.astro'
+      - 'astro-site/src/lib/auth/revocation.js'
       - '.github/workflows/post-deploy-billing-smoke.yml'
   workflow_dispatch:
 
@@ -37,10 +40,12 @@ jobs:
       - name: Wait for the production deploy
         run: |
           F="$BASE/.netlify/functions/stripe-subscription"
+          # 🔴 新しい版の目印: 廃止した resume は「未ログインでも 400 invalid_action」になる
+          #    （旧版は 401 login_required を返すので、反映前と区別できる）
           for i in $(seq 1 30); do
-            code=$(curl -s -m 20 -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"action":"status"}' "$F" || true)
+            code=$(curl -s -m 20 -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"action":"resume"}' "$F" || true)
             echo "attempt $i: $code"
-            [ "$code" = "401" ] && exit 0
+            [ "$code" = "400" ] && exit 0
             sleep 30
           done
           echo "::error::stripe-subscription が 15 分以内に本番へ反映されなかった"
@@ -65,9 +70,11 @@ jobs:
           chk "subscription status（未ログイン）" 401 login_required -X POST -H "$J" -d '{"action":"status"}' "$F"
           chk "subscription GET"                 405 ""             "$F"
           chk "subscription 不明な action"        400 invalid_action -X POST -H "$J" -d '{"action":"cancel"}' "$F"
-          chk "subscription resume（未ログイン）" 401 login_required -X POST -H "$J" -d '{"action":"resume"}' "$F"
+          chk "resume は廃止（予約取り消しなし）"  400 invalid_action -X POST -H "$J" -d '{"action":"resume"}' "$F"
+          chk "withdraw（未ログイン）"            401 login_required -X POST -H "$J" -d '{"action":"withdraw","confirm":true}' "$F"
           chk "portal（未ログイン）"              401 login_required -X POST "$BASE/.netlify/functions/stripe-portal"
           chk "/mypage"                           200 ""             "$BASE/mypage"
           chk "/"                                 200 ""             "$BASE/"
-          chk "/pricing"                          200 ""             "$BASE/pricing"
+          chk "/pricing"                          200 "退会はマイページから" "$BASE/pricing"
+          chk "/terms（退会は即時）"              200 "残り期間の有料機能はご利用いただけません" "$BASE/terms"
           exit $fail

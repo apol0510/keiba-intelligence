@@ -13,7 +13,7 @@
  *    この API の応答を書き換えても有料コンテンツは出てこない。
  */
 
-import { resolveEntitlement } from '../../src/lib/auth/entitlement.js';
+import { resolveEntitlement, applyRevocation } from '../../src/lib/auth/entitlement.js';
 
 const ALLOWED_ORIGINS = [
   'https://keiba-intelligence.jp',
@@ -43,11 +43,12 @@ export async function handler(event) {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
   }
 
-  const ent = resolveEntitlement({
+  // 🔴 退会後は残り期間があっても有料を返さない（docs/WITHDRAWAL_2026_10.md §4）
+  const ent = await applyRevocation(resolveEntitlement({
     cookieHeader: event.headers.cookie || null,
     env: process.env,
     nowMs: Date.now(),
-  });
+  }), { event });
 
   if (!ent.authenticated) {
     // 🔴 失敗理由は返さない（内部区分を外部へ出さない）

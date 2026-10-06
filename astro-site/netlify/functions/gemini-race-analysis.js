@@ -91,12 +91,13 @@ const RESULT_PROMPT = `あなたは競馬AI予想の結果振り返りライタ�
  */
 async function isPaidViewer(event) {
   try {
-    const { resolveEntitlement } = await import('../../src/lib/auth/entitlement.js');
-    const ent = resolveEntitlement({
+    const { resolveEntitlement, applyRevocation } = await import('../../src/lib/auth/entitlement.js');
+    // 🔴 退会後は残り期間があっても有料本文を出さない（docs/WITHDRAWAL_2026_10.md §4）
+    const ent = await applyRevocation(resolveEntitlement({
       cookieHeader: (event.headers && (event.headers.cookie || event.headers.Cookie)) || null,
       env: process.env,
       nowMs: Date.now(),
-    });
+    }), { event });
     return ent.showBetting === true;
   } catch (e) {
     console.warn('⚠️ gemini-race-analysis: entitlement unavailable — free preview');

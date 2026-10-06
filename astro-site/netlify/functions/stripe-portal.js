@@ -1,7 +1,12 @@
 /**
- * stripe-portal — Stripe カスタマーポータル（解約・カード変更）へのリンクを作る
+ * stripe-portal — Stripe カスタマーポータル（カード変更・請求履歴）へのリンクを作る
  *
- * 正本: docs/RENEWAL_2026_08.md §6.2
+ * 正本: docs/RENEWAL_2026_08.md §6.2 / docs/WITHDRAWAL_2026_10.md §5
+ *
+ * 🔴 ポータルからは **解約できない**（2026-10-06 MK 確定）。退会はマイページの「退会する」だけ。
+ *    セッションは必ず KI 管理の構成（`portalConfig.js`。解約・プラン変更が無効）で作る。
+ *    構成を用意・確認できなければ **ポータルを開かない**（502。fail-closed）。
+ *    アカウント既定の構成（解約が有効かもしれない）で開くことはしない。
  *
  * 🔴 安全契約:
  *   - POST のみ・**ログイン必須**（セッション Cookie の email だけを使う）
@@ -14,6 +19,7 @@ import Stripe from 'stripe';
 import { hasStripeSecret, STRIPE_ENV } from '../../src/lib/billing/plans.js';
 import { resolveEntitlement } from '../../src/lib/auth/entitlement.js';
 import { resolveSiteOrigin, normalizeSiteOrigin } from '../../src/lib/http/siteOrigin.js';
+import { ensurePortalConfiguration } from '../../src/lib/billing/portalConfig.js';
 
 const ALLOWED_ORIGINS = [
   'https://keiba-intelligence.jp',
@@ -67,9 +73,12 @@ export async function handler(event) {
     }
 
     const returnUrl = process.env[STRIPE_ENV.PORTAL_RETURN_URL] || `${siteBase(event)}/mypage`;
+    // 🔴 解約できない構成でだけ開く（取得・作成に失敗したら例外 → 502）
+    const configuration = await ensurePortalConfiguration(stripe);
     const portal = await stripe.billingPortal.sessions.create({
       customer: customer.id,
       return_url: returnUrl,
+      configuration: configuration.id,
     });
 
     if (!portal?.url) {
