@@ -28,7 +28,9 @@ const totals = combinedSummary(archiveNankan, archiveJra);
   title="ホーム"
   description="南関東4場と中央競馬（JRA全10場）の全レース馬柱・過去走・AI短評・展開予想を登録不要で無料公開。印は無料会員、馬単の買い目は月額プランで提供します。"
 >
-  <!-- ヒーローキービジュアル（ヒーローセクションの上） -->
+  <!-- ヒーローキービジュアル（ヒーローセクションの上）
+       🔴 2026-10-06: PC 画像の下段に焼き込まれていた固定の的中率・回収率等のカード行を切り落とした
+       （1536×1024 → 1536×715）。成績の数値は下の stats-grid（単一源）だけに出す。docs/PERFORMANCE_STATS.md -->
   <section class="hero-keyvisual">
     <picture>
       <source media="(max-width: 768px)" srcset="/images/KI_hero_Mobile.png">
@@ -37,7 +39,7 @@ const totals = combinedSummary(archiveNankan, archiveJra);
         alt="KEIBA INTELLIGENCE - 中央競馬を、AIとデータで深く読む。オッズ・AI評価・騎手・馬データを一目で可視化"
         class="hero-keyvisual-img"
         width="1536"
-        height="1024"
+        height="715"
         fetchpriority="high"
       >
     </picture>

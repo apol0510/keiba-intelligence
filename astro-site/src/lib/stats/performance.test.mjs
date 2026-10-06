@@ -236,3 +236,21 @@ test('🔴 閉じた #150 系の実装（上位表示の段階・凍結）を持
     assert.doesNotMatch(read(p), /selectionTiers|displayedSelection|ki-top-v1|AI上位表示|displayedBets|freeze:displayed/, p);
   }
 });
+
+test('🔴 固定の的中率・回収率が焼き込まれた旧画像（トップ Hero PC・登録 CTA）へ戻さない', async () => {
+  const { createHash } = await import('node:crypto');
+  // 2026-10-06 以前の画像（71.1% / 186.4% / 124.6% を含む）の SHA-256
+  const OLD = {
+    'public/images/KI_hero_PC.png': 'd8802ca07190c419f1f50642d07166f80efdab76c1b611536cad415bf118905f',
+    'public/images/KI_register_PC.png': 'c3aec8f6c984c5cec04bf3d9e0acdfc793a4667031d31e9338294370184234f2',
+    'public/images/KI_register_Mobile.png': '43ebebc9be6248b0351ef6b381cdab237d861e3aad6a21e2ed770411201a92cb',
+  };
+  for (const [rel, sha] of Object.entries(OLD)) {
+    const buf = fs.readFileSync(path.join(SITE, rel));
+    assert.notEqual(createHash('sha256').update(buf).digest('hex'), sha, `${rel} が旧画像に戻っている`);
+  }
+  // Hero PC は数値カード行を切り落とした高さ（PNG IHDR の高さ）
+  const hero = fs.readFileSync(path.join(SITE, 'public/images/KI_hero_PC.png'));
+  assert.equal(hero.readUInt32BE(20), 715);
+  assert.match(read('src/pages/index.astro'), /width="1536"\s+height="715"/);
+});
