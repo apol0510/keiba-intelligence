@@ -85,14 +85,14 @@ if (combinedStats) {
 }
 
 const monthName = new Date(year, parseInt(month) - 1).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' });
-const title = `${monthName} 的中実績 - KEIBA Intelligence`;
-const description = `${monthName}の競馬予想的中実績。${combinedStats ? `的中率${combinedStats.hitRate}%、回収率${combinedStats.returnRate}%、${combinedStats.days}日間で${combinedStats.hitRaces}/${combinedStats.totalRaces}レース的中。` : ''}AI競馬予想の詳細な結果を公開。`;
+const title = `${monthName} AI予想結果 - KEIBA Intelligence`;
+const description = `${monthName}のAI予想結果。${combinedStats ? `${combinedStats.days}日間で${combinedStats.hitRaces}/${combinedStats.totalRaces}レース的中（的中率${combinedStats.hitRate}%）。` : ''}日ごとの結果と判定を公開。`;
 ---
 
 <BaseLayout title={title} description={description}>
   <main class="container">
     <div class="page-header">
-      <h1>📊 {monthName} 的中実績</h1>
+      <h1>📊 {monthName} AI予想結果</h1>
       <p class="subtitle">南関競馬 + 中央競馬 月間統計</p>
     </div>
 
@@ -100,7 +100,7 @@ const description = `${monthName}の競馬予想的中実績。${combinedStats ?
     <nav class="breadcrumb">
       <a href="/">ホーム</a>
       <span>›</span>
-      <a href="/archive">的中実績</a>
+      <a href="/archive">AI予想結果</a>
       <span>›</span>
       <span>{year}年{month}月</span>
     </nav>
@@ -125,18 +125,6 @@ const description = `${monthName}の競馬予想的中実績。${combinedStats ?
               <div class="stat-value">{combinedStats.hitRate}%</div>
               <div class="stat-detail">{combinedStats.hitRaces}/{combinedStats.totalRaces}R</div>
             </div>
-            <div class="stat-card">
-              <div class="stat-label">回収率</div>
-              <div class="stat-value">{combinedStats.returnRate}%</div>
-              <div class="stat-detail">
-                {combinedStats.profit >= 0 ? '+' : ''}¥{combinedStats.profit.toLocaleString()}
-              </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">投資額</div>
-              <div class="stat-value">¥{combinedStats.betAmount.toLocaleString()}</div>
-              <div class="stat-detail">払戻 ¥{combinedStats.totalPayout.toLocaleString()}</div>
-            </div>
           </div>
         </section>
 
@@ -155,10 +143,6 @@ const description = `${monthName}の競馬予想的中実績。${combinedStats ?
                   <div class="type-stat">
                     <span class="label">的中率</span>
                     <span class="value">{nankanStats.hitRate}%</span>
-                  </div>
-                  <div class="type-stat">
-                    <span class="label">回収率</span>
-                    <span class="value">{nankanStats.returnRate}%</span>
                   </div>
                   <div class="type-stat">
                     <span class="label">的中</span>
@@ -180,10 +164,6 @@ const description = `${monthName}の競馬予想的中実績。${combinedStats ?
                     <span class="value">{jraStats.hitRate}%</span>
                   </div>
                   <div class="type-stat">
-                    <span class="label">回収率</span>
-                    <span class="value">{jraStats.returnRate}%</span>
-                  </div>
-                  <div class="type-stat">
                     <span class="label">的中</span>
                     <span class="value">{jraStats.hitRaces}/{jraStats.totalRaces}R</span>
                   </div>
@@ -197,7 +177,7 @@ const description = `${monthName}の競馬予想的中実績。${combinedStats ?
 
     <!-- 日別実績リスト -->
     <section class="daily-results">
-      <h2>📅 日別実績</h2>
+      <h2>📅 日別の結果</h2>
 
       {nankan.length > 0 && (
         <div class="results-group">
@@ -209,11 +189,7 @@ const description = `${monthName}の競馬予想的中実績。${combinedStats ?
                 <div class="result-venue">{entry.venue}</div>
                 <div class="result-stats">
                   <span class="hit-rate">{entry.hitRate}%</span>
-                  <span class="return-rate">{entry.returnRate}%</span>
                   <span class="races">{entry.hitRaces}/{entry.totalRaces}R</span>
-                </div>
-                <div class="result-payout">
-                  ¥{entry.totalPayout.toLocaleString()}
                 </div>
               </a>
             ))}
@@ -231,11 +207,7 @@ const description = `${monthName}の競馬予想的中実績。${combinedStats ?
                 <div class="result-venue">{entry.venue}</div>
                 <div class="result-stats">
                   <span class="hit-rate">{entry.hitRate}%</span>
-                  <span class="return-rate">{entry.returnRate}%</span>
                   <span class="races">{entry.hitRaces}/{entry.totalRaces}R</span>
-                </div>
-                <div class="result-payout">
-                  ¥{entry.totalPayout.toLocaleString()}
                 </div>
               </a>
             ))}
@@ -265,8 +237,7 @@ const description = `${monthName}の競馬予想的中実績。${combinedStats ?
 
     <!-- 注意事項 -->
     <section class="results-notice">
-      <p>※ 掲載されている的中率・収支データは、AIモデルが算出した買い目パターンに基づく理論値です。実際の収支はお客様の購入点数・金額配分により異なります。</p>
-      <p>※ 本サービスで提示する買い目は複数パターンの候補を含むため、表示点数と集計上の基準点数が異なる場合があります。</p>
+      <p>※ 的中は、そのレースでAIが表示した馬単の買い目（組み合わせ）に、確定した馬単の組み合わせが含まれていた場合に数えています。</p>
       <p>※ 過去の実績は将来の結果を保証するものではありません。馬券購入は自己責任でお願いいたします。</p>
     </section>
   </main>

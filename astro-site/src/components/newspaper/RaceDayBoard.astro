@@ -104,8 +104,8 @@ const venueViews = venues.map((venue: any, venueIndex: number) => {
 {day?.error && venues.length === 0 ? (
   <div class="rdb-empty">
     <p class="rdb-empty-title">本日の予想はまだ公開されていません</p>
-    <p class="rdb-empty-desc">開催前日の夜に更新されます。過去の的中実績はいつでもご覧いただけます。</p>
-    <a class="rdb-empty-link" href={category === 'jra' ? '/archive/jra' : '/archive/nankan'}>的中実績を見る</a>
+    <p class="rdb-empty-desc">開催前日の夜に更新されます。過去のAI予想結果はいつでもご覧いただけます。</p>
+    <a class="rdb-empty-link" href={category === 'jra' ? '/archive/jra' : '/archive/nankan'}>AI予想結果を見る</a>
   </div>
 ) : (
   <div class="raceday" data-category={category} data-tier={view?.tier}>
