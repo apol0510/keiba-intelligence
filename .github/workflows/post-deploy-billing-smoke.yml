@@ -1,0 +1,73 @@
+# 課金・マイページまわりの変更が main に入ったあと、本番を外から確かめる（read-only）
+#
+# 正本: docs/RETENTION_2026_10.md §2.2
+#
+# 🔴 本番へ送るのは GET と「未ログインの POST」だけ。Cookie・秘密値は使わない（secrets 不要）。
+#    課金・会員状態には一切触れない（未ログインは関数の入口で 401 になる）。
+# 🔴 fail-closed。Netlify の反映を最大 15 分待ち、反映されない・期待と違う場合は failure(red)。
+#    静かに緑にしない（GitHub の失敗通知で気づけるようにする）。
+# 🔴 データ取込の自動 commit では動かさない（paths で課金・マイページの変更に限定）。
+
+name: Post-deploy billing smoke
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'astro-site/netlify/functions/stripe-*.js'
+      - 'astro-site/src/lib/billing/**'
+      - 'astro-site/src/pages/mypage.astro'
+      - '.github/workflows/post-deploy-billing-smoke.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: post-deploy-billing-smoke
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      BASE: https://keiba-intelligence.jp
+    steps:
+      - name: Wait for the production deploy
+        run: |
+          F="$BASE/.netlify/functions/stripe-subscription"
+          for i in $(seq 1 30); do
+            code=$(curl -s -m 20 -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"action":"status"}' "$F" || true)
+            echo "attempt $i: $code"
+            [ "$code" = "401" ] && exit 0
+            sleep 30
+          done
+          echo "::error::stripe-subscription が 15 分以内に本番へ反映されなかった"
+          exit 1
+
+      - name: Smoke checks
+        run: |
+          F="$BASE/.netlify/functions/stripe-subscription"
+          J='Content-Type: application/json'
+          fail=0
+          chk() { # name expected_code expected_body curl-args...
+            local n="$1" ec="$2" eb="$3"; shift 3
+            local out code body
+            out=$(curl -s -m 20 -w $'\n%{http_code}' "$@" || true)
+            code="${out##*$'\n'}"; body="${out%$'\n'*}"
+            if [ "$code" = "$ec" ] && { [ -z "$eb" ] || grep -q "$eb" <<<"$body"; }; then
+              echo "PASS  $n -> $code"
+            else
+              echo "::error::FAIL $n -> $code (expected $ec ${eb})"; fail=1
+            fi
+          }
+          chk "subscription status（未ログイン）" 401 login_required -X POST -H "$J" -d '{"action":"status"}' "$F"
+          chk "subscription GET"                 405 ""             "$F"
+          chk "subscription 不明な action"        400 invalid_action -X POST -H "$J" -d '{"action":"cancel"}' "$F"
+          chk "subscription resume（未ログイン）" 401 login_required -X POST -H "$J" -d '{"action":"resume"}' "$F"
+          chk "portal（未ログイン）"              401 login_required -X POST "$BASE/.netlify/functions/stripe-portal"
+          chk "/mypage"                           200 ""             "$BASE/mypage"
+          chk "/"                                 200 ""             "$BASE/"
+          chk "/pricing"                          200 ""             "$BASE/pricing"
+          exit $fail
