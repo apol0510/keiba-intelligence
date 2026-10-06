@@ -7,6 +7,27 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-10-06 公開実績（的中率・回収率）の単一源化と基準の是正（正本: `docs/PERFORMANCE_STATS.md`）— Preview・MK 確認待ち
+
+- **目的**: ページごとに極端に違う回収率・古い固定値・「買い目と算定の食い違い」を解消する。買い目・結果・払戻は変えない。
+- **現行算定式（Preview）**: Premium に表示した全組（`buildBettingPlan(...).combos`・抑え除く）を各 100 円。
+  投資 = 組数 × 100、払戻 = 的中レースの馬単実払戻、的中 = 表示組に 1→2 着が含まれる（= `isHit`）。足してから割る。
+  着順と払戻の組が一致しない 21 レースは集計外。単一源 `astro-site/src/lib/stats/performance.js`。
+- **実測（全期間）**: 南関 的中率 59.5%・回収率 72.0%（2,238R）/ JRA 49.2%・71.4%（2,267R）/ 全体 54.3%・71.7%（4,505R）。
+  直近（09-01〜）南関 62.2%・72.2% / JRA 53.5%・85.0% / 全体 57.9%・78.6%。旧 5 点基準は全体 216.7%（直近 234.0%）。
+- **固定表示の実態（撤去）**: トップ Hero 画像（PC）と無料登録 CTA 画像（PC/Mobile）に焼き込みの「71.1% / 186.4% / 124.6%」、フッター全ページ「71.1% / 186.4%」、既定 meta「的中率71%、回収率186%」、AI チャット知識「71.1% / 186.4%」。
+  `/stats/[JRA 会場]` は投資の重ねがけで回収率 0.0%、月別結果は的中率を整数丸め、会場別は単独開催日だけ。
+- **test**: `npm run test:performance`（17 件・build に組込み）。`npm run build` green、`umatanHit.test.mjs` 5/5、`test:validation` 6/6、`test:computer-index` 14/14。
+  ⚠️ `workflowStaticAudit.test.mjs` 7 件 fail は本件と無関係（workflow を変更していない・origin/main と同一ファイル）。
+- **未完了**: MK の Preview 確認と代表値の決定（PERFORMANCE_STATS §5.1 の A/B/C）→ merge → 本番 smoke。
+  範囲外: `/results/Y/M/D` の南関・中央の同日衝突（既存不具合）、archive 内部値の新基準化、`/venues` と `/stats` の重複。
+- **branch**: `fix/ki-return-rate-ssot`（worktree `/Users/user/Projects/ki-worktrees/return-rate-ssot`、base origin/main `2c943bca`）
+- **PR**: #151（Draft）`https://github.com/apol0510/keiba-intelligence/pull/151`
+- **Preview**: `https://deploy-preview-151--keiba-intelligence.netlify.app`（Netlify deploy-preview pass。この repo の PR チェックは Netlify のみで GitHub Actions の PR CI は無い）
+- **ブラウザ確認**: Desktop（1366）でトップ・Hero・統計カード・登録 CTA・南関/中央アーカイブ・月別結果・会場別。Mobile（390・headless Chrome）でトップ・アーカイブ・結果。
+- **現在地**: Preview 完成・MK 確認待ち。🔴 **本番未反映**（MK の Preview 確認まで merge しない）。再開時は PR #151 の head を確認し、MK の決定（§5.1 A/B/C）に合わせて調整 → merge → 本番 smoke（トップ・/archive/nankan・/archive/jra・/stats/tokyo の値が PERFORMANCE_STATS §4 と一致）。
+- **PR #150（OPEN のまま・未 merge）/ #149** は使っていない・復活させていない。
+
 ### 2026-10-06 解約監査とマイページ継続導線（正本: `docs/RETENTION_2026_10.md`）
 
 - **監査**: 有効 8 件中 5 件が解約予約、1 件は予約→自力取り消し。全件カスタマーポータル経由の本人操作で、webhook 200・Airtable 正常。

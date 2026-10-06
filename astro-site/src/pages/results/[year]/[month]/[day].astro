@@ -3,6 +3,7 @@ import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import AIRaceComment from '../../../../components/AIRaceComment.astro';
 import archiveResults from '../../../../data/archiveResults.json';
 import archiveResultsJra from '../../../../data/archiveResultsJra.json';
+import { dayPerformance, formatPercent, formatYen, formatSignedYen, BASIS_NOTE_LINES } from '../../../../lib/stats/performance.js';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -33,6 +34,8 @@ export async function getStaticPaths() {
 }
 
 const { entry, type } = Astro.props;
+// 🔴 成績は単一源から（archive の旧 5 点基準 betAmount / returnRate は使わない）
+const perf = dayPerformance(entry);
 const { year, month, day } = Astro.params;
 
 // ── 文字化け検出 + クリーン名抽出 ─────────────────────────────────
@@ -117,7 +120,7 @@ try {
 }
 
 const title = `${entry.date} ${type === 'jra' ? '中央競馬' : '南関競馬'} 的中実績 - KEIBA Intelligence`;
-const description = `${entry.date}の${type === 'jra' ? '中央競馬' : '南関競馬'}予想の的中実績。的中率${entry.hitRate}%、回収率${entry.returnRate}%、${entry.hitRaces}/${entry.totalRaces}レース的中。AI競馬予想の詳細な結果を公開。`;
+const description = `${entry.date}の${type === 'jra' ? '中央競馬' : '南関競馬'}予想の的中実績。的中率${formatPercent(perf.hitRate)}、回収率${formatPercent(perf.returnRate)}、${perf.hits}/${perf.races}レース的中。AI競馬予想の詳細な結果を公開。`;
 
 // 会場別の住所マッピング
 const venueAddresses = {
@@ -207,22 +210,22 @@ const jsonLd = {
     <section class="stats-summary">
       <div class="stat-card">
         <div class="stat-label">的中率</div>
-        <div class="stat-value">{entry.hitRate}%</div>
-        <div class="stat-detail">{entry.hitRaces}/{entry.totalRaces}レース</div>
+        <div class="stat-value">{formatPercent(perf.hitRate)}</div>
+        <div class="stat-detail">{perf.hits}/{perf.races}レース</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">回収率</div>
-        <div class="stat-value">{entry.returnRate}%</div>
+        <div class="stat-value">{formatPercent(perf.returnRate)}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">投資額</div>
-        <div class="stat-value">¥{(entry.betAmount || 0).toLocaleString()}</div>
-        <div class="stat-detail">{entry.totalRaces}レース</div>
+        <div class="stat-value">{formatYen(perf.investment)}</div>
+        <div class="stat-detail">{perf.races}レース</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">払戻額</div>
-        <div class="stat-value">¥{(entry.totalPayout || 0).toLocaleString()}</div>
-        <div class="stat-detail">+¥{((entry.totalPayout || 0) - (entry.betAmount || 0)).toLocaleString()}</div>
+        <div class="stat-value">{formatYen(perf.payout)}</div>
+        <div class="stat-detail">{formatSignedYen(perf.profit)}</div>
       </div>
     </section>
 
@@ -343,9 +346,7 @@ const jsonLd = {
 
     <!-- 注意事項 -->
     <section class="results-notice">
-      <p>※ 掲載されている的中率・収支データは、AIモデルが算出した買い目パターンに基づく理論値です。実際の収支はお客様の購入点数・金額配分により異なります。</p>
-      <p>※ 本サービスで提示する買い目は複数パターンの候補を含むため、表示点数と集計上の基準点数が異なる場合があります。</p>
-      <p>※ 過去の実績は将来の結果を保証するものではありません。馬券購入は自己責任でお願いいたします。</p>
+      {BASIS_NOTE_LINES.map((line) => <p>{line}</p>)}
     </section>
   </main>
 </BaseLayout>

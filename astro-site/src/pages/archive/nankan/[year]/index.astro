@@ -2,6 +2,8 @@
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import PerformanceBasisNote from '../../../../components/PerformanceBasisNote.astro';
+import { summarize, monthlySummaries, formatPercent, formatYen } from '../../../../lib/stats/performance.js';
 
 export const prerender = false;
 
@@ -10,17 +12,7 @@ const { year } = Astro.params;
 // archiveResults.jsonから該当年のデータを取得
 const archivePath = join(process.cwd(), 'src', 'data', 'archiveResults.json');
 let yearData = [];
-let yearStats = {
-  totalDays: 0,
-  totalRaces: 0,
-  totalHitRaces: 0,
-  totalBetAmount: 0,
-  totalPayout: 0,
-  hitRate: 0,
-  returnRate: 0,
-  bestMonth: null,
-  worstMonth: null,
-};
+let yearStats = null;
 let monthlyStats = {};
 
 try {
@@ -33,65 +25,28 @@ try {
       const [entryYear] = entry.date.split('-');
       return entryYear === year;
     }).sort((a, b) => b.date.localeCompare(a.date)); // 降順ソート
-
-    // 年間統計を計算
-    yearData.forEach(entry => {
-      yearStats.totalDays++;
-      yearStats.totalRaces += entry.totalRaces;
-      yearStats.totalHitRaces += entry.hitRaces;
-      yearStats.totalBetAmount += entry.betAmount;
-      yearStats.totalPayout += entry.totalPayout;
-
-      // 月別統計
-      const [, month] = entry.date.split('-');
-      if (!monthlyStats[month]) {
-        monthlyStats[month] = {
-          month,
-          totalDays: 0,
-          totalRaces: 0,
-          totalHitRaces: 0,
-          totalBetAmount: 0,
-          totalPayout: 0,
-          hitRate: 0,
-          returnRate: 0,
-        };
-      }
-
-      monthlyStats[month].totalDays++;
-      monthlyStats[month].totalRaces += entry.totalRaces;
-      monthlyStats[month].totalHitRaces += entry.hitRaces;
-      monthlyStats[month].totalBetAmount += entry.betAmount;
-      monthlyStats[month].totalPayout += entry.totalPayout;
-    });
-
-    // 月別統計の的中率・回収率計算
-    Object.values(monthlyStats).forEach(month => {
-      if (month.totalRaces > 0) {
-        month.hitRate = Number(((month.totalHitRaces / month.totalRaces) * 100).toFixed(1));
-      }
-      if (month.totalBetAmount > 0) {
-        month.returnRate = Number(((month.totalPayout / month.totalBetAmount) * 100).toFixed(1));
-      }
-
-      // 最高・最低回収率の月
-      if (!yearStats.bestMonth || parseFloat(month.returnRate) > parseFloat(yearStats.bestMonth.returnRate)) {
-        yearStats.bestMonth = month;
-      }
-      if (!yearStats.worstMonth || parseFloat(month.returnRate) < parseFloat(yearStats.worstMonth.returnRate)) {
-        yearStats.worstMonth = month;
-      }
-    });
-
-    // 年間統計の的中率・回収率計算
-    if (yearStats.totalRaces > 0) {
-      yearStats.hitRate = Number(((yearStats.totalHitRaces / yearStats.totalRaces) * 100).toFixed(1));
-    }
-    if (yearStats.totalBetAmount > 0) {
-      yearStats.returnRate = Number(((yearStats.totalPayout / yearStats.totalBetAmount) * 100).toFixed(1));
-    }
   }
 } catch (error) {
   console.error('Error loading archive:', error);
+}
+
+// 🔴 年間・月別の成績は単一源（lib/stats/performance.js）から。旧 5 点基準の保存値は使わない。
+const toView = (s, extra = {}) => ({
+  ...extra,
+  totalDays: s.days,
+  totalRaces: s.races,
+  totalHitRaces: s.hits,
+  totalPayout: s.payout,
+  hitRate: s.hitRate,
+  returnRate: s.returnRate,
+});
+yearStats = { ...toView(summarize(yearData)), bestMonth: null, worstMonth: null };
+for (const m of monthlySummaries(yearData)) {
+  const view = toView(m, { month: m.month });
+  monthlyStats[m.month] = view;
+  if (view.returnRate == null) continue;
+  if (!yearStats.bestMonth || view.returnRate > yearStats.bestMonth.returnRate) yearStats.bestMonth = view;
+  if (!yearStats.worstMonth || view.returnRate < yearStats.worstMonth.returnRate) yearStats.worstMonth = view;
 }
 
 const pageTitle = yearData.length > 0
@@ -99,7 +54,7 @@ const pageTitle = yearData.length > 0
   : '的中実績が見つかりません';
 
 const pageDescription = yearData.length > 0
-  ? `${year}年の的中実績。開催日数${yearStats.totalDays}日、年間的中率${yearStats.hitRate}%、年間回収率${yearStats.returnRate}%、年間合計配当¥${yearStats.totalPayout.toLocaleString()}`
+  ? `${year}年の的中実績。開催日数${yearStats.totalDays}日、年間的中率${formatPercent(yearStats.hitRate)}、年間回収率${formatPercent(yearStats.returnRate)}、年間合計配当¥${yearStats.totalPayout.toLocaleString()}`
   : '南関競馬の的中実績アーカイブ';
 ---
 
@@ -134,18 +89,18 @@ const pageDescription = yearData.length > 0
               </div>
               <div class="summary-card">
                 <div class="summary-label">年間的中率</div>
-                <div class="summary-value highlight">{yearStats.hitRate}%</div>
+                <div class="summary-value highlight">{formatPercent(yearStats.hitRate)}</div>
                 <div class="summary-detail">{yearStats.totalHitRaces}/{yearStats.totalRaces}R</div>
               </div>
               <div class="summary-card">
                 <div class="summary-label">年間回収率</div>
                 <div class={`summary-value ${parseFloat(yearStats.returnRate) >= 100 ? 'profit' : 'loss'}`}>
-                  {yearStats.returnRate}%
+                  {formatPercent(yearStats.returnRate)}
                 </div>
               </div>
               <div class="summary-card">
                 <div class="summary-label">年間合計配当</div>
-                <div class="summary-value profit">¥{(Number(yearStats.totalPayout) || 0).toLocaleString()}</div>
+                <div class="summary-value profit">{formatYen(yearStats.totalPayout)}</div>
               </div>
             </div>
           </section>
@@ -158,7 +113,7 @@ const pageDescription = yearData.length > 0
                 <div class="highlight-card best">
                   <div class="highlight-icon">🏆</div>
                   <div class="highlight-label">最高回収率の月</div>
-                  <div class="highlight-value">{yearStats.bestMonth.returnRate}%</div>
+                  <div class="highlight-value">{formatPercent(yearStats.bestMonth.returnRate)}</div>
                   <div class="highlight-date">
                     <a href={`/archive/nankan/${year}/${yearStats.bestMonth.month}`}>
                       {year}年{yearStats.bestMonth.month}月
@@ -168,7 +123,7 @@ const pageDescription = yearData.length > 0
                 <div class="highlight-card worst">
                   <div class="highlight-icon">📉</div>
                   <div class="highlight-label">最低回収率の月</div>
-                  <div class="highlight-value">{yearStats.worstMonth.returnRate}%</div>
+                  <div class="highlight-value">{formatPercent(yearStats.worstMonth.returnRate)}</div>
                   <div class="highlight-date">
                     <a href={`/archive/nankan/${year}/${yearStats.worstMonth.month}`}>
                       {year}年{yearStats.worstMonth.month}月
@@ -195,17 +150,17 @@ const pageDescription = yearData.length > 0
                   <div class="month-stats">
                     <div class="stat-row">
                       <span class="stat-label">的中率</span>
-                      <span class="stat-value highlight">{month.hitRate}%</span>
+                      <span class="stat-value highlight">{formatPercent(month.hitRate)}</span>
                     </div>
                     <div class="stat-row">
                       <span class="stat-label">回収率</span>
                       <span class={`stat-value ${parseFloat(month.returnRate) >= 100 ? 'profit' : 'loss'}`}>
-                        {month.returnRate}%
+                        {formatPercent(month.returnRate)}
                       </span>
                     </div>
                     <div class="stat-row">
                       <span class="stat-label">配当</span>
-                      <span class="stat-value profit">¥{(Number(month.totalPayout) || 0).toLocaleString()}</span>
+                      <span class="stat-value profit">{formatYen(month.totalPayout)}</span>
                     </div>
                   </div>
                   <div class="month-detail">
@@ -215,6 +170,8 @@ const pageDescription = yearData.length > 0
               ))}
             </div>
           </section>
+
+          <PerformanceBasisNote />
 
           {/* フッターナビ */}
           <footer class="page-footer">

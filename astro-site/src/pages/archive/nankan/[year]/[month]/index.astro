@@ -2,6 +2,8 @@
 import BaseLayout from '../../../../../layouts/BaseLayout.astro';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import PerformanceBasisNote from '../../../../../components/PerformanceBasisNote.astro';
+import { summarize, dayPerformance, formatPercent, formatYen } from '../../../../../lib/stats/performance.js';
 
 export const prerender = false;
 
@@ -10,15 +12,7 @@ const { year, month } = Astro.params;
 // archiveResults.jsonから該当月のデータを取得
 const archivePath = join(process.cwd(), 'src', 'data', 'archiveResults.json');
 let monthData = [];
-let monthStats = {
-  totalDays: 0,
-  totalRaces: 0,
-  totalHitRaces: 0,
-  totalBetAmount: 0,
-  totalPayout: 0,
-  hitRate: 0,
-  returnRate: 0
-};
+let monthStats = null;
 
 try {
   if (existsSync(archivePath)) {
@@ -31,24 +25,22 @@ try {
       return entryYear === year && entryMonth === month;
     }).sort((a, b) => b.date.localeCompare(a.date)); // 降順ソート（新しい日付が上）
 
-    // 月間統計を計算（NaN防止）
-    monthData.forEach(entry => {
-      monthStats.totalDays++;
-      monthStats.totalRaces += Number(entry.totalRaces) || 0;
-      monthStats.totalHitRaces += Number(entry.hitRaces) || 0;
-      monthStats.totalBetAmount += Number(entry.betAmount) || 0;
-      monthStats.totalPayout += Number(entry.totalPayout) || 0;
-    });
-
-    if (monthStats.totalRaces > 0) {
-      monthStats.hitRate = Number(((monthStats.totalHitRaces / monthStats.totalRaces) * 100).toFixed(1));
-    }
-    if (monthStats.totalBetAmount > 0) {
-      monthStats.returnRate = Number(((monthStats.totalPayout / monthStats.totalBetAmount) * 100).toFixed(1));
-    }
   }
 } catch (error) {
   console.error('Error loading archive:', error);
+}
+
+// 🔴 月間・日別の成績は単一源（lib/stats/performance.js）から。旧 5 点基準の保存値は使わない。
+{
+  const m = summarize(monthData);
+  monthStats = {
+    totalDays: m.days,
+    totalRaces: m.races,
+    totalHitRaces: m.hits,
+    totalPayout: m.payout,
+    hitRate: m.hitRate,
+    returnRate: m.returnRate,
+  };
 }
 
 const pageTitle = monthData.length > 0
@@ -56,7 +48,7 @@ const pageTitle = monthData.length > 0
   : '的中実績が見つかりません';
 
 const pageDescription = monthData.length > 0
-  ? `${year}年${month}月の的中実績。開催日数${monthStats.totalDays}日、月間的中率${monthStats.hitRate}%、月間回収率${monthStats.returnRate}%、月間合計配当¥${monthStats.totalPayout.toLocaleString()}`
+  ? `${year}年${month}月の的中実績。開催日数${monthStats.totalDays}日、月間的中率${formatPercent(monthStats.hitRate)}、月間回収率${formatPercent(monthStats.returnRate)}、月間合計配当¥${monthStats.totalPayout.toLocaleString()}`
   : '南関競馬の的中実績アーカイブ';
 ---
 
@@ -85,17 +77,17 @@ const pageDescription = monthData.length > 0
               </div>
               <div class="summary-card">
                 <div class="summary-label">月間的中率</div>
-                <div class="summary-value highlight">{Number(monthStats.hitRate) || 0}%</div>
+                <div class="summary-value highlight">{formatPercent(monthStats.hitRate)}</div>
               </div>
               <div class="summary-card">
                 <div class="summary-label">月間回収率</div>
-                <div class={`summary-value ${(Number(monthStats.returnRate) || 0) >= 100 ? 'profit' : 'loss'}`}>
-                  {Number(monthStats.returnRate) || 0}%
+                <div class={`summary-value ${(monthStats.returnRate ?? 0) >= 100 ? 'profit' : 'loss'}`}>
+                  {formatPercent(monthStats.returnRate)}
                 </div>
               </div>
               <div class="summary-card">
                 <div class="summary-label">月間合計配当</div>
-                <div class="summary-value payout-yen">¥{(Number(monthStats.totalPayout) || 0).toLocaleString()}</div>
+                <div class="summary-value payout-yen">{formatYen(monthStats.totalPayout)}</div>
               </div>
             </div>
             <div class="summary-detail">
@@ -106,6 +98,7 @@ const pageDescription = monthData.length > 0
           {/* 日別結果一覧 */}
           {monthData.map((dayData) => {
             const [, , day] = dayData.date.split('-');
+            const dv = dayPerformance(dayData);
 
             return (
               <section class="day-section">
@@ -117,13 +110,13 @@ const pageDescription = monthData.length > 0
                     <span class="day-detail-link">詳細を見る →</span>
                   </h2>
                   <div class="day-stats">
-                    <span class="stat">的中 {Number(dayData.hitRaces) || 0}/{Number(dayData.totalRaces) || 0}R</span>
-                    <span class="stat hit-rate">的中率 {Number(dayData.hitRate) || 0}%</span>
-                    {(Number(dayData.totalPayout) || 0) > 0 && (
-                      <span class="stat payout-yen">配当 ¥{(Number(dayData.totalPayout) || 0).toLocaleString()}</span>
+                    <span class="stat">的中 {dv.hits}/{dv.races}R</span>
+                    <span class="stat hit-rate">的中率 {formatPercent(dv.hitRate)}</span>
+                    {dv.payout > 0 && (
+                      <span class="stat payout-yen">配当 {formatYen(dv.payout)}</span>
                     )}
-                    <span class={`stat ${(Number(dayData.returnRate) || 0) >= 100 ? 'profit' : 'loss'}`}>
-                      回収率 {Number(dayData.returnRate) || 0}%
+                    <span class={`stat ${(dv.returnRate ?? 0) >= 100 ? 'profit' : 'loss'}`}>
+                      回収率 {formatPercent(dv.returnRate)}
                     </span>
                   </div>
                 </div>
@@ -167,6 +160,8 @@ const pageDescription = monthData.length > 0
               </section>
             );
           })}
+
+          <PerformanceBasisNote />
 
           {/* フッターナビ */}
           <footer class="page-footer">

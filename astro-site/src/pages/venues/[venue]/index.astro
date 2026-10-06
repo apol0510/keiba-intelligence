@@ -2,6 +2,8 @@
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import PerformanceBasisNote from '../../../components/PerformanceBasisNote.astro';
+import { venueSummary, entriesWithVenue, dayPerformance, formatPercent, formatYen } from '../../../lib/stats/performance.js';
 
 export const prerender = false;
 
@@ -20,18 +22,7 @@ const venueName = venueMap[venue] || venue;
 // archiveResults.jsonから該当会場のデータを取得
 const archivePath = join(process.cwd(), 'src', 'data', 'archiveResults.json');
 let venueData = [];
-let venueStats = {
-  totalDays: 0,
-  totalRaces: 0,
-  totalHitRaces: 0,
-  totalBetAmount: 0,
-  totalPayout: 0,
-  hitRate: 0,
-  returnRate: 0,
-  bestDay: null,
-  worstDay: null,
-  highestPayout: null,
-};
+let venueStats = null;
 
 try {
   if (existsSync(archivePath)) {
@@ -39,42 +30,30 @@ try {
     const allData = JSON.parse(fileContent);
 
     // 該当会場のデータを抽出（新しい順にソート）
-    venueData = allData.filter(entry => entry.venue === venueName)
+    // その会場のレースを含む開催（複数会場の日も含め、数えるのはその会場のレースだけ）
+    venueData = entriesWithVenue(allData, venueName)
       .sort((a, b) => b.date.localeCompare(a.date)); // 降順ソート
 
-    // 会場統計を計算
-    venueData.forEach(entry => {
-      venueStats.totalDays++;
-      venueStats.totalRaces += entry.totalRaces;
-      venueStats.totalHitRaces += entry.hitRaces;
-      venueStats.totalBetAmount += entry.betAmount;
-      venueStats.totalPayout += entry.totalPayout;
-
-      // 最高回収率の日
-      if (!venueStats.bestDay || entry.returnRate > venueStats.bestDay.returnRate) {
-        venueStats.bestDay = entry;
-      }
-
-      // 最低回収率の日
-      if (!venueStats.worstDay || entry.returnRate < venueStats.worstDay.returnRate) {
-        venueStats.worstDay = entry;
-      }
-
-      // 最高配当の日
-      if (!venueStats.highestPayout || entry.totalPayout > venueStats.highestPayout.totalPayout) {
-        venueStats.highestPayout = entry;
-      }
-    });
-
-    if (venueStats.totalRaces > 0) {
-      venueStats.hitRate = ((venueStats.totalHitRaces / venueStats.totalRaces) * 100).toFixed(1);
-    }
-    if (venueStats.totalBetAmount > 0) {
-      venueStats.returnRate = ((venueStats.totalPayout / venueStats.totalBetAmount) * 100).toFixed(1);
-    }
   }
 } catch (error) {
   console.error('Error loading archive:', error);
+}
+
+// 🔴 通算・日別の成績は単一源（lib/stats/performance.js）から。旧 5 点基準の保存値は使わない。
+{
+  const t = venueSummary(venueData, venueName);
+  const days = venueData.map((entry) => ({ date: entry.date, ...dayPerformance(entry, { venue: venueName }) }));
+  const pick = (better) => days.reduce((best, d) => (best == null || better(d, best) ? d : best), null);
+  venueStats = {
+    totalDays: t.days,
+    totalRaces: t.races,
+    totalHitRaces: t.hits,
+    totalPayout: t.payout,
+    hitRate: t.hitRate,
+    returnRate: t.returnRate,
+    bestDay: pick((d, b) => (d.returnRate ?? -1) > (b.returnRate ?? -1)),
+    highestPayout: pick((d, b) => d.payout > b.payout),
+  };
 }
 
 const pageTitle = venueData.length > 0
@@ -82,7 +61,7 @@ const pageTitle = venueData.length > 0
   : `${venueName}競馬 的中実績`;
 
 const pageDescription = venueData.length > 0
-  ? `${venueName}競馬の的中実績。開催日数${venueStats.totalDays}日、通算的中率${venueStats.hitRate}%、通算回収率${venueStats.returnRate}%、通算合計配当¥${venueStats.totalPayout.toLocaleString()}`
+  ? `${venueName}競馬の的中実績。開催日数${venueStats.totalDays}日、通算的中率${formatPercent(venueStats.hitRate)}、通算回収率${formatPercent(venueStats.returnRate)}、通算合計配当${formatYen(venueStats.totalPayout)}`
   : `${venueName}競馬の的中実績・統計データ`;
 ---
 
@@ -121,18 +100,18 @@ const pageDescription = venueData.length > 0
               </div>
               <div class="summary-card">
                 <div class="summary-label">通算的中率</div>
-                <div class="summary-value highlight">{venueStats.hitRate}%</div>
+                <div class="summary-value highlight">{formatPercent(venueStats.hitRate)}</div>
                 <div class="summary-detail">{venueStats.totalHitRaces}/{venueStats.totalRaces}R</div>
               </div>
               <div class="summary-card">
                 <div class="summary-label">通算回収率</div>
-                <div class={`summary-value ${parseFloat(venueStats.returnRate) >= 100 ? 'profit' : 'loss'}`}>
-                  {venueStats.returnRate}%
+                <div class={`summary-value ${(venueStats.returnRate ?? 0) >= 100 ? 'profit' : 'loss'}`}>
+                  {formatPercent(venueStats.returnRate)}
                 </div>
               </div>
               <div class="summary-card">
                 <div class="summary-label">通算合計配当</div>
-                <div class="summary-value profit">¥{venueStats.totalPayout.toLocaleString()}</div>
+                <div class="summary-value profit">{formatYen(venueStats.totalPayout)}</div>
               </div>
             </div>
           </section>
@@ -146,7 +125,7 @@ const pageDescription = venueData.length > 0
                   <div class="highlight-card best">
                     <div class="highlight-icon">🏆</div>
                     <div class="highlight-label">最高回収率</div>
-                    <div class="highlight-value">{venueStats.bestDay.returnRate}%</div>
+                    <div class="highlight-value">{formatPercent(venueStats.bestDay.returnRate)}</div>
                     <div class="highlight-date">
                       <a href={`/results/${venueStats.bestDay.date.split('-')[0]}/${venueStats.bestDay.date.split('-')[1]}/${venueStats.bestDay.date.split('-')[2]}`}>
                         {venueStats.bestDay.date}
@@ -158,7 +137,7 @@ const pageDescription = venueData.length > 0
                   <div class="highlight-card payout">
                     <div class="highlight-icon">💰</div>
                     <div class="highlight-label">最高配当</div>
-                    <div class="highlight-value">¥{venueStats.highestPayout.totalPayout.toLocaleString()}</div>
+                    <div class="highlight-value">{formatYen(venueStats.highestPayout.payout)}</div>
                     <div class="highlight-date">
                       <a href={`/results/${venueStats.highestPayout.date.split('-')[0]}/${venueStats.highestPayout.date.split('-')[1]}/${venueStats.highestPayout.date.split('-')[2]}`}>
                         {venueStats.highestPayout.date}
@@ -176,6 +155,7 @@ const pageDescription = venueData.length > 0
             <div class="history-list">
               {venueData.map((dayData) => {
                 const [year, month, day] = dayData.date.split('-');
+                const dv = dayPerformance(dayData, { venue: venueName });
 
                 return (
                   <a
@@ -189,27 +169,29 @@ const pageDescription = venueData.length > 0
                     <div class="history-stats">
                       <div class="stat-item">
                         <span class="stat-label">的中率</span>
-                        <span class="stat-value highlight">{dayData.hitRate}%</span>
+                        <span class="stat-value highlight">{formatPercent(dv.hitRate)}</span>
                       </div>
                       <div class="stat-item">
                         <span class="stat-label">回収率</span>
-                        <span class={`stat-value ${dayData.returnRate >= 100 ? 'profit' : 'loss'}`}>
-                          {dayData.returnRate}%
+                        <span class={`stat-value ${(dv.returnRate ?? 0) >= 100 ? 'profit' : 'loss'}`}>
+                          {formatPercent(dv.returnRate)}
                         </span>
                       </div>
                       <div class="stat-item">
                         <span class="stat-label">配当</span>
-                        <span class="stat-value profit">¥{dayData.totalPayout.toLocaleString()}</span>
+                        <span class="stat-value profit">{formatYen(dv.payout)}</span>
                       </div>
                     </div>
                     <div class="history-detail">
-                      <span>{dayData.hitRaces}/{dayData.totalRaces}R的中</span>
+                      <span>{dv.hits}/{dv.races}R的中</span>
                     </div>
                   </a>
                 );
               })}
             </div>
           </section>
+
+          <PerformanceBasisNote />
 
           {/* フッターナビ */}
           <footer class="page-footer">
