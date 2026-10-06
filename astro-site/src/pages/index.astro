@@ -63,11 +63,6 @@ const totals = combinedTotals(archiveNankan, archiveJra);
         <!-- 統計カード（公開アーカイブの実測集計。加工なし） -->
         <div class="stats-grid">
           <div class="stat-card card">
-            <div class="stat-icon">💰</div>
-            <div class="stat-value">{formatPercent(totals.all.returnRate)}</div>
-            <div class="stat-label">回収率（通算）</div>
-          </div>
-          <div class="stat-card card">
             <div class="stat-icon">🎯</div>
             <div class="stat-value">{formatPercent(totals.all.hitRate)}</div>
             <div class="stat-label">的中率（通算）</div>
@@ -84,7 +79,7 @@ const totals = combinedTotals(archiveNankan, archiveJra);
           </div>
         </div>
         <p class="stats-note">
-          公開しているアーカイブ全件から算出した実測値です（払戻÷投資×100）。高配当を除外していません。
+          公開しているアーカイブ全件から算出しています。的中は、AIが表示した馬単の買い目（組み合わせ）に、確定した馬単の組み合わせが含まれていたレースを数えています。
           <a href="/archive">内訳を見る →</a>
         </p>
       </div>
@@ -118,7 +113,7 @@ const totals = combinedTotals(archiveNankan, archiveJra);
           <div class="feature-icon">📈</div>
           <h3>データ可視化</h3>
           <p>
-            的中率・回収率をグラフで可視化。直感的なダッシュボードで予想の精度を一目で確認できます。
+            AI予想の結果を日別・月別・競馬場別に公開。的中・不的中をレースごとに確認できます。
           </p>
         </div>
 
@@ -193,7 +188,7 @@ const totals = combinedTotals(archiveNankan, archiveJra);
           </ul>
           <div class="venue-cta">
             <a href="/prediction/nankan" class="btn btn-primary w-full">南関の予想を見る（無料）</a>
-            <a href="/archive/nankan" class="btn btn-secondary w-full">南関の的中実績</a>
+            <a href="/archive/nankan" class="btn btn-secondary w-full">南関のAI予想結果</a>
           </div>
         </div>
 
@@ -214,7 +209,7 @@ const totals = combinedTotals(archiveNankan, archiveJra);
           </ul>
           <div class="venue-cta">
             <a href="/prediction/jra" class="btn btn-primary w-full">中央の予想を見る（無料）</a>
-            <a href="/archive/jra" class="btn btn-secondary w-full">中央の的中実績</a>
+            <a href="/archive/jra" class="btn btn-secondary w-full">中央のAI予想結果</a>
           </div>
         </div>
       </div>
@@ -238,7 +233,7 @@ const totals = combinedTotals(archiveNankan, archiveJra);
             <li>✅ AI短評（1頭ごとの文章）</li>
             <li>✅ AIレース展望・展開予想</li>
             <li>✅ 特徴量6指標</li>
-            <li>✅ 的中実績・回収率</li>
+            <li>✅ AI予想結果（的中・不的中）</li>
           </ul>
           <a href="/prediction/nankan" class="btn btn-secondary w-full">そのまま見る</a>
         </div>
@@ -374,7 +369,7 @@ const totals = combinedTotals(archiveNankan, archiveJra);
 
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: var(--spacing-lg);
       margin-top: var(--spacing-2xl);
     }
@@ -627,7 +622,7 @@ const totals = combinedTotals(archiveNankan, archiveJra);
       }
 
       .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
       }
     }
 

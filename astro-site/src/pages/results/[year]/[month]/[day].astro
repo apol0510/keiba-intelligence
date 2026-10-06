@@ -116,8 +116,8 @@ try {
   // 予想データがない場合は空のままで問題ない
 }
 
-const title = `${entry.date} ${type === 'jra' ? '中央競馬' : '南関競馬'} 的中実績 - KEIBA Intelligence`;
-const description = `${entry.date}の${type === 'jra' ? '中央競馬' : '南関競馬'}予想の的中実績。的中率${entry.hitRate}%、回収率${entry.returnRate}%、${entry.hitRaces}/${entry.totalRaces}レース的中。AI競馬予想の詳細な結果を公開。`;
+const title = `${entry.date} ${type === 'jra' ? '中央競馬' : '南関競馬'} AI予想結果 - KEIBA Intelligence`;
+const description = `${entry.date}の${type === 'jra' ? '中央競馬' : '南関競馬'}AI予想結果。${entry.hitRaces}/${entry.totalRaces}レース的中（的中率${entry.hitRate}%）。レースごとの結果と判定を公開。`;
 
 // 会場別の住所マッピング
 const venueAddresses = {
@@ -145,7 +145,7 @@ const venueAddress = venueAddresses[primaryVenue] || "日本";
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SportsEvent",
-  "name": `${entry.date} ${type === 'jra' ? '中央競馬' : '南関競馬'} 的中実績`,
+  "name": `${entry.date} ${type === 'jra' ? '中央競馬' : '南関競馬'} AI予想結果`,
   "description": description,
   "startDate": `${entry.date}T10:00:00+09:00`,
   "endDate": `${entry.date}T20:30:00+09:00`,
@@ -188,7 +188,7 @@ const jsonLd = {
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   <main class="container">
     <div class="page-header">
-      <h1>🎯 {entry.date} 的中実績</h1>
+      <h1>🎯 {entry.date} AI予想結果</h1>
       <p class="subtitle">{type === 'jra' ? '中央競馬' : '南関競馬'} - {entry.venue}</p>
     </div>
 
@@ -196,7 +196,7 @@ const jsonLd = {
     <nav class="breadcrumb">
       <a href="/">ホーム</a>
       <span>›</span>
-      <a href={type === 'jra' ? '/archive/jra' : '/archive'}>的中実績</a>
+      <a href={type === 'jra' ? '/archive/jra' : '/archive'}>AI予想結果</a>
       <span>›</span>
       <a href={`/results/${year}/${month}`}>{year}年{month}月</a>
       <span>›</span>
@@ -210,20 +210,7 @@ const jsonLd = {
         <div class="stat-value">{entry.hitRate}%</div>
         <div class="stat-detail">{entry.hitRaces}/{entry.totalRaces}レース</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">回収率</div>
-        <div class="stat-value">{entry.returnRate}%</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">投資額</div>
-        <div class="stat-value">¥{(entry.betAmount || 0).toLocaleString()}</div>
-        <div class="stat-detail">{entry.totalRaces}レース</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">払戻額</div>
-        <div class="stat-value">¥{(entry.totalPayout || 0).toLocaleString()}</div>
-        <div class="stat-detail">+¥{((entry.totalPayout || 0) - (entry.betAmount || 0)).toLocaleString()}</div>
-      </div>
+      {/* 🔴 回収率・投資額・払戻額・収支は旧 5 点基準のため顧客向け表示から撤去（2026-10-06 MK）。表示買い目基準の再計算は別途 */}
     </section>
 
     <!-- レース別結果 -->
@@ -291,7 +278,7 @@ const jsonLd = {
               </div>
               {(race.isHit || race.honmeiHit) && (race.umatan?.payout || race.payouts?.umatan?.[0]?.payout) && (
                 <div class="summary-item">
-                  <span class="summary-label">払い戻し</span>
+                  <span class="summary-label">馬単払戻（100円あたり）</span>
                   <span class="summary-value hit">¥{(race.umatan?.payout || race.payouts?.umatan?.[0]?.payout || 0).toLocaleString()}</span>
                 </div>
               )}
@@ -343,8 +330,7 @@ const jsonLd = {
 
     <!-- 注意事項 -->
     <section class="results-notice">
-      <p>※ 掲載されている的中率・収支データは、AIモデルが算出した買い目パターンに基づく理論値です。実際の収支はお客様の購入点数・金額配分により異なります。</p>
-      <p>※ 本サービスで提示する買い目は複数パターンの候補を含むため、表示点数と集計上の基準点数が異なる場合があります。</p>
+      <p>※ 的中は、そのレースでAIが表示した馬単の買い目（組み合わせ）に、確定した馬単の組み合わせが含まれていた場合に数えています。</p>
       <p>※ 過去の実績は将来の結果を保証するものではありません。馬券購入は自己責任でお願いいたします。</p>
     </section>
   </main>

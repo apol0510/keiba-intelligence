@@ -29,18 +29,18 @@ const nankanLatestHref = nankanLatest ? `/archive/nankan/${nankanLatest.year}/${
 const formatLatestLabel = (m: { year: string; month: string } | null) =>
   m ? `${m.year}年${parseInt(m.month, 10)}月` : '最新月';
 
-const pageTitle = '的中実績アーカイブ';
-const pageDescription = '中央競馬（JRA）と南関競馬の的中実績アーカイブ。月別・日別の予想結果と配当を全件アーカイブ。AIモデルの判定精度を実データでご確認いただけます。';
+const pageTitle = 'AI予想結果アーカイブ';
+const pageDescription = '中央競馬（JRA）と南関競馬のAI予想結果アーカイブ。月別・日別に、AIが表示した買い目の的中・不的中を全レース公開しています。';
 ---
 
 <BaseLayout title={pageTitle} description={pageDescription}>
   <div class="archive-hub">
     <div class="page-header">
-      <h1 class="page-title">🏆 的中実績アーカイブ</h1>
-      <p class="page-subtitle">中央競馬（JRA）と南関競馬の的中記録</p>
+      <h1 class="page-title">🏆 AI予想結果アーカイブ</h1>
+      <p class="page-subtitle">中央競馬（JRA）と南関競馬のAI予想結果</p>
       <p class="page-description">
         AIモデルの判定精度を実データでご確認いただけます。<br>
-        月別・日別の予想結果と配当をすべてアーカイブしています。
+        月別・日別の予想結果をすべてアーカイブしています。
       </p>
     </div>
 
@@ -51,7 +51,7 @@ const pageDescription = '中央競馬（JRA）と南関競馬の的中実績ア�
           <span class="card-title">中央競馬（JRA）</span>
         </div>
         <p class="card-summary">
-          JRA全10場の的中実績を月別・日別に公開。重賞レースを含む全レースをアーカイブ。
+          JRA全10場のAI予想結果を月別・日別に公開。重賞レースを含む全レースをアーカイブ。
         </p>
         <div class="card-venues">
           <span class="venue-tag">東京</span>
@@ -74,7 +74,7 @@ const pageDescription = '中央競馬（JRA）と南関競馬の的中実績ア�
           <span class="card-title">南関競馬</span>
         </div>
         <p class="card-summary">
-          大井・川崎・船橋・浦和の南関4場の的中実績を月別・日別に公開。重賞・特別レースを含むアーカイブ。
+          大井・川崎・船橋・浦和の南関4場のAI予想結果を月別・日別に公開。重賞・特別レースを含むアーカイブ。
         </p>
         <div class="card-venues">
           <span class="venue-tag">大井</span>

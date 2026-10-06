@@ -26,7 +26,7 @@ interface Props {
 
 const {
   title,
-  description = 'AI-Powered Intelligence Dashboard for 南関・中央競馬。的中率71%、回収率186%を誇る競馬予想プラットフォーム。南関4場とJRA全10場に対応。',
+  description = 'AI-Powered Intelligence Dashboard for 南関・中央競馬。南関4場とJRA全10場の全頭の馬柱・AI短評・展開予想と、AI予想結果を公開する競馬予想プラットフォーム。',
   ogImage = '/og-image.png',
   canonicalPath,
   hideFreeRegisterCta = false
@@ -124,7 +124,7 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
             </div>
           </div>
           <div class="nav-dropdown">
-            <span class="nav-dropdown-trigger">的中実績 ▾</span>
+            <span class="nav-dropdown-trigger">AI予想結果 ▾</span>
             <div class="nav-dropdown-menu">
               <a href="/archive/nankan">南関</a>
               <a href="/archive/jra">中央</a>
@@ -170,16 +170,6 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
             <span class="footer-logo-text">KEIBA Intelligence</span>
           </a>
           <p class="footer-tagline">AI-Powered Intelligence Dashboard<br>for 南関・中央競馬</p>
-          <div class="footer-stats">
-            <div class="footer-stat">
-              <span class="footer-stat-value">71.1%</span>
-              <span class="footer-stat-label">的中率（回収含む）</span>
-            </div>
-            <div class="footer-stat">
-              <span class="footer-stat-value">186.4%</span>
-              <span class="footer-stat-label">回収率</span>
-            </div>
-          </div>
           {!hideFreeRegisterCta && (
             <a href="/register" class="footer-cta" data-auth-out hidden={navAuthed}>無料会員登録 →</a>
           )}
@@ -196,7 +186,7 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
               <li><a href="/free-prediction/jra">無料予想（中央）</a></li>
               <li><a href="/prediction/nankan">有料予想</a></li>
               <li><a href="/pricing">料金プラン</a></li>
-              <li><a href="/archive/">的中実績</a></li>
+              <li><a href="/archive/">AI予想結果</a></li>
               <li><a href="/about">サイト概要</a></li>
             </ul>
           </div>

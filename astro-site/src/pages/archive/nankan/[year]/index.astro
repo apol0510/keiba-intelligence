@@ -95,12 +95,12 @@ try {
 }
 
 const pageTitle = yearData.length > 0
-  ? `${year}年 的中実績アーカイブ`
-  : '的中実績が見つかりません';
+  ? `${year}年 AI予想結果アーカイブ`
+  : 'AI予想結果が見つかりません';
 
 const pageDescription = yearData.length > 0
-  ? `${year}年の的中実績。開催日数${yearStats.totalDays}日、年間的中率${yearStats.hitRate}%、年間回収率${yearStats.returnRate}%、年間合計配当¥${yearStats.totalPayout.toLocaleString()}`
-  : '南関競馬の的中実績アーカイブ';
+  ? `${year}年のAI予想結果。開催日数${yearStats.totalDays}日、的中${yearStats.totalHitRaces}/${yearStats.totalRaces}レース（的中率${yearStats.hitRate}%）`
+  : '南関競馬のAI予想結果アーカイブ';
 ---
 
 <BaseLayout title={pageTitle} description={pageDescription}>
@@ -109,19 +109,19 @@ const pageDescription = yearData.length > 0
       {yearData.length === 0 ? (
         <div class="no-data">
           <h1>⚠️ データが見つかりません</h1>
-          <p>{year}年の的中実績はまだありません。</p>
-          <a href="/results" class="btn-back">的中実績一覧へ戻る</a>
+          <p>{year}年のAI予想結果はまだありません。</p>
+          <a href="/results" class="btn-back">AI予想結果一覧へ戻る</a>
         </div>
       ) : (
         <>
           {/* ページヘッダー */}
           <header class="page-header">
             <div class="breadcrumb">
-              <a href="/results">的中実績</a>
+              <a href="/results">AI予想結果</a>
               <span>/</span>
               <span>{year}年</span>
             </div>
-            <h1>{year}年 的中実績アーカイブ</h1>
+            <h1>{year}年 AI予想結果アーカイブ</h1>
           </header>
 
           {/* 年間サマリー統計 */}
@@ -137,47 +137,9 @@ const pageDescription = yearData.length > 0
                 <div class="summary-value highlight">{yearStats.hitRate}%</div>
                 <div class="summary-detail">{yearStats.totalHitRaces}/{yearStats.totalRaces}R</div>
               </div>
-              <div class="summary-card">
-                <div class="summary-label">年間回収率</div>
-                <div class={`summary-value ${parseFloat(yearStats.returnRate) >= 100 ? 'profit' : 'loss'}`}>
-                  {yearStats.returnRate}%
-                </div>
-              </div>
-              <div class="summary-card">
-                <div class="summary-label">年間合計配当</div>
-                <div class="summary-value profit">¥{(Number(yearStats.totalPayout) || 0).toLocaleString()}</div>
-              </div>
             </div>
           </section>
 
-          {/* ハイライト */}
-          {yearStats.bestMonth && yearStats.worstMonth && (
-            <section class="highlights-section">
-              <h2>ハイライト</h2>
-              <div class="highlights-grid">
-                <div class="highlight-card best">
-                  <div class="highlight-icon">🏆</div>
-                  <div class="highlight-label">最高回収率の月</div>
-                  <div class="highlight-value">{yearStats.bestMonth.returnRate}%</div>
-                  <div class="highlight-date">
-                    <a href={`/archive/nankan/${year}/${yearStats.bestMonth.month}`}>
-                      {year}年{yearStats.bestMonth.month}月
-                    </a>
-                  </div>
-                </div>
-                <div class="highlight-card worst">
-                  <div class="highlight-icon">📉</div>
-                  <div class="highlight-label">最低回収率の月</div>
-                  <div class="highlight-value">{yearStats.worstMonth.returnRate}%</div>
-                  <div class="highlight-date">
-                    <a href={`/archive/nankan/${year}/${yearStats.worstMonth.month}`}>
-                      {year}年{yearStats.worstMonth.month}月
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
 
           {/* 月別統計 */}
           <section class="monthly-section">
@@ -197,16 +159,6 @@ const pageDescription = yearData.length > 0
                       <span class="stat-label">的中率</span>
                       <span class="stat-value highlight">{month.hitRate}%</span>
                     </div>
-                    <div class="stat-row">
-                      <span class="stat-label">回収率</span>
-                      <span class={`stat-value ${parseFloat(month.returnRate) >= 100 ? 'profit' : 'loss'}`}>
-                        {month.returnRate}%
-                      </span>
-                    </div>
-                    <div class="stat-row">
-                      <span class="stat-label">配当</span>
-                      <span class="stat-value profit">¥{(Number(month.totalPayout) || 0).toLocaleString()}</span>
-                    </div>
                   </div>
                   <div class="month-detail">
                     {month.totalHitRaces}/{month.totalRaces}R的中
@@ -218,7 +170,7 @@ const pageDescription = yearData.length > 0
 
           {/* フッターナビ */}
           <footer class="page-footer">
-            <a href="/results" class="btn-back">← 的中実績一覧へ戻る</a>
+            <a href="/results" class="btn-back">← AI予想結果一覧へ戻る</a>
           </footer>
         </>
       )}
