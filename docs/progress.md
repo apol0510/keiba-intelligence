@@ -22,7 +22,10 @@
 - **未完了**: MK の Preview 確認と代表値の決定（PERFORMANCE_STATS §5.1 の A/B/C）→ merge → 本番 smoke。
   範囲外: `/results/Y/M/D` の南関・中央の同日衝突（既存不具合）、archive 内部値の新基準化、`/venues` と `/stats` の重複。
 - **branch**: `fix/ki-return-rate-ssot`（worktree `/Users/user/Projects/ki-worktrees/return-rate-ssot`、base origin/main `2c943bca`）
-- **PR / Preview / CI**: 下記「現在地」参照。🔴 **本番未反映**（MK の Preview 確認まで merge しない）。
+- **PR**: #151（Draft）`https://github.com/apol0510/keiba-intelligence/pull/151`
+- **Preview**: `https://deploy-preview-151--keiba-intelligence.netlify.app`（Netlify deploy-preview pass。この repo の PR チェックは Netlify のみで GitHub Actions の PR CI は無い）
+- **ブラウザ確認**: Desktop（1366）でトップ・Hero・統計カード・登録 CTA・南関/中央アーカイブ・月別結果・会場別。Mobile（390・headless Chrome）でトップ・アーカイブ・結果。
+- **現在地**: Preview 完成・MK 確認待ち。🔴 **本番未反映**（MK の Preview 確認まで merge しない）。再開時は PR #151 の head を確認し、MK の決定（§5.1 A/B/C）に合わせて調整 → merge → 本番 smoke（トップ・/archive/nankan・/archive/jra・/stats/tokyo の値が PERFORMANCE_STATS §4 と一致）。
 - **PR #150（OPEN のまま・未 merge）/ #149** は使っていない・復活させていない。
 
 ### 2026-10-06 解約監査とマイページ継続導線（正本: `docs/RETENTION_2026_10.md`）
