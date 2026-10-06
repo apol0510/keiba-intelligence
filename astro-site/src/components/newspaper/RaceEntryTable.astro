@@ -201,7 +201,8 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     <section class="ret-plan" id={`plan-${raceKey}`} hidden>
       {/*
         🔴 点数・金額を前面に出さない（2026-10-06 MK 決定）。
-           点数と金額の見出しは撤去した。組み合わせそのものだけを見せる。
+           AI上位表示（AI全選定の先頭 N 組）を最初に見せ、残りは「すべてのAI選定を見る」で開く（2026-10-06 MK）。
+           組の並び・上位の範囲は bettingPlan（selectionTiers と同じ）で決める。
       */}
       <header class="rpl-head">
         <h4 class="rpl-title">
@@ -209,10 +210,12 @@ const colCount = 3 // 枠 / 馬番 / 馬名
           買い目
           {plan.isMain && <span class="rpl-main">メインレース</span>}
         </h4>
+        <p class="rpl-count">AI選定 <b>{plan.selectionCount}</b>組</p>
       </header>
 
+      <p class="rpl-tier">AI上位表示</p>
       <ol class="rpl-combos">
-        {plan.combos.map((c: any, i: number) => (
+        {plan.topCombos.map((c: any, i: number) => (
           <li class="rpl-combo" style={`--i:${Math.min(i, 15)}`}>
             <span class="rpl-n rpl-1st">{c.first}</span>
             <span class="rpl-arrow" aria-hidden="true">→</span>
@@ -220,6 +223,21 @@ const colCount = 3 // 枠 / 馬番 / 馬名
           </li>
         ))}
       </ol>
+
+      {plan.restCombos.length > 0 && (
+        <details class="rpl-more">
+          <summary>すべてのAI選定を見る（AI全選定 {plan.selectionCount}組）</summary>
+          <ol class="rpl-combos rpl-combos-rest">
+            {plan.restCombos.map((c: any) => (
+              <li class="rpl-combo rpl-combo-rest">
+                <span class="rpl-n rpl-1st">{c.first}</span>
+                <span class="rpl-arrow" aria-hidden="true">→</span>
+                <span class="rpl-n rpl-2nd">{c.second}</span>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
 
       <dl class="rpl-lines">
         {plan.lines.map((l: any) => (
@@ -721,6 +739,30 @@ const colCount = 3 // 枠 / 馬番 / 馬名
     from { opacity: 0; transform: translateY(4px) scale(0.96); }
     to   { opacity: 1; transform: none; }
   }
+
+  /* AI選定の組数・AI上位表示・すべてのAI選定（2026-10-06 MK） */
+  .rpl-count {
+    margin: 0;
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+  }
+  .rpl-count b { font-size: 1.05rem; color: var(--text-primary); margin: 0 2px; }
+  .rpl-tier {
+    margin: 2px 0 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+  }
+  .rpl-more { margin: 10px 0 4px; }
+  .rpl-more > summary {
+    cursor: pointer;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--text-link, #2563eb);
+    padding: 6px 0;
+  }
+  .rpl-combos-rest { margin-top: 6px; }
+  .rpl-combo-rest { animation: none; opacity: 1; }
 
   /* 軸の内訳と抑えは、組み合わせが出そろってから続けて出す */
   .rpl-lines,

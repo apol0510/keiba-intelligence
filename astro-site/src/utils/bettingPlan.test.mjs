@@ -331,3 +331,66 @@ test('パネルの開閉が出馬表の行に触れない', () => {
   const fn = src.slice(src.indexOf('function applyPlan'), src.indexOf('function syncButtons'));
   assert.ok(!/ret-row|tbody/.test(fn), 'パネルの開閉が出馬表を触っている');
 });
+
+/* ---------- AI上位表示 / AI全選定（2026-10-06 MK） ---------- */
+
+import { selectionTiers, topTierCount, TOP_TIER_RULE } from './bettingPlan.js';
+import { tiersForVenue, hitTier, linesOf } from './displayedSelection.js';
+
+const LINES16 = ['10-4.12.6.7.11.1(抑え2.3.9)', '12-10.4.6.7.11.1(抑え2.3.9)'];
+
+test('AI上位表示は AI全選定の先頭 N 組（部分集合・並びは展開順のまま）', () => {
+  const p = buildBettingPlan(LINES16, { isMain: false, fieldSize: 12 });
+  assert.equal(p.selectionCount, p.combos.length);
+  assert.equal(p.topCount, 8);
+  assert.deepEqual(p.topCombos, p.combos.slice(0, 8));
+  assert.deepEqual([...p.topCombos, ...p.restCombos], p.combos);
+  const t = selectionTiers(LINES16, { isMain: false, fieldSize: 12 });
+  assert.equal(t.rule, TOP_TIER_RULE);
+  assert.deepEqual(t.top, t.all.slice(0, 8));
+  assert.ok(t.top.every((c) => t.all.includes(c)));
+  assert.equal(t.all.some((c) => c.includes('02') || c.includes('03') || c.includes('09')), false, '抑えが入っている');
+});
+
+test('AI上位表示の組数: 8 頭以下 6 組・それ以外 8 組・全選定を超えない', () => {
+  assert.equal(topTierCount(8, 16), 6);
+  assert.equal(topTierCount(9, 16), 8);
+  assert.equal(topTierCount(16, 16), 8);
+  assert.equal(topTierCount(0, 16), 8);
+  assert.equal(topTierCount(12, 5), 5);           // メインレース（5 組）は全部が上位表示
+  const main = buildBettingPlan(['3-5.7.8.10.12'], { isMain: true, fieldSize: 12 });
+  assert.equal(main.restCombos.length, 0);
+});
+
+test('表示と同じ入力から作る（会場のレース数でメイン判定・頭数・行の形を吸収）', () => {
+  const horses = (n) => Array.from({ length: n }, (_, i) => ({ horseNumber: i + 1 }));
+  const preds = Array.from({ length: 12 }, (_, i) => ({ raceInfo: { raceNumber: i + 1 }, horses: horses(12),
+    bettingLines: i % 2 ? { umatan: LINES16 } : LINES16 }));
+  const m = tiersForVenue(preds);
+  assert.equal(m.get(11).isMain, true);
+  assert.equal(m.get(1).isMain, false);
+  assert.deepEqual(m.get(2).all, m.get(1).all);    // 配列 / { umatan } の両方
+  assert.deepEqual(m.get(1), { isMain: false, fieldSize: 12, ...selectionTiers(LINES16, { isMain: false, fieldSize: 12 }) });
+  assert.deepEqual(linesOf({ bettingLines: { umatan: ['', '3-5'] } }), ['3-5']);
+  assert.equal(hitTier(m.get(1), 10, 4), 'top');
+  assert.equal(hitTier(m.get(1), 6, 12), 'all');
+  assert.equal(hitTier(m.get(1), 2, 10), null);
+});
+
+test('🔴 買い目パネル: AI選定○組・AI上位表示・すべてのAI選定を見る（「厳選」は使わない・点数/金額は出さない）', () => {
+  const src = read('src/components/newspaper/RaceEntryTable.astro');
+  const markup = src.slice(src.indexOf('{hasPlan && ('), src.indexOf('<table class="ret-table">'));
+  assert.match(markup, /AI選定 <b>\{plan\.selectionCount\}<\/b>組/);
+  assert.match(markup, /AI上位表示/);
+  assert.match(markup, /すべてのAI選定を見る/);
+  assert.match(markup, /plan\.topCombos\.map/);
+  assert.match(markup, /plan\.restCombos\.map/);
+  for (const w of ['厳選', 'plan.points', 'plan.amountYen', '推奨', '購入']) assert.equal(markup.includes(w), false, w);
+});
+
+test('🔴 「厳選」を顧客向け画面で使わない', () => {
+  for (const f of ['src/components/newspaper/RaceEntryTable.astro', 'src/pages/index.astro', 'src/pages/pricing.astro',
+    'src/pages/results/[year]/[month]/[day].astro']) {
+    assert.equal(read(f).includes('厳選'), false, f);
+  }
+});

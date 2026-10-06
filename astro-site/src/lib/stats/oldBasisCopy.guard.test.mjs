@@ -67,6 +67,6 @@ test('🔴 AI チャットの知識に旧基準の回収率・廃止プランを
 test('的中の数え方の注記がある（結果・アーカイブ）', () => {
   for (const f of ['src/pages/results/[year]/[month]/[day].astro', 'src/pages/results/[year]/[month]/index.astro',
     'src/pages/archive/nankan/index.astro', 'src/pages/archive/jra/index.astro']) {
-    assert.match(readFileSync(join(ROOT, f), 'utf8'), /AIが表示した馬単の買い目（組み合わせ）に、確定した馬単の組み合わせが含まれていた/, f);
+    assert.match(readFileSync(join(ROOT, f), 'utf8'), /AI全選定（会員に表示した馬単の組み合わせのすべて）に、確定した馬単の組み合わせが含まれていた/, f);
   }
 });

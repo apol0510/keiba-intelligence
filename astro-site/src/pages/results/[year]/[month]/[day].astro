@@ -5,6 +5,7 @@ import archiveResults from '../../../../data/archiveResults.json';
 import archiveResultsJra from '../../../../data/archiveResultsJra.json';
 import fs from 'node:fs';
 import path from 'node:path';
+import { tiersForVenue, hitTier } from '../../../../utils/displayedSelection.js';
 
 export const prerender = true;
 
@@ -71,6 +72,8 @@ function cleanRaceName(name: any): string {
 // 予想データから役割情報（本命・対抗等）を取得
 const venueToFile: Record<string, string> = { '大井': 'ooi', '川崎': 'kawasaki', '船橋': 'funabashi', '浦和': 'urawa' };
 const predictionRoles: Record<string, Array<{horseNumber: number, horseName: string, role: string}>> = {};
+/** 会員に表示した AI上位表示 / AI全選定（表示と同じ入力・displayedSelection）。key = `${会場}-${R}` */
+const predictionTiers: Record<string, any> = {};
 
 try {
   const dateStr = entry.date;
@@ -79,6 +82,8 @@ try {
     if (fs.existsSync(jraPath)) {
       const jraData = JSON.parse(fs.readFileSync(jraPath, 'utf-8'));
       for (const v of jraData.venues || []) {
+        const vt = tiersForVenue(v.predictions || []);
+        for (const [rn, t] of vt) predictionTiers[`${v.venue || v.predictions?.[0]?.raceInfo?.venue}-${rn}`] = t;
         for (const pred of v.predictions || []) {
           const rNum = pred.raceInfo?.raceNumber;
           const vName = v.venue || pred.raceInfo?.venue;
@@ -100,6 +105,7 @@ try {
       const predPath = path.join(process.cwd(), 'src/data/predictions', `${dateStr}-${fileKey}.json`);
       if (!fs.existsSync(predPath)) continue;
       const predData = JSON.parse(fs.readFileSync(predPath, 'utf-8'));
+      for (const [rn, t] of tiersForVenue(predData.predictions || [])) predictionTiers[`${venue}-${rn}`] = t;
       for (const pred of predData.predictions || []) {
         const rNum = pred.raceInfo?.raceNumber;
         if (rNum) {
@@ -270,12 +276,27 @@ const jsonLd = {
                   <span class={`summary-value ${(race.isHit || race.honmeiHit) ? 'hit' : ''}`}>{race.payouts?.umatan?.[0]?.combination || race.umatan?.combination}</span>
                 </div>
               )}
-              <div class="summary-item">
-                <span class="summary-label">判定</span>
-                <span class={`summary-value ${(race.isHit || race.honmeiHit) ? 'hit' : 'miss'}`}>
-                  {(race.isHit || race.honmeiHit) ? '的中' : '不的中'}
-                </span>
-              </div>
+              {(() => {
+                const t = predictionTiers[`${race.venue || entry.venue}-${race.raceNumber}`];
+                const isHit = !!(race.isHit || race.honmeiHit);
+                const tier = isHit ? hitTier(t, race.result?.first?.number, race.result?.second?.number) : null;
+                return (
+                  <>
+                    {t && t.all.length > 0 && (
+                      <div class="summary-item">
+                        <span class="summary-label">AI選定</span>
+                        <span class="summary-value">{t.all.length}組</span>
+                      </div>
+                    )}
+                    <div class="summary-item">
+                      <span class="summary-label">判定</span>
+                      <span class={`summary-value ${isHit ? 'hit' : 'miss'}`}>
+                        {isHit ? (tier === 'top' ? '的中（AI上位表示）' : tier === 'all' ? '的中（AI全選定）' : '的中') : '不的中'}
+                      </span>
+                    </div>
+                  </>
+                );
+              })()}
               {(race.isHit || race.honmeiHit) && (race.umatan?.payout || race.payouts?.umatan?.[0]?.payout) && (
                 <div class="summary-item">
                   <span class="summary-label">馬単払戻（100円あたり）</span>
@@ -330,7 +351,7 @@ const jsonLd = {
 
     <!-- 注意事項 -->
     <section class="results-notice">
-      <p>※ 的中は、そのレースでAIが表示した馬単の買い目（組み合わせ）に、確定した馬単の組み合わせが含まれていた場合に数えています。</p>
+      <p>※ 的中は、そのレースでAI全選定（会員に表示した馬単の組み合わせのすべて）に、確定した馬単の組み合わせが含まれていた場合に数えています。</p>
       <p>※ 過去の実績は将来の結果を保証するものではありません。馬券購入は自己責任でお願いいたします。</p>
     </section>
   </main>
