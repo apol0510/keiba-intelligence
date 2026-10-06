@@ -1,0 +1,29 @@
+{
+ "schema": "ki_displayed_summary.v1",
+ "basis": "ai_all_selection",
+ "visibility": "internal_only",
+ "unitYen": 100,
+ "publicFrom": "2026-08-30",
+ "nankan": {
+  "from": "2026-08-31",
+  "to": "2026-10-05",
+  "races": 306,
+  "hits": 190,
+  "hitRate": 62.1,
+  "avgCombos": 14.8,
+  "stake": 453000,
+  "payout": 353100,
+  "returnRate": 77.9
+ },
+ "jra": {
+  "from": "2026-08-30",
+  "to": "2026-10-04",
+  "races": 324,
+  "hits": 175,
+  "hitRate": 54,
+  "avgCombos": 15,
+  "stake": 485100,
+  "payout": 414540,
+  "returnRate": 85.5
+ }
+}

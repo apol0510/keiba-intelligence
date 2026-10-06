@@ -5,34 +5,31 @@ import archiveResults from '../../../../data/archiveResults.json';
 import archiveResultsJra from '../../../../data/archiveResultsJra.json';
 import fs from 'node:fs';
 import path from 'node:path';
+import { hitTier } from '../../../../utils/displayedSelection.js';
+import displayedReturn from '../../../../data/stats/displayedReturn.json';
 
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const paths = [];
-
-  // 南関競馬の日別ページ
-  archiveResults.forEach((entry) => {
-    const [year, month, day] = entry.date.split('-');
-    paths.push({
-      params: { year, month, day },
-      props: { entry, type: 'nankan' }
-    });
+  // 🔴 南関と中央が同じ日にあると URL が重なる（以前は中央だけが残り、南関の日別ページに辿り着けなかった）。
+  //    日付ごとにまとめて 1 ページに両方を出す（中央 → 南関）。
+  const byDate = new Map<string, Array<{ entry: any; type: 'jra' | 'nankan' }>>();
+  for (const entry of archiveResultsJra as any[]) {
+    if (!byDate.has(entry.date)) byDate.set(entry.date, []);
+    byDate.get(entry.date)!.push({ entry, type: 'jra' });
+  }
+  for (const entry of archiveResults as any[]) {
+    if (!byDate.has(entry.date)) byDate.set(entry.date, []);
+    byDate.get(entry.date)!.push({ entry, type: 'nankan' });
+  }
+  return [...byDate.entries()].map(([date, entries]) => {
+    const [year, month, day] = date.split('-');
+    return { params: { year, month, day }, props: { entries } };
   });
-
-  // 中央競馬の日別ページ
-  archiveResultsJra.forEach((entry) => {
-    const [year, month, day] = entry.date.split('-');
-    paths.push({
-      params: { year, month, day },
-      props: { entry, type: 'jra' }
-    });
-  });
-
-  return paths;
 }
 
-const { entry, type } = Astro.props;
+const { entries } = Astro.props as { entries: Array<{ entry: any; type: 'jra' | 'nankan' }> };
+const { entry, type } = entries[0];
 const { year, month, day } = Astro.params;
 
 // ── 文字化け検出 + クリーン名抽出 ─────────────────────────────────
@@ -71,8 +68,34 @@ function cleanRaceName(name: any): string {
 // 予想データから役割情報（本命・対抗等）を取得
 const venueToFile: Record<string, string> = { '大井': 'ooi', '川崎': 'kawasaki', '船橋': 'funabashi', '浦和': 'urawa' };
 const predictionRoles: Record<string, Array<{horseNumber: number, horseName: string, role: string}>> = {};
+/**
+ * 会員に表示した AI全選定 / AI上位表示。🔴 公開時に凍結した表示買い目（data/displayedBets・lib/stats/displayedBets）を正本にする。
+ * 成績（data/stats/displayedReturn.json）と同じデータなので、AI選定の組数・判定・回収率がずれない。key = `${市場}|${会場}|${R}`
+ */
+const frozenTiers: Record<string, { all: string[]; top: string[] }> = {};
+for (const { entry: e, type: market } of entries) {
+  const dir = path.join(process.cwd(), 'src/data/displayedBets', market);
+  if (!fs.existsSync(dir)) continue;
+  for (const name of fs.readdirSync(dir).filter((n) => n.startsWith(e.date) && n.endsWith('.json'))) {
+    for (const rec of JSON.parse(fs.readFileSync(path.join(dir, name), 'utf-8'))) {
+      if (rec.date !== e.date) continue;
+      for (const r of rec.races || []) frozenTiers[`${market}|${rec.venue}|${r.raceNumber}`] = { all: r.combos || [], top: Array.isArray(r.top) ? r.top : [] };
+    }
+  }
+}
+/**
+ * 日・市場ごとの的中と AI選定の組数（displayedReturn の日別を会場合算）。
+ * 🔴 回収率は顧客画面に出さない（内部計測のみ・2026-10-06 MK）。ここでも読まない。
+ */
+function dayStats(market: string, date: string) {
+  const ds = ((displayedReturn as any).days || []).filter((d: any) => d.market === market && d.date === date && d.races > 0);
+  if (!ds.length) return null;
+  const sum = (k: string) => ds.reduce((a: number, d: any) => a + d[k], 0);
+  const races = sum('races'); const hits = sum('hits'); const combos = sum('combos');
+  return { races, hits, hitRate: Math.round((hits / races) * 1000) / 10, avgCombos: Math.round((combos / races) * 10) / 10 };
+}
 
-try {
+for (const { entry, type } of entries) try {
   const dateStr = entry.date;
   if (type === 'jra') {
     const jraPath = path.join(process.cwd(), 'src/data/predictions/jra', year, month, `${dateStr}.json`);
@@ -116,8 +139,9 @@ try {
   // 予想データがない場合は空のままで問題ない
 }
 
-const title = `${entry.date} ${type === 'jra' ? '中央競馬' : '南関競馬'} 的中実績 - KEIBA Intelligence`;
-const description = `${entry.date}の${type === 'jra' ? '中央競馬' : '南関競馬'}予想の的中実績。的中率${entry.hitRate}%、回収率${entry.returnRate}%、${entry.hitRaces}/${entry.totalRaces}レース的中。AI競馬予想の詳細な結果を公開。`;
+const marketLabel = (t: string) => (t === 'jra' ? '中央競馬' : '南関競馬');
+const title = `${entry.date} ${entries.map((x) => marketLabel(x.type)).join('・')} AI予想結果 - KEIBA Intelligence`;
+const description = `${entry.date}の${entries.map((x) => marketLabel(x.type)).join('・')}AI予想結果。${entries.map((x) => `${marketLabel(x.type)} ${x.entry.hitRaces}/${x.entry.totalRaces}レース的中`).join('・')}。レースごとの結果と判定を公開。`;
 
 // 会場別の住所マッピング
 const venueAddresses = {
@@ -145,7 +169,7 @@ const venueAddress = venueAddresses[primaryVenue] || "日本";
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SportsEvent",
-  "name": `${entry.date} ${type === 'jra' ? '中央競馬' : '南関競馬'} 的中実績`,
+  "name": `${entry.date} ${type === 'jra' ? '中央競馬' : '南関競馬'} AI予想結果`,
   "description": description,
   "startDate": `${entry.date}T10:00:00+09:00`,
   "endDate": `${entry.date}T20:30:00+09:00`,
@@ -188,142 +212,161 @@ const jsonLd = {
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   <main class="container">
     <div class="page-header">
-      <h1>🎯 {entry.date} 的中実績</h1>
-      <p class="subtitle">{type === 'jra' ? '中央競馬' : '南関競馬'} - {entry.venue}</p>
+      <h1>🎯 {entry.date} AI予想結果</h1>
+      <p class="subtitle">{entries.map((x) => `${marketLabel(x.type)} - ${x.entry.venue}`).join(' ／ ')}</p>
+      {entries.length > 1 && (
+        <nav class="market-jump">
+          {entries.map((x) => <a href={`#${x.type}`}>{marketLabel(x.type)}</a>)}
+        </nav>
+      )}
     </div>
 
     <!-- パンくずリスト -->
     <nav class="breadcrumb">
       <a href="/">ホーム</a>
       <span>›</span>
-      <a href={type === 'jra' ? '/archive/jra' : '/archive'}>的中実績</a>
+      <a href={type === 'jra' ? '/archive/jra' : '/archive'}>AI予想結果</a>
       <span>›</span>
       <a href={`/results/${year}/${month}`}>{year}年{month}月</a>
       <span>›</span>
       <span>{day}日</span>
     </nav>
 
-    <!-- 統計サマリー -->
-    <section class="stats-summary">
-      <div class="stat-card">
-        <div class="stat-label">的中率</div>
-        <div class="stat-value">{entry.hitRate}%</div>
-        <div class="stat-detail">{entry.hitRaces}/{entry.totalRaces}レース</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">回収率</div>
-        <div class="stat-value">{entry.returnRate}%</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">投資額</div>
-        <div class="stat-value">¥{(entry.betAmount || 0).toLocaleString()}</div>
-        <div class="stat-detail">{entry.totalRaces}レース</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">払戻額</div>
-        <div class="stat-value">¥{(entry.totalPayout || 0).toLocaleString()}</div>
-        <div class="stat-detail">+¥{((entry.totalPayout || 0) - (entry.betAmount || 0)).toLocaleString()}</div>
-      </div>
-    </section>
+    {entries.map(({ entry, type }) => {
+      const st = dayStats(type, entry.date);
+      return (
+      <section class="market-block" id={type}>
+        {entries.length > 1 && <h2 class="market-title">{marketLabel(type)}（{entry.venue}）</h2>}
 
-    <!-- レース別結果 -->
-    <section class="races-section">
-      <h2>📋 全{entry.totalRaces}レース結果</h2>
-
-      {(entry.raceResults || entry.races || []).map((race) => {
-        // 表示名と馬名のクリーン化（文字化けを画面に出さない）
-        const raceDisplayName = race.displayName
-          || cleanRaceName(race.raceName)
-          || `${race.venue || ''}${race.raceNumber}R`;
-        const firstName = cleanHorseName(race.result?.first?.name);
-        const secondName = cleanHorseName(race.result?.second?.name);
-        const thirdName = cleanHorseName(race.result?.third?.name);
-        return (
-        <div class={`race-card ${race.honmeiHit || race.isHit ? 'hit' : 'miss'}`}>
-          <div class="race-header">
-            <div class="race-info">
-              <span class="race-number">{race.raceNumber}R</span>
-              <span class="race-name">{raceDisplayName}</span>
-              {race.venue && <span class="race-venue">{race.venue}</span>}
-            </div>
-            <div class={`race-result-badge ${race.honmeiHit || race.isHit ? 'hit' : 'miss'}`}>
-              {(race.honmeiHit || race.isHit) ? '✅ 的中' : '❌ 外れ'}
-            </div>
+        {/* 統計サマリー（的中率・的中レース数が中心。🔴 回収率は出さない＝内部計測のみ・2026-10-06 MK） */}
+        <section class="stats-summary">
+          <div class="stat-card">
+            <div class="stat-label">的中率</div>
+            <div class="stat-value">{st ? st.hitRate : entry.hitRate}%</div>
           </div>
-
-          <div class="race-content">
-            <!-- 結果 -->
-            <div class="result-box">
-              <h4>レース結果</h4>
-              <div class="result-line">
-                <span class="position">1着</span>
-                <span class="horse">{race.winner || race.result?.first?.number}番{firstName ? ` ${firstName}` : ''}</span>
-              </div>
-              <div class="result-line">
-                <span class="position">2着</span>
-                <span class="horse">{race.second || race.result?.second?.number}番{secondName ? ` ${secondName}` : ''}</span>
-              </div>
-              <div class="result-line">
-                <span class="position">3着</span>
-                <span class="horse">{race.third || race.result?.third?.number}番{thirdName ? ` ${thirdName}` : ''}</span>
-              </div>
-              <div class="hit-summary">
-                {race.honmeiHit && <span class="hit-badge">本命的中</span>}
-                {race.umatanHit && <span class="hit-badge">馬単的中</span>}
-                {race.sanrenpukuHit && <span class="hit-badge">3連複的中</span>}
-              </div>
-            </div>
-
-            {/* 予想サマリー（買い目は非表示） */}
-            <div class="prediction-summary-box">
-              <h4>AI予想サマリー</h4>
-              {(race.payouts?.umatan?.[0]?.combination || race.umatan?.combination) && (
-                <div class="summary-item">
-                  <span class="summary-label">馬単</span>
-                  <span class={`summary-value ${(race.isHit || race.honmeiHit) ? 'hit' : ''}`}>{race.payouts?.umatan?.[0]?.combination || race.umatan?.combination}</span>
-                </div>
-              )}
-              <div class="summary-item">
-                <span class="summary-label">判定</span>
-                <span class={`summary-value ${(race.isHit || race.honmeiHit) ? 'hit' : 'miss'}`}>
-                  {(race.isHit || race.honmeiHit) ? '的中' : '不的中'}
-                </span>
-              </div>
-              {(race.isHit || race.honmeiHit) && (race.umatan?.payout || race.payouts?.umatan?.[0]?.payout) && (
-                <div class="summary-item">
-                  <span class="summary-label">払い戻し</span>
-                  <span class="summary-value hit">¥{(race.umatan?.payout || race.payouts?.umatan?.[0]?.payout || 0).toLocaleString()}</span>
-                </div>
-              )}
-            </div>
-
+          <div class="stat-card">
+            <div class="stat-label">的中レース数</div>
+            <div class="stat-value">{st ? st.hits : entry.hitRaces}<span class="stat-unit">/{st ? st.races : entry.totalRaces}レース</span></div>
           </div>
+        </section>
+        {st && <p class="stats-sub">AI選定：平均{st.avgCombos}組/レース</p>}
 
-          {/* AI振り返り */}
-          <AIRaceComment
-            type="result"
-            masked={true}
-            raceData={JSON.stringify({
-              venue: race.venue || entry.venue,
-              date: entry.date,
-              raceNumber: race.raceNumber,
-              raceName: raceDisplayName,
-              generatedAt: entry.verifiedAt,
-              isHit: race.isHit || race.honmeiHit || false,
-              result: {
-                first: { number: race.winner || race.result?.first?.number || '?', name: firstName },
-                second: { number: race.second || race.result?.second?.number || '?', name: secondName },
-                third: { number: race.third || race.result?.third?.number || '?', name: thirdName }
-              },
-              umatanCombination: race.umatan?.combination || race.payouts?.umatan?.[0]?.combination || '',
-              payout: race.umatan?.payout || race.payouts?.umatan?.[0]?.payout || 0,
-              roles: predictionRoles[`${race.venue || entry.venue}-${race.raceNumber}`] || []
-            })}
-          />
-        </div>
-        );
-      })}
-    </section>
+        <!-- レース別結果 -->
+        <section class="races-section">
+          <h2>📋 全{entry.totalRaces}レース結果</h2>
+
+          {(entry.raceResults || entry.races || []).map((race) => {
+            // 表示名と馬名のクリーン化（文字化けを画面に出さない）
+            const raceDisplayName = race.displayName
+              || cleanRaceName(race.raceName)
+              || `${race.venue || ''}${race.raceNumber}R`;
+            const firstName = cleanHorseName(race.result?.first?.name);
+            const secondName = cleanHorseName(race.result?.second?.name);
+            const thirdName = cleanHorseName(race.result?.third?.name);
+            return (
+            <div class={`race-card ${race.honmeiHit || race.isHit ? 'hit' : 'miss'}`}>
+              <div class="race-header">
+                <div class="race-info">
+                  <span class="race-number">{race.raceNumber}R</span>
+                  <span class="race-name">{raceDisplayName}</span>
+                  {race.venue && <span class="race-venue">{race.venue}</span>}
+                </div>
+                <div class={`race-result-badge ${race.honmeiHit || race.isHit ? 'hit' : 'miss'}`}>
+                  {(race.honmeiHit || race.isHit) ? '✅ 的中' : '❌ 外れ'}
+                </div>
+              </div>
+
+              <div class="race-content">
+                <!-- 結果 -->
+                <div class="result-box">
+                  <h4>レース結果</h4>
+                  <div class="result-line">
+                    <span class="position">1着</span>
+                    <span class="horse">{race.winner || race.result?.first?.number}番{firstName ? ` ${firstName}` : ''}</span>
+                  </div>
+                  <div class="result-line">
+                    <span class="position">2着</span>
+                    <span class="horse">{race.second || race.result?.second?.number}番{secondName ? ` ${secondName}` : ''}</span>
+                  </div>
+                  <div class="result-line">
+                    <span class="position">3着</span>
+                    <span class="horse">{race.third || race.result?.third?.number}番{thirdName ? ` ${thirdName}` : ''}</span>
+                  </div>
+                  <div class="hit-summary">
+                    {race.honmeiHit && <span class="hit-badge">本命的中</span>}
+                    {race.umatanHit && <span class="hit-badge">馬単的中</span>}
+                    {race.sanrenpukuHit && <span class="hit-badge">3連複的中</span>}
+                  </div>
+                </div>
+
+                {/* 予想サマリー（買い目は非表示） */}
+                <div class="prediction-summary-box">
+                  <h4>AI予想サマリー</h4>
+                  {(race.payouts?.umatan?.[0]?.combination || race.umatan?.combination) && (
+                    <div class="summary-item">
+                      <span class="summary-label">馬単</span>
+                      <span class={`summary-value ${(race.isHit || race.honmeiHit) ? 'hit' : ''}`}>{race.payouts?.umatan?.[0]?.combination || race.umatan?.combination}</span>
+                    </div>
+                  )}
+                  {(() => {
+                    const t = frozenTiers[`${type}|${race.venue || entry.venue}|${race.raceNumber}`];
+                    const isHit = !!(race.isHit || race.honmeiHit);
+                    const tier = isHit ? hitTier(t, race.result?.first?.number, race.result?.second?.number) : null;
+                    return (
+                      <>
+                        {t && t.all.length > 0 && (
+                          <div class="summary-item">
+                            <span class="summary-label">AI選定</span>
+                            <span class="summary-value">{t.all.length}組</span>
+                          </div>
+                        )}
+                        <div class="summary-item">
+                          <span class="summary-label">判定</span>
+                          <span class={`summary-value ${isHit ? 'hit' : 'miss'}`}>
+                            {isHit ? (tier === 'top' ? '的中（AI上位表示）' : tier === 'all' ? '的中（AI全選定）' : '的中') : '不的中'}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                  {(race.isHit || race.honmeiHit) && (race.umatan?.payout || race.payouts?.umatan?.[0]?.payout) && (
+                    <div class="summary-item">
+                      <span class="summary-label">馬単払戻（100円あたり）</span>
+                      <span class="summary-value hit">¥{(race.umatan?.payout || race.payouts?.umatan?.[0]?.payout || 0).toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* AI振り返り */}
+              <AIRaceComment
+                type="result"
+                masked={true}
+                raceData={JSON.stringify({
+                  venue: race.venue || entry.venue,
+                  date: entry.date,
+                  raceNumber: race.raceNumber,
+                  raceName: raceDisplayName,
+                  generatedAt: entry.verifiedAt,
+                  isHit: race.isHit || race.honmeiHit || false,
+                  result: {
+                    first: { number: race.winner || race.result?.first?.number || '?', name: firstName },
+                    second: { number: race.second || race.result?.second?.number || '?', name: secondName },
+                    third: { number: race.third || race.result?.third?.number || '?', name: thirdName }
+                  },
+                  umatanCombination: race.umatan?.combination || race.payouts?.umatan?.[0]?.combination || '',
+                  payout: race.umatan?.payout || race.payouts?.umatan?.[0]?.payout || 0,
+                  roles: predictionRoles[`${race.venue || entry.venue}-${race.raceNumber}`] || []
+                })}
+              />
+            </div>
+            );
+          })}
+        </section>
+      </section>
+      );
+    })}
 
     <!-- 関連リンク -->
     <section class="related-links">
@@ -343,8 +386,7 @@ const jsonLd = {
 
     <!-- 注意事項 -->
     <section class="results-notice">
-      <p>※ 掲載されている的中率・収支データは、AIモデルが算出した買い目パターンに基づく理論値です。実際の収支はお客様の購入点数・金額配分により異なります。</p>
-      <p>※ 本サービスで提示する買い目は複数パターンの候補を含むため、表示点数と集計上の基準点数が異なる場合があります。</p>
+      <p>※ 的中は、そのレースでAI全選定（会員に表示した馬単の組み合わせのすべて）に、確定した馬単の組み合わせが含まれていた場合に数えています。</p>
       <p>※ 過去の実績は将来の結果を保証するものではありません。馬券購入は自己責任でお願いいたします。</p>
     </section>
   </main>
@@ -399,6 +441,13 @@ const jsonLd = {
 }
 
 /* 統計サマリー */
+.market-jump { display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.75rem; flex-wrap: wrap; }
+.market-jump a { padding: 0.35rem 0.9rem; border: 1px solid currentColor; border-radius: 999px; font-size: 0.9rem; text-decoration: none; }
+.market-block { scroll-margin-top: 160px; }
+.market-block + .market-block { margin-top: 2.5rem; }
+.market-title { font-size: 1.4rem; margin: 1.5rem 0 1rem; }
+.stat-unit { font-size: 0.5em; font-weight: 600; margin-left: 0.15em; opacity: 0.75; }
+.stats-sub { margin: -2rem 0 2.5rem; text-align: center; font-size: 0.9rem; opacity: 0.8; }
 .stats-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

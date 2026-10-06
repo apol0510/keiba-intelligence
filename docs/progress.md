@@ -20,6 +20,16 @@
 - **現在地**: PR #146（branch `feat/mypage-retention-2026-10-06`）CI green・mergeable。billing 変更のため owner の merge 待ち
   （KAO mediumHandoff は billing を対象外とする）。merge 後は `post-deploy-billing-smoke.yml` が本番を自動確認する。
 
+### 2026-10-06 表示買い目の凍結と、表示買い目基準の回収率の再計算（水面下・顧客には未表示）
+
+- **凍結**: `scripts/freezeDisplayedBets.mjs`（`npm run freeze:displayed`）。予想公開時（import workflow 内）に、会員に表示した馬単の組み合わせ
+  （`buildBettingPlan` と同じ規則・抑えは含めない・メインレースは表示と同じ判定）を `src/data/displayedBets/{nankan,jra}/` へ保存。**最初の版が勝つ**（上書きしない・後の変更は drift ログ）。
+- **backfill**: 過去 389 開催（2026-01〜10-05）を凍結。結果取込済みのレースは archive に残った買い目を使う（2026 年前半は予想ファイルが後で書き換わった例あり）。
+- **再計算**: `scripts/recomputeDisplayedReturn.mjs` → `src/data/stats/displayedReturn.json`（内部）。全期間で **回収率 71.7%**（南関 72.0%・JRA 71.4%）・的中率 54.3%。
+  着順と払戻の組が食い違う 21 レースは推測せず除外（`dataConflicts`）。
+- **検証**: `test:displayed-bets`（凍結の先勝ち・drift・規則一致・archive isHit との一致）を build に組込。
+- **未定（MK 判断）**: 表示買い目基準の回収率を顧客に出すか・いつ・どの期間から（旧 5 点基準は撤去済み）。
+
 ### 2026-09-30 JRA 予想の会場公開は racebook を必須条件にする（MK 決定）
 
 - **事象**: 2026-09-21 中山が開催中止（9/22 へ順延）となり racebook は保存されなかったが、`importPredictionJra.js` の
@@ -30,6 +40,53 @@
   除外会場と理由を `[VENUE-GATE]` でログに残す。整合する会場が 0 ならその日は公開しない。日ファイルは毎回丸ごと書き直すため、除外会場は再実行で消える。
 - **test**: `importPredictionJra.test.mjs` 17〜21（9/21 再現・全会場除外・date 不一致・統合ファイル経路・理由表）。
 - ⚠️ 既存の失敗（本件と無関係・origin/main でも再現）: test 16 `fetchJraResultDay: 429 → retry → 200`。別 task。
+
+### 2026-10-06 回収率は内部計測に戻す・結果画面は的中率中心・Deploy Preview 専用デモ Premium 画面（MK 決定・#150）
+
+- 🔴 **MK 決定: 顧客向けにマイナス収支となる回収率を主要 KPI として公開しない。** 表示買い目基準の回収率は中央・南関・日別すべて**内部計測のみ**。旧 186.4% 等も復活させない。
+  → トップ・予想ページの成績ブロック（DisplayedBasisStats）を削除。結果ページ（日）の回収率カードと注記を削除。
+  → guard（oldBasisCopy）: 回収率はどの基準でも顧客画面に出さない・`displayedSummary` を顧客画面から読まない。
+  → `displayedReturn.json` / `displayedSummary.json`（`visibility: internal_only`）は内部 KPI として生成を継続。
+- 結果画面（日）: **的中率・的中レース数**が中心。AI選定は日合計を出さず「AI選定：平均○組/レース」。各レースの「AI選定○組」「的中（AI上位表示 / AI全選定）」は維持。
+- **デモ Premium 画面** `/preview-demo/jra`・`/preview-demo/nankan`（`lib/preview/demoPages.js`）:
+  build 時に `CONTEXT === 'deploy-preview'` のときだけ静的生成（production / branch-deploy / ローカル build では 0 ページ＝404・ローカルは `KI_PREVIEW_DEMO=1`）。
+  認証・Cookie・entitlement に触れない。結果確定済みの過去日（2026-10-04 中央 / 大井）だけ。実際の RaceDayBoard の 2 段階買い目 UI をそのまま使う。test: `demoPages.test.mjs`（test:results-copy）。
+
+### 2026-10-06 表示買い目基準の回収率を再表示・結果ページの南関/中央 URL 衝突を修正（MK 指示・#150）
+
+- **原因（10/4 で「AI選定○組」が見えない）**: 南関と中央が同じ日にあると `/results/Y/M/D` が重なり、中央だけが生成されていた（南関の日別ページに辿り着けない日が 8 日: 2026-02-28・06-28・07-04・08-02・08-15・08-16・09-22・10-04）。
+  → 日付ごとに 1 ページへまとめ、中央 → 南関の順に両方を出す（`#jra` / `#nankan`・月別一覧とアーカイブのリンクは市場のアンカー付き）。
+- **単一の定義**: #149（表示買い目の凍結）を #150 へ merge。凍結（`lib/stats/displayedBets`）は `utils/displayedSelection` を使い、レースごとに `combos`（AI全選定）と `top`（AI上位表示・`ki-top-v1`）を保存。
+  既存の凍結は combos が一致するレースだけ `top` を補った（combos は変えない・`topAugmentedAt`）。
+- **結果ページ（日）**: AI選定の組数・判定（的中（AI上位表示）/ 的中（AI全選定））・日の的中率・**表示買い目基準回収率**を、凍結データと `data/stats/displayedReturn.json` から出す（予想ファイルから作り直さない）。
+- **顧客向けの集計**: `data/stats/displayedSummary.json`（`scripts/recomputeDisplayedReturn.mjs`・`test:billing` の前に毎回再生成・出力は入力だけで決まる）。
+  起点 `PUBLIC_FROM = 2026-08-30`（展開した組を表示する買い目パネルの公開日）。それより前は内部集計だけ。
+  トップ（中央・南関）と予想ページ（各市場）に `DisplayedBasisStats`（的中率・平均 AI選定組数・回収率・期間・注記）。
+- 2026-10-06 時点: 中央 324R 的中率 54.0%・平均 15.0 組・回収率 85.5% ／ 南関 306R 62.1%・14.8 組・77.9%。
+  AI上位表示だけの成績（内部）: 中央 81.0% ／ 南関 70.1%。データ食い違い 21R は除外。
+- guard（oldBasisCopy）: 回収率を出せるのは表示買い目基準のデータを読む 2 ファイルだけ。archive 由来（旧 5 点基準）の値は参照禁止。
+
+### 2026-10-06 買い目表示を「AI上位表示」と「AI全選定」の 2 段階に（MK 指示）
+
+- **AI全選定** = `buildBettingPlan` が展開した組の全体（的中判定・凍結・回収率の基準）。**AI上位表示** = その先頭 N 組（部分集合）。
+  並びは既存の展開順（1 行目の軸→相手を評価順→評価上位の逆方向→2 行目…）。N = 8 頭以下 6 組・それ以外 8 組（全選定を超えない）。ルール名 `ki-top-v1`。
+- 単一の定義: `bettingPlan.selectionTiers` ＋ `utils/displayedSelection.js`（表示と同じ入力＝行・会場のレース数によるメイン判定・頭数）。
+  Premium 表示・「AI選定 ○組」・結果ページの判定（的中（AI上位表示）/ 的中（AI全選定））が同じ定義を通る。凍結（#149）も同じ定義へ寄せる。
+- 画面: 買い目パネルに「AI選定 ○組」「AI上位表示」と、`<details>` の「すべてのAI選定を見る（AI全選定 ○組）」。🔴「厳選」は使わない（test で固定）。
+- 結果ページ（日）: レースごとに「AI選定 ○組」と、的中が上位表示の範囲か全選定の範囲かを表示。的中の注記は「AI全選定…に含まれていた場合」に統一。
+
+### 2026-10-06 旧 5 点基準の回収率・投資額・払戻額・収支を顧客向け表示から撤去・ページ名を「AI予想結果」へ（MK 決定）
+
+- **撤去**: 結果（日・月）・アーカイブ（トップ・南関 / JRA の一覧・年・月）・競馬場別（venues / stats）・トップの回収率カード・
+  料金ページの回収率 FAQ・予想ページ下部の回収率説明・SEO の title / description（既定 description の「的中率71%、回収率186%」を含む）・
+  フッターの固定値「71.1% / 186.4%」・AI チャットの知識（旧回収率と廃止プランの記載）。frontmatter の計算は残す（表示しない）。
+- **残す**: 的中率 / ○レース的中。検証: archive 全 4,526 レースで、保存済み isHit ＝「表示した組み合わせ（buildBettingPlan.combos）に確定組が含まれる」が 100% 一致。
+  2026-09-01 以降、公開後に買い目が変わったレースは 0。注記「的中は、AIが表示した馬単の買い目（組み合わせ）に…含まれていた場合に数えています」を各ページに置く。
+- **名称**: 「的中実績」→「AI予想結果」（ナビ・フッター・見出し・パンくず・SEO・JSON-LD）。
+- **guard**: `src/lib/stats/oldBasisCopy.guard.test.mjs`（`test:results-copy`・build に組込）。
+- **Open（別対応）**: ①「抑え」は判定に含めないが画面に馬番を出している（抑え 2 着の不的中が NK 100・JRA 159 レース）→ 表示の扱いを決める。
+  ② メインレース判定が表示（予想ファイル）と取込（結果データ）で別に数えている（2026-07-24 大井で不一致・判定は同じ）。
+  ③ 結果・予想が揃わないレースは分母から黙って落ちる（2026-03-13 NK・07-24 NK・04-05 JRA）。④ AIBettingSection の「期待値分析」訴求（未使用コンポーネント）。
 
 ### 2026-10-06 買い目画面・成績ページから購入点数の表示を撤去（MK 決定）
 

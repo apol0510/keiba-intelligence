@@ -78,12 +78,12 @@ try {
 }
 
 const pageTitle = venueData.length > 0
-  ? `${venueName}競馬 的中実績・統計データ`
-  : `${venueName}競馬 的中実績`;
+  ? `${venueName}競馬 AI予想結果`
+  : `${venueName}競馬 AI予想結果`;
 
 const pageDescription = venueData.length > 0
-  ? `${venueName}競馬の的中実績。開催日数${venueStats.totalDays}日、通算的中率${venueStats.hitRate}%、通算回収率${venueStats.returnRate}%、通算合計配当¥${venueStats.totalPayout.toLocaleString()}`
-  : `${venueName}競馬の的中実績・統計データ`;
+  ? `${venueName}競馬のAI予想結果。開催日数${venueStats.totalDays}日、通算${venueStats.totalHitRaces}/${venueStats.totalRaces}レース的中（的中率${venueStats.hitRate}%）`
+  : `${venueName}競馬のAI予想結果`;
 ---
 
 <BaseLayout title={pageTitle} description={pageDescription}>
@@ -92,19 +92,19 @@ const pageDescription = venueData.length > 0
       {venueData.length === 0 ? (
         <div class="no-data">
           <h1>⚠️ データが見つかりません</h1>
-          <p>{venueName}競馬の的中実績はまだありません。</p>
-          <a href="/results" class="btn-back">的中実績一覧へ戻る</a>
+          <p>{venueName}競馬のAI予想結果はまだありません。</p>
+          <a href="/results" class="btn-back">AI予想結果一覧へ戻る</a>
         </div>
       ) : (
         <>
           {/* ページヘッダー */}
           <header class="page-header">
             <div class="breadcrumb">
-              <a href="/results">的中実績</a>
+              <a href="/results">AI予想結果</a>
               <span>/</span>
               <span>{venueName}競馬</span>
             </div>
-            <h1>{venueName}競馬 的中実績</h1>
+            <h1>{venueName}競馬 AI予想結果</h1>
             <div class="meta">
               <span class="venue-badge">{venueName}</span>
               <span class="days-badge">{venueStats.totalDays}日開催</span>
@@ -124,51 +124,9 @@ const pageDescription = venueData.length > 0
                 <div class="summary-value highlight">{venueStats.hitRate}%</div>
                 <div class="summary-detail">{venueStats.totalHitRaces}/{venueStats.totalRaces}R</div>
               </div>
-              <div class="summary-card">
-                <div class="summary-label">通算回収率</div>
-                <div class={`summary-value ${parseFloat(venueStats.returnRate) >= 100 ? 'profit' : 'loss'}`}>
-                  {venueStats.returnRate}%
-                </div>
-              </div>
-              <div class="summary-card">
-                <div class="summary-label">通算合計配当</div>
-                <div class="summary-value profit">¥{venueStats.totalPayout.toLocaleString()}</div>
-              </div>
             </div>
           </section>
 
-          {/* ハイライト記録 */}
-          {venueStats.bestDay && (
-            <section class="highlights-section">
-              <h2>ハイライト記録</h2>
-              <div class="highlights-grid">
-                {venueStats.bestDay && (
-                  <div class="highlight-card best">
-                    <div class="highlight-icon">🏆</div>
-                    <div class="highlight-label">最高回収率</div>
-                    <div class="highlight-value">{venueStats.bestDay.returnRate}%</div>
-                    <div class="highlight-date">
-                      <a href={`/results/${venueStats.bestDay.date.split('-')[0]}/${venueStats.bestDay.date.split('-')[1]}/${venueStats.bestDay.date.split('-')[2]}`}>
-                        {venueStats.bestDay.date}
-                      </a>
-                    </div>
-                  </div>
-                )}
-                {venueStats.highestPayout && (
-                  <div class="highlight-card payout">
-                    <div class="highlight-icon">💰</div>
-                    <div class="highlight-label">最高配当</div>
-                    <div class="highlight-value">¥{venueStats.highestPayout.totalPayout.toLocaleString()}</div>
-                    <div class="highlight-date">
-                      <a href={`/results/${venueStats.highestPayout.date.split('-')[0]}/${venueStats.highestPayout.date.split('-')[1]}/${venueStats.highestPayout.date.split('-')[2]}`}>
-                        {venueStats.highestPayout.date}
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
 
           {/* 開催履歴 */}
           <section class="history-section">
@@ -191,16 +149,6 @@ const pageDescription = venueData.length > 0
                         <span class="stat-label">的中率</span>
                         <span class="stat-value highlight">{dayData.hitRate}%</span>
                       </div>
-                      <div class="stat-item">
-                        <span class="stat-label">回収率</span>
-                        <span class={`stat-value ${dayData.returnRate >= 100 ? 'profit' : 'loss'}`}>
-                          {dayData.returnRate}%
-                        </span>
-                      </div>
-                      <div class="stat-item">
-                        <span class="stat-label">配当</span>
-                        <span class="stat-value profit">¥{dayData.totalPayout.toLocaleString()}</span>
-                      </div>
                     </div>
                     <div class="history-detail">
                       <span>{dayData.hitRaces}/{dayData.totalRaces}R的中</span>
@@ -213,7 +161,7 @@ const pageDescription = venueData.length > 0
 
           {/* フッターナビ */}
           <footer class="page-footer">
-            <a href="/results" class="btn-back">← 的中実績一覧へ戻る</a>
+            <a href="/results" class="btn-back">← AI予想結果一覧へ戻る</a>
           </footer>
         </>
       )}

@@ -42,7 +42,7 @@ const TIER_MATRIX = [
   { label: 'AI短評（1頭ごとの文章）', guest: true, free: true, paid: true },
   { label: 'AIレース展望・展開予想', guest: true, free: true, paid: true },
   { label: '特徴量6指標', guest: true, free: true, paid: true },
-  { label: '的中実績・回収率', guest: true, free: true, paid: true },
+  { label: 'AI予想結果（的中・不的中）', guest: true, free: true, paid: true },
   { label: '印（◎○▲△・複数付与）', guest: false, free: true, paid: true },
   { label: 'AI指数の数値（無料はモザイク）', guest: false, free: false, paid: true },
   { label: 'AI結論（推奨理由の解説）', guest: false, free: false, paid: true },
@@ -264,8 +264,8 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       <details><summary>あとから値上げされませんか？</summary>
         <p>ご契約中は、加入されたときの価格のまま続けていただけます（継続価格ロック）。新規のお申し込み価格を変更する場合でも、契約中の会員さまの金額は上がりません。解約後90日以内に再開された場合は以前の価格が戻り、それを過ぎた場合はその時点の価格になります。</p>
       </details>
-      <details><summary>回収率はどう計算していますか？</summary>
-        <p>払戻 ÷ 投資 × 100 の実測値です。公開している的中はすべて算入しています。</p>
+      <details><summary>的中はどう数えていますか？</summary>
+        <p>的中は、AI全選定（会員に表示した馬単の組み合わせのすべて）に、確定した馬単の組み合わせが含まれていたレースを数えています。公開したレースはすべて集計に入れています。</p>
       </details>
     </section>
   </div>

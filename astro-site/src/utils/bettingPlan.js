@@ -41,6 +41,37 @@
  *       したがって「表示されている組の数」と「見出しの点数」は一致しないことがある。
  */
 
+/**
+ * ── AI上位表示 / AI全選定（2026-10-06 MK）──
+ *
+ * - **AI全選定** = 本モジュールが展開した組の全体（`combos`）。的中判定・凍結・回収率の基準はこれ。
+ * - **AI上位表示** = AI全選定の**先頭 N 組**（部分集合）。並びは本モジュールの展開順（再現可能な既存の評価順）:
+ *   1 行目の軸 → 相手を評価順に → 評価上位の逆方向 → 2 行目 … （重複は先に出た方を残す）。
+ * - N は出走頭数で決める（8 頭以下 6 組・それ以外 8 組）。全選定の組数を超えない。
+ * - 🔴 上位表示は全選定を絞り込んだ別の買い目ではない。同じ並びの先頭であり、凍結・評価も同じ並びから作る
+ *   （`selectionTiers` を表示・凍結・成績で共通に使う）。
+ */
+export const TOP_TIER_RULE = 'ki-top-v1';
+export const TOP_TIER_SMALL_FIELD = 6;
+export const TOP_TIER_DEFAULT = 8;
+
+/** AI上位表示の組数。 */
+export function topTierCount(fieldSize, total) {
+  const n = Number(fieldSize);
+  const size = Number.isFinite(n) && n > 0 && n <= 8 ? TOP_TIER_SMALL_FIELD : TOP_TIER_DEFAULT;
+  return Math.max(0, Math.min(Number(total) || 0, size));
+}
+
+/**
+ * 表示・凍結・成績で共通に使う 2 段階の選定（組合せ文字列 `"07>03"`）。
+ * @returns {{ rule: string, all: string[], top: string[] }}
+ */
+export function selectionTiers(lines, { isMain = false, fieldSize = 0 } = {}) {
+  const plan = buildBettingPlan(lines, { isMain, fieldSize });
+  const key = (c) => `${String(c.first).padStart(2, '0')}>${String(c.second).padStart(2, '0')}`;
+  return { rule: TOP_TIER_RULE, all: plan.combos.map(key), top: plan.topCombos.map(key) };
+}
+
 /** 1 点あたりの購入額（円）。BET_POINT_LOGIC.md「1 点 100 円」。 */
 export const UNIT_PRICE_YEN = 100;
 
@@ -135,6 +166,8 @@ export function buildBettingPlan(lines, { isMain = false, fieldSize = 0, betType
 
   // 🔴 見出しに出す推奨購入点数。**combos は絞らない**（買い目を減らさない）
   const points = recommendedPoints(fieldSize, combos.length);
+  // AI上位表示 = AI全選定の先頭 N 組（部分集合）
+  const topCount = topTierCount(fieldSize, combos.length);
 
   return Object.freeze({
     betType,
@@ -153,6 +186,12 @@ export function buildBettingPlan(lines, { isMain = false, fieldSize = 0, betType
     amountYen: points * UNIT_PRICE_YEN,
     // 展開した組の総数（＝ combos.length）
     expandedPoints: combos.length,
+    // AI選定の組数（画面の「AI選定 ○組」）と、AI上位表示（先頭 N 組）
+    selectionCount: combos.length,
+    topCount,
+    topCombos: combos.slice(0, topCount),
+    restCombos: combos.slice(topCount),
+    topRule: TOP_TIER_RULE,
     hold,
     unitPriceYen: UNIT_PRICE_YEN,
   });

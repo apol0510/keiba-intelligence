@@ -121,7 +121,7 @@ const stats = calculateVenueStats(data, venueInfo.name, venueInfo.type);
 
 const title = `${venueInfo.name}競馬場 統計 - KEIBA Intelligence`;
 const description = stats
-  ? `${venueInfo.name}競馬場の${venueInfo.type === 'jra' ? '中央競馬' : '南関競馬'}予想統計。${stats.days}日間、的中率${stats.hitRate}%、回収率${stats.returnRate}%、${stats.hitRaces}/${stats.totalRaces}レース的中。`
+  ? `${venueInfo.name}競馬場の${venueInfo.type === 'jra' ? '中央競馬' : '南関競馬'}予想統計。${stats.days}日間、的中率${stats.hitRate}%、${stats.hitRaces}/${stats.totalRaces}レース的中。`
   : `${venueInfo.name}競馬場の${venueInfo.type === 'jra' ? '中央競馬' : '南関競馬'}予想統計。`;
 ---
 
@@ -157,24 +157,12 @@ const description = stats
               <div class="stat-value">{stats.hitRate}%</div>
               <div class="stat-detail">{stats.hitRaces}/{stats.totalRaces}R</div>
             </div>
-            <div class="stat-card">
-              <div class="stat-label">回収率</div>
-              <div class="stat-value">{stats.returnRate}%</div>
-              <div class="stat-detail">
-                {stats.profit >= 0 ? '+' : ''}¥{stats.profit.toLocaleString()}
-              </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">投資額</div>
-              <div class="stat-value">¥{stats.betAmount.toLocaleString()}</div>
-              <div class="stat-detail">払戻 ¥{stats.totalPayout.toLocaleString()}</div>
-            </div>
           </div>
         </section>
 
         <!-- 日別実績リスト -->
         <section class="daily-list">
-          <h2>📅 開催日別実績（直近{Math.min(data.length, 20)}日）</h2>
+          <h2>📅 開催日別の結果（直近{Math.min(data.length, 20)}日）</h2>
           <div class="results-list">
             {data.slice(-20).reverse().map((entry) => {
               const [year, month, day] = entry.date.split('-');
@@ -183,11 +171,7 @@ const description = stats
                   <div class="result-date">{entry.date}</div>
                   <div class="result-stats">
                     <span class="hit-rate">的中率 {entry.hitRate}%</span>
-                    <span class="return-rate">回収率 {entry.returnRate}%</span>
                     <span class="races">{entry.hitRaces}/{entry.totalRaces}R</span>
-                  </div>
-                  <div class="result-payout">
-                    ¥{entry.totalPayout.toLocaleString()}
                   </div>
                 </a>
               );
@@ -209,7 +193,7 @@ const description = stats
           📊 全競馬場統計
         </a>
         <a href={venueInfo.type === 'jra' ? '/archive/jra' : '/archive'} class="link-card">
-          📅 的中実績一覧
+          📅 AI予想結果一覧
         </a>
         <a href={venueInfo.type === 'jra' ? '/prediction/jra' : '/prediction/nankan'} class="link-card">
           🔮 最新予想を見る

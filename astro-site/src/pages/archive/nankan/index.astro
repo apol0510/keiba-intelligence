@@ -78,8 +78,8 @@ try {
   console.error('Error loading archive:', error);
 }
 
-const pageTitle = '的中実績アーカイブ';
-const pageDescription = `南関競馬の的中実績アーカイブ。月ごとの予想結果と配当金額を全件開示し、AIモデルの判定精度を実データでご確認いただけます。`;
+const pageTitle = 'AI予想結果アーカイブ';
+const pageDescription = `南関競馬のAI予想結果アーカイブ。月ごと・日ごとに、AIが表示した買い目の的中・不的中を全レース公開しています。`;
 ---
 
 <BaseLayout title={pageTitle} description={pageDescription}>
@@ -87,7 +87,7 @@ const pageDescription = `南関競馬の的中実績アーカイブ。月ごと�
     <div class="container">
       {/* ページヘッダー */}
       <header class="page-header">
-        <h1>🏆 的中実績アーカイブ</h1>
+        <h1>🏆 AI予想結果アーカイブ</h1>
         <p class="subtitle">全レースの予想と結果を毎日アーカイブ</p>
         <p class="description">
           的中した日も外した日も、すべての予想結果を記録しています。<br>
@@ -105,7 +105,7 @@ const pageDescription = `南関競馬の的中実績アーカイブ。月ごと�
 
       {allMonths.length === 0 ? (
         <div class="no-data">
-          <p>まだ的中実績データがありません。</p>
+          <p>まだAI予想結果のデータがありません。</p>
         </div>
       ) : (
         <section class="months-grid">
@@ -122,18 +122,8 @@ const pageDescription = `南関競馬の的中実績アーカイブ。月ごと�
                   <div class="stat-value highlight">{monthData.hitRate}%</div>
                 </div>
                 <div class="stat-item">
-                  <div class="stat-label">回収率</div>
-                  <div class={`stat-value ${parseFloat(monthData.returnRate) >= 100 ? 'profit' : 'loss'}`}>
-                    {monthData.returnRate}%
-                  </div>
-                </div>
-                <div class="stat-item">
                   <div class="stat-label">的中レース</div>
                   <div class="stat-value">{monthData.totalHitRaces}/{monthData.totalRaces}R</div>
-                </div>
-                <div class="stat-item">
-                  <div class="stat-label">合計配当</div>
-                  <div class="stat-value profit">¥{(Number(monthData.totalPayout) || 0).toLocaleString()}</div>
                 </div>
               </div>
 
@@ -152,8 +142,7 @@ const pageDescription = `南関競馬の的中実績アーカイブ。月ごと�
 
       {/* 注意事項 */}
       <div class="results-notice">
-        <p>※ 掲載されている的中率・収支データは、AIモデルが算出した買い目パターンに基づく理論値です。実際の収支はお客様の購入点数・金額配分により異なります。</p>
-        <p>※ 本サービスで提示する買い目は複数パターンの候補を含むため、表示点数と集計上の基準点数が異なる場合があります。</p>
+        <p>※ 的中は、そのレースでAI全選定（会員に表示した馬単の組み合わせのすべて）に、確定した馬単の組み合わせが含まれていた場合に数えています。</p>
         <p>※ 過去の実績は将来の結果を保証するものではありません。馬券購入は自己責任でお願いいたします。</p>
       </div>
     </div>
