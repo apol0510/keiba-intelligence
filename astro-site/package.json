@@ -47,7 +47,7 @@
     "generate:digest": "node scripts/generateDailyDigest.mjs",
     "test:mail-guard": "node --test src/lib/mail/previewMailGuard.test.mjs",
     "test:unsubscribe": "node --test src/lib/unsubscribe/unsubscribe.test.mjs",
-    "test:refresh-session": "node --experimental-test-module-mocks --test src/lib/auth/refreshSession.e2e.test.mjs"
+    "test:refresh-session": "node --experimental-test-module-mocks src/lib/auth/refreshSession.e2e.test.mjs"
   },
   "dependencies": {
     "@astrojs/netlify": "^6.5.8",
