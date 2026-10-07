@@ -7,6 +7,21 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-10-07 本番 build が断続的に落ちる（`test:refresh-session` の flake）— 原因確定・修正
+
+- **事象**: 2026-10-06 15:06 UTC（`0545d441`・docs のみ）と 2026-10-07 12:17 UTC（`105e5f50`・horseStats 自動取込）の
+  production deploy が `Build script returned non-zero exit code: 2` で失敗。前後の deploy は ready で、本番は直前の版のまま稼働（停止なし）。
+- **原因（deploy log で確定）**: build チェーン内の `test:refresh-session` が
+  `uncaughtException: Unable to deserialize cloned data due to invalid or unsupported version.`（2 回とも同一）。
+  `node --test` は test ファイルを子プロセスで動かし、結果を stdout 上の直列化データで親へ返す。
+  実ハンドラ `refresh-session.js` の `console.log` が同じ stdout に混ざり、Node 20（Netlify の `NODE_VERSION`）では
+  境界の取り方次第で親が逆シリアライズに失敗する。コードや data の問題ではない。
+- **再現（Node 20.20.2・8 並列）**: 元の script 24/300 失敗。`--test` を外した直接実行 0/600 失敗。
+  意図的に assert を落とすと直接実行でも exit 1（build ゲートは維持）。Node 24 では未発生。
+- **修正**: `test:refresh-session` から `--test` を外し、`test:stripe` と同じ直接実行にそろえた（`astro-site/package.json` 1 行）。
+  build チェーンの他の `test:*` は Node 20・80 回並列実行で失敗 0（`--test` を使う他ファイルは stdout へ出力しない）。
+- 🔴 **再発防止の目安**: 実ハンドラを動かしてログを出す test を build に足すときは `--test` を付けず直接実行にする。
+
 ### 2026-10-07 退会（即時のみ）の本番反映と Stripe 側の設定
 
 - **本番反映**: PR #152 を 2026-10-06 14:41 UTC に squash merge。`post-deploy-billing-smoke` が 14:43 に新版を検出し 10 項目すべて PASS
