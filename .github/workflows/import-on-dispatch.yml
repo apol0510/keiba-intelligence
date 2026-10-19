@@ -139,6 +139,9 @@ jobs:
             # 3. 差分チェック
             echo ""
             echo "🔍 Step 3/5: Checking for changes..."
+            # 公開時の表示買い目を凍結（最初に見た版が勝つ・既存は上書きしない）。失敗しても予想の公開は止めない
+            node scripts/freezeDisplayedBets.mjs || echo "⚠️ freezeDisplayedBets failed (non-fatal)"
+            git add src/data/displayedBets/ 2>/dev/null || true
             git add src/data/predictions/
 
             if git diff --cached --quiet; then

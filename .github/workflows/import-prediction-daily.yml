@@ -71,6 +71,9 @@ jobs:
         id: git-check
         run: |
           # 変更をステージング（新規ファイル + 既存ファイルの変更）
+          # 公開時の表示買い目を凍結（最初に見た版が勝つ・既存は上書きしない）。失敗しても予想の公開は止めない
+          node scripts/freezeDisplayedBets.mjs || echo "⚠️ freezeDisplayedBets failed (non-fatal)"
+          git add src/data/displayedBets/ 2>/dev/null || true
           git add src/data/predictions/
           # ステージされた変更があるかチェック
           git diff --staged --exit-code || echo "changed=true" >> $GITHUB_OUTPUT
@@ -115,6 +118,9 @@ jobs:
             done
 
             # 3. ステージング＆コミット
+            # 公開時の表示買い目を凍結（最初に見た版が勝つ・既存は上書きしない）。失敗しても予想の公開は止めない
+            node scripts/freezeDisplayedBets.mjs || echo "⚠️ freezeDisplayedBets failed (non-fatal)"
+            git add src/data/displayedBets/ 2>/dev/null || true
             git add src/data/predictions/
             if git diff --staged --quiet; then
               echo "⏭️  No changes after sync (remote already has latest)"
