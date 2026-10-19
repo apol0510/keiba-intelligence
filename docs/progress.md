@@ -7,6 +7,14 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-10-19 ログイン後に元のページへ戻す（正本: `docs/measurements/LOGIN_RETURN_TO_2026_10.md`・registry e52a3c07）
+
+- **問題**: ログイン後は常に `/mypage`。セッション切れの有料会員が `/prediction/*` からログインしても予想ページへ戻れなかった。
+- **実装**: `src/lib/auth/returnTo.js`（許可リストの相対パスだけ・open redirect 拒否）。帯のログインリンク → `/login?next=`（無ければ同一オリジンの referrer）
+  → send-magic-link（`intentQuery || returnToQuery`）→ `/auth/verify` → verify-magic-link（`resumePathFor(intent, next || '/mypage')`・購入意図が優先）。
+  GA4 `return_to`（分類名のみ）。tier・価格・会員権利・実績表示は不変（frozen ファイル未変更）。
+- **検証**: `returnTo.test.mjs`・`returnTo.handlers.test.mjs`（実ハンドラ）・`npm run build` green。評価期間 2026-10-20 〜 2026-11-16。
+
 ### 2026-10-19 銀行振込申込フォームで既存顧客を書き換えない（registry 65c799ef・security）
 
 - **欠陥**: `bank-transfer-application.js` は本人確認をしないのに、email が既存顧客と一致すると Name / Plan / PlanType / Status を pending へ上書きしていた。

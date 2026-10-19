@@ -17,6 +17,7 @@
 
 import Airtable from 'airtable';
 import { customerSessionTier } from '../../src/lib/auth/paidEntitlement.js';
+import { canSeeBetting } from '../../src/lib/auth/tiers.js';
 import { signSession, serializeSessionCookie, SESSION_TTL_SECONDS } from '../../src/lib/auth/session.js';
 import { readRevocation, tierForNewSession } from '../../src/lib/auth/revocation.js';
 import { escapeFormulaString } from '../../src/lib/airtable/formula.js';
@@ -172,12 +173,21 @@ export async function handler(event) {
     //    `resumePathFor` が固定文字列で組み立てる（open redirect を作らない）。
     //    未知・空・URL 等はすべて無視され、従来の戻り先のままになる。
     const { resumePathFor, normalizeIntent } = await import('../../src/lib/billing/purchaseIntent.js');
+    // 🔴 ログイン前に見ていたページへ戻す（許可リストの相対パスだけ・src/lib/auth/returnTo.js）。
+    //    不正・未指定は従来の /mypage。購入意図があれば resumePathFor が購入の続きを優先する。
+    //    買い目を見られる会員が無料ページから来た場合は、対応する有料ページへ戻す
+    //    （未ログインの有料ページは無料ページへ 302 するため。権限の判定は有料ページ自身が Cookie で行う）。
+    const { normalizeReturnTo, returnToKind, paidEquivalentPath } = await import('../../src/lib/auth/returnTo.js');
+    const rawNext = event.queryStringParameters?.next;
+    const nextPath = normalizeReturnTo(rawNext);
+    redirectTo = (nextPath && canSeeBetting(tier) && paidEquivalentPath(nextPath)) || nextPath || redirectTo;
     const rawIntent = event.queryStringParameters?.intent;
     redirectTo = resumePathFor(rawIntent, redirectTo);
     // 🔴 値そのものは出さない（受け取ったか / 有効だったかだけ）
     console.log('↩︎ redirect:', redirectTo,
       '| intent received:', rawIntent ? 'yes' : 'no',
-      '| intent valid:', normalizeIntent(rawIntent) ? 'yes' : 'no');
+      '| intent valid:', normalizeIntent(rawIntent) ? 'yes' : 'no',
+      '| return_to:', returnToKind(rawNext));
 
     return {
       statusCode: 200,

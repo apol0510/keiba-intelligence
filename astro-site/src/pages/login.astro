@@ -44,6 +44,8 @@ export const prerender = true;
             <span class="btn-loading" style="display: none;">送信中...</span>
           </button>
 
+          <p id="returnHint" class="return-hint" hidden>ログイン後、元のページへ戻ります。</p>
+
           <div id="message" class="message" style="display: none;"></div>
           <p id="messageLink" class="message-link" hidden><a href="/register">無料会員登録へ進む</a></p>
           <p id="browserHint" class="browser-hint" hidden>
@@ -236,6 +238,8 @@ export const prerender = true;
   // GA4 計測（PII なし。email は送らない。docs/measurements/LOGIN_GUIDANCE_2026_10.md）
   import { trackFunnel, FUNNEL_EVENTS, loginLinkResultOf } from '../lib/analytics/funnelEvents.js';
   import { loginFailureCopy } from '../lib/auth/loginGuidance.js';
+  // ログイン後に戻るページ（許可リストのパスだけ。LOGIN_RETURN_TO_2026_10.md）
+  import { normalizeReturnTo, returnToFromReferrer, returnToKind, RETURN_PARAM } from '../lib/auth/returnTo.js';
 
   const form = document.getElementById('loginForm') as HTMLFormElement;
   const messageLink = document.getElementById('messageLink') as HTMLParagraphElement;
@@ -243,6 +247,15 @@ export const prerender = true;
   const emailInput = document.getElementById('email') as HTMLInputElement;
   const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
   const messageDiv = document.getElementById('message') as HTMLDivElement;
+
+  /*
+   * 🔴 戻り先は ?next= を最優先、無ければ直前のページ（同一オリジンのときだけ）。
+   *    どちらも許可リストで検査し、外れたら送らない（ログイン後は従来どおり /mypage）。
+   */
+  const returnTo = normalizeReturnTo(new URLSearchParams(window.location.search).get(RETURN_PARAM))
+    || returnToFromReferrer(document.referrer, window.location.origin);
+  const returnHint = document.getElementById('returnHint') as HTMLParagraphElement | null;
+  if (returnHint && returnTo && returnTo.indexOf('/mypage') !== 0) returnHint.hidden = false;
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -267,11 +280,11 @@ export const prerender = true;
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify(returnTo ? { email, next: returnTo } : { email }),
       });
 
       const data = await response.json();
-      trackFunnel(FUNNEL_EVENTS.LOGIN_LINK_RESULT, { result: loginLinkResultOf(response.status) });
+      trackFunnel(FUNNEL_EVENTS.LOGIN_LINK_RESULT, { result: loginLinkResultOf(response.status), return_to: returnToKind(returnTo) });
 
       if (response.ok) {
         showMessage(
@@ -310,7 +323,14 @@ export const prerender = true;
     font-weight: 700;
   }
 
-  .message-link[hidden], .browser-hint[hidden] { display: none !important; }
+  .message-link[hidden], .browser-hint[hidden], .return-hint[hidden] { display: none !important; }
+
+  .return-hint {
+    margin: 12px 0 0;
+    font-size: 0.85rem;
+    text-align: center;
+    color: var(--text-tertiary);
+  }
 
   .browser-hint {
     margin: 12px 0 0;

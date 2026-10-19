@@ -8,6 +8,8 @@
  * 一目で分かるようにする。閉じている項目には次の一歩（登録 / プラン）を必ず添える。
  */
 
+import { loginHrefFor } from '../../lib/auth/returnTo.js';
+
 interface Props {
   view: {
     tier?: string; tierLabel?: string; showMarks?: boolean;
@@ -16,6 +18,9 @@ interface Props {
 }
 
 const { view } = Astro.props;
+
+// 🔴 ログイン後にこのページへ戻す（許可リストのパスだけ。src/lib/auth/returnTo.js）
+const loginHref = loginHrefFor(Astro.url.pathname);
 
 const paid = !!view?.showBetting;
 
@@ -86,7 +91,7 @@ const showLogin = !view?.authenticated && !view?.preview;
   {nextStep && (
     <div class="tr-actions">
       <a class="tr-cta" href={nextStep.href}>{nextStep.label}</a>
-      {showLogin && <a class="tr-login" href="/login">登録済みの方はログイン</a>}
+      {showLogin && <a class="tr-login" href={loginHref}>登録済みの方はログイン</a>}
     </div>
   )}
 </div>

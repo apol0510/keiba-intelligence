@@ -43,13 +43,15 @@ test('🔴 ログイン済みの判定は get-session の 200 + authenticated:tr
 
 test('verify.astro: 失敗時にサーバーのセッションを確かめ、再取得の導線を出す', () => {
   const src = read('src/pages/auth/verify.astro');
-  assert.match(src, /await handleFailure\(verifyResultOf\(response\.status, false, data\.error\), intent\)/);
+  assert.match(src, /await handleFailure\(verifyResultOf\(response\.status, false, data\.error\), intent, next\)/);
   assert.match(src, /fetch\('\/\.netlify\/functions\/get-session', \{ credentials: 'include' \}\)/);
   assert.match(src, /isSignedInSession\(/);
-  // ログイン済みなら戻り先は固定パス（open redirect を作らない）
-  assert.match(src, /resumePathFor\(intent, '\/mypage'\)/);
+  // ログイン済みなら戻り先は固定パス or 許可リストを通した next（open redirect を作らない・returnTo.js）
+  assert.match(src, /resumePathFor\(intent, back \|\| '\/mypage'\)/);
+  assert.match(src, /const back = next \? \(\(paid && paidEquivalentPath\(next\)\) \|\| next\) : null;/);
+  assert.match(src, /const next = normalizeReturnTo\(urlParams\.get\(RETURN_PARAM\)\)/);
   // 再取得の導線
-  assert.match(src, /<a href="\/login" class="btn-primary">新しいログインリンクを受け取る<\/a>/);
+  assert.match(src, /<a href="\/login" class="btn-primary" id="reloginLink">新しいログインリンクを受け取る<\/a>/);
   // 🔴 sessionStorage の自己申告でログイン済みと判断しない
   const fn = src.slice(src.indexOf('async function handleFailure('), src.indexOf('function showSuccess('));
   assert.doesNotMatch(fn, /sessionStorage/);
