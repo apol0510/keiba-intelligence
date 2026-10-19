@@ -117,6 +117,74 @@ exports.handler = async (event, context) => {
       throw new Error('SendGrid API key not configured');
     }
 
+    // ========================================
+    // 既存顧客の照会（読み取りのみ・メール送信より前）
+    // ========================================
+    /*
+     * 🔴 **未認証のフォーム送信で既存顧客のレコードを書き換えない**（registry 65c799ef・2026-10-19）。
+     *
+     *    このフォームは本人確認をしない。以前は送信された email が既存顧客と一致すると
+     *    Name / Plan / PlanType / Status を pending へ上書きしていたため、
+     *    有料会員のアドレスを知っていれば誰でもその会員を無料へ落とせた
+     *    （有料の閲覧権は Status ∈ {active, payment_failed} が条件・KI #162）。
+     *    pending → active の Automation（入金確認メール）を誤って動かす恐れもあった。
+     *
+     *    既存顧客の場合は **Customers を一切更新しない**。申込は管理者メールに
+     *    「既存顧客・レコード未変更」と明記して届け、入金と本人を確認した運営が手動で更新する。
+     *    照会に失敗したときも既存顧客の可能性を否定できないので **書き込まない（fail-closed）**。
+     *
+     * 🔴 応答・申請者向けメールは既存 / 新規で**変えない**（アカウントの存在を推測させない）。
+     */
+    const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
+    const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
+    /** 'new' | 'existing' | 'lookup_failed' | 'not_configured' */
+    let customerLookup = 'not_configured';
+    let existingRecordId = null;
+
+    if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
+      console.warn('⚠️ Airtable credentials not configured, skipping registration');
+    } else {
+      try {
+        const searchFormula = `{Email} = "${escapeFormulaString(email)}"`;
+        const searchUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Customers?filterByFormula=${encodeURIComponent(searchFormula)}`;
+
+        const searchResponse = await fetch(searchUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!searchResponse.ok) {
+          throw new Error(`Airtable search failed: ${searchResponse.status}`);
+        }
+
+        const searchData = await searchResponse.json();
+        const existingRecords = Array.isArray(searchData && searchData.records) ? searchData.records : null;
+        if (existingRecords === null) {
+          throw new Error('Airtable search returned an unexpected shape');
+        }
+        if (existingRecords.length > 0) {
+          customerLookup = 'existing';
+          existingRecordId = existingRecords[0].id || null;
+        } else {
+          customerLookup = 'new';
+        }
+      } catch (lookupError) {
+        customerLookup = 'lookup_failed';
+        console.error('❌ Airtable customer lookup error:', redactEmails(lookupError));
+      }
+    }
+
+    // 管理者向け: 顧客レコードの扱い（申請者向けメール・応答には出さない）
+    const adminCustomerNote = {
+      new: '新規の申込として Airtable に Status=pending で登録します。',
+      existing: '🔴 このメールアドレスには既存の顧客レコードがあります。フォームは本人確認をしないため、顧客レコード（Status / プラン / 氏名 / 有効期限）は自動では変更していません。入金と申込者本人を確認したうえで、Airtable で手動更新してください。',
+      lookup_failed: '🔴 Airtable の照会に失敗したため、顧客レコードは登録・変更していません。手動で確認・登録してください。',
+      not_configured: 'Airtable が未設定のため、顧客レコードは登録していません。',
+    }[customerLookup];
+
     // 管理者向けメール内容
     const adminEmailData = {
       personalizations: [{
@@ -190,6 +258,11 @@ exports.handler = async (event, context) => {
         <div class="value" style="margin-top: 10px; white-space: pre-wrap;">${remarks}</div>
       </div>
       ` : ''}
+    </div>
+
+    <div class="alert">
+      <h4 style="margin: 0 0 10px 0; color: #92400e;">🗂 顧客レコード</h4>
+      <p style="margin: 0; color: #78350f;">${adminCustomerNote}</p>
     </div>
 
     <div class="alert">
@@ -357,115 +430,58 @@ exports.handler = async (event, context) => {
     }
 
     // ========================================
-    // Airtable登録
+    // Airtable登録（新規のみ）
     // ========================================
     try {
-      const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
-      const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
-
-      if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
-        console.warn('⚠️ Airtable credentials not configured, skipping registration');
-      } else {
+      if (customerLookup === 'new') {
         // 🔴 2026-08-30: 銀行振込は年払い 1 本のみ。
         //    ライト（南関のみ）・月払い・買い切りは廃止したため分岐を持たない。
         //    会場で分ける概念も廃止したので VenueAccess は書かない。
         const planName = 'pro';
         const planTypeMapped = 'pro';
 
-        // 既存顧客チェック
-        const searchFormula = `{Email} = "${escapeFormulaString(email)}"`;
-        const searchUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Customers?filterByFormula=${encodeURIComponent(searchFormula)}`;
+        // 新規顧客 - Create
+        const createUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Customers`;
 
-        const searchResponse = await fetch(searchUrl, {
-          method: 'GET',
+        const createPayload = {
+          fields: {
+            'Email': email,
+            'Name': fullName,
+            'Plan': planName,
+            'PlanType': planTypeMapped,
+            'plan_type': planType,
+            'Status': 'pending',
+            'PaymentMethod': 'Bank Transfer',
+            'PaymentEmailSent': false,
+            'AccessEnabled': false,
+            'Source': 'keiba-intelligence'
+          }
+        };
+
+        // 🔴 アドレスはマスク、氏名は出さない（値の有無だけ）
+        console.log('📤 Airtable create payload:', JSON.stringify({
+          fields: { ...createPayload.fields, Email: maskEmail(email), Name: fullName ? '[redacted]' : '' }
+        }, null, 2));
+
+        const createResponse = await fetch(createUrl, {
+          method: 'POST',
           headers: {
             'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify(createPayload)
         });
 
-        if (!searchResponse.ok) {
-          throw new Error(`Airtable search failed: ${searchResponse.status}`);
+        if (!createResponse.ok) {
+          const errorText = await createResponse.text();
+          console.error('❌ Airtable create error details:', redactEmails(errorText));
+          throw new Error(`Airtable create failed: ${createResponse.status} - ${errorText}`);
         }
 
-        const searchData = await searchResponse.json();
-        const existingRecords = searchData.records || [];
-
-        if (existingRecords.length > 0) {
-          // 既存顧客 - Update
-          const recordId = existingRecords[0].id;
-          const updateUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Customers/${recordId}`;
-
-          const updatePayload = {
-            fields: {
-              'Name': fullName,
-              'Plan': planName,
-              'PlanType': planTypeMapped,
-              'plan_type': planType,
-              'Status': 'pending',
-              'PaymentMethod': 'Bank Transfer',
-              'PaymentEmailSent': false,
-              'Source': 'keiba-intelligence'
-            }
-          };
-
-          const updateResponse = await fetch(updateUrl, {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updatePayload)
-          });
-
-          if (!updateResponse.ok) {
-            const errorText = await updateResponse.text();
-            console.error('❌ Airtable update error details:', redactEmails(errorText));
-            throw new Error(`Airtable update failed: ${updateResponse.status} - ${errorText}`);
-          }
-
-          console.log('✅ Airtable updated (existing customer):', maskEmail(email), recordId);
-        } else {
-          // 新規顧客 - Create
-          const createUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Customers`;
-
-          const createPayload = {
-            fields: {
-              'Email': email,
-              'Name': fullName,
-              'Plan': planName,
-              'PlanType': planTypeMapped,
-              'plan_type': planType,
-              'Status': 'pending',
-              'PaymentMethod': 'Bank Transfer',
-              'PaymentEmailSent': false,
-              'AccessEnabled': false,
-              'Source': 'keiba-intelligence'
-            }
-          };
-
-          // 🔴 アドレスはマスク、氏名は出さない（値の有無だけ）
-          console.log('📤 Airtable create payload:', JSON.stringify({
-            fields: { ...createPayload.fields, Email: maskEmail(email), Name: fullName ? '[redacted]' : '' }
-          }, null, 2));
-
-          const createResponse = await fetch(createUrl, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(createPayload)
-          });
-
-          if (!createResponse.ok) {
-            const errorText = await createResponse.text();
-            console.error('❌ Airtable create error details:', redactEmails(errorText));
-            throw new Error(`Airtable create failed: ${createResponse.status} - ${errorText}`);
-          }
-
-          console.log('✅ Airtable created (new customer):', maskEmail(email));
-        }
+        console.log('✅ Airtable created (new customer):', maskEmail(email));
+      } else if (customerLookup === 'existing') {
+        // 🔴 既存顧客は更新しない（registry 65c799ef）。運営が入金・本人確認後に手動で更新する
+        console.log('ℹ️ Existing customer: record not modified by unauthenticated application:', existingRecordId);
       }
     } catch (airtableError) {
       console.error('❌ Airtable registration error:', redactEmails(airtableError));
@@ -485,18 +501,19 @@ exports.handler = async (event, context) => {
         // SendGrid Marketing Campaigns API v3: Add or Update Contact
         // PUT /v3/marketing/contacts (upsert: 既存コンタクトは自動更新)
         const url = 'https://api.sendgrid.com/v3/marketing/contacts';
-        const payload = {
-          contacts: [
-            {
-              email: email,
-              first_name: fullName.split(' ')[0] || fullName,  // 姓名分割（スペース区切り）
-              last_name: fullName.split(' ')[1] || '',
-              custom_fields: {
-                [CUSTOM_FIELD_INTELLIGENCE]: 'true'  // カスタムフィールド: registered_intelligence = 'true'
-              }
-            }
-          ]
+        // 🔴 新規と確認できた申込だけ氏名を書く。既存（または照会失敗）の連絡先の氏名を
+        //    未認証の入力で上書きしない（registry 65c799ef）。
+        const contact = {
+          email: email,
+          custom_fields: {
+            [CUSTOM_FIELD_INTELLIGENCE]: 'true'  // カスタムフィールド: registered_intelligence = 'true'
+          }
         };
+        if (customerLookup === 'new') {
+          contact.first_name = fullName.split(' ')[0] || fullName;  // 姓名分割（スペース区切り）
+          contact.last_name = fullName.split(' ')[1] || '';
+        }
+        const payload = { contacts: [contact] };
 
         console.log('📧 SendGrid Marketing Campaigns: Registering contact:', maskEmail(email));
 
