@@ -45,6 +45,14 @@ const items = paid
 const nextStep = !view?.showMarks
   ? { href: '/register', label: '無料会員に登録して印を見る', tone: 'free' }
   : (!view?.showBetting ? { href: '/pricing', label: 'プランを見て買い目を受け取る', tone: 'paid' } : null);
+
+/**
+ * 🔴 未ログイン（ゲスト）には「登録済みの方はログイン」を添える（2026-10-19 本番導線監査）。
+ *    セッション（7 日）が切れた有料会員が `/prediction/*` を開くと無料版へ移り、
+ *    帯には「無料会員に登録して印を見る」しか出ていなかった（ログインはメニューの中だけ）。
+ *    ログイン済み・プレビューでは出さない。正本: docs/measurements/LOGIN_GUIDANCE_2026_10.md
+ */
+const showLogin = !view?.authenticated && !view?.preview;
 ---
 
 {view?.preview && (
@@ -76,7 +84,10 @@ const nextStep = !view?.showMarks
   </div>
 
   {nextStep && (
-    <a class="tr-cta" href={nextStep.href}>{nextStep.label}</a>
+    <div class="tr-actions">
+      <a class="tr-cta" href={nextStep.href}>{nextStep.label}</a>
+      {showLogin && <a class="tr-login" href="/login">登録済みの方はログイン</a>}
+    </div>
   )}
 </div>
 
@@ -172,8 +183,27 @@ const nextStep = !view?.showMarks
 
   .tr-cta:hover { color: var(--btn-ink); }
 
+  .tr-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* 既存会員向けの控えめな文字リンク（主要 CTA と競わせない） */
+  .tr-login {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--primary-start);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    padding: 4px 8px;
+  }
+
   @media (max-width: 640px) {
     .tier-ribbon { flex-direction: column; align-items: stretch; }
+    .tr-actions { align-items: stretch; }
     .tr-cta { text-align: center; }
+    .tr-login { text-align: center; }
   }
 </style>
