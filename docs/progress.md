@@ -92,6 +92,10 @@
 - **未実施（理由）**: GA4 / Search Console の API 読み取り（KI プロパティへの権限が無い）・過去データの削除リクエスト（GA4 管理画面）・
   確認メールのリンクから `&email=` を外す（認証経路の変更として別 task）。KAO の unmet に登録。
 
+### 2026-10-19 robots.txt の Sitemap を本番ドメインへ（正本: `docs/measurements/ROBOTS_SITEMAP_2026_10.md`）
+
+- 旧ホスト（`*.netlify.app`）を指していた `Sitemap:` を `https://keiba-intelligence.jp/sitemap.xml` へ。guard test を `siteOrigin.test.mjs` に追加。KAO registry `f032ad08`。
+
 ### 2026-10-19 メルマガ配信 API の管理者認証（registry e1f0c2ce）と register-free token の乱数（registry 7a7522ac）
 
 - **欠陥（origin/main で確認・実リクエストは送っていない）**: `create-broadcast` / `send-broadcast` / `send-test` は
