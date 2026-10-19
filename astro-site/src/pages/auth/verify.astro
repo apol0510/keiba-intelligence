@@ -15,6 +15,10 @@ export const prerender = false;
           <div class="spinner"></div>
           <h1 id="status">認証中...</h1>
           <p id="message">トークンを確認しています。しばらくお待ちください。</p>
+          <div class="verify-actions" id="verifyActions" hidden>
+            <a href="/login" class="btn-primary">新しいログインリンクを受け取る</a>
+            <p class="verify-hint" id="verifyHint" hidden></p>
+          </div>
         </div>
       </div>
     </div>
@@ -116,6 +120,18 @@ export const prerender = false;
     }
   }
 
+  .verify-actions {
+    margin-top: 8px;
+
+    &[hidden] { display: none; }
+
+    .verify-hint {
+      margin-top: 20px;
+      font-size: 14px;
+      text-align: left;
+    }
+  }
+
   @media (max-width: 640px) {
     .verify-card {
       padding: 48px 24px;
@@ -128,9 +144,10 @@ export const prerender = false;
 </style>
 
 <script>
-  import { readStoredIntent, clearStoredIntent } from '../../lib/billing/purchaseIntent.js';
+  import { readStoredIntent, clearStoredIntent, resumePathFor } from '../../lib/billing/purchaseIntent.js';
   // GA4 計測（PII なし。token・email は送らない。docs/measurements/FUNNEL_2026_10.md）
   import { trackFunnel, FUNNEL_EVENTS, verifyResultOf } from '../../lib/analytics/funnelEvents.js';
+  import { verifyFailureCopy, isSignedInSession } from '../../lib/auth/verifyRecovery.js';
 
   const statusEl = document.getElementById('status') as HTMLHeadingElement;
   const messageEl = document.getElementById('message') as HTMLParagraphElement;
@@ -141,7 +158,7 @@ export const prerender = false;
     const token = urlParams.get('token');
 
     if (!token) {
-      showError('トークンが見つかりません', 'URLが正しくありません。もう一度ログインしてください。');
+      showError('リンクを確認できませんでした', 'URL が途中で切れている可能性があります。新しいログインリンクを受け取ってください。');
       return;
     }
 
@@ -196,21 +213,37 @@ export const prerender = false;
           window.location.href = data.redirectTo || '/mypage';
         }, 500);
       } else {
-        const errorMessage =
-          response.status === 404
-            ? 'トークンが見つかりません。有効期限が切れている可能性があります。'
-            : response.status === 403
-            ? data.error === 'Token already used'
-              ? 'このリンクは既に使用されています。もう一度ログインしてください。'
-              : 'トークンの有効期限が切れています。もう一度ログインしてください。'
-            : 'エラーが発生しました。もう一度お試しください。';
-
-        showError('認証失敗', errorMessage);
+        await handleFailure(verifyResultOf(response.status, false, data.error), intent);
       }
     } catch (error) {
       console.error('Verify error:', error);
       showError('通信エラー', 'サーバーとの通信に失敗しました。もう一度お試しください。');
     }
+  }
+
+  /*
+   * 🔴 リンクが使えなかったときに「もう一度ログイン」で終わらせない（docs/measurements/LOGIN_RECOVERY_2026_10.md）。
+   *    1. この端末ですでにログインしているなら（同じリンクを 2 回開いた・戻るで再表示した等）、そのまま進める。
+   *       判定は get-session（署名付き Cookie をサーバーが検証）だけ。sessionStorage は見ない。
+   *    2. ログインしていなければ、何が起きたか（使用済み・期限切れ）と、新しいリンクの受け取り方を出す。
+   */
+  async function handleFailure(result: string, intent: string | null) {
+    let signedIn = false;
+    try {
+      const res = await fetch('/.netlify/functions/get-session', { credentials: 'include' });
+      signedIn = isSignedInSession(res.status, res.ok ? await res.json() : null);
+    } catch { /* 判定できなければログインしていない扱い */ }
+    trackFunnel(FUNNEL_EVENTS.VERIFY_FALLBACK, { result: signedIn ? 'signed_in' : 'relogin' });
+
+    if (signedIn) {
+      const to = resumePathFor(intent, '/mypage');
+      if (intent) clearStoredIntent(window.localStorage);
+      showSuccess('ログイン済みです', intent ? 'お申し込みの続きへ移動します…' : 'マイページへ移動します…');
+      setTimeout(() => { window.location.href = to; }, 500);
+      return;
+    }
+    const copy = verifyFailureCopy(result);
+    showError(copy.title, copy.message, copy.hint);
   }
 
   function showSuccess(title: string, message: string) {
@@ -219,14 +252,15 @@ export const prerender = false;
     messageEl.textContent = message;
   }
 
-  function showError(title: string, message: string) {
+  function showError(title: string, message: string, hint?: string) {
     contentEl.classList.add('error');
     statusEl.textContent = title;
-    messageEl.innerHTML = `
-      ${message}
-      <br><br>
-      <a href="/login" class="btn-primary">ログインページへ戻る</a>
-    `;
+    // 🔴 文言は固定文字列（verifyRecovery.js）。URL の値は表示に使わない
+    messageEl.textContent = message;
+    const actions = document.getElementById('verifyActions');
+    const hintEl = document.getElementById('verifyHint');
+    if (hintEl && hint) { hintEl.textContent = hint; hintEl.hidden = false; }
+    if (actions) actions.hidden = false;
   }
 
   // ページ読み込み時に自動実行

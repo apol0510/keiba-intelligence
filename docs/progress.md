@@ -16,6 +16,23 @@
   顧客向けの出力は不変。
 - 🔴 **影響**: 保護対象を変える open PR（#148 KI_EXACTA 表示準備・#149 / #150 / #151）は、MK が明示指示して manifest を更新しない限りこの guard で build が落ちる。
 
+### 2026-10-19 ログインの行き止まり解消（正本: `docs/measurements/LOGIN_RECOVERY_2026_10.md`）
+
+- **監査**: 本番を実ブラウザ（375 / 1280px・解析通信は遮断・関数応答は差し替え）で通した。
+  確認リンクの期限切れ（pending）・契約終了 / 退会（inactive）・決済失敗（payment_failed）の人が `send-magic-link` の 403
+  「アカウントが無効です」でログインできず、退会者は再契約もできなかった（`start-purchase` → 502）。同じリンクの 2 回目はログイン済みでも失敗表示。
+- **実装**: ログイン可能な Status を active / pending / inactive / payment_failed に（`loginEligibility.js`・他は 403 のまま）。
+  認証時は本人確認の完了だけを書き、契約終了・決済失敗の記録は保持。確認リンクから `&email=` を外した（token の乱数化は #161）。
+  `/auth/verify` は失敗時に get-session でログイン済みなら先へ進め、未ログインなら理由と「新しいログインリンクを受け取る」を出す。GA4 `ki_verify_fallback` を追加。
+- **検証**: `test:login-eligibility` 14 件（verify-magic-link 実ハンドラ）・`verifyRecovery` 5 件・`magicLinkBase` 21 件・funnelEvents 14 件、`npm run build` green。localhost Playwright 38 項目。
+- **ログイン可否と有料権限の分離（MK 2026-10-19 指示）**: 発行 tier が Status を見ておらず、inactive・PlanType=premium 残存（退会記録なし）や
+  銀行振込の入金確認前（pending・premium）がログインで premium になる漏れを検出・修正。`paidEntitlement.js` の `customerSessionTier`
+  （PlanType 有料 ∧ Status ∈ {active, payment_failed} ∧ 有効期限が無い or 未来、読めない値は free）を verify-magic-link / refresh-session で共通化。
+  pending・有料 PlanType は認証で active にしない。`paidEntitlement.test.mjs` 33 件（216 組 × ログイン / refresh / ゲート）。正本 §2.1。
+- **評価期間**: 2026-10-20 〜 2026-11-16。
+- **範囲外（KAO registry）**: 無料予想ページの HTML 1.4MB / 3.5MB、ゲスト帯にログイン導線なし、`/login` の未登録案内が料金ページ、robots.txt の旧ホスト。
+  `/free-prediction/nankan` の 375px 横スクロールは 2026-10-19 に再現せず。
+
 ### 2026-10-07 本番 build が断続的に落ちる（`test:refresh-session` の flake）— 原因確定・修正
 
 - **事象**: 2026-10-06 15:06 UTC（`0545d441`・docs のみ）と 2026-10-07 12:17 UTC（`105e5f50`・horseStats 自動取込）の

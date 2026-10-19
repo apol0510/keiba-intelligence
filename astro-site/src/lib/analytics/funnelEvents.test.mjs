@@ -156,7 +156,7 @@ test('verifyResultOf: 応答を列挙値にする（文言・token を使わな�
 const WIRING = {
   'src/pages/pricing.astro': ['CHECKOUT_CLICK', 'PURCHASE_AUTH_OPEN', 'PURCHASE_EMAIL_RESULT', 'CHECKOUT_REDIRECT', 'CHECKOUT_ERROR', 'CHECKOUT_CANCELLED'],
   'src/pages/register.astro': ['SIGNUP_RESULT'],
-  'src/pages/auth/verify.astro': ['LOGIN_VERIFY_RESULT'],
+  'src/pages/auth/verify.astro': ['LOGIN_VERIFY_RESULT', 'VERIFY_FALLBACK'],
   'src/pages/mypage.astro': ['CHECKOUT_RETURN', 'CHECKOUT_SYNCED'],
   'src/layouts/BaseLayout.astro': ['PRICING_LINK_CLICK'],
 };
