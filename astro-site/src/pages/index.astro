@@ -6,7 +6,8 @@
  *
  * 🔴 2026-08-28 改修:
  *   - 訴求を「無料でどこまで見えるか」に変えた（改修の最重要目的）。
- *   - 的中率・回収率は **archive の実測値をビルド時に集計**して表示する。
+ *   - 的中率は **archive の実測値をビルド時に集計**して表示する。
+ *   - 🔴 2026-10-06 MK 決定: 旧 5 点基準の回収率は顧客向けに出さない（表示した組数と投資の基準が一致しないため）。
  *     旧実装の「的中率71%・回収率186%・会員数1,000+」は出典が確認できない固定値だったため撤去した。
  *   - 価格をトップに書かない（金額の正本は Stripe。docs/RENEWAL_2026_08.md §6.1）。
  */
@@ -63,11 +64,6 @@ const totals = combinedTotals(archiveNankan, archiveJra);
         <!-- 統計カード（公開アーカイブの実測集計。加工なし） -->
         <div class="stats-grid">
           <div class="stat-card card">
-            <div class="stat-icon">💰</div>
-            <div class="stat-value">{formatPercent(totals.all.returnRate)}</div>
-            <div class="stat-label">回収率（通算）</div>
-          </div>
-          <div class="stat-card card">
             <div class="stat-icon">🎯</div>
             <div class="stat-value">{formatPercent(totals.all.hitRate)}</div>
             <div class="stat-label">的中率（通算）</div>
@@ -84,7 +80,7 @@ const totals = combinedTotals(archiveNankan, archiveJra);
           </div>
         </div>
         <p class="stats-note">
-          公開しているアーカイブ全件から算出した実測値です（払戻÷投資×100）。高配当を除外していません。
+          公開しているアーカイブ全件から算出した実測値です。的中率は、表示した馬単の買い目（抑えを除く）に確定した馬単の組み合わせが含まれていたレースの割合です。
           <a href="/archive">内訳を見る →</a>
         </p>
       </div>
@@ -118,7 +114,7 @@ const totals = combinedTotals(archiveNankan, archiveJra);
           <div class="feature-icon">📈</div>
           <h3>データ可視化</h3>
           <p>
-            的中率・回収率をグラフで可視化。直感的なダッシュボードで予想の精度を一目で確認できます。
+            的中率をグラフで可視化。直感的なダッシュボードで予想の精度を一目で確認できます。
           </p>
         </div>
 
@@ -238,7 +234,7 @@ const totals = combinedTotals(archiveNankan, archiveJra);
             <li>✅ AI短評（1頭ごとの文章）</li>
             <li>✅ AIレース展望・展開予想</li>
             <li>✅ 特徴量6指標</li>
-            <li>✅ 的中実績・回収率</li>
+            <li>✅ 的中実績</li>
           </ul>
           <a href="/prediction/nankan" class="btn btn-secondary w-full">そのまま見る</a>
         </div>
@@ -374,7 +370,7 @@ const totals = combinedTotals(archiveNankan, archiveJra);
 
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: var(--spacing-lg);
       margin-top: var(--spacing-2xl);
     }

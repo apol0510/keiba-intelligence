@@ -117,7 +117,7 @@ try {
 }
 
 const title = `${entry.date} ${type === 'jra' ? '中央競馬' : '南関競馬'} 的中実績 - KEIBA Intelligence`;
-const description = `${entry.date}の${type === 'jra' ? '中央競馬' : '南関競馬'}予想の的中実績。的中率${entry.hitRate}%、回収率${entry.returnRate}%、${entry.hitRaces}/${entry.totalRaces}レース的中。AI競馬予想の詳細な結果を公開。`;
+const description = `${entry.date}の${type === 'jra' ? '中央競馬' : '南関競馬'}予想の的中実績。的中率${entry.hitRate}%、${entry.hitRaces}/${entry.totalRaces}レース的中。AI競馬予想の詳細な結果を公開。`;
 
 // 会場別の住所マッピング
 const venueAddresses = {
@@ -209,20 +209,6 @@ const jsonLd = {
         <div class="stat-label">的中率</div>
         <div class="stat-value">{entry.hitRate}%</div>
         <div class="stat-detail">{entry.hitRaces}/{entry.totalRaces}レース</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">回収率</div>
-        <div class="stat-value">{entry.returnRate}%</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">投資額</div>
-        <div class="stat-value">¥{(entry.betAmount || 0).toLocaleString()}</div>
-        <div class="stat-detail">{entry.totalRaces}レース</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">払戻額</div>
-        <div class="stat-value">¥{(entry.totalPayout || 0).toLocaleString()}</div>
-        <div class="stat-detail">+¥{((entry.totalPayout || 0) - (entry.betAmount || 0)).toLocaleString()}</div>
       </div>
     </section>
 
@@ -344,7 +330,6 @@ const jsonLd = {
     <!-- 注意事項 -->
     <section class="results-notice">
       <p>※ 掲載されている的中率・収支データは、AIモデルが算出した買い目パターンに基づく理論値です。実際の収支はお客様の購入点数・金額配分により異なります。</p>
-      <p>※ 本サービスで提示する買い目は複数パターンの候補を含むため、表示点数と集計上の基準点数が異なる場合があります。</p>
       <p>※ 過去の実績は将来の結果を保証するものではありません。馬券購入は自己責任でお願いいたします。</p>
     </section>
   </main>

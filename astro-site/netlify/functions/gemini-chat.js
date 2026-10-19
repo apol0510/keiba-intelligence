@@ -24,7 +24,7 @@ const SYSTEM_PROMPT = `あなたはKEIBA Intelligenceのカスタマーサポー
 - URL: https://keiba-intelligence.jp
 - 主要機能:
   - AI予想システム（馬単買い目提供）
-  - データビジュアライゼーション（的中率・回収率グラフ）
+  - データビジュアライゼーション（的中率グラフ）
   - Feature Importance分析
   - 全レース結果完全公開
 

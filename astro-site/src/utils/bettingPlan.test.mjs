@@ -283,14 +283,13 @@ test('🔴 買い目画面に購入点数・購入額を出さない（2026-10-0
   }
 });
 
-test('🔴 料金ページで購入点数を訴求しない・回収率の算出根拠は残す', () => {
+test('🔴 料金ページで購入点数を訴求しない', () => {
   const src = read('src/pages/pricing.astro');
   for (const gone of ['買い目は何点', '5点固定', '投資は5点']) {
     assert.ok(!src.includes(gone), `料金ページに購入点数の訴求が残っている: ${gone}`);
   }
-  // 🔴 点数を消しても、回収率の計算方法は分かるままにする
-  assert.match(src, /回収率はどう計算していますか？/);
-  assert.match(src, /払戻 ÷ 投資 × 100/);
+  // 旧 5 点基準の回収率は 2026-10-06 MK 決定で顧客向けから撤去した（FAQ も撤去）。
+  // 再表示させないガードは src/lib/stats/trackRecordCopy.guard.test.mjs。
 });
 
 test('🔴 成績ページに「購入点数」「N点/R」を出さない', () => {
