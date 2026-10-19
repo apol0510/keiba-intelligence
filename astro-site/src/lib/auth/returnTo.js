@@ -79,6 +79,32 @@ export function returnToKind(value) {
 }
 
 /**
+ * 無料ページの戻り先に対応する有料ページ（無ければ null）。
+ *
+ * 未ログインで `/prediction/*` を開くと有料ページは無料ページ（`/free-prediction/*`）へ 302 する
+ * （`paidPageRedirect`）。そのため戻り先は無料ページになり、無料ページは有料会員にも「無料の見え方」を出す。
+ * 買い目を見られる会員を元の有料ページへ戻すため、呼び出し側（verify-magic-link）が
+ * **買い目を見られる会員のときだけ**この対応を使う。
+ *
+ * 🔴 対応は有料ページの 302 の逆（固定の対応だけ）。値から URL を組み立てない。
+ * 🔴 有料ページ自身が Cookie で判定するので、ここで権限は決まらない（誤って送っても無料ページへ戻るだけ）。
+ *   - /free-prediction/nankan          → /prediction/nankan
+ *   - /free-prediction/nankan/<slug>   → /prediction/<slug>（`archive` を除く）
+ *   - /free-prediction/jra             → /prediction/jra
+ *   - それ以外（/free-prediction/jra/<日付>・archive 等）は対応なし
+ */
+export function paidEquivalentPath(value) {
+  const v = normalizeReturnTo(value);
+  if (!v) return null;
+  const path = v.length > 1 && v.endsWith('/') ? v.slice(0, -1) : v;
+  if (path === '/free-prediction/nankan') return '/prediction/nankan';
+  if (path === '/free-prediction/jra') return '/prediction/jra';
+  const m = /^\/free-prediction\/nankan\/([A-Za-z0-9_-]+)$/.exec(path);
+  if (m && m[1] !== 'archive') return `/prediction/${m[1]}`;
+  return null;
+}
+
+/**
  * /login へのリンク。いまのページが許可リストにあれば `?next=` を付ける。
  * @param {string} pathname 現在のページのパス（`Astro.url.pathname` 等）
  */

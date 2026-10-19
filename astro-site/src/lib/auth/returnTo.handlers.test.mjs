@@ -193,7 +193,7 @@ describe('verify-magic-link（実ハンドラ）: 認証後の戻り先', () => 
     assert.equal(json.redirectTo, '/mypage');
   });
 
-  for (const p of ['/prediction/jra', '/prediction/2026-10-19-ooi-11r', '/free-prediction/nankan/2026-10-19', '/results/2026/10/19', '/mypage']) {
+  for (const p of ['/prediction/jra', '/prediction/2026-10-19-ooi-11r', '/free-prediction/jra/2026-10-19', '/results/2026/10/19', '/mypage']) {
     test(`許可リストの next へ戻す: ${p}`, async () => {
       const { res, json } = await verify({ next: p });
       assert.equal(res.statusCode, 200);
@@ -217,6 +217,31 @@ describe('verify-magic-link（実ハンドラ）: 認証後の戻り先', () => 
   test('未知の購入意図は無視され、next へ戻す', async () => {
     const { json } = await verify({ next: '/prediction/jra', intent: 'https://evil.example' });
     assert.equal(json.redirectTo, '/prediction/jra');
+  });
+
+  test('買い目を見られる会員が無料ページから来たら、対応する有料ページへ戻す', async () => {
+    let r = await verify({ next: '/free-prediction/nankan' });
+    assert.equal(r.json.redirectTo, '/prediction/nankan');
+    db.reset();
+    r = await verify({ next: '/free-prediction/nankan/2026-10-19-ooi' });
+    assert.equal(r.json.redirectTo, '/prediction/2026-10-19-ooi');
+    db.reset();
+    r = await verify({ next: '/free-prediction/jra' });
+    assert.equal(r.json.redirectTo, '/prediction/jra');
+    // 対応の無い無料ページはそのまま
+    db.reset();
+    r = await verify({ next: '/free-prediction/jra/2026-10-19' });
+    assert.equal(r.json.redirectTo, '/free-prediction/jra/2026-10-19');
+  });
+
+  test('🔴 無料会員・契約終了は無料ページのまま（有料ページへ送らない）', async () => {
+    db.reset({ PlanType: 'free-registered' });
+    let r = await verify({ next: '/free-prediction/nankan' });
+    assert.equal(r.json.redirectTo, '/free-prediction/nankan');
+    db.reset({ PlanType: 'premium', Status: 'inactive' });
+    r = await verify({ next: '/free-prediction/nankan' });
+    assert.equal(r.json.redirectTo, '/free-prediction/nankan');
+    assert.equal(r.cookie.session.tier, TIER.FREE);
   });
 
   test('🔴 戻り先で tier は変わらない（有料会員は premium・無料会員は free のまま）', async () => {

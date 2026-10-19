@@ -47,7 +47,8 @@ test('verify.astro: 失敗時にサーバーのセッションを確かめ、再
   assert.match(src, /fetch\('\/\.netlify\/functions\/get-session', \{ credentials: 'include' \}\)/);
   assert.match(src, /isSignedInSession\(/);
   // ログイン済みなら戻り先は固定パス or 許可リストを通した next（open redirect を作らない・returnTo.js）
-  assert.match(src, /resumePathFor\(intent, next \|\| '\/mypage'\)/);
+  assert.match(src, /resumePathFor\(intent, back \|\| '\/mypage'\)/);
+  assert.match(src, /const back = next \? \(\(paid && paidEquivalentPath\(next\)\) \|\| next\) : null;/);
   assert.match(src, /const next = normalizeReturnTo\(urlParams\.get\(RETURN_PARAM\)\)/);
   // 再取得の導線
   assert.match(src, /<a href="\/login" class="btn-primary" id="reloginLink">新しいログインリンクを受け取る<\/a>/);

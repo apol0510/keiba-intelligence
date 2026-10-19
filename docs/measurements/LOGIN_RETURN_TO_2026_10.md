@@ -23,7 +23,7 @@
 | `/login` | `?next=` を最優先、無ければ直前のページ（同一オリジンの referrer・パスだけ）。どちらも同じ検査。有効なときだけ「ログイン後、元のページへ戻ります。」の 1 行 |
 | `send-magic-link` | `intentQuery(intent) \|\| returnToQuery(next)` をマジックリンクへ付ける（購入意図が優先・email は載せない） |
 | `/auth/verify` | `next` を検査して verify-magic-link へ渡す。成功時「元のページへ戻ります…」。リンク切れでログイン済みなら同じ戻り先、未ログインなら「新しいログインリンクを受け取る」へ戻り先を引き継ぐ |
-| `verify-magic-link` | `resumePathFor(intent, normalizeReturnTo(next) \|\| '/mypage')`。**購入意図 > 戻り先 > /mypage** |
+| `verify-magic-link` | `resumePathFor(intent, normalizeReturnTo(next) \|\| '/mypage')`。**購入意図 > 戻り先 > /mypage**。未ログインの有料ページは無料ページへ 302 するため、戻り先が無料ページで**買い目を見られる会員**（`canSeeBetting(tier)`）なら対応する有料ページへ戻す（`paidEquivalentPath`: `/free-prediction/nankan` → `/prediction/nankan`・`/free-prediction/nankan/<slug>` → `/prediction/<slug>`・`/free-prediction/jra` → `/prediction/jra`。対応の無いページはそのまま） |
 | GA4 | `ki_login_link_result` / `ki_login_verify_result` に `return_to: prediction \| free_prediction \| results \| mypage \| none`（分類名だけ。パス・PII は送らない） |
 
 🔴 権限は変えていない: tier は従来どおり署名付き Cookie だけで決まり、戻り先は認可に使わない。

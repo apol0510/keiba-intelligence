@@ -149,7 +149,8 @@ export const prerender = false;
   import { trackFunnel, FUNNEL_EVENTS, verifyResultOf } from '../../lib/analytics/funnelEvents.js';
   import { verifyFailureCopy, isSignedInSession } from '../../lib/auth/verifyRecovery.js';
   // ログイン前に見ていたページ（許可リストのパスだけ。LOGIN_RETURN_TO_2026_10.md）
-  import { normalizeReturnTo, returnToKind, loginHrefFor, RETURN_PARAM } from '../../lib/auth/returnTo.js';
+  import { normalizeReturnTo, returnToKind, loginHrefFor, paidEquivalentPath, RETURN_PARAM } from '../../lib/auth/returnTo.js';
+  import { canSeeBetting } from '../../lib/auth/tiers.js';
 
   const statusEl = document.getElementById('status') as HTMLHeadingElement;
   const messageEl = document.getElementById('message') as HTMLParagraphElement;
@@ -210,7 +211,8 @@ export const prerender = false;
            *    実際の遷移先と食い違う案内になる。行き先から選ぶ。
            */
           const to = data.redirectTo || '/mypage';
-          const where = next && to === next && to.indexOf('/mypage') !== 0
+          // 戻り先があれば元のページ（有料会員は対応する有料ページ）へ戻る
+          const where = next && to.indexOf('/mypage') !== 0 && to.indexOf('/pricing') !== 0
             ? '元のページへ戻ります…'
             : to.indexOf('/mypage') === 0
             ? 'マイページへ移動します…'
@@ -237,14 +239,19 @@ export const prerender = false;
    */
   async function handleFailure(result: string, intent: string | null, next: string | null) {
     let signedIn = false;
+    let paid = false;
     try {
       const res = await fetch('/.netlify/functions/get-session', { credentials: 'include' });
-      signedIn = isSignedInSession(res.status, res.ok ? await res.json() : null);
+      const body = res.ok ? await res.json() : null;
+      signedIn = isSignedInSession(res.status, body);
+      // 行き先を選ぶためだけに使う（有料ページ自身が Cookie で判定する）
+      paid = signedIn && canSeeBetting(body?.tier);
     } catch { /* 判定できなければログインしていない扱い */ }
     trackFunnel(FUNNEL_EVENTS.VERIFY_FALLBACK, { result: signedIn ? 'signed_in' : 'relogin' });
 
     if (signedIn) {
-      const to = resumePathFor(intent, next || '/mypage');
+      const back = next ? ((paid && paidEquivalentPath(next)) || next) : null;
+      const to = resumePathFor(intent, back || '/mypage');
       if (intent) clearStoredIntent(window.localStorage);
       showSuccess('ログイン済みです', intent ? 'お申し込みの続きへ移動します…'
         : (next && next.indexOf('/mypage') !== 0 ? '元のページへ戻ります…' : 'マイページへ移動します…'));

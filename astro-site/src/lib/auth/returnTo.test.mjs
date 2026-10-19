@@ -18,6 +18,7 @@ import {
   returnToKind,
   loginHrefFor,
   returnToFromReferrer,
+  paidEquivalentPath,
 } from './returnTo.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -140,6 +141,22 @@ describe('マジックリンク用クエリ・GA4 分類・/login リンク', ()
   });
 });
 
+describe('無料ページ → 有料ページの対応（有料ページの 302 の逆）', () => {
+  test('固定の対応だけ', () => {
+    assert.equal(paidEquivalentPath('/free-prediction/nankan'), '/prediction/nankan');
+    assert.equal(paidEquivalentPath('/free-prediction/nankan/'), '/prediction/nankan');
+    assert.equal(paidEquivalentPath('/free-prediction/jra'), '/prediction/jra');
+    assert.equal(paidEquivalentPath('/free-prediction/nankan/2026-10-19-ooi'), '/prediction/2026-10-19-ooi');
+  });
+
+  test('対応の無いページ・不正値は null', () => {
+    for (const v of ['/free-prediction/nankan/archive', '/free-prediction/jra/2026-10-19', '/free-prediction/jra/archive',
+      '/free-prediction', '/prediction/nankan', '/mypage', '/results', '//evil.example', '/free-prediction/nankan/a/b', null]) {
+      assert.equal(paidEquivalentPath(v), null, String(v));
+    }
+  });
+});
+
 describe('直前のページ（referrer）からの補助', () => {
   test('同一オリジンの許可リストのパスだけ（クエリ・ハッシュは捨てる）', () => {
     assert.equal(returnToFromReferrer(`${ORIGIN}/prediction/jra?x=1#y`, ORIGIN), '/prediction/jra');
@@ -167,7 +184,8 @@ describe('静的ガード（経路が同じ検査を通る・email を URL に�
 
   test('verify-magic-link: normalizeReturnTo を通した値を resumePathFor の fallback にする', () => {
     const src = read('netlify/functions/verify-magic-link.js');
-    assert.match(src, /redirectTo = normalizeReturnTo\(rawNext\) \|\| redirectTo;\s*\n[\s\S]{0,120}redirectTo = resumePathFor\(rawIntent, redirectTo\);/);
+    assert.match(src, /const nextPath = normalizeReturnTo\(rawNext\);/);
+    assert.match(src, /redirectTo = \(nextPath && canSeeBetting\(tier\) && paidEquivalentPath\(nextPath\)\) \|\| nextPath \|\| redirectTo;\s*\n[\s\S]{0,120}redirectTo = resumePathFor\(rawIntent, redirectTo\);/);
   });
 
   test('/login・/auth/verify は normalizeReturnTo を通してから送る', () => {
