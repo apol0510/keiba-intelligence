@@ -129,6 +129,8 @@ export const prerender = false;
 
 <script>
   import { readStoredIntent, clearStoredIntent } from '../../lib/billing/purchaseIntent.js';
+  // GA4 計測（PII なし。token・email は送らない。docs/measurements/FUNNEL_2026_10.md）
+  import { trackFunnel, FUNNEL_EVENTS, verifyResultOf } from '../../lib/analytics/funnelEvents.js';
 
   const statusEl = document.getElementById('status') as HTMLHeadingElement;
   const messageEl = document.getElementById('message') as HTMLParagraphElement;
@@ -153,6 +155,10 @@ export const prerender = false;
       const q = `token=${encodeURIComponent(token)}` + (intent ? `&intent=${encodeURIComponent(intent)}` : '');
       const response = await fetch(`/.netlify/functions/verify-magic-link?${q}`);
       const data = await response.json();
+      trackFunnel(FUNNEL_EVENTS.LOGIN_VERIFY_RESULT, {
+        result: verifyResultOf(response.status, response.ok && data.success, data.error),
+        intent: intent ? 'purchase' : 'none',
+      });
 
       if (response.ok && data.success) {
         // セッション情報をsessionStorageに保存

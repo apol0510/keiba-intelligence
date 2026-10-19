@@ -135,6 +135,9 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
 </BaseLayout>
 
 <script>
+  // GA4 の登録ファネル計測（PII なし。docs/measurements/FUNNEL_2026_10.md）
+  import { trackFunnel, FUNNEL_EVENTS } from '../lib/analytics/funnelEvents.js';
+
   const form = document.getElementById('registerForm') as HTMLFormElement;
   const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
   const messageDiv = document.getElementById('message') as HTMLDivElement;
@@ -181,6 +184,7 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
       emailMatchError?.classList.remove('hidden');
       emailConfirmInput.style.borderColor = '#ef4444';
       emailConfirmInput.focus();
+      trackFunnel(FUNNEL_EVENTS.SIGNUP_RESULT, { result: 'mismatch' });
       return;
     }
 
@@ -204,6 +208,10 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
 
       const data = await response.json();
 
+      trackFunnel(FUNNEL_EVENTS.SIGNUP_RESULT, {
+        result: !response.ok ? 'error' : (data.alreadyRegistered ? 'already' : (data.resent ? 'resent' : 'sent')),
+      });
+
       if (response.ok && data.alreadyRegistered) {
         // 🔴 認証済みの会員。メールは送っていないので「送信しました」と言わない
         messageDiv.innerHTML =
@@ -221,6 +229,7 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
       }
       revealMessage();
     } catch (error) {
+      trackFunnel(FUNNEL_EVENTS.SIGNUP_RESULT, { result: 'error' });
       messageDiv.textContent = '❌ ネットワークエラーが発生しました';
       messageDiv.className = 'message error';
       revealMessage();

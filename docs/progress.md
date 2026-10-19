@@ -56,6 +56,19 @@
   リクエスト本文の自己申告 email だけ・`get-broadcast` は認証なし (2) `register-free` の token が `Math.random`（非 CSPRNG）
   (3) `bank-transfer-application` は本人確認なしで既存顧客の Status を pending に上書きできる。
 
+### 2026-10-19 購入ファネル計測と GA4 の URL 浄化（正本: `docs/measurements/FUNNEL_2026_10.md`）
+
+- **診断**: 2026-09 売上 ¥31,840（目標の 3.2%・Stripe 8 件）。実測できる最大の落ち込みは継続（8 件中 6 件が解約操作・RETENTION §1）で、
+  主因の仮説は事業判断（PR #150 / #151 が MK 確認待ち）。決済より上流（料金ページ到達・申し込み・メール確認・Checkout）は **GA4 イベントが 0 で 1 段も数えられない**。
+  🔴 さらに `/auth/verify?token=…&email=…` の page_view が **email と token を GA4 の page_location / page_referrer へ送っていた**。
+- **実装**: GA4 初期化で page_location / page_referrer を許可リスト（utm_* / 広告 ID / ref / checkout / resume）で浄化してから
+  `set` → `config`。ファネルイベント 11 種（`ki_pricing_link_click` 〜 `ki_checkout_synced`）を PII なしで追加。表示・導線・価格は不変。
+- **検証**: `funnelEvents.test.mjs` 14 件（`test:billing` → `npm run build`）、`npm run build` green。
+  Playwright（localhost・関数と GA 通信は差し替え）1280 / 375px で 22 項目 PASS（verify の URL 浄化・購入導線の発火順・登録結果・料金リンク）。
+- **評価期間**: 2026-10-20 〜 2026-11-16（28 日）。段ごとの通過率で次の 1 変更を選ぶ。
+- **未実施（理由）**: GA4 / Search Console の API 読み取り（KI プロパティへの権限が無い）・過去データの削除リクエスト（GA4 管理画面）・
+  確認メールのリンクから `&email=` を外す（認証経路の変更として別 task）。KAO の unmet に登録。
+
 ### 2026-10-06 退会は即時のみ（MK 確定。正本: `docs/WITHDRAWAL_2026_10.md`）
 
 - **仕様**: 期間末解約・予約停止・予約取り消し・ポータル解約を廃止。マイページ「アカウント管理」→「退会する」→ 確認画面 →
