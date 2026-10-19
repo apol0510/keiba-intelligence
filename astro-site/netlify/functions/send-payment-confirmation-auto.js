@@ -203,9 +203,13 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 400,
         headers,
+        // 🔴 応答にメールアドレス・氏名を入れない（registry 6e72645d）。
+        //    Airtable Automation の「Send webhook request」は応答本文を使わない。
+        //    切り分け用に「どの項目が空か」と record id だけ返す。
         body: JSON.stringify({
           error: 'Missing required fields in Airtable record',
-          details: { email, fullName }
+          details: { hasEmail: !!email, hasName: !!fullName },
+          airtableRecordId
         })
       };
     }
@@ -360,7 +364,7 @@ exports.handler = async (event, context) => {
         message: alreadyConfirmed
           ? 'Payment email already sent (membership reconciled)'
           : 'Payment confirmation email sent successfully',
-        email: email,
+        // 🔴 応答にメールアドレスを入れない（registry 6e72645d）
         planType: planType,
         expirationDate: expirationDate,
         airtableRecordId: airtableRecordId
@@ -374,7 +378,8 @@ exports.handler = async (event, context) => {
       headers,
       body: JSON.stringify({
         error: 'Internal Server Error',
-        message: error.message
+        // 🔴 外部 API のエラー本文が混ざりうるため、アドレスはマスクして返す（registry 6e72645d）
+        message: redactEmails(error && error.message ? error.message : '')
       })
     };
   }
