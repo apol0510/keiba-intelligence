@@ -139,15 +139,16 @@ export const prerender = false;
   </style>
 
   <script>
+    import { adminFetch, ADMIN_FORBIDDEN_MESSAGE } from '../../../lib/auth/adminKeyClient.js';
     const broadcastId = window.location.pathname.split('/').pop();
     const messageEl = document.getElementById('message');
-    const adminEmail = 'admin@keiba-intelligence.netlify.app'; // 仮：実際は認証から取得
 
     async function loadBroadcast() {
       try {
-        const response = await fetch(`/.netlify/functions/get-broadcast?broadcast_id=${broadcastId}`);
+        const response = await adminFetch(`/.netlify/functions/get-broadcast?broadcast_id=${encodeURIComponent(broadcastId || '')}`);
         const data = await response.json();
 
+        if (response.status === 403) throw new Error(ADMIN_FORBIDDEN_MESSAGE);
         if (!response.ok) {
           throw new Error(data.error || 'エラーが発生しました');
         }
@@ -237,11 +238,11 @@ export const prerender = false;
     }
 
     async function handleTestSend(broadcast: any) {
-      const testEmail = prompt('テスト送信先メールアドレスを入力してください:', adminEmail);
+      const testEmail = prompt('テスト送信先メールアドレスを入力してください（管理者アドレスのみ）:');
       if (!testEmail) return;
 
       try {
-        const response = await fetch('/.netlify/functions/send-test', {
+        const response = await adminFetch('/.netlify/functions/send-test', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -252,6 +253,7 @@ export const prerender = false;
 
         const data = await response.json();
 
+        if (response.status === 403) throw new Error(ADMIN_FORBIDDEN_MESSAGE);
         if (!response.ok) {
           throw new Error(data.error || 'エラーが発生しました');
         }
@@ -273,18 +275,18 @@ export const prerender = false;
       if (!confirm('Dry-Runを実行しますか？（送信件数のみ算出します）')) return;
 
       try {
-        const response = await fetch('/.netlify/functions/send-broadcast', {
+        const response = await adminFetch('/.netlify/functions/send-broadcast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             broadcast_id: broadcast.broadcast_id,
             dry_run: true,
-            user_email: adminEmail,
           }),
         });
 
         const data = await response.json();
 
+        if (response.status === 403) throw new Error(ADMIN_FORBIDDEN_MESSAGE);
         if (!response.ok) {
           throw new Error(data.error || 'エラーが発生しました');
         }
@@ -320,19 +322,19 @@ export const prerender = false;
       if (!doubleConfirmed) return;
 
       try {
-        const response = await fetch('/.netlify/functions/send-broadcast', {
+        const response = await adminFetch('/.netlify/functions/send-broadcast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             broadcast_id: broadcast.broadcast_id,
             dry_run: false,
             confirm: true,
-            user_email: adminEmail,
           }),
         });
 
         const data = await response.json();
 
+        if (response.status === 403) throw new Error(ADMIN_FORBIDDEN_MESSAGE);
         if (!response.ok) {
           throw new Error(data.error || data.message || 'エラーが発生しました');
         }
