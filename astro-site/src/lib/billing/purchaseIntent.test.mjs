@@ -124,10 +124,12 @@ describe('認証・認可の契約を変えていない', () => {
     const login = read('netlify/functions/send-magic-link.js');
     // intent は任意（分割代入で受けるだけ）
     assert.match(reg, /const \{ email, intent \} = JSON\.parse\(event\.body\);/);
-    assert.match(login, /const \{ email, intent \} = JSON\.parse\(event\.body\);/);
+    // send-magic-link は戻り先 next も任意で受ける（returnTo.js・LOGIN_RETURN_TO_2026_10.md）
+    assert.match(login, /const \{ email, intent, next \} = JSON\.parse\(event\.body\);/);
     // 付与されるのは intentQuery の結果だけ（空文字なら従来のリンク）
     assert.match(reg, /\+ intentQuery\(intent\)/);
-    assert.match(login, /\+ intentQuery\(intent\)/);
+    // 🔴 購入意図が優先。意図が無いときだけ許可リストの戻り先を付ける
+    assert.match(login, /\+ \(intentQuery\(intent\) \|\| returnToQuery\(next\)\)/);
     // 登録時の Airtable 値は不変
     assert.match(reg, /PlanType: 'free-registered',/);
     assert.match(reg, /Status: 'pending',/);

@@ -78,7 +78,8 @@ exports.handler = async (event) => {
 
   try {
     // `intent` は任意。購入導線から来たときだけ入る（従来の /login は送らない）
-    const { email, intent } = JSON.parse(event.body);
+    // `next` も任意。ログイン後に戻るページ（許可リストのパスだけ・src/lib/auth/returnTo.js）
+    const { email, intent, next } = JSON.parse(event.body);
 
     if (!email) {
       return {
@@ -166,7 +167,9 @@ exports.handler = async (event) => {
     // 🔴 購入意図（プラン id）を持ち越す。URL は運ばない（open redirect を作らない）。
     //    受け付けるのは plans.js に定義のある id だけ。未知・空は意図なしとして無視する。
     const { intentQuery } = await import('../../src/lib/billing/purchaseIntent.js');
-    const magicLink = buildMagicLinkUrl(token, process.env) + intentQuery(intent);
+    // 🔴 戻り先（next）は許可リストの相対パスだけ運ぶ。購入意図があれば購入が優先なので付けない。
+    const { returnToQuery } = await import('../../src/lib/auth/returnTo.js');
+    const magicLink = buildMagicLinkUrl(token, process.env) + (intentQuery(intent) || returnToQuery(next));
 
     // 🔴 購入導線から来た場合は「ログインリンク」ではなく、お支払いへの案内にする
     const { emailCopyFor } = await import('../../src/lib/billing/purchaseEmailCopy.js');

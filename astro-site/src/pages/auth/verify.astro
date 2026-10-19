@@ -16,7 +16,7 @@ export const prerender = false;
           <h1 id="status">認証中...</h1>
           <p id="message">トークンを確認しています。しばらくお待ちください。</p>
           <div class="verify-actions" id="verifyActions" hidden>
-            <a href="/login" class="btn-primary">新しいログインリンクを受け取る</a>
+            <a href="/login" class="btn-primary" id="reloginLink">新しいログインリンクを受け取る</a>
             <p class="verify-hint" id="verifyHint" hidden></p>
           </div>
         </div>
@@ -148,6 +148,8 @@ export const prerender = false;
   // GA4 計測（PII なし。token・email は送らない。docs/measurements/FUNNEL_2026_10.md）
   import { trackFunnel, FUNNEL_EVENTS, verifyResultOf } from '../../lib/analytics/funnelEvents.js';
   import { verifyFailureCopy, isSignedInSession } from '../../lib/auth/verifyRecovery.js';
+  // ログイン前に見ていたページ（許可リストのパスだけ。LOGIN_RETURN_TO_2026_10.md）
+  import { normalizeReturnTo, returnToKind, loginHrefFor, RETURN_PARAM } from '../../lib/auth/returnTo.js';
 
   const statusEl = document.getElementById('status') as HTMLHeadingElement;
   const messageEl = document.getElementById('message') as HTMLParagraphElement;
@@ -169,12 +171,16 @@ export const prerender = false;
       //    （メールクライアントがクエリを削ることがある）。
       //    どちらも値はサーバー側で `plans.js` と照合され、戻り先は固定パス。
       const intent = urlParams.get('intent') || readStoredIntent(window.localStorage);
-      const q = `token=${encodeURIComponent(token)}` + (intent ? `&intent=${encodeURIComponent(intent)}` : '');
+      // 🔴 戻り先も許可リストで検査してから渡す（サーバーでも同じ検査をする）。購入意図が優先。
+      const next = normalizeReturnTo(urlParams.get(RETURN_PARAM));
+      const q = `token=${encodeURIComponent(token)}` + (intent ? `&intent=${encodeURIComponent(intent)}` : '')
+        + (next ? `&${RETURN_PARAM}=${encodeURIComponent(next)}` : '');
       const response = await fetch(`/.netlify/functions/verify-magic-link?${q}`);
       const data = await response.json();
       trackFunnel(FUNNEL_EVENTS.LOGIN_VERIFY_RESULT, {
         result: verifyResultOf(response.status, response.ok && data.success, data.error),
         intent: intent ? 'purchase' : 'none',
+        return_to: returnToKind(next),
       });
 
       if (response.ok && data.success) {
@@ -204,7 +210,9 @@ export const prerender = false;
            *    実際の遷移先と食い違う案内になる。行き先から選ぶ。
            */
           const to = data.redirectTo || '/mypage';
-          const where = to.indexOf('/mypage') === 0
+          const where = next && to === next && to.indexOf('/mypage') !== 0
+            ? '元のページへ戻ります…'
+            : to.indexOf('/mypage') === 0
             ? 'マイページへ移動します…'
             : (to.indexOf('/free-prediction') === 0 ? '今日の予想へ移動します…' : 'ページへ移動します…');
           showSuccess('ログインしました', where);
@@ -213,7 +221,7 @@ export const prerender = false;
           window.location.href = data.redirectTo || '/mypage';
         }, 500);
       } else {
-        await handleFailure(verifyResultOf(response.status, false, data.error), intent);
+        await handleFailure(verifyResultOf(response.status, false, data.error), intent, next);
       }
     } catch (error) {
       console.error('Verify error:', error);
@@ -227,7 +235,7 @@ export const prerender = false;
    *       判定は get-session（署名付き Cookie をサーバーが検証）だけ。sessionStorage は見ない。
    *    2. ログインしていなければ、何が起きたか（使用済み・期限切れ）と、新しいリンクの受け取り方を出す。
    */
-  async function handleFailure(result: string, intent: string | null) {
+  async function handleFailure(result: string, intent: string | null, next: string | null) {
     let signedIn = false;
     try {
       const res = await fetch('/.netlify/functions/get-session', { credentials: 'include' });
@@ -236,13 +244,17 @@ export const prerender = false;
     trackFunnel(FUNNEL_EVENTS.VERIFY_FALLBACK, { result: signedIn ? 'signed_in' : 'relogin' });
 
     if (signedIn) {
-      const to = resumePathFor(intent, '/mypage');
+      const to = resumePathFor(intent, next || '/mypage');
       if (intent) clearStoredIntent(window.localStorage);
-      showSuccess('ログイン済みです', intent ? 'お申し込みの続きへ移動します…' : 'マイページへ移動します…');
+      showSuccess('ログイン済みです', intent ? 'お申し込みの続きへ移動します…'
+        : (next && next.indexOf('/mypage') !== 0 ? '元のページへ戻ります…' : 'マイページへ移動します…'));
       setTimeout(() => { window.location.href = to; }, 500);
       return;
     }
     const copy = verifyFailureCopy(result);
+    // 新しいリンクを受け取った後も元のページへ戻れるように、/login へ戻り先を引き継ぐ
+    const relogin = document.getElementById('reloginLink') as HTMLAnchorElement | null;
+    if (relogin && next) relogin.href = loginHrefFor(next);
     showError(copy.title, copy.message, copy.hint);
   }
 

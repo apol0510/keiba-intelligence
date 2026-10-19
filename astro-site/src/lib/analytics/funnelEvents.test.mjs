@@ -100,6 +100,12 @@ test('🔴 イベント引数は許可キー・英数字の列挙値だけ（ema
   assert.deepEqual(sanitizeFunnelParams({ plan: 1 }), {});
 });
 
+test('🔴 return_to は分類名だけ送れる（パス・URL は形式外で落ちる。LOGIN_RETURN_TO_2026_10.md）', () => {
+  assert.deepEqual(sanitizeFunnelParams({ result: 'ok', return_to: 'prediction' }), { result: 'ok', return_to: 'prediction' });
+  assert.deepEqual(sanitizeFunnelParams({ return_to: '/prediction/jra' }), {});
+  assert.deepEqual(sanitizeFunnelParams({ return_to: 'https://evil.example' }), {});
+});
+
 test('trackFunnel: 許可イベントだけ送る・gtag が無い / 例外でも導線を止めない', () => {
   const calls = [];
   const win = { gtag: (...a) => calls.push(a) };

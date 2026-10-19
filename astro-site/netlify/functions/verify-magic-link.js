@@ -172,12 +172,18 @@ export async function handler(event) {
     //    `resumePathFor` が固定文字列で組み立てる（open redirect を作らない）。
     //    未知・空・URL 等はすべて無視され、従来の戻り先のままになる。
     const { resumePathFor, normalizeIntent } = await import('../../src/lib/billing/purchaseIntent.js');
+    // 🔴 ログイン前に見ていたページへ戻す（許可リストの相対パスだけ・src/lib/auth/returnTo.js）。
+    //    不正・未指定は従来の /mypage。購入意図があれば resumePathFor が購入の続きを優先する。
+    const { normalizeReturnTo, returnToKind } = await import('../../src/lib/auth/returnTo.js');
+    const rawNext = event.queryStringParameters?.next;
+    redirectTo = normalizeReturnTo(rawNext) || redirectTo;
     const rawIntent = event.queryStringParameters?.intent;
     redirectTo = resumePathFor(rawIntent, redirectTo);
     // 🔴 値そのものは出さない（受け取ったか / 有効だったかだけ）
     console.log('↩︎ redirect:', redirectTo,
       '| intent received:', rawIntent ? 'yes' : 'no',
-      '| intent valid:', normalizeIntent(rawIntent) ? 'yes' : 'no');
+      '| intent valid:', normalizeIntent(rawIntent) ? 'yes' : 'no',
+      '| return_to:', returnToKind(rawNext));
 
     return {
       statusCode: 200,

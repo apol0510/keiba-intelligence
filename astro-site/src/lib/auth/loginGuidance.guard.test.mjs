@@ -50,7 +50,9 @@ test('login.astro: 未登録の案内と下部の案内は /register、送信後
 test('TierRibbon: ゲストだけに「登録済みの方はログイン」（ログイン済み・プレビューでは出さない）', () => {
   const src = read('src/components/newspaper/TierRibbon.astro');
   assert.match(src, /const showLogin = !view\?\.authenticated && !view\?\.preview;/);
-  assert.match(src, /\{showLogin && <a class="tr-login" href="\/login">登録済みの方はログイン<\/a>\}/);
+  // ログイン後にこのページへ戻す（許可リストのパスだけ。returnTo.js・LOGIN_RETURN_TO_2026_10.md）
+  assert.match(src, /\{showLogin && <a class="tr-login" href=\{loginHref\}>登録済みの方はログイン<\/a>\}/);
+  assert.match(src, /const loginHref = loginHrefFor\(Astro\.url\.pathname\);/);
   // 主要 CTA は 1 つのまま（増やさない）
   assert.equal((src.match(/class="tr-cta"/g) || []).length, 1);
 });

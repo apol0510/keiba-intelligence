@@ -7,6 +7,14 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-10-19 ログイン後に元のページへ戻す（正本: `docs/measurements/LOGIN_RETURN_TO_2026_10.md`・registry e52a3c07）
+
+- **問題**: ログイン後は常に `/mypage`。セッション切れの有料会員が `/prediction/*` からログインしても予想ページへ戻れなかった。
+- **実装**: `src/lib/auth/returnTo.js`（許可リストの相対パスだけ・open redirect 拒否）。帯のログインリンク → `/login?next=`（無ければ同一オリジンの referrer）
+  → send-magic-link（`intentQuery || returnToQuery`）→ `/auth/verify` → verify-magic-link（`resumePathFor(intent, next || '/mypage')`・購入意図が優先）。
+  GA4 `return_to`（分類名のみ）。tier・価格・会員権利・実績表示は不変（frozen ファイル未変更）。
+- **検証**: `returnTo.test.mjs`・`returnTo.handlers.test.mjs`（実ハンドラ）・`npm run build` green。評価期間 2026-10-20 〜 2026-11-16。
+
 ### 2026-10-19 的中率・回収率・実績表示の固定（MK 最終決定・正本: `docs/decisions.md` 2026-10-19）
 
 - **決定**: 的中率・回収率・実績表示は現行のまま（数値・撤去・再計算・表示方法・配置の変更なし）。#149 / #150 / #151 / #158 は保留（close しない）。

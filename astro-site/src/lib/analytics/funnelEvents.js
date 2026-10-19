@@ -38,9 +38,9 @@ export const FUNNEL_EVENTS = Object.freeze({
   CHECKOUT_RETURN: 'ki_checkout_return',
   /** 戻った後の権限反映 `{result: changed|pending}` */
   CHECKOUT_SYNCED: 'ki_checkout_synced',
-  /** /login のログインリンク送信結果 `{result: sent|not_found|blocked|error}`（LOGIN_GUIDANCE_2026_10.md） */
+  /** /login のログインリンク送信結果 `{result: sent|not_found|blocked|error, return_to}`（LOGIN_GUIDANCE_2026_10.md・return_to は LOGIN_RETURN_TO_2026_10.md） */
   LOGIN_LINK_RESULT: 'ki_login_link_result',
-  /** マジックリンクの確認結果 `{result: ok|expired|used|not_found|error, intent: purchase|none}` */
+  /** マジックリンクの確認結果 `{result: ok|expired|used|not_found|error, intent: purchase|none, return_to: prediction|free_prediction|results|mypage|none}` */
   LOGIN_VERIFY_RESULT: 'ki_login_verify_result',
   /** リンクが使えなかった後の分岐 `{result: signed_in|relogin}`（この端末がログイン済みだったか。LOGIN_RECOVERY_2026_10.md） */
   VERIFY_FALLBACK: 'ki_verify_fallback',
@@ -49,7 +49,7 @@ export const FUNNEL_EVENTS = Object.freeze({
 const EVENT_NAMES = new Set(Object.values(FUNNEL_EVENTS));
 
 /** 送ってよいキー（これ以外は落とす）。 */
-const ALLOWED_KEYS = new Set(['placement', 'plan', 'result', 'resumed', 'intent']);
+const ALLOWED_KEYS = new Set(['placement', 'plan', 'result', 'resumed', 'intent', 'return_to']);
 
 /** 値は短い英数字・`_`・`-` だけ。`@` や `.` を含む値（email 等）はここで弾かれる。 */
 const VALUE_RE = /^[a-z0-9_-]{1,40}$/i;
