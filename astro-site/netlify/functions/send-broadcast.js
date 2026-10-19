@@ -35,9 +35,11 @@ function sleep(ms) {
  * 配信情報を取得
  */
 async function getBroadcast(broadcastId) {
+  // 🔴 値は必ずエスケープする（registry 5a5dd591）
+  const { escapeFormulaString } = await import('../../src/lib/airtable/formula.js');
   const records = await broadcastsTable
     .select({
-      filterByFormula: `{broadcast_id} = "${broadcastId}"`,
+      filterByFormula: `{broadcast_id} = "${escapeFormulaString(broadcastId)}"`,
       maxRecords: 1,
     })
     .firstPage();
@@ -107,9 +109,10 @@ async function getTargetCustomers(stage) {
  * 既に送信済みかチェック
  */
 async function checkAlreadySent(broadcastId, email) {
+  const { escapeFormulaString } = await import('../../src/lib/airtable/formula.js');
   const records = await recipientsTable
     .select({
-      filterByFormula: `AND({broadcast_id} = "${broadcastId}", {email} = "${email}")`,
+      filterByFormula: `AND({broadcast_id} = "${escapeFormulaString(broadcastId)}", {email} = "${escapeFormulaString(email)}")`,
       maxRecords: 1,
     })
     .firstPage();

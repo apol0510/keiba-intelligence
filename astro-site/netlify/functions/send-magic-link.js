@@ -88,12 +88,22 @@ exports.handler = async (event) => {
       };
     }
 
+    // 🔴 形式が違う email は Airtable へ問い合わせずに 400（式インジェクション対策・registry 5a5dd591）
+    const { escapeFormulaString, isValidEmail } = await import('../../src/lib/airtable/formula.js');
+    if (!isValidEmail(email)) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Invalid email' }),
+      };
+    }
+
     console.log('📧 Sending magic link to:', maskEmail(email));
 
     // 1. Customersテーブル確認
     const customers = await customersTable
       .select({
-        filterByFormula: `{Email} = "${email}"`,
+        filterByFormula: `{Email} = "${escapeFormulaString(email)}"`,
         maxRecords: 1,
       })
       .firstPage();
@@ -138,8 +148,8 @@ exports.handler = async (event) => {
       },
     ]);
 
-    // 🔴 トークンはログインに使える秘密値。先頭だけ出す（register-free と同じ形式）
-    console.log('✅ Token created:', token.substring(0, 8) + '...');
+    // 🔴 token はワンタイムのログイン credential。値をログへ出さない
+    console.log('✅ Token created: [redacted]');
 
     // 4. SendGrid経由でマジックリンク送信
     // 🔴 送信先は既定で本番（従来どおり）。`MAGIC_LINK_BASE_URL` が

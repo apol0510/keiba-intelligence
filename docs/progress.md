@@ -36,6 +36,26 @@
 - **未確認**: 本番での実際の退会操作（実顧客の契約を終了させることになるため行っていない）。次に実際の退会が起きたとき、
   webhook 200・Airtable free・退会記録を Stripe / Netlify のログで確認する。
 
+### 2026-10-19 Airtable 式インジェクション対策（KAO registry 5a5dd591）
+
+- **事象**: `verify-magic-link` が URL の token を `{Token} = "<token>"` へ検証・エスケープなしで埋め込んでいた（顧客検索の
+  `{Email} = "<保存済み Email>"` も同様）。`"` を含む値で文字列リテラルを閉じ、`TRUE()` / `OR(...)` 等を足せる。
+- **注入点（全件）**: 未エスケープ = `verify-magic-link`（Token・Email）/ `send-magic-link`（Email）/ `register-free`（Email）/
+  `bank-transfer-application`（Email。一致した既存顧客を更新する経路）/ `get-broadcast`・`send-test`・`send-broadcast`（broadcast_id・email）。
+  `"` だけエスケープ（`\"` で破れる）= `refresh-session` / `start-purchase` / `stripe-webhook` / `src/lib/membership/airtableStore.js`。
+  `paypal-webhook.js.disabled` は未デプロイのため対象外（有効化するなら同じ helper を使う）。
+- **修正**: 共通 helper `src/lib/airtable/formula.js`（`escapeFormulaString` = `\` → `"` の順でエスケープ・`isValidEmail` = WHATWG
+  type="email" 相当＋ドメインに `.`＋254 文字上限）を全箇所で使う。token は `src/lib/auth/magicLinkToken.js` で発行側の 2 形式
+  （send-magic-link の uuid v4 / register-free の小文字英数字 1〜26 文字）だけ通し、それ以外は Airtable へ問い合わせず 400。
+  email を受け取る 4 関数は形式外を問い合わせ前に 400。`send-magic-link` が token 値をログへ出していたのも `[redacted]` にした。
+  正規 token の挙動（1 回限り・15 分）は不変。
+- **test**: `npm run test:airtable-formula`（build に組込み）— helper・形式検証・未エスケープ埋め込みの静的ガード（31）と、
+  実ハンドラの回帰（58: 注入 payload で 400＋問い合わせ 0・正規 token の 200/使用済み 403/期限切れ 403・発行 token が検証を通る）。
+  旧コードに戻すと 23 件失敗することを確認。`npm run build` green。
+- **範囲外（別 task・未修正）**: (1) newsletter 管理 API（`create-broadcast` / `send-broadcast` / `send-test`）の管理者判定が
+  リクエスト本文の自己申告 email だけ・`get-broadcast` は認証なし (2) `register-free` の token が `Math.random`（非 CSPRNG）
+  (3) `bank-transfer-application` は本人確認なしで既存顧客の Status を pending に上書きできる。
+
 ### 2026-10-19 購入ファネル計測と GA4 の URL 浄化（正本: `docs/measurements/FUNNEL_2026_10.md`）
 
 - **診断**: 2026-09 売上 ¥31,840（目標の 3.2%・Stripe 8 件）。実測できる最大の落ち込みは継続（8 件中 6 件が解約操作・RETENTION §1）で、

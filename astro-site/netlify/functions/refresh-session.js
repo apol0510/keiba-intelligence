@@ -28,6 +28,7 @@ import { signSession, serializeSessionCookie } from '../../src/lib/auth/session.
 import { resolveEntitlement } from '../../src/lib/auth/entitlement.js';
 import { resolveSiteOrigin } from '../../src/lib/http/siteOrigin.js';
 import { readRevocation, tierForNewSession } from '../../src/lib/auth/revocation.js';
+import { escapeFormulaString } from '../../src/lib/airtable/formula.js';
 // 🔴 メールアドレスはログへ平文で出さない（src/lib/log/maskEmail.cjs）
 import { redactEmails } from '../../src/lib/log/maskEmail.cjs';
 
@@ -71,7 +72,7 @@ export async function handler(event) {
 
   try {
     const customersTable = new Airtable({ apiKey }).base(baseId)('Customers');
-    const escaped = String(ent.email).replace(/"/g, '\\"');
+    const escaped = escapeFormulaString(ent.email);
     const customers = await customersTable
       .select({ filterByFormula: `{Email} = "${escaped}"`, maxRecords: 1 })
       .firstPage();
