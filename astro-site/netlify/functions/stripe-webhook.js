@@ -41,6 +41,7 @@ import { contractPriceFromCheckoutSession } from '../../src/lib/membership/price
 import { buildPaidPeriodEntry, PERIOD_MONTHS } from '../../src/lib/membership/rewards.js';
 import { updateRevocation } from '../../src/lib/auth/revocation.js';
 import { CUSTOMER_FIELDS, toAirtableDate } from '../../src/lib/membership/airtableStore.js';
+import { escapeFormulaString } from '../../src/lib/airtable/formula.js';
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -51,11 +52,6 @@ const ACTIVE_STATUSES = new Set(['active', 'trialing']);
 function customersTable() {
   const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(AIRTABLE_BASE_ID);
   return base('Customers');
-}
-
-/** Airtable のフォーミュラ用に " をエスケープする。 */
-function escapeFormulaValue(v) {
-  return String(v).replace(/"/g, '\\"');
 }
 
 /**
@@ -242,7 +238,7 @@ async function markProcessed(event, eventId) {
 async function findCustomer(email) {
   if (!email) return null;
   const rows = await customersTable()
-    .select({ filterByFormula: `{Email} = "${escapeFormulaValue(email)}"`, maxRecords: 1 })
+    .select({ filterByFormula: `{Email} = "${escapeFormulaString(email)}"`, maxRecords: 1 })
     .firstPage();
   return rows.length ? rows[0] : null;
 }

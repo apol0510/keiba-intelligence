@@ -86,12 +86,18 @@ import AuthCheck from '../../../components/AuthCheck.astro';
   </style>
 
   <script>
+    import { adminFetch, ADMIN_FORBIDDEN_MESSAGE } from '../../../lib/auth/adminKeyClient.js';
     async function loadBroadcasts() {
       try {
-        const response = await fetch('/.netlify/functions/get-broadcasts');
+        const response = await adminFetch('/.netlify/functions/get-broadcasts');
         const data = await response.json();
 
         const listEl = document.getElementById('broadcasts-list');
+
+        if (response.status === 403) {
+          listEl.textContent = ADMIN_FORBIDDEN_MESSAGE;
+          return;
+        }
 
         if (!data.success || data.broadcasts.length === 0) {
           listEl.innerHTML = '<p>配信がありません。</p>';

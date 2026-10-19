@@ -22,6 +22,7 @@ import { STORE_RESULT } from './store.js';
 import { createContractPrice } from './priceLock.js';
 import { ENTRY_TYPE } from './rewards.js';
 import { isAccrualForbidden } from './rewardScope.js';
+import { escapeFormulaString } from '../airtable/formula.js';
 
 /**
  * 🔴 **読むだけ**の既存列。`CUSTOMER_FIELDS` には入れない（あれは書き込む列）。
@@ -94,7 +95,8 @@ const API = 'https://api.airtable.com/v0';
 export const SCHEMA_MISSING = 'schema_missing';
 
 const normEmail = (v) => String(v || '').trim().toLowerCase();
-const escapeFormula = (v) => String(v).replace(/"/g, '\\"');
+/** 🔴 `\` と `"` の両方をエスケープする共通部品へ寄せた（registry 5a5dd591）。 */
+const escapeFormula = escapeFormulaString;
 
 /**
  * Airtable の応答から「スキーマがまだ無い」を判定する。

@@ -16,23 +16,15 @@ const broadcastsTable = base('Broadcasts');
  * メインハンドラー
  */
 exports.handler = async (event) => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  };
-
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
-  }
-
-  if (event.httpMethod !== 'GET') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method Not Allowed' }),
-    };
-  }
+  /*
+   * 🔴 管理者認証（registry e1f0c2ce）。body のメールアドレスでは判定しない。
+   *    `X-KI-Admin-Key` ヘッダーと env `KI_ADMIN_API_KEY` の timing-safe 照合のみ。
+   *    未設定なら常に 403（fail-closed）。CORS は KI 自身の origin だけ。
+   *    🔴 Airtable を読む前に止める（配信本文・作成者アドレスを漏らさない）。
+   */
+  const { guardAdminRequest } = await import('../../src/lib/auth/adminAuth.js');
+  const { headers, response: denied } = guardAdminRequest(event, { method: 'GET', env: process.env });
+  if (denied) return denied;
 
   try {
     // 全配信を取得（作成日時降順）
