@@ -49,6 +49,10 @@
 - **未実施（理由）**: GA4 / Search Console の API 読み取り（KI プロパティへの権限が無い）・過去データの削除リクエスト（GA4 管理画面）・
   確認メールのリンクから `&email=` を外す（認証経路の変更として別 task）。KAO の unmet に登録。
 
+### 2026-10-19 robots.txt の Sitemap を本番ドメインへ（正本: `docs/measurements/ROBOTS_SITEMAP_2026_10.md`）
+
+- 旧ホスト（`*.netlify.app`）を指していた `Sitemap:` を `https://keiba-intelligence.jp/sitemap.xml` へ。guard test を `siteOrigin.test.mjs` に追加。KAO registry `f032ad08`。
+
 ### 2026-10-06 退会は即時のみ（MK 確定。正本: `docs/WITHDRAWAL_2026_10.md`）
 
 - **仕様**: 期間末解約・予約停止・予約取り消し・ポータル解約を廃止。マイページ「アカウント管理」→「退会する」→ 確認画面 →
