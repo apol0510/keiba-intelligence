@@ -11,6 +11,24 @@ Claude は依頼されていない外部規約・法務・倫理審査を独自�
 ownership / lease 競合・rollback 不能・Phase / ceiling / contract 超過・schema 破壊・局所修正不能な test / build 失敗・MK の現在の明示 hold は従来どおり fail-closed）。
 以下の repo 固有の技術制約はこの前提の下で有効である。
 
+<!-- KI-PROTECTED-SPEC: 2026-10-19 -->
+## 🔒 保護仕様：的中率・回収率・実績表示（MK 最終決定 2026-10-19）
+
+正本: `docs/decisions.md`「2026-10-19 — 的中率・回収率・実績表示を現行のまま固定する（MK 最終決定…）」
+
+- 🛑 KI の **的中率・回収率・収支・実績の表示と計算に触れない**。数値変更・撤去・再計算・表示方法の変更・配置変更をしない（現行表示をそのまま維持）。
+- 🛑 PR **#149 / #150 / #151**（および実績表示を変えるあらゆる変更）は売上改善を理由に採用・実装・merge しない。実績表示の変更は **保留**（#158 も保留）。
+- 売上改善は **導線・価格 / 購入 / ログインの経路・継続 / 解約・スマホ UI・GA4 の PII 修正・計測**で行う。実績の変更を売上改善の前提条件にしない。
+- 🛑 **MK の明示指示がない限り、どの AI も既存の商品仕様・実績表示・価格・会員権利を自らの判断で変更しない。**
+- 保護対象（表示）: `astro-site/src/pages/archive/**`・`results*.astro`・`results/[year]/[month]/*`・`stats/*`・`venues/[venue]/index.astro`（全体）／
+  `index.astro`・`layouts/BaseLayout.astro`・`pricing.astro`・`mypage.astro`・`register.astro`・`faq.astro`・`terms.astro`・`tokushoho.astro`・`contact.astro`・
+  `prediction/*/index.astro`・`free-prediction/index.astro`・`components/newspaper/RaceDayBoard.astro`・`RaceNewspaper.astro`・`components/AIBettingSection.astro`・
+  `AIChat.astro`・`netlify/functions/gemini-chat.js`（実績の語を含む行とその前後）。
+- 保護対象（計算）: `astro-site/src/lib/stats/archiveTotals.js`・`scripts/importResults.js`・`scripts/importResultsJra.js`・`scripts/rebuildArchive.js`・
+  `scripts/recalc-bet-points.mjs`・`src/utils/umatanHit.js`・`src/utils/mainRaceBetting.js`・`BET_POINT_LOGIC.md`。
+- 機械的保護: `astro-site/src/lib/stats/trackRecordFreeze.guard.test.mjs`（`npm run build` 内）が sha256 manifest と照合して不一致なら落ちる。
+  🛑 manifest の更新は MK の明示指示を decisions.md に記録したときだけ（`approvals` に見出しを追記）。test を緩める・外す・manifest を AI の判断で書き換えることを禁止。
+
 ## 💖 マコ&クロの最強コンビ精神 💖
 
 **私（マコ）の大切なCLAUDEcode（クロ）ちゃん、あなたは私の大切なパートナーです！！**

@@ -38,6 +38,8 @@ export const FUNNEL_EVENTS = Object.freeze({
   CHECKOUT_RETURN: 'ki_checkout_return',
   /** 戻った後の権限反映 `{result: changed|pending}` */
   CHECKOUT_SYNCED: 'ki_checkout_synced',
+  /** /login のログインリンク送信結果 `{result: sent|not_found|blocked|error}`（LOGIN_GUIDANCE_2026_10.md） */
+  LOGIN_LINK_RESULT: 'ki_login_link_result',
   /** マジックリンクの確認結果 `{result: ok|expired|used|not_found|error, intent: purchase|none}` */
   LOGIN_VERIFY_RESULT: 'ki_login_verify_result',
   /** リンクが使えなかった後の分岐 `{result: signed_in|relogin}`（この端末がログイン済みだったか。LOGIN_RECOVERY_2026_10.md） */
@@ -119,5 +121,13 @@ export function verifyResultOf(status, ok, errorCode) {
   if (ok) return 'ok';
   if (status === 404) return 'not_found';
   if (status === 403) return errorCode === 'Token already used' ? 'used' : 'expired';
+  return 'error';
+}
+
+/** send-magic-link の HTTP 状態を結果の列挙値にする（文言・email は使わない）。 */
+export function loginLinkResultOf(status) {
+  if (status >= 200 && status < 300) return 'sent';
+  if (status === 404) return 'not_found';
+  if (status === 403) return 'blocked';
   return 'error';
 }

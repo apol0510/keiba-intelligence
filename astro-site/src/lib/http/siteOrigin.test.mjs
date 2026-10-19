@@ -118,3 +118,15 @@ describe('Stripe 関数が共有ポリシーを使っている', () => {
     assert.match(portal, /if \(!ent\.authenticated \|\| !ent\.email\)/);
   });
 });
+
+describe('robots.txt の Sitemap は本番の独自ドメイン（2026-10-19）', () => {
+  // 旧ホスト（*.netlify.app）を指していた。301 で本番へ転送されるが、検索エンジンへは
+  // 正の URL を直接示す。astro.config.mjs の `site`・sitemap.xml.js の baseUrl と同じ origin。
+  test('Sitemap 行は DEFAULT_SITE_ORIGIN/sitemap.xml だけ', () => {
+    const robots = read('public/robots.txt');
+    const lines = robots.split('\n').filter((l) => /^sitemap:/i.test(l.trim()));
+    assert.deepEqual(lines.map((l) => l.trim()), [`Sitemap: ${DEFAULT_SITE_ORIGIN}/sitemap.xml`]);
+    assert.doesNotMatch(robots, /netlify\.app/);
+    assert.match(read('astro.config.mjs'), new RegExp(`site: '${DEFAULT_SITE_ORIGIN.replace(/\./g, '\\.')}'`));
+  });
+});

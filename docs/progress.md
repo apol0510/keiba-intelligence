@@ -7,6 +7,15 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-10-19 的中率・回収率・実績表示の固定（MK 最終決定・正本: `docs/decisions.md` 2026-10-19）
+
+- **決定**: 的中率・回収率・実績表示は現行のまま（数値・撤去・再計算・表示方法・配置の変更なし）。#149 / #150 / #151 / #158 は保留（close しない）。
+  売上改善は導線・価格 / 購入 / ログインの経路・継続 / 解約・スマホ UI・GA4 の PII 修正・計測で行う。AI は MK の明示指示なしに商品仕様・実績表示・価格・会員権利を変えない。
+- **実装**: `CLAUDE.md` 冒頭に保護仕様を追加。`astro-site/src/lib/stats/trackRecordFreeze.guard.test.mjs` ＋ `trackRecordFreeze.manifest.json`
+  （表示 30・計算 8 の計 38 ファイル。実績専用ファイルは全体、混在ファイルは実績の語を含む行と前後 2 行の sha256）を `test:track-record-freeze` として `npm run build` に組込み。
+  顧客向けの出力は不変。
+- 🔴 **影響**: 保護対象を変える open PR（#148 KI_EXACTA 表示準備・#149 / #150 / #151）は、MK が明示指示して manifest を更新しない限りこの guard で build が落ちる。
+
 ### 2026-10-19 ログインの行き止まり解消（正本: `docs/measurements/LOGIN_RECOVERY_2026_10.md`）
 
 - **監査**: 本番を実ブラウザ（375 / 1280px・解析通信は遮断・関数応答は差し替え）で通した。
@@ -53,6 +62,12 @@
 - **未確認**: 本番での実際の退会操作（実顧客の契約を終了させることになるため行っていない）。次に実際の退会が起きたとき、
   webhook 200・Airtable free・退会記録を Stripe / Netlify のログで確認する。
 
+### 2026-10-19 ログイン画面と予想ページの帯の案内（正本: `docs/measurements/LOGIN_GUIDANCE_2026_10.md`）
+
+- **問題**: `/login` の未登録案内が「料金プランからご登録ください」（無料登録ではなく有料へ）。ゲストの帯にログイン導線が無く、セッション切れの有料会員は無料版で「無料会員に登録」しか見えない。送信後にアプリ内ブラウザ・15 分の説明が無い。
+- **実装**: 404 → 無料会員登録の案内とリンク、画面下も `/register`。送信成功時にブラウザの補足。帯はゲストだけ「登録済みの方はログイン」（主要 CTA は 1 つのまま）。GA4 `ki_login_link_result`。
+- **検証**: `loginGuidance.test.mjs` 5 件ほか、`npm run build` green。localhost Playwright 375 / 1280px 26 項目。評価 2026-10-20 〜 11-16。
+
 ### 2026-10-19 Airtable 式インジェクション対策（KAO registry 5a5dd591）
 
 - **事象**: `verify-magic-link` が URL の token を `{Token} = "<token>"` へ検証・エスケープなしで埋め込んでいた（顧客検索の
@@ -85,6 +100,10 @@
 - **評価期間**: 2026-10-20 〜 2026-11-16（28 日）。段ごとの通過率で次の 1 変更を選ぶ。
 - **未実施（理由）**: GA4 / Search Console の API 読み取り（KI プロパティへの権限が無い）・過去データの削除リクエスト（GA4 管理画面）・
   確認メールのリンクから `&email=` を外す（認証経路の変更として別 task）。KAO の unmet に登録。
+
+### 2026-10-19 robots.txt の Sitemap を本番ドメインへ（正本: `docs/measurements/ROBOTS_SITEMAP_2026_10.md`）
+
+- 旧ホスト（`*.netlify.app`）を指していた `Sitemap:` を `https://keiba-intelligence.jp/sitemap.xml` へ。guard test を `siteOrigin.test.mjs` に追加。KAO registry `f032ad08`。
 
 ### 2026-10-19 メルマガ配信 API の管理者認証（registry e1f0c2ce）と register-free token の乱数（registry 7a7522ac）
 

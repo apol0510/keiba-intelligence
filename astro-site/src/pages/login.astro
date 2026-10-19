@@ -45,10 +45,16 @@ export const prerender = true;
           </button>
 
           <div id="message" class="message" style="display: none;"></div>
+          <p id="messageLink" class="message-link" hidden><a href="/register">無料会員登録へ進む</a></p>
+          <p id="browserHint" class="browser-hint" hidden>
+            ログインは、メールのリンクを開いたブラウザでだけ有効になります。メールアプリの中で開くと、
+            いつものブラウザ（Safari・Chrome など）ではログインしていない状態になります。
+            いつものブラウザで使う場合は、リンクを長押ししてブラウザで開いてください。リンクの有効期限は 15 分です。
+          </p>
         </form>
 
         <div class="login-footer">
-          <p>アカウントをお持ちでない方は、<a href="/pricing">料金プラン</a>からご登録ください。</p>
+          <p>アカウントをお持ちでない方は、<a href="/register">無料会員登録</a>から始められます。</p>
         </div>
       </div>
     </div>
@@ -227,7 +233,13 @@ export const prerender = true;
 </style>
 
 <script>
+  // GA4 計測（PII なし。email は送らない。docs/measurements/LOGIN_GUIDANCE_2026_10.md）
+  import { trackFunnel, FUNNEL_EVENTS, loginLinkResultOf } from '../lib/analytics/funnelEvents.js';
+  import { loginFailureCopy } from '../lib/auth/loginGuidance.js';
+
   const form = document.getElementById('loginForm') as HTMLFormElement;
+  const messageLink = document.getElementById('messageLink') as HTMLParagraphElement;
+  const browserHint = document.getElementById('browserHint') as HTMLParagraphElement;
   const emailInput = document.getElementById('email') as HTMLInputElement;
   const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
   const messageDiv = document.getElementById('message') as HTMLDivElement;
@@ -246,6 +258,8 @@ export const prerender = true;
     submitBtn.disabled = true;
     submitBtn.classList.add('loading');
     messageDiv.style.display = 'none';
+    messageLink.hidden = true;
+    browserHint.hidden = true;
 
     try {
       const response = await fetch('/.netlify/functions/send-magic-link', {
@@ -257,25 +271,24 @@ export const prerender = true;
       });
 
       const data = await response.json();
+      trackFunnel(FUNNEL_EVENTS.LOGIN_LINK_RESULT, { result: loginLinkResultOf(response.status) });
 
       if (response.ok) {
         showMessage(
           data.message || 'ログインリンクを送信しました。メールをご確認ください。',
           'success'
         );
+        browserHint.hidden = false;
         emailInput.value = '';
       } else {
-        const errorMessage =
-          response.status === 404
-            ? 'アカウントが見つかりません。料金プランからご登録ください。'
-            : response.status === 403
-            ? 'アカウントが無効です。サポートまでお問い合わせください。'
-            : data.error || 'エラーが発生しました。もう一度お試しください。';
-
-        showMessage(errorMessage, 'error');
+        // 🔴 未登録は有料プランではなく無料会員登録へ案内する（ログイン画面に来た人は無料で始められる）
+        const copy = loginFailureCopy(response.status);
+        showMessage(copy.message, 'error');
+        if (copy.register) messageLink.hidden = false;
       }
     } catch (error) {
       console.error('Login error:', error);
+      trackFunnel(FUNNEL_EVENTS.LOGIN_LINK_RESULT, { result: 'error' });
       showMessage('通信エラーが発生しました。もう一度お試しください。', 'error');
     } finally {
       submitBtn.disabled = false;
@@ -291,6 +304,21 @@ export const prerender = true;
 </script>
 
 <style>
+  .message-link {
+    margin: 10px 0 0;
+    text-align: center;
+    font-weight: 700;
+  }
+
+  .message-link[hidden], .browser-hint[hidden] { display: none !important; }
+
+  .browser-hint {
+    margin: 12px 0 0;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: var(--text-tertiary);
+  }
+
   .already-signed-in {
     max-width: 520px;
     margin: 24px auto 0;
