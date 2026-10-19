@@ -33,7 +33,8 @@ const read = (p) => readFileSync(join(siteRoot, p), 'utf8');
 const SESSION_SECRET = ['session', 'fixture', 'value'].join('-');
 /** 🔴 実在しないドメイン（実行時に組み立てる）。 */
 const MEMBER = ['member', 'example.invalid'].join('@');
-const LINK = ['probe', 'link', '7'].join('-');
+/** token の形は発行元（英数字）と同じにする（形式検証が入っても通る値）。 */
+const LINK = ['probe', 'link', '7'].join('');
 
 // ------------------------------------------------------------ 1. 方針（純関数）
 

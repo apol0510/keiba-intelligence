@@ -267,9 +267,7 @@ async function saveAuthToken(email, token) {
 
 // マジックリンク生成とメール送信
 async function sendMagicLink(email, intent) {
-  // 🔴 ログイン用の一回限りの値なので暗号論的乱数で作る（send-magic-link と同じ強さ）
-  const { randomUUID } = await import('node:crypto');
-  const token = randomUUID();
+  const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
   // 🔴 登録確認 URL の宛先は `magicLinkBase.js` の共有ポリシーで決める。
   //    ハードコードしていると Deploy Preview / ブランチデプロイで登録しても

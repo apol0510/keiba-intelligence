@@ -25,7 +25,7 @@ Playwright（Chromium）で本番 `keiba-intelligence.jp` を開き、アクセ�
 - B は 2026-10-07 時点の解約予約 4 件（終了日 10/15・10/19・10/27・10/28）と、それ以前に終了した 1 件が順に該当する。
   RETENTION_2026_10.md §1.3 の「B は短時間に連続発行」「D は 7 日ごとに再ログイン」も、D の型（アプリ内ブラウザと通常ブラウザでログイン状態が共有されない）と整合する。
 - 確認メールのリンクに `&email=` が載っていた（`register-free`）。`/auth/verify` も `verify-magic-link` も email を読んでいない（認証は token だけ）。
-  ログイン用リンク（`send-magic-link`）は既に token だけだった。登録用 token は `Math.random` で作っていた。
+  ログイン用リンク（`send-magic-link`）は既に token だけだった。登録用 token が `Math.random` である件は PR #161（registry 7a7522ac）が扱う。
 
 ### 1.2 そのほかの観察（本 PR の範囲外・KAO registry に登録）
 
@@ -42,7 +42,7 @@ Playwright（Chromium）で本番 `keiba-intelligence.jp` を開き、アクセ�
 | `src/lib/auth/loginEligibility.js`（新規） | ログインリンクを送る Status を **active / pending / inactive / payment_failed** に固定。`suspended` / `cancelled` / 未知 / 空は従来どおり 403（fail-closed） |
 | `send-magic-link.js` | 上の判定を使う（有効期限 15 分・token の作り方・応答形は不変） |
 | `verify-magic-link.js` | 認証で書くのは本人確認の完了だけ（空 / pending / active → `Status: active`・`AccessEnabled: true`、従来どおり）。**inactive・payment_failed の記録は書き換えない**。tier は従来どおり PlanType・有効期限・退会記録で決まる |
-| `register-free.js` | 確認リンクから `&email=` を外し、ログインと同じ `buildMagicLinkUrl` に統一。token を `crypto.randomUUID()` に |
+| `register-free.js` | 確認リンクから `&email=` を外し、ログインと同じ `buildMagicLinkUrl` に統一（token の作り方は PR #161 が扱うため本 PR では変えない） |
 | `/auth/verify` | リンクが使えなかったら get-session（署名付き Cookie をサーバーが検証）で確認し、**ログイン済みならそのままマイページ（購入導線なら申し込みの続き）へ**。未ログインなら「使用済み / 期限切れ（15 分）/ 確認できない」を言い分け、「新しいログインリンクを受け取る」ボタンと、メールアプリ内ブラウザの補足を出す |
 | GA4 | `ki_verify_fallback{result: signed_in \| relogin}` を追加（FUNNEL_2026_10.md と同じ契約。PII なし） |
 
@@ -55,7 +55,7 @@ Playwright（Chromium）で本番 `keiba-intelligence.jp` を開き、アクセ�
   Status の許可・拒否、認証時の書き込み、**verify-magic-link の実ハンドラ**で pending → active / inactive は free のまま書き換えない /
   退会記録が未反映なら有料を出さない / payment_failed は PlanType どおり / 使用済み・期限切れは従来どおり 403。
 - `src/lib/auth/verifyRecovery.test.mjs`（5 件・`test:auth`）: 文言・ログイン済み判定・verify.astro の配線・認証判定の不変。
-- `src/lib/auth/magicLinkBase.test.mjs`: 確認リンクに email が無い・token が暗号論的乱数。
+- `src/lib/auth/magicLinkBase.test.mjs`: 確認リンクに email が無い。
 - ブラウザ（Playwright・localhost・関数応答と GA 通信は差し替え）375px / 1280px で 38 項目:
   使用済み / 期限切れ / 見つからない × 未ログイン → 再取得ボタン・横スクロールなし・`/login` へ遷移、
   使用済み × ログイン済み → `/mypage` へ、`ki_verify_fallback` の発火、イベントに email・token なし。

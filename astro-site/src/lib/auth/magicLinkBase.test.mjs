@@ -174,13 +174,6 @@ describe('register-free.js（無料登録の確認 URL）も同じポリシー',
     assert.doesNotMatch(verifyFn, /const \{[^}]*email[^}]*\} = event\.queryStringParameters/);
   });
 
-  test('🔴 確認リンクの token は暗号論的乱数（Math.random を使わない）', () => {
-    const s2 = src();
-    const fn = s2.slice(s2.indexOf('async function sendMagicLink('), s2.indexOf('const magicLink ='));
-    assert.match(fn, /randomUUID\(\)/);
-    assert.doesNotMatch(fn, /Math\.random/);
-  });
-
   test('🔴 既存の登録フロー（Status / PlanType / AccessEnabled）を変えていない', () => {
     const s2 = src();
     // 新規作成時の値（2026-09-02 時点の実装。URL の修正では変えていない）
