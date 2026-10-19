@@ -46,10 +46,11 @@ exports.handler = async (event) => {
       };
     }
 
-    // Airtable から検索
+    // Airtable から検索（🔴 値は必ずエスケープする・registry 5a5dd591）
+    const { escapeFormulaString } = await import('../../src/lib/airtable/formula.js');
     const records = await broadcastsTable
       .select({
-        filterByFormula: `{broadcast_id} = "${broadcastId}"`,
+        filterByFormula: `{broadcast_id} = "${escapeFormulaString(broadcastId)}"`,
         maxRecords: 1,
       })
       .firstPage();

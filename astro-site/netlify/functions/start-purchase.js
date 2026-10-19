@@ -50,6 +50,7 @@
 
 import { normalizeIntent } from '../../src/lib/billing/purchaseIntent.js';
 import { normalizeSiteOrigin, resolveSiteOrigin } from '../../src/lib/http/siteOrigin.js';
+import { escapeFormulaString, isValidEmail } from '../../src/lib/airtable/formula.js';
 
 /** リクエストから origin を復元する。判断できなければ null（既定へ倒さない）。 */
 function originFromRequest(headers) {
@@ -77,8 +78,6 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
 ];
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 /**
  * email の会員状態を返す。`null` は「判断できない」。
  *
@@ -90,7 +89,7 @@ async function lookupCustomerStatus(email) {
   const base = process.env.AIRTABLE_BASE_ID;
   if (!key || !base) return null; // 判断できない
 
-  const formula = encodeURIComponent(`{Email} = "${String(email).replace(/"/g, '\\"')}"`);
+  const formula = encodeURIComponent(`{Email} = "${escapeFormulaString(email)}"`);
   const res = await fetch(
     `https://api.airtable.com/v0/${base}/Customers?maxRecords=1&filterByFormula=${formula}`,
     { headers: { Authorization: `Bearer ${key}` } },
@@ -125,7 +124,8 @@ export async function handler(event) {
   }
 
   const email = typeof body.email === 'string' ? body.email.trim() : '';
-  if (!EMAIL_RE.test(email)) {
+  // 🔴 委譲先（send-magic-link / register-free）と同じ検証を使う（registry 5a5dd591）
+  if (!isValidEmail(email)) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'invalid_email' }) };
   }
 
