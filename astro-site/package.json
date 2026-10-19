@@ -49,7 +49,7 @@
     "test:mail-guard": "node --test src/lib/mail/previewMailGuard.test.mjs",
     "test:unsubscribe": "node --test src/lib/unsubscribe/unsubscribe.test.mjs",
     "test:refresh-session": "node --experimental-test-module-mocks src/lib/auth/refreshSession.e2e.test.mjs",
-    "test:airtable-formula": "node --test src/lib/airtable/formula.test.mjs && node --experimental-test-module-mocks --test src/lib/airtable/airtableInjection.handlers.test.mjs",
+    "test:airtable-formula": "node --test src/lib/airtable/formula.test.mjs && node --experimental-test-module-mocks src/lib/airtable/airtableInjection.handlers.test.mjs",
     "test:login-eligibility": "node --experimental-test-module-mocks src/lib/auth/loginEligibility.test.mjs && node --experimental-test-module-mocks src/lib/auth/paidEntitlement.test.mjs"
   },
   "dependencies": {
