@@ -6,6 +6,8 @@
 
 const Airtable = require('airtable');
 const sgMail = require('@sendgrid/mail');
+// 🔴 メールアドレスはログへ平文で出さない（src/lib/log/maskEmail.cjs）
+const { maskEmail, redactEmails } = require('../../src/lib/log/maskEmail.cjs');
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -131,7 +133,7 @@ ${broadcast.body_html}
       },
     ]);
 
-    console.log('✅ Test email sent to:', test_email);
+    console.log('✅ Test email sent to:', maskEmail(test_email));
 
     return {
       statusCode: 200,
@@ -143,7 +145,7 @@ ${broadcast.body_html}
       }),
     };
   } catch (error) {
-    console.error('❌ Send test error:', error);
+    console.error('❌ Send test error:', redactEmails(error));
     return {
       statusCode: 500,
       headers,

@@ -7,6 +7,8 @@
 const { v4: uuidv4 } = require('uuid');
 const Airtable = require('airtable');
 const sgMail = require('@sendgrid/mail');
+// 🔴 メールアドレスはログへ平文で出さない（src/lib/log/maskEmail.cjs）
+const { maskEmail, redactEmails } = require('../../src/lib/log/maskEmail.cjs');
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -86,7 +88,7 @@ exports.handler = async (event) => {
       };
     }
 
-    console.log('📧 Sending magic link to:', email);
+    console.log('📧 Sending magic link to:', maskEmail(email));
 
     // 1. Customersテーブル確認
     const customers = await customersTable
@@ -97,7 +99,7 @@ exports.handler = async (event) => {
       .firstPage();
 
     if (customers.length === 0) {
-      console.error('❌ Customer not found:', email);
+      console.error('❌ Customer not found:', maskEmail(email));
       return {
         statusCode: 404,
         headers,
@@ -109,7 +111,7 @@ exports.handler = async (event) => {
 
     // ステータス確認
     if (customer.Status !== 'active') {
-      console.error('❌ Account is not active:', email);
+      console.error('❌ Account is not active:', maskEmail(email));
       return {
         statusCode: 403,
         headers,
@@ -136,7 +138,8 @@ exports.handler = async (event) => {
       },
     ]);
 
-    console.log('✅ Token created:', token);
+    // 🔴 トークンはログインに使える秘密値。先頭だけ出す（register-free と同じ形式）
+    console.log('✅ Token created:', token.substring(0, 8) + '...');
 
     // 4. SendGrid経由でマジックリンク送信
     // 🔴 送信先は既定で本番（従来どおり）。`MAGIC_LINK_BASE_URL` が
@@ -202,7 +205,7 @@ exports.handler = async (event) => {
 
     await sgMail.send(msg);
 
-    console.log('✅ Magic link sent to:', email);
+    console.log('✅ Magic link sent to:', maskEmail(email));
 
     return {
       statusCode: 200,
@@ -213,7 +216,7 @@ exports.handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error('❌ Send magic link error:', error);
+    console.error('❌ Send magic link error:', redactEmails(error));
     return {
       statusCode: 500,
       headers,

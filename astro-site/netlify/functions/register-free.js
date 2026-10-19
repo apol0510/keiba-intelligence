@@ -8,6 +8,8 @@
  */
 
 const https = require('https');
+// 🔴 メールアドレスはログへ平文で出さない（src/lib/log/maskEmail.cjs）
+const { maskEmail, redactEmails } = require('../../src/lib/log/maskEmail.cjs');
 
 // SendGrid APIでメール送信 (nankan-analytics方式: fetchを使用)
 async function sendEmail(to, subject, body) {
@@ -20,7 +22,7 @@ async function sendEmail(to, subject, body) {
     throw new Error('SendGrid API key is not configured');
   }
 
-  console.log('📧 Sending email to:', to);
+  console.log('📧 Sending email to:', maskEmail(to));
   console.log('📧 From:', FROM_EMAIL);
   console.log('📧 Subject:', subject);
 
@@ -50,7 +52,7 @@ async function sendEmail(to, subject, body) {
   };
 
   console.log('📧 SendGrid payload (partial):', JSON.stringify({
-    to: to,
+    to: maskEmail(to),
     from: FROM_EMAIL,
     subject: subject,
     contentType: 'text/html',
@@ -59,7 +61,10 @@ async function sendEmail(to, subject, body) {
 
   // Debug: Full payload (without body content for readability)
   console.log('📧 SendGrid full payload structure:', JSON.stringify({
-    personalizations: payload.personalizations,
+    personalizations: payload.personalizations.map((p) => ({
+      ...p,
+      to: (p.to || []).map((t) => ({ ...t, email: maskEmail(t.email) }))
+    })),
     from: payload.from,
     content: [{ type: payload.content[0].type, valueLength: payload.content[0].value.length }]
   }, null, 2));
@@ -76,7 +81,7 @@ async function sendEmail(to, subject, body) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('❌ SendGrid error:', response.status, errorText);
+    console.error('❌ SendGrid error:', response.status, redactEmails(errorText));
     throw new Error(`SendGrid error: ${response.status} ${errorText}`);
   }
 
@@ -113,7 +118,7 @@ async function registerToAirtable(email) {
     const searchData = await searchResponse.json();
 
     if (searchData.records && searchData.records.length > 0) {
-      console.log('ℹ️ Airtable customer already exists:', email);
+      console.log('ℹ️ Airtable customer already exists:', maskEmail(email));
       // 🔴 既存かどうかを呼び出し側へ伝える。
       //    以前は既存でも新規と同じ 200 を返し、
       //    **同じアドレスで何度でも「新規登録」できてしまっていた**（2026-09-03 指摘）。
@@ -146,16 +151,16 @@ async function registerToAirtable(email) {
 
     if (!createResponse.ok) {
       const errorText = await createResponse.text();
-      console.error('Airtable create error:', errorText);
+      console.error('Airtable create error:', redactEmails(errorText));
       throw new Error(`Airtable create failed: ${createResponse.status}`);
     }
 
     const createData = await createResponse.json();
-    console.log('✅ Airtable customer created:', email);
+    console.log('✅ Airtable customer created:', maskEmail(email));
     return { record: (createData.records && createData.records[0]) || null, existed: false };
 
   } catch (error) {
-    console.error('❌ Airtable error:', error);
+    console.error('❌ Airtable error:', redactEmails(error));
     throw error;
   }
 }
@@ -185,7 +190,7 @@ async function registerToSendGridMarketing(email) {
       ]
     };
 
-    console.log('📧 SendGrid Marketing Campaigns: Registering contact:', email);
+    console.log('📧 SendGrid Marketing Campaigns: Registering contact:', maskEmail(email));
     console.log('📧 Custom field ID:', CUSTOM_FIELD_INTELLIGENCE);
 
     const response = await fetch(url, {
@@ -199,17 +204,17 @@ async function registerToSendGridMarketing(email) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ SendGrid Marketing Campaigns error:', response.status, errorText);
+      console.error('❌ SendGrid Marketing Campaigns error:', response.status, redactEmails(errorText));
       throw new Error(`SendGrid Marketing Campaigns error: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
-    console.log('✅ SendGrid Marketing Campaigns registered:', email);
+    console.log('✅ SendGrid Marketing Campaigns registered:', maskEmail(email));
     console.log('✅ Result:', result);
     return result;
 
   } catch (error) {
-    console.error('❌ SendGrid Marketing Campaigns registration error:', error);
+    console.error('❌ SendGrid Marketing Campaigns registration error:', redactEmails(error));
     // SendGridエラーでも処理は続行（マジックリンク送信を優先）
     return null;
   }
@@ -251,7 +256,7 @@ async function saveAuthToken(email, token) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AuthTokens save error:', errorText);
+      console.error('AuthTokens save error:', redactEmails(errorText));
       throw new Error(`AuthTokens save failed: ${response.status}`);
     }
 
@@ -260,7 +265,7 @@ async function saveAuthToken(email, token) {
     return data.records[0];
 
   } catch (error) {
-    console.error('❌ AuthToken save error:', error);
+    console.error('❌ AuthToken save error:', redactEmails(error));
     throw error;
   }
 }
@@ -423,7 +428,7 @@ exports.handler = async (event) => {
       };
     }
 
-    console.log('📧 無料会員登録:', email);
+    console.log('📧 無料会員登録:', maskEmail(email));
 
     // 1. Airtableに登録（既存なら作らずに返る）
     let airtable = null;
@@ -431,7 +436,7 @@ exports.handler = async (event) => {
       airtable = await registerToAirtable(email);
       console.log('✅ Airtable登録完了');
     } catch (error) {
-      console.error('⚠️ Airtable登録エラー:', error.message);
+      console.error('⚠️ Airtable登録エラー:', redactEmails(error.message));
       // Airtable失敗は警告のみ（登録は継続）
     }
 
@@ -450,7 +455,7 @@ exports.handler = async (event) => {
       : null;
 
     if (existedStatus === 'active') {
-      console.log('ℹ️ 認証済みの会員からの再登録 — メールは送らない:', email);
+      console.log('ℹ️ 認証済みの会員からの再登録 — メールは送らない:', maskEmail(email));
       return {
         statusCode: 200,
         headers,
@@ -468,7 +473,7 @@ exports.handler = async (event) => {
       await registerToSendGridMarketing(email);
       console.log('✅ SendGrid Marketing Campaigns登録完了');
     } catch (error) {
-      console.error('⚠️ SendGrid Marketing Campaigns登録エラー:', error.message);
+      console.error('⚠️ SendGrid Marketing Campaigns登録エラー:', redactEmails(error.message));
       // SendGridエラーは警告のみ（登録は継続）
     }
 
@@ -481,7 +486,7 @@ exports.handler = async (event) => {
       await saveAuthToken(email, token);
       console.log('✅ AuthToken保存完了');
     } catch (error) {
-      console.error('⚠️ AuthToken保存エラー:', error.message);
+      console.error('⚠️ AuthToken保存エラー:', redactEmails(error.message));
       // トークン保存失敗は警告のみ（メールは既に送信済み）
     }
 
@@ -515,8 +520,8 @@ exports.handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error('❌ エラー:', error);
-    console.error('❌ エラースタック:', error.stack);
+    console.error('❌ エラー:', redactEmails(error));
+    console.error('❌ エラースタック:', redactEmails(error && error.stack));
     return {
       statusCode: 500,
       headers,

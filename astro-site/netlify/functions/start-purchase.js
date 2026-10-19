@@ -50,6 +50,8 @@
 
 import { normalizeIntent } from '../../src/lib/billing/purchaseIntent.js';
 import { normalizeSiteOrigin, resolveSiteOrigin } from '../../src/lib/http/siteOrigin.js';
+// 🔴 メールアドレスはログへ平文で出さない（src/lib/log/maskEmail.cjs）
+import { redactEmails } from '../../src/lib/log/maskEmail.cjs';
 
 /** リクエストから origin を復元する。判断できなければ null（既定へ倒さない）。 */
 function originFromRequest(headers) {
@@ -176,7 +178,7 @@ export async function handler(event) {
         : { error: 'send_failed' }),
     };
   } catch (err) {
-    console.error('❌ start-purchase failed:', err && err.message);
+    console.error('❌ start-purchase failed:', redactEmails(err && err.message));
     return { statusCode: 502, headers, body: JSON.stringify({ error: 'send_failed' }) };
   }
 }

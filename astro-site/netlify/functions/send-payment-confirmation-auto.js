@@ -15,6 +15,9 @@
  *    正本: docs/MEMBERSHIP_REWARDS.md §7.6 / §7.7
  */
 
+// 🔴 メールアドレスはログへ平文で出さない（src/lib/log/maskEmail.cjs）
+const { maskEmail, redactEmails } = require('../../src/lib/log/maskEmail.cjs');
+
 /**
  * 入金確認を会員継続制度へ反映する（best-effort）。
  *
@@ -192,10 +195,11 @@ exports.handler = async (event, context) => {
     const paymentAmount = fields['入金金額'] || fields.transferAmount || null;
     const paymentEmailSent = fields.PaymentEmailSent || false;
 
-    console.log('📋 Record info:', { email, fullName, planDisplayName, planType, paymentEmailSent });
+    // 🔴 アドレスはマスク、氏名は有無だけ
+    console.log('📋 Record info:', { email: maskEmail(email), hasName: !!fullName, planDisplayName, planType, paymentEmailSent });
 
     if (!email || !fullName) {
-      console.error('⚠️ Missing required fields:', { email, fullName });
+      console.error('⚠️ Missing required fields:', { hasEmail: !!email, hasName: !!fullName });
       return {
         statusCode: 400,
         headers,
@@ -216,7 +220,7 @@ exports.handler = async (event, context) => {
     //    再実行で Step 5 だけ回復できるように先へ進む。
     const alreadyConfirmed = paymentEmailSent === true;
     if (alreadyConfirmed) {
-      console.log('ℹ️ Payment email already sent — skip mail/update, try membership only:', email);
+      console.log('ℹ️ Payment email already sent — skip mail/update, try membership only:', maskEmail(email));
     }
 
     // ========================================
@@ -282,11 +286,11 @@ exports.handler = async (event, context) => {
 
       if (!userResponse.ok) {
         const errorText = await userResponse.text();
-        console.error('SendGrid user email error:', errorText);
+        console.error('SendGrid user email error:', redactEmails(errorText));
         throw new Error(`Failed to send user email: ${userResponse.status}`);
       }
 
-      console.log('✅ Payment confirmation email sent:', email);
+      console.log('✅ Payment confirmation email sent:', maskEmail(email));
     }
 
     // ========================================
@@ -325,7 +329,7 @@ exports.handler = async (event, context) => {
         console.log('✅ Airtable updated:', airtableRecordId);
       } else {
         const errorText = await updateResponse.text();
-        console.error('⚠️ Airtable update failed:', errorText);
+        console.error('⚠️ Airtable update failed:', redactEmails(errorText));
       }
     }
 
@@ -364,7 +368,7 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error('Error sending payment confirmation:', error);
+    console.error('Error sending payment confirmation:', redactEmails(error));
     return {
       statusCode: 500,
       headers,

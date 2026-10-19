@@ -28,6 +28,8 @@ import { signSession, serializeSessionCookie } from '../../src/lib/auth/session.
 import { resolveEntitlement } from '../../src/lib/auth/entitlement.js';
 import { resolveSiteOrigin } from '../../src/lib/http/siteOrigin.js';
 import { readRevocation, tierForNewSession } from '../../src/lib/auth/revocation.js';
+// 🔴 メールアドレスはログへ平文で出さない（src/lib/log/maskEmail.cjs）
+import { redactEmails } from '../../src/lib/log/maskEmail.cjs';
 
 function isLocalHost(event) {
   const host = event?.headers?.host || '';
@@ -131,7 +133,7 @@ export async function handler(event) {
       body: JSON.stringify({ tier, changed: true }),
     };
   } catch (err) {
-    console.error('❌ refresh-session failed:', err && err.message);
+    console.error('❌ refresh-session failed:', redactEmails(err && err.message));
     return { statusCode: 502, headers, body: JSON.stringify({ error: 'lookup_failed' }) };
   }
 }
