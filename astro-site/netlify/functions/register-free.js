@@ -8,6 +8,7 @@
  */
 
 const https = require('https');
+const crypto = require('crypto');
 
 // SendGrid APIでメール送信 (nankan-analytics方式: fetchを使用)
 async function sendEmail(to, subject, body) {
@@ -96,7 +97,8 @@ async function registerToAirtable(email) {
   try {
     // Step 1: 既存レコード確認（重複登録防止）
     // 🚨 重要: Sourceフィールドでフィルタリング（keiba-intelligence登録者のみ）
-    const filterFormula = `AND({Email} = "${email}", OR({Source} = "keiba-intelligence", {Source} = BLANK()))`;
+    const { escapeFormulaString } = await import('../../src/lib/airtable/formula.js');
+    const filterFormula = `AND({Email} = "${escapeFormulaString(email)}", OR({Source} = "keiba-intelligence", {Source} = BLANK()))`;
     const searchUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Customers?filterByFormula=${encodeURIComponent(filterFormula)}`;
 
     const searchResponse = await fetch(searchUrl, {
@@ -267,7 +269,9 @@ async function saveAuthToken(email, token) {
 
 // マジックリンク生成とメール送信
 async function sendMagicLink(email, intent) {
-  const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  // 🔴 ログイン用 token は暗号論的乱数で作る（registry 7a7522ac。従来は Math.random で推測可能だった）。
+  //    形式は send-magic-link と同じ UUID v4（verify-magic-link がそのまま受け付ける形式）。
+  const token = crypto.randomUUID();
 
   // 🔴 登録確認 URL の宛先は `magicLinkBase.js` の共有ポリシーで決める。
   //    ハードコードしていると Deploy Preview / ブランチデプロイで登録しても
@@ -415,7 +419,9 @@ exports.handler = async (event) => {
     // `intent` は任意。購入導線から来たときだけ入る（通常の /register は送らない）
     const { email, intent } = JSON.parse(event.body);
 
-    if (!email || !email.includes('@')) {
+    // 🔴 形式検証（式インジェクション対策・registry 5a5dd591）。Airtable へ問い合わせる前に止める
+    const { isValidEmail } = await import('../../src/lib/airtable/formula.js');
+    if (!isValidEmail(email)) {
       return {
         statusCode: 400,
         headers,

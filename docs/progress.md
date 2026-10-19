@@ -42,6 +42,26 @@
 - **実装**: 404 → 無料会員登録の案内とリンク、画面下も `/register`。送信成功時にブラウザの補足。帯はゲストだけ「登録済みの方はログイン」（主要 CTA は 1 つのまま）。GA4 `ki_login_link_result`。
 - **検証**: `loginGuidance.test.mjs` 5 件ほか、`npm run build` green。localhost Playwright 375 / 1280px 26 項目。評価 2026-10-20 〜 11-16。
 
+### 2026-10-19 Airtable 式インジェクション対策（KAO registry 5a5dd591）
+
+- **事象**: `verify-magic-link` が URL の token を `{Token} = "<token>"` へ検証・エスケープなしで埋め込んでいた（顧客検索の
+  `{Email} = "<保存済み Email>"` も同様）。`"` を含む値で文字列リテラルを閉じ、`TRUE()` / `OR(...)` 等を足せる。
+- **注入点（全件）**: 未エスケープ = `verify-magic-link`（Token・Email）/ `send-magic-link`（Email）/ `register-free`（Email）/
+  `bank-transfer-application`（Email。一致した既存顧客を更新する経路）/ `get-broadcast`・`send-test`・`send-broadcast`（broadcast_id・email）。
+  `"` だけエスケープ（`\"` で破れる）= `refresh-session` / `start-purchase` / `stripe-webhook` / `src/lib/membership/airtableStore.js`。
+  `paypal-webhook.js.disabled` は未デプロイのため対象外（有効化するなら同じ helper を使う）。
+- **修正**: 共通 helper `src/lib/airtable/formula.js`（`escapeFormulaString` = `\` → `"` の順でエスケープ・`isValidEmail` = WHATWG
+  type="email" 相当＋ドメインに `.`＋254 文字上限）を全箇所で使う。token は `src/lib/auth/magicLinkToken.js` で発行側の 2 形式
+  （send-magic-link の uuid v4 / register-free の小文字英数字 1〜26 文字）だけ通し、それ以外は Airtable へ問い合わせず 400。
+  email を受け取る 4 関数は形式外を問い合わせ前に 400。`send-magic-link` が token 値をログへ出していたのも `[redacted]` にした。
+  正規 token の挙動（1 回限り・15 分）は不変。
+- **test**: `npm run test:airtable-formula`（build に組込み）— helper・形式検証・未エスケープ埋め込みの静的ガード（31）と、
+  実ハンドラの回帰（58: 注入 payload で 400＋問い合わせ 0・正規 token の 200/使用済み 403/期限切れ 403・発行 token が検証を通る）。
+  旧コードに戻すと 23 件失敗することを確認。`npm run build` green。
+- **範囲外（別 task・未修正）**: (1) newsletter 管理 API（`create-broadcast` / `send-broadcast` / `send-test`）の管理者判定が
+  リクエスト本文の自己申告 email だけ・`get-broadcast` は認証なし (2) `register-free` の token が `Math.random`（非 CSPRNG）
+  (3) `bank-transfer-application` は本人確認なしで既存顧客の Status を pending に上書きできる。
+
 ### 2026-10-19 購入ファネル計測と GA4 の URL 浄化（正本: `docs/measurements/FUNNEL_2026_10.md`）
 
 - **診断**: 2026-09 売上 ¥31,840（目標の 3.2%・Stripe 8 件）。実測できる最大の落ち込みは継続（8 件中 6 件が解約操作・RETENTION §1）で、
@@ -54,6 +74,26 @@
 - **評価期間**: 2026-10-20 〜 2026-11-16（28 日）。段ごとの通過率で次の 1 変更を選ぶ。
 - **未実施（理由）**: GA4 / Search Console の API 読み取り（KI プロパティへの権限が無い）・過去データの削除リクエスト（GA4 管理画面）・
   確認メールのリンクから `&email=` を外す（認証経路の変更として別 task）。KAO の unmet に登録。
+
+### 2026-10-19 メルマガ配信 API の管理者認証（registry e1f0c2ce）と register-free token の乱数（registry 7a7522ac）
+
+- **欠陥（origin/main で確認・実リクエストは送っていない）**: `create-broadcast` / `send-broadcast` / `send-test` は
+  body のメールアドレスが `ADMIN_EMAILS` に含まれるかだけで管理者を判定していた。さらに本番には `ADMIN_EMAILS` が
+  **未設定**（Netlify env 名で確認）で、`''.split(',')` = `['']` のため **`user_email: ""` で誰でも有料会員への一斉配信を起動できた**。
+  `get-broadcast` / `get-broadcasts` は認証なし・CORS `*` で、配信本文と作成者アドレスを誰でも読めた。
+- **実装**: `src/lib/auth/adminAuth.js`（純関数）。管理者の証明は env `KI_ADMIN_API_KEY` と `X-KI-Admin-Key` ヘッダーの
+  timing-safe 照合（SHA-256 にそろえて比較）だけ。body / クエリ / メールアドレスは証明に使わない。未設定・32 文字未満は常に 403。
+  CORS は本番 / www と同一ホストの origin だけ（`*` を返さない）。許可外 Origin は鍵があっても 403。
+  5 関数（`get-broadcasts` を含む）すべてで、body を読む前・Airtable / SendGrid に触れる前に止める。
+  `send-test` の宛先は `ADMIN_EMAILS` ∪ `ADMIN_EMAIL` に制限（認証ではなく宛先制限・空文字は含めない）。
+  管理画面（`/admin/newsletter`）は `adminKeyClient.js` で鍵を一度入力させ、タブの sessionStorage にだけ置いてヘッダーで送る。
+  `register-free` の token は `crypto.randomUUID()`（`send-magic-link` と同じ UUID v4。PR #157 の形式検証器と互換）。
+- **test**: `npm run test:admin-auth`（`test:auth` から連鎖・`npm run build` に含まれる）。未認証・偽装 body・空文字・違う鍵・
+  env 未設定・body に鍵・プレビュー・許可外 Origin で 403 かつ送信 / 書き込み 0、認証済みは従来どおり、CORS、get 系の拒否。
+- **残り（人の操作）**: Netlify に `KI_ADMIN_API_KEY`（32 文字以上のランダム値・Functions scope・production）を設定するまで、
+  配信 API は常に 403（fail-closed）。設定値は管理画面で入力する。
+- **既存の不具合（本件と無関係・未修正）**: 管理画面の作成・送信フォームは `stage` を送らないため、`create-broadcast` /
+  `send-broadcast` は 400 を返す（本件以前から）。段階値の入力 UI は運用判断が要るため別 task。
 
 ### 2026-10-06 退会は即時のみ（MK 確定。正本: `docs/WITHDRAWAL_2026_10.md`）
 

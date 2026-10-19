@@ -84,6 +84,16 @@ exports.handler = async (event, context) => {
       };
     }
 
+    // 🔴 email の形式検証（式インジェクション対策・registry 5a5dd591）。メール送信・Airtable より前に止める
+    const { escapeFormulaString, isValidEmail } = await import('../../src/lib/airtable/formula.js');
+    if (!isValidEmail(email)) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: '有効なメールアドレスを入力してください' })
+      };
+    }
+
     // 日本時間表示用
     const japanTime = new Date(timestamp).toLocaleString('ja-JP', {
       timeZone: 'Asia/Tokyo',
@@ -360,7 +370,7 @@ exports.handler = async (event, context) => {
         const planTypeMapped = 'pro';
 
         // 既存顧客チェック
-        const searchFormula = `{Email} = "${email}"`;
+        const searchFormula = `{Email} = "${escapeFormulaString(email)}"`;
         const searchUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Customers?filterByFormula=${encodeURIComponent(searchFormula)}`;
 
         const searchResponse = await fetch(searchUrl, {
