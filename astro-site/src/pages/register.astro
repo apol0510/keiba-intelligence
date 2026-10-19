@@ -63,6 +63,32 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
           -->
           <div id="message" class="message" role="status" aria-live="polite" tabindex="-1"></div>
 
+          <!--
+            🔴 確認メールを送った後の案内（docs/measurements/SIGNUP_COMPLETION_2026_10.md）。
+               送信先（一部を伏せて表示）・探し方・有効期限・メールアプリ内ブラウザの注意・本人が押す再送。
+               再送は既存の send-magic-link（ログインリンク）を使い、新しい種類のメールは作らない。
+          -->
+          <div id="sentPanel" class="sent-panel" hidden>
+            <h3 class="sent-title">確認メールを送りました</h3>
+            <p class="sent-to">送信先: <strong id="sentTo"></strong></p>
+            <ol class="sent-steps">
+              <li>受信箱で、件名「【KEIBA Intelligence】無料会員登録ありがとうございます！」のメールを開いてください。</li>
+              <li>見つからないときは、迷惑メール・プロモーションのフォルダもご確認ください。</li>
+              <li>メールのボタンを押すと登録が完了します。リンクの有効期限は 15 分です。</li>
+            </ol>
+            <p id="signupBrowserHint" class="sent-browser-hint">
+              ログインは、メールのリンクを開いたブラウザでだけ有効になります。メールアプリの中で開くと、
+              いつものブラウザ（Safari・Chrome など）ではログインしていない状態になります。
+              いつものブラウザで使う場合は、リンクを長押ししてブラウザで開いてください。
+            </p>
+            <div class="sent-resend">
+              <p>数分待っても届かないとき・有効期限が切れたときは</p>
+              <button type="button" id="resendBtn" class="btn-resend">確認メールを再送する</button>
+              <p id="resendStatus" class="resend-status" role="status" aria-live="polite"></p>
+            </div>
+            <p class="sent-edit">アドレスを間違えたときは <button type="button" id="editEmailBtn" class="link-btn">入力し直す</button></p>
+          </div>
+
           <form id="registerForm" class="register-form">
             <div class="form-group">
               <label for="email">メールアドレス</label>
@@ -137,6 +163,8 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
 <script>
   // GA4 の登録ファネル計測（PII なし。docs/measurements/FUNNEL_2026_10.md）
   import { trackFunnel, FUNNEL_EVENTS } from '../lib/analytics/funnelEvents.js';
+  // 送信後の案内・再送（SIGNUP_COMPLETION_2026_10.md）
+  import { maskEmailForDisplay, resendResultCopy, RESEND_COOLDOWN_SEC, SIGNUP_SOURCE } from '../lib/auth/signupGuidance.js';
 
   const form = document.getElementById('registerForm') as HTMLFormElement;
   const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
@@ -155,6 +183,78 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
       messageDiv.scrollIntoView();
     }
   }
+  const sentPanel = document.getElementById('sentPanel') as HTMLDivElement;
+  const sentTo = document.getElementById('sentTo') as HTMLElement;
+  const resendBtn = document.getElementById('resendBtn') as HTMLButtonElement;
+  const resendStatus = document.getElementById('resendStatus') as HTMLParagraphElement;
+  const editEmailBtn = document.getElementById('editEmailBtn') as HTMLButtonElement;
+  const RESEND_LABEL = '確認メールを再送する';
+  /** 再送先。画面には伏せた形でしか出さない。送信成功後だけ入る。 */
+  let sentEmail = '';
+  let cooldownTimer: ReturnType<typeof setInterval> | null = null;
+
+  /** 🔴 再送の連打でメールが重ならないよう、送った直後から一定時間は押せなくする。 */
+  function startResendCooldown() {
+    if (cooldownTimer) clearInterval(cooldownTimer);
+    let left = RESEND_COOLDOWN_SEC;
+    resendBtn.disabled = true;
+    resendBtn.textContent = `${RESEND_LABEL}（${left}秒後）`;
+    cooldownTimer = setInterval(() => {
+      left -= 1;
+      if (left <= 0) {
+        if (cooldownTimer) clearInterval(cooldownTimer);
+        cooldownTimer = null;
+        resendBtn.disabled = false;
+        resendBtn.textContent = RESEND_LABEL;
+        return;
+      }
+      resendBtn.textContent = `${RESEND_LABEL}（${left}秒後）`;
+    }, 1000);
+  }
+
+  function showSentPanel(email: string) {
+    sentEmail = email;
+    // 🔴 表示は textContent（伏せたアドレス）。innerHTML に値を流さない
+    sentTo.textContent = maskEmailForDisplay(email);
+    resendStatus.textContent = '';
+    form.hidden = true;
+    sentPanel.hidden = false;
+    startResendCooldown();
+  }
+
+  // 🔴 再送は本人が押したときだけ。既存の send-magic-link を使う（新しいメールの種類は作らない）
+  resendBtn?.addEventListener('click', async () => {
+    if (!sentEmail || resendBtn.disabled) return;
+    resendBtn.disabled = true;
+    resendStatus.textContent = '送信中…';
+    let status = 0;
+    try {
+      const response = await fetch('/.netlify/functions/send-magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: sentEmail, source: SIGNUP_SOURCE }),
+      });
+      status = response.status;
+    } catch {
+      status = 0;
+    }
+    const copy = resendResultCopy(status);
+    trackFunnel(FUNNEL_EVENTS.SIGNUP_RESEND_RESULT, { result: copy.ok ? 'sent' : 'error' });
+    resendStatus.textContent = copy.message;
+    startResendCooldown();
+  });
+
+  editEmailBtn?.addEventListener('click', () => {
+    sentEmail = '';
+    if (cooldownTimer) clearInterval(cooldownTimer);
+    cooldownTimer = null;
+    sentPanel.hidden = true;
+    form.hidden = false;
+    messageDiv.textContent = '';
+    messageDiv.className = 'message';
+    emailInput.focus();
+  });
+
   const emailInput = document.getElementById('email') as HTMLInputElement;
   const emailConfirmInput = document.getElementById('emailConfirm') as HTMLInputElement;
   const emailMatchError = document.getElementById('emailMatchError') as HTMLDivElement;
@@ -223,6 +323,7 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
           : '✅ 登録完了メールを送信しました。メールをご確認ください。';
         messageDiv.className = 'message success';
         form.reset();
+        showSentPanel(email);
       } else {
         messageDiv.textContent = `❌ ${data.error || '登録に失敗しました'}`;
         messageDiv.className = 'message error';
@@ -449,6 +550,96 @@ const description = '無料会員登録で印（◎○▲△）が見られま�
 
 .login-link a:hover {
   text-decoration: underline;
+}
+
+/* 確認メール送信後の案内（SIGNUP_COMPLETION_2026_10.md） */
+.sent-panel {
+  padding: 1.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--background);
+  line-height: 1.7;
+}
+
+.sent-panel[hidden],
+.register-form[hidden] {
+  display: none;
+}
+
+.sent-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+  color: var(--heading-color);
+}
+
+.sent-to {
+  margin: 0 0 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.sent-steps {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.sent-steps li {
+  margin-bottom: 0.35rem;
+}
+
+.sent-browser-hint {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.sent-resend {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.sent-resend p {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.btn-resend {
+  padding: 0.7rem 1.25rem;
+  border-radius: 8px;
+  border: 2px solid var(--primary-blue);
+  background: transparent;
+  color: var(--primary-blue);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  max-width: 100%;
+}
+
+.btn-resend:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.resend-status {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.sent-edit {
+  margin: 1rem 0 0;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.link-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--primary-blue);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 /* エラーメッセージ */
