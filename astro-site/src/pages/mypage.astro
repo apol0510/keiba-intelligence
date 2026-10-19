@@ -731,6 +731,9 @@ const expiresLabel = ent.expiresAtMs
 </BaseLayout>
 
 <script>
+  // 決済から戻った後の計測（PII なし。docs/measurements/FUNNEL_2026_10.md）
+  import { trackFunnel, FUNNEL_EVENTS } from '../lib/analytics/funnelEvents.js';
+
   /**
    * 決済から戻ってきたら、いまの権限で Cookie を出し直す。
    *
@@ -745,6 +748,7 @@ const expiresLabel = ent.expiresAtMs
 
     const notice = document.getElementById('mp-syncing');
     if (notice) notice.hidden = false;
+    trackFunnel(FUNNEL_EVENTS.CHECKOUT_RETURN);
 
     for (let i = 0; i < 6; i += 1) {
       try {
@@ -755,6 +759,7 @@ const expiresLabel = ent.expiresAtMs
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.changed) {
+          trackFunnel(FUNNEL_EVENTS.CHECKOUT_SYNCED, { result: 'changed' });
           // 反映済み。?checkout を落として読み込み直す（同じ処理を繰り返さない）
           window.location.replace(window.location.pathname);
           return;
@@ -765,6 +770,7 @@ const expiresLabel = ent.expiresAtMs
       await new Promise((r) => setTimeout(r, 2000));
     }
 
+    trackFunnel(FUNNEL_EVENTS.CHECKOUT_SYNCED, { result: 'pending' });
     if (notice) {
       notice.textContent = 'お支払いの反映に少し時間がかかっています。'
         + 'このページを再読み込みするか、しばらくしてからご確認ください。';
