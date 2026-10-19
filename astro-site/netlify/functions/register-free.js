@@ -284,12 +284,14 @@ async function sendMagicLink(email, intent) {
   //    （send-magic-link.js と同型の問題。2026-09-02 修正）。
   //    未設定・許可外ホストは **本番へ倒す**（fail-closed）。
   //    🔴 token の宛先なので、許可リスト外のホストへは絶対に向けない。
-  const { resolveMagicLinkBase } = await import('../../src/lib/auth/magicLinkBase.js');
+  const { resolveMagicLinkBase, buildMagicLinkUrl } = await import('../../src/lib/auth/magicLinkBase.js');
   const base = resolveMagicLinkBase(process.env);
   // 🔴 購入意図（プラン id）を持ち越す。URL は運ばない（open redirect を作らない）
   const { intentQuery } = await import('../../src/lib/billing/purchaseIntent.js');
-  const magicLink = `${base}/auth/verify?token=${token}&email=${encodeURIComponent(email)}`
-    + intentQuery(intent);
+  // 🔴 リンクに email を載せない（2026-10-19）。認証は token だけで行い、`/auth/verify` も
+  //    `verify-magic-link` も email を読まない。email 付きの URL はメールの転送・閲覧履歴・
+  //    アクセス解析に残る（docs/measurements/FUNNEL_2026_10.md §1）。ログインと同じ組み立てにそろえる。
+  const magicLink = buildMagicLinkUrl(token, process.env) + intentQuery(intent);
 
   /*
    * 🔴 購入導線から来た人に「無料会員登録ありがとうございます！」は出さない。

@@ -13,7 +13,7 @@
  * 🔴 これは **認証の入口ではない**。
  *   - 有効な `ki_session` が無ければ 401。ここでログインはできない
  *   - email は **セッション由来**のみ。リクエストの中身は一切見ない
- *   - tier は **Airtable の PlanType / ExpirationDate からだけ**決める。
+ *   - tier は **Airtable の PlanType / Status / ExpirationDate からだけ**決める。
  *     `verify-magic-link` とまったく同じ関数を使う
  *   - premium を与えるのは従来どおり **Stripe の webhook** だけ。ここでは何も書かない
  *
@@ -23,7 +23,7 @@
  */
 
 import Airtable from 'airtable';
-import { planTypeToTier, applyExpiry } from '../../src/lib/auth/tiers.js';
+import { customerSessionTier } from '../../src/lib/auth/paidEntitlement.js';
 import { signSession, serializeSessionCookie } from '../../src/lib/auth/session.js';
 import { resolveEntitlement } from '../../src/lib/auth/entitlement.js';
 import { resolveSiteOrigin } from '../../src/lib/http/siteOrigin.js';
@@ -90,11 +90,8 @@ export async function handler(event) {
     // 🔴 退会直後で webhook の反映前（Airtable がまだ premium）なら有料を出さない
     //    （docs/WITHDRAWAL_2026_10.md §4）
     const { revocation } = await readRevocation(ent.email, { event });
-    const tier = tierForNewSession(applyExpiry(
-      planTypeToTier(customer.PlanType || 'free-registered'),
-      customer.ExpirationDate || customer['有効期限'] || null,
-      nowMs,
-    ), revocation);
+    // 🔴 verify-magic-link と同じ判定（PlanType・Status・有効期限。paidEntitlement.js）
+    const tier = tierForNewSession(customerSessionTier(customer, nowMs), revocation);
 
     if (tier === ent.tier) {
       return { statusCode: 200, headers, body: JSON.stringify({ tier, changed: false }) };

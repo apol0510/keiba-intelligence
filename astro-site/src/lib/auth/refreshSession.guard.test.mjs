@@ -40,11 +40,10 @@ describe('refresh-session', () => {
 
   test('🔴 tier は Airtable からだけ決める', () => {
     // verify-magic-link と同じ関数を使う
-    assert.match(src, /planTypeToTier\(customer\.PlanType/);
-    assert.match(src, /applyExpiry\(/);
+    // （PlanType・Status・有効期限。paidEntitlement.js・MK 2026-10-19）
+    assert.match(src, /customerSessionTier\(customer, nowMs\)/);
     const verify = read('netlify/functions/verify-magic-link.js');
-    assert.match(verify, /planTypeToTier\(/);
-    assert.match(verify, /applyExpiry\(/);
+    assert.match(verify, /customerSessionTier\(customer, nowMs\)/);
     // 固定で有料を入れていない
     assert.equal(/tier\s*=\s*['"](premium|light)['"]/.test(src), false);
   });
