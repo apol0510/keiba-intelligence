@@ -7,6 +7,19 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-10-19 ログインの行き止まり解消（正本: `docs/measurements/LOGIN_RECOVERY_2026_10.md`）
+
+- **監査**: 本番を実ブラウザ（375 / 1280px・解析通信は遮断・関数応答は差し替え）で通した。
+  確認リンクの期限切れ（pending）・契約終了 / 退会（inactive）・決済失敗（payment_failed）の人が `send-magic-link` の 403
+  「アカウントが無効です」でログインできず、退会者は再契約もできなかった（`start-purchase` → 502）。同じリンクの 2 回目はログイン済みでも失敗表示。
+- **実装**: ログイン可能な Status を active / pending / inactive / payment_failed に（`loginEligibility.js`・他は 403 のまま）。
+  認証時は本人確認の完了だけを書き、契約終了・決済失敗の記録は保持。確認リンクから `&email=` を外し token を暗号論的乱数に。
+  `/auth/verify` は失敗時に get-session でログイン済みなら先へ進め、未ログインなら理由と「新しいログインリンクを受け取る」を出す。GA4 `ki_verify_fallback` を追加。
+- **検証**: `test:login-eligibility` 14 件（verify-magic-link 実ハンドラ）・`verifyRecovery` 5 件・`magicLinkBase` 22 件・funnelEvents 14 件、`npm run build` green。localhost Playwright 38 項目。
+- **評価期間**: 2026-10-20 〜 2026-11-16。
+- **範囲外（KAO registry）**: 無料予想ページの HTML 1.4MB / 3.5MB、ゲスト帯にログイン導線なし、`/login` の未登録案内が料金ページ、robots.txt の旧ホスト。
+  `/free-prediction/nankan` の 375px 横スクロールは 2026-10-19 に再現せず。
+
 ### 2026-10-07 本番 build が断続的に落ちる（`test:refresh-session` の flake）— 原因確定・修正
 
 - **事象**: 2026-10-06 15:06 UTC（`0545d441`・docs のみ）と 2026-10-07 12:17 UTC（`105e5f50`・horseStats 自動取込）の

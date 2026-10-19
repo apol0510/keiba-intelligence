@@ -108,7 +108,12 @@ exports.handler = async (event) => {
     const customer = customers[0].fields;
 
     // ステータス確認
-    if (customer.Status !== 'active') {
+    // 🔴 未確認（pending）・契約終了（inactive）・決済失敗（payment_failed）も本人のアドレスへは送る。
+    //    以前は active 以外をすべて 403 にしていたため、確認リンクの期限切れ・退会後の無料利用・
+    //    再契約・カード更新のためのログインが行き止まりになっていた。権限（tier）は変えない。
+    //    正本: docs/measurements/LOGIN_RECOVERY_2026_10.md
+    const { canRequestLoginLink } = await import('../../src/lib/auth/loginEligibility.js');
+    if (!canRequestLoginLink(customer.Status)) {
       console.error('❌ Account is not active:', email);
       return {
         statusCode: 403,

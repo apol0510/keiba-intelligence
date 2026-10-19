@@ -108,11 +108,15 @@ export async function handler(event) {
     const planExpiresAt = customer.ExpirationDate || customer['有効期限'] || null;
 
     // 3.5. 顧客ステータス更新（PlanType は上書きしない＝有料プランが消えるバグ防止）
+    // 🔴 本人確認の完了（pending → active）だけを書く。契約終了（inactive）・決済失敗（payment_failed）の
+    //    記録は消さない（loginEligibility.js）。tier は従来どおり PlanType から決まる。
     const currentPlanType = customer.PlanType || 'free-registered';
-    const updateFields = { Status: 'active', AccessEnabled: true };
-    if (!customer.PlanType) updateFields.PlanType = 'free-registered';
-    await customersTable.update([{ id: customers[0].id, fields: updateFields }]);
-    console.log('✅ Customer status updated to active. PlanType:', currentPlanType);
+    const { verifiedCustomerUpdate } = await import('../../src/lib/auth/loginEligibility.js');
+    const updateFields = verifiedCustomerUpdate(customer);
+    if (updateFields) {
+      await customersTable.update([{ id: customers[0].id, fields: updateFields }]);
+    }
+    console.log('✅ Customer verified. status updated:', updateFields ? 'yes' : 'no', '| PlanType:', currentPlanType);
 
     // 4. tier を決めて署名付きセッションを発行
     const nowMs = Date.now();
