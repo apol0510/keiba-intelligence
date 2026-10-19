@@ -183,6 +183,85 @@ test('E2E: ログイン済みなら Checkout URL が返り、metadata が webhoo
   assert.equal(p.amount, undefined);
 });
 
+/* ---------- Checkout: 申込元の分類 ki_entry（CHECKOUT_ATTRIBUTION_2026_10.md） ---------- */
+
+/** Airtable の顧客レコードを差し替えて Checkout を開く（ネットワーク不使用）。 */
+async function checkoutWithCustomer(fieldsOrBehavior, extra = {}) {
+  const savedFetch = globalThis.fetch;
+  const airtableCalls = [];
+  process.env.AIRTABLE_API_KEY = 'key_test';
+  process.env.AIRTABLE_BASE_ID = 'app_test';
+  globalThis.fetch = async (url, init) => {
+    airtableCalls.push({ url: String(url), init });
+    if (fieldsOrBehavior === 'throw') throw new Error('airtable down');
+    if (fieldsOrBehavior === 'error') return { ok: false, status: 500, json: async () => ({}) };
+    return { ok: true, json: async () => ({ records: fieldsOrBehavior ? [{ id: 'recX', fields: { Email: ALICE, Name: 'Alice', ...fieldsOrBehavior } }] : [] }) };
+  };
+  try {
+    const res = await checkout({ cookie: cookieFor(ALICE), ...extra });
+    return { res, p: calls.checkout[0], airtableCalls };
+  } finally {
+    globalThis.fetch = savedFetch;
+    delete process.env.AIRTABLE_API_KEY;
+    delete process.env.AIRTABLE_BASE_ID;
+  }
+}
+
+const ENTRY_ENUM = ['new', 'free', 'pending', 'lapsed', 'withdrawn'];
+
+for (const [label, fields, expected] of [
+  ['登録 24 時間以内 → new', { PlanType: 'free-registered', Status: 'active', CreatedAt: new Date(Date.now() - 3600e3).toISOString() }, 'new'],
+  ['無料会員 → free', { PlanType: 'free-registered', Status: 'active', CreatedAt: '2026-01-01T00:00:00.000Z' }, 'free'],
+  ['入金確認前 → pending', { PlanType: 'premium', Status: 'pending' }, 'pending'],
+  ['期限切れの元会員 → lapsed', { PlanType: 'premium', Status: 'active', ExpirationDate: '2026-01-31' }, 'lapsed'],
+  ['退会・契約終了 → withdrawn', { PlanType: 'free', Status: 'inactive', CancelledAt: '2026-10-07' }, 'withdrawn'],
+]) {
+  test(`ki_entry: ${label}（session / subscription の両方・列挙値だけ）`, async () => {
+    const { res, p, airtableCalls } = await checkoutWithCustomer(fields);
+    assert.equal(res.statusCode, 200);
+    assert.equal(p.metadata.ki_entry, expected);
+    assert.equal(p.subscription_data.metadata.ki_entry, expected);
+    assert.ok(ENTRY_ENUM.includes(p.metadata.ki_entry));
+    // 既存の metadata は不変
+    assert.equal(p.metadata.ki_plan, 'premium');
+    assert.equal(p.metadata.ki_email, ALICE);
+    assert.equal(p.metadata.ki_price_id, PRICE_ID);
+    // 🔴 読むのは本人（セッションの email）の 1 件だけ・GET のみ
+    assert.equal(airtableCalls.length, 1);
+    assert.equal(airtableCalls[0].init.method, 'GET');
+    assert.ok(airtableCalls[0].url.includes(encodeURIComponent(`{Email} = "${ALICE}"`)));
+  });
+}
+
+test('🔴 ki_entry は列挙値だけ: 顧客の他の値（氏名・日付・Status 文字列）を metadata に入れない', async () => {
+  const { p } = await checkoutWithCustomer({ PlanType: 'free-registered', Status: 'active', CreatedAt: '2026-01-01T00:00:00.000Z' });
+  const extraKeys = Object.keys(p.metadata).filter((k) => !['ki_plan', 'ki_email', 'ki_price_id'].includes(k));
+  assert.deepEqual(extraKeys, ['ki_entry']);
+  assert.ok(ENTRY_ENUM.includes(p.metadata.ki_entry));
+  const json = JSON.stringify(p);
+  for (const leaked of ['Alice', '2026-01-01', 'recX', 'free-registered']) assert.equal(json.includes(leaked), false, leaked);
+});
+
+test('🔴 本文で ki_entry を申告しても使わない（サーバー側の顧客レコードだけで決める）', async () => {
+  const { p } = await checkoutWithCustomer(null, { body: { plan: 'premium', ki_entry: 'withdrawn', entry: 'lapsed', metadata: { ki_entry: 'x' } } });
+  assert.equal('ki_entry' in p.metadata, false, '顧客が見つからないのに申告値が入った');
+  assert.equal('ki_entry' in p.subscription_data.metadata, false);
+});
+
+for (const [label, behaviorOrFields] of [
+  ['Airtable が例外', 'throw'],
+  ['Airtable が 500', 'error'],
+  ['有料の閲覧権がある（プラン変更）', { PlanType: 'premium', Status: 'active' }],
+  ['未知の Status', { PlanType: 'free-registered', Status: 'suspended' }],
+]) {
+  test(`ki_entry: ${label} → 付けない・Checkout は止めない`, async () => {
+    const { res, p } = await checkoutWithCustomer(behaviorOrFields);
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(p.metadata, { ki_plan: 'premium', ki_email: ALICE, ki_price_id: PRICE_ID });
+    assert.deepEqual(p.subscription_data.metadata, { ki_plan: 'premium', ki_email: ALICE, ki_price_id: PRICE_ID });
+  });
+}
+
 test('🔴 ki_price_id はサーバー側で確定した priceId（クライアント申告を使わない）', async () => {
   const res = await checkout({
     cookie: cookieFor(ALICE),

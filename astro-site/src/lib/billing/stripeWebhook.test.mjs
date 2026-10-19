@@ -849,7 +849,9 @@ test('🔴 metadata が欠けていたら推測補完しない', async () => {
 test('🔴 checkout 関数が metadata に ki_price_id を入れている（送信側の契約）', () => {
   const src = readFileSync(
     new URL('../../../netlify/functions/stripe-create-checkout.js', import.meta.url), 'utf8');
-  assert.match(src, /metadata: \{ ki_plan: plan\.id, ki_email: ent\.email, ki_price_id: priceId \}/);
+  // `...entry` は計測専用の ki_entry（固定列挙値・checkoutEntry.js）。ki_plan / ki_email / ki_price_id は不変
+  assert.match(src, /metadata: \{ ki_plan: plan\.id, ki_email: ent\.email, ki_price_id: priceId, \.\.\.entry \}/);
+  assert.match(src, /subscription_data: \{\n\s*metadata: \{ ki_plan: plan\.id, ki_email: ent\.email, ki_price_id: priceId, \.\.\.entry \}/);
   assert.match(src, /const priceId = priceIdFor\(plan, process\.env\)/,
     '🔴 priceId をサーバー側で確定していない');
 });
