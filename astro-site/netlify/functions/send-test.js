@@ -10,7 +10,6 @@ const sgMail = require('@sendgrid/mail');
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',');
 
 const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(AIRTABLE_BASE_ID);
 const broadcastsTable = base('Broadcasts');
@@ -22,23 +21,15 @@ sgMail.setApiKey(SENDGRID_API_KEY);
  * メインハンドラー
  */
 exports.handler = async (event) => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
-  }
-
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method Not Allowed' }),
-    };
-  }
+  /*
+   * 🔴 管理者認証（registry e1f0c2ce）。body のメールアドレスでは判定しない。
+   *    `X-KI-Admin-Key` ヘッダーと env `KI_ADMIN_API_KEY` の timing-safe 照合のみ。
+   *    未設定なら常に 403（fail-closed）。CORS は KI 自身の origin だけ。
+   *    🔴 送信・Airtable への書き込みより前で止める。
+   */
+  const { guardAdminRequest } = await import('../../src/lib/auth/adminAuth.js');
+  const { headers, response: denied } = guardAdminRequest(event, { method: 'POST', env: process.env });
+  if (denied) return denied;
 
   /*
    * 🔴 **本番以外のホストからはメールを送らない**（`docs/decisions.md` 2026-09-11）。
@@ -74,8 +65,9 @@ exports.handler = async (event) => {
       };
     }
 
-    // 管理者権限チェック
-    if (!ADMIN_EMAILS.includes(test_email)) {
+    // 🔴 宛先の制限（認証ではない）。ADMIN_EMAILS / ADMIN_EMAIL のアドレスにだけ送る
+    const { isAllowedTestRecipient } = await import('../../src/lib/auth/adminAuth.js');
+    if (!isAllowedTestRecipient(test_email, process.env)) {
       return {
         statusCode: 403,
         headers,
