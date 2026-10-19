@@ -66,6 +66,26 @@
 - **未実施（理由）**: GA4 / Search Console の API 読み取り（KI プロパティへの権限が無い）・過去データの削除リクエスト（GA4 管理画面）・
   確認メールのリンクから `&email=` を外す（認証経路の変更として別 task）。KAO の unmet に登録。
 
+### 2026-10-19 メルマガ配信 API の管理者認証（registry e1f0c2ce）と register-free token の乱数（registry 7a7522ac）
+
+- **欠陥（origin/main で確認・実リクエストは送っていない）**: `create-broadcast` / `send-broadcast` / `send-test` は
+  body のメールアドレスが `ADMIN_EMAILS` に含まれるかだけで管理者を判定していた。さらに本番には `ADMIN_EMAILS` が
+  **未設定**（Netlify env 名で確認）で、`''.split(',')` = `['']` のため **`user_email: ""` で誰でも有料会員への一斉配信を起動できた**。
+  `get-broadcast` / `get-broadcasts` は認証なし・CORS `*` で、配信本文と作成者アドレスを誰でも読めた。
+- **実装**: `src/lib/auth/adminAuth.js`（純関数）。管理者の証明は env `KI_ADMIN_API_KEY` と `X-KI-Admin-Key` ヘッダーの
+  timing-safe 照合（SHA-256 にそろえて比較）だけ。body / クエリ / メールアドレスは証明に使わない。未設定・32 文字未満は常に 403。
+  CORS は本番 / www と同一ホストの origin だけ（`*` を返さない）。許可外 Origin は鍵があっても 403。
+  5 関数（`get-broadcasts` を含む）すべてで、body を読む前・Airtable / SendGrid に触れる前に止める。
+  `send-test` の宛先は `ADMIN_EMAILS` ∪ `ADMIN_EMAIL` に制限（認証ではなく宛先制限・空文字は含めない）。
+  管理画面（`/admin/newsletter`）は `adminKeyClient.js` で鍵を一度入力させ、タブの sessionStorage にだけ置いてヘッダーで送る。
+  `register-free` の token は `crypto.randomUUID()`（`send-magic-link` と同じ UUID v4。PR #157 の形式検証器と互換）。
+- **test**: `npm run test:admin-auth`（`test:auth` から連鎖・`npm run build` に含まれる）。未認証・偽装 body・空文字・違う鍵・
+  env 未設定・body に鍵・プレビュー・許可外 Origin で 403 かつ送信 / 書き込み 0、認証済みは従来どおり、CORS、get 系の拒否。
+- **残り（人の操作）**: Netlify に `KI_ADMIN_API_KEY`（32 文字以上のランダム値・Functions scope・production）を設定するまで、
+  配信 API は常に 403（fail-closed）。設定値は管理画面で入力する。
+- **既存の不具合（本件と無関係・未修正）**: 管理画面の作成・送信フォームは `stage` を送らないため、`create-broadcast` /
+  `send-broadcast` は 400 を返す（本件以前から）。段階値の入力 UI は運用判断が要るため別 task。
+
 ### 2026-10-06 退会は即時のみ（MK 確定。正本: `docs/WITHDRAWAL_2026_10.md`）
 
 - **仕様**: 期間末解約・予約停止・予約取り消し・ポータル解約を廃止。マイページ「アカウント管理」→「退会する」→ 確認画面 →

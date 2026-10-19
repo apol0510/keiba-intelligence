@@ -147,6 +147,7 @@ import AuthCheck from '../../../components/AuthCheck.astro';
   </style>
 
   <script>
+    import { adminFetch, ADMIN_FORBIDDEN_MESSAGE } from '../../../lib/auth/adminKeyClient.js';
     const form = document.getElementById('create-form') as HTMLFormElement;
     const previewBtn = document.getElementById('preview-btn');
     const previewArea = document.getElementById('preview-area');
@@ -171,11 +172,11 @@ import AuthCheck from '../../../components/AuthCheck.astro';
       const subject = (document.getElementById('subject') as HTMLInputElement).value;
       const bodyHtml = (document.getElementById('body_html') as HTMLTextAreaElement).value;
 
-      // 管理者メールアドレス（仮：実際は認証システムから取得）
-      const createdBy = 'admin@keiba-intelligence.netlify.app';
+      // 作成者の表示ラベル（🔴 認証には使わない。認証は管理キーのヘッダーのみ）
+      const createdBy = 'admin';
 
       try {
-        const response = await fetch('/.netlify/functions/create-broadcast', {
+        const response = await adminFetch('/.netlify/functions/create-broadcast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -187,6 +188,7 @@ import AuthCheck from '../../../components/AuthCheck.astro';
 
         const data = await response.json();
 
+        if (response.status === 403) throw new Error(ADMIN_FORBIDDEN_MESSAGE);
         if (!response.ok) {
           throw new Error(data.error || 'エラーが発生しました');
         }

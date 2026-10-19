@@ -8,6 +8,7 @@
  */
 
 const https = require('https');
+const crypto = require('crypto');
 
 // SendGrid APIでメール送信 (nankan-analytics方式: fetchを使用)
 async function sendEmail(to, subject, body) {
@@ -267,7 +268,9 @@ async function saveAuthToken(email, token) {
 
 // マジックリンク生成とメール送信
 async function sendMagicLink(email, intent) {
-  const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  // 🔴 ログイン用 token は暗号論的乱数で作る（registry 7a7522ac。従来は Math.random で推測可能だった）。
+  //    形式は send-magic-link と同じ UUID v4（verify-magic-link がそのまま受け付ける形式）。
+  const token = crypto.randomUUID();
 
   // 🔴 登録確認 URL の宛先は `magicLinkBase.js` の共有ポリシーで決める。
   //    ハードコードしていると Deploy Preview / ブランチデプロイで登録しても
