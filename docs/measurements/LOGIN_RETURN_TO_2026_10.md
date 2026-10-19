@@ -35,6 +35,10 @@
 - `src/lib/auth/returnTo.handlers.test.mjs`（`test:login-eligibility`・`--test` なしで直接実行）: send-magic-link と verify-magic-link の実ハンドラ（Airtable・SendGrid・Blobs は差し替え）で
   リンクの `next`・不正値の除外・購入意図の優先・戻り先・tier 不変・使用済み token は 403。
 - `npm run build` green（trackRecordFreeze guard を含む）。
+- Deploy Preview（#168）を実ブラウザ（Playwright Chromium・375px・解析通信は遮断・send-magic-link は応答を差し替えて実送信なし）で 21 項目:
+  ゲストの `/prediction/nankan` → `/free-prediction/nankan`・帯のリンクが `?next=` 付き・`/login` の案内表示と送信本文の `next`・
+  不正な `next`（`//`・絶対 URL・エンコード・`/admin`・`..`）は案内なし / 送信なし・referrer 補助（別オリジンは無視）・
+  `/auth/verify` の失敗時に「新しいログインリンク」が戻り先を引き継ぐ・成功時に `next` を関数へ渡し「元のページへ戻ります…」・不正値は `/mypage`・横スクロールなし。
 
 ## 4. 実験として扱う
 
