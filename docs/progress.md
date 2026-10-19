@@ -7,6 +7,15 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-10-19 的中率・回収率・実績表示の固定（MK 最終決定・正本: `docs/decisions.md` 2026-10-19）
+
+- **決定**: 的中率・回収率・実績表示は現行のまま（数値・撤去・再計算・表示方法・配置の変更なし）。#149 / #150 / #151 / #158 は保留（close しない）。
+  売上改善は導線・価格 / 購入 / ログインの経路・継続 / 解約・スマホ UI・GA4 の PII 修正・計測で行う。AI は MK の明示指示なしに商品仕様・実績表示・価格・会員権利を変えない。
+- **実装**: `CLAUDE.md` 冒頭に保護仕様を追加。`astro-site/src/lib/stats/trackRecordFreeze.guard.test.mjs` ＋ `trackRecordFreeze.manifest.json`
+  （表示 30・計算 8 の計 38 ファイル。実績専用ファイルは全体、混在ファイルは実績の語を含む行と前後 2 行の sha256）を `test:track-record-freeze` として `npm run build` に組込み。
+  顧客向けの出力は不変。
+- 🔴 **影響**: 保護対象を変える open PR（#148 KI_EXACTA 表示準備・#149 / #150 / #151）は、MK が明示指示して manifest を更新しない限りこの guard で build が落ちる。
+
 ### 2026-10-07 本番 build が断続的に落ちる（`test:refresh-session` の flake）— 原因確定・修正
 
 - **事象**: 2026-10-06 15:06 UTC（`0545d441`・docs のみ）と 2026-10-07 12:17 UTC（`105e5f50`・horseStats 自動取込）の

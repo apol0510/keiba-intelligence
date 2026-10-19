@@ -1,0 +1,237 @@
+{
+  "_comment": "🛑 MK 最終決定（2026-10-19）で固定した実績表示・集計ファイルの sha256。MK の明示指示なしに更新しない。更新時は docs/decisions.md に MK の指示を記録し approvals に見出しを追記する。",
+  "approvals": [
+    "2026-10-19 — 的中率・回収率・実績表示を現行のまま固定する（MK 最終決定。表示変更は保留・AI の独断変更禁止）"
+  ],
+  "baseCommit": "6b055122",
+  "files": [
+    {
+      "path": "astro-site/src/pages/archive/index.astro",
+      "role": "display",
+      "mode": "file",
+      "sha256": "7071de37e7b0dd4b4bb078ad0fb71a28a93408439186d72f8c86c62f89772397"
+    },
+    {
+      "path": "astro-site/src/pages/archive/jra/index.astro",
+      "role": "display",
+      "mode": "file",
+      "sha256": "01b6fc4f3f7f9073f3f7e2a66c1c273f6097f5c1727bd89559d738b4c1bd7288"
+    },
+    {
+      "path": "astro-site/src/pages/archive/jra/[year]/[month]/index.astro",
+      "role": "display",
+      "mode": "file",
+      "sha256": "21e5d959d61a20d182b00a8e1b109b95cef23ca2339765a7e43c9214d5799bc1"
+    },
+    {
+      "path": "astro-site/src/pages/archive/nankan/index.astro",
+      "role": "display",
+      "mode": "file",
+      "sha256": "23a79214f67a36dd6c16f59494a43da363391e82c16dc154e8c58191ba48a813"
+    },
+    {
+      "path": "astro-site/src/pages/archive/nankan/[year]/index.astro",
+      "role": "display",
+      "mode": "file",
+      "sha256": "b48f692134a430c90efa6b93fcca53c9aae783c181ee4bb8baacf67f291ad5c7"
+    },
+    {
+      "path": "astro-site/src/pages/archive/nankan/[year]/[month]/index.astro",
+      "role": "display",
+      "mode": "file",
+      "sha256": "59192c3d1ece353581158d8f1dd0b5dd3459017a04d4d1b85f313d492bd4b4e1"
+    },
+    {
+      "path": "astro-site/src/pages/results.astro",
+      "role": "display",
+      "mode": "file",
+      "sha256": "b43198e2b1be12ad76e9993635d92394541426213954abbc319f0431ce701545"
+    },
+    {
+      "path": "astro-site/src/pages/results-jra.astro",
+      "role": "display",
+      "mode": "file",
+      "sha256": "6078d3534a5ee48c86a35dfab11333f2b2022962cb5dd47f73073d8a404509c0"
+    },
+    {
+      "path": "astro-site/src/pages/results/[year]/[month]/index.astro",
+      "role": "display",
+      "mode": "file",
+      "sha256": "af65089beb3b11e548f41e456cf32a308bebe6be5863fd8d05fe740b606df12e"
+    },
+    {
+      "path": "astro-site/src/pages/results/[year]/[month]/[day].astro",
+      "role": "display",
+      "mode": "file",
+      "sha256": "c089ee1b0c565814c44b1bce70a4c66fbe35d5786a88946a87e56dcd71935175"
+    },
+    {
+      "path": "astro-site/src/pages/stats/index.astro",
+      "role": "display",
+      "mode": "file",
+      "sha256": "4c0d3e480eecb8716b55cba77c843875da681c72dccb1b2551f1ec8001dbd93b"
+    },
+    {
+      "path": "astro-site/src/pages/stats/[venue].astro",
+      "role": "display",
+      "mode": "file",
+      "sha256": "9ce4e4e7cd7b09fc0402a05fe749f0d1bd798e68324973a5ed1181a326bf14e4"
+    },
+    {
+      "path": "astro-site/src/pages/venues/[venue]/index.astro",
+      "role": "display",
+      "mode": "file",
+      "sha256": "f6e81eb6a19d2fdfc84e61ae715d34225490d8515b105e278732d0e2fe92b535"
+    },
+    {
+      "path": "astro-site/src/lib/stats/archiveTotals.js",
+      "role": "computation",
+      "mode": "file",
+      "sha256": "0fc51f097990beded65fe3fb973254dc1884d256a37f36e1876ff14e4659b37c"
+    },
+    {
+      "path": "astro-site/scripts/importResults.js",
+      "role": "computation",
+      "mode": "file",
+      "sha256": "4afab3745aff2cb09c396f15b9caa43dc0143fb84064f15063aeb336fdc089df"
+    },
+    {
+      "path": "astro-site/scripts/importResultsJra.js",
+      "role": "computation",
+      "mode": "file",
+      "sha256": "a4cfd5623bbc310cba65ef876931d43a29f70e336a6a485a8837f2899b0bac6b"
+    },
+    {
+      "path": "astro-site/scripts/rebuildArchive.js",
+      "role": "computation",
+      "mode": "file",
+      "sha256": "06b4a42c1547f942b7417004cef821bbd968e6248d87bb0575564e897adc51bb"
+    },
+    {
+      "path": "astro-site/scripts/recalc-bet-points.mjs",
+      "role": "computation",
+      "mode": "file",
+      "sha256": "c0abf67d4b140bce39ce0e48a4a390817cc55f951b836885be8a692bdb3a60af"
+    },
+    {
+      "path": "astro-site/src/utils/umatanHit.js",
+      "role": "computation",
+      "mode": "file",
+      "sha256": "b795658b3ef653bbca5dbc786b07acde44c75481fe6a54d0232a08a53d074f7a"
+    },
+    {
+      "path": "astro-site/src/utils/mainRaceBetting.js",
+      "role": "computation",
+      "mode": "file",
+      "sha256": "8d4a61e25cb18cad31585e02b21edb5baa4d3577c7bf33d83e32323962d37099"
+    },
+    {
+      "path": "BET_POINT_LOGIC.md",
+      "role": "computation",
+      "mode": "file",
+      "sha256": "56e874c9e02f297067406e82b1e7d0e56d5b97f985841e33fa463f9f2c6e99f1"
+    },
+    {
+      "path": "astro-site/src/pages/index.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "148e36b984386e95ddbad4e766779ab034140231639ef7960840a428fb85cdb5"
+    },
+    {
+      "path": "astro-site/src/layouts/BaseLayout.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "3c4f651dc8023423ae6d0d32a0bee1affcfc53ac849de9ac9bbc93e026d91c86"
+    },
+    {
+      "path": "astro-site/src/pages/pricing.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "71a768d032a33698e9cb3d210a514ae8287aa7344a44c0400aef909b41c30b11"
+    },
+    {
+      "path": "astro-site/src/pages/mypage.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "8be638d25368c46fa513b3a9c42d5ef05a20638463c53cbcd7bb2611c8607b4b"
+    },
+    {
+      "path": "astro-site/src/pages/register.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "f0dcddbbbaa48a5c301542ef3d6e5cba3ef88b0cd246e11c4209eeab19b8d787"
+    },
+    {
+      "path": "astro-site/src/pages/faq.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "ec2721634f42268476f155c890fcc2f387d3693e790f44acad621256b2dec1c2"
+    },
+    {
+      "path": "astro-site/src/pages/terms.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "dae42f40f4353dfd44a9a5acaac0d9d795d8d8c048da16f8f8c226b640d01f47"
+    },
+    {
+      "path": "astro-site/src/pages/tokushoho.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "b08006b1c70780a68f45ac3da3d99939e6a04863477e2cedde8e9fcc083a513f"
+    },
+    {
+      "path": "astro-site/src/pages/contact.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "5834ba831b0095f2ebe108bf883b3d65f3385a940442119a63c022fac6a1454e"
+    },
+    {
+      "path": "astro-site/src/pages/prediction/jra/index.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "29874a4dfd0efdff4c0118bfbf8ef53c775b1090f96ad6e08e29b2d1ebb8af4a"
+    },
+    {
+      "path": "astro-site/src/pages/prediction/nankan/index.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "b33e8da73d61764e0e0ad3b6f316b9b2da7e0e9e21ef044bb31af754c3ca0525"
+    },
+    {
+      "path": "astro-site/src/pages/free-prediction/index.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "684bd7f871a5bae53ca640615fada405831f871d05fde4bca5dc09a4df0ecfb8"
+    },
+    {
+      "path": "astro-site/src/components/newspaper/RaceDayBoard.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "b0ed51738ed669e732cb1df55f1b5d712ff5685836c64ebcbf368b46b5254352"
+    },
+    {
+      "path": "astro-site/src/components/newspaper/RaceNewspaper.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "cda462a9d88310bafb1d9bbefabd07c24521c31fc01680360f8135480cbc5d97"
+    },
+    {
+      "path": "astro-site/src/components/AIBettingSection.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "e8a6b240338a20c394c2cca6cad0a755c21be0b2a544f3de3905b466055084a5"
+    },
+    {
+      "path": "astro-site/src/components/AIChat.astro",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "1d071252770faf6e1def40b28e79c5206e111774d596263f90bb6ec57a44c6be"
+    },
+    {
+      "path": "astro-site/netlify/functions/gemini-chat.js",
+      "role": "display",
+      "mode": "lines",
+      "sha256": "84e11ad2d9ec852a9721483e5bc27a6e6b020095dc2b36a8b969106014ae7b9b"
+    }
+  ]
+}

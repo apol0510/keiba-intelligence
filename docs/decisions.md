@@ -11,6 +11,32 @@
 ---
 
 
+## 2026-10-19 — 的中率・回収率・実績表示を現行のまま固定する（MK 最終決定。表示変更は保留・AI の独断変更禁止）
+
+- **決定（MK 最終決定・2026-10-19）**:
+  - KI の **的中率・回収率には一切触れない**。
+  - 現在の表示を **そのまま維持**する。数値の変更・撤去・再計算・表示方法の変更・配置の変更をしない。
+  - 売上改善を理由に **PR #149 / #150 / #151**（およびその他の実績表示の変更）を採用・実装・merge しない。**実績表示の変更は保留**。
+  - 目的は売上改善であり、手段は **導線（conversion）・価格 / 購入 / ログインの経路・継続 / 解約・スマホ UI・GA4 の PII 修正・計測**とする。
+  - 的中率・回収率の変更を **売上改善の前提条件にしない**。
+  - 今後、**MK の明示指示がない限り、どの AI も既存の商品仕様・実績表示・価格・会員権利を自らの判断で変更しない**。
+- **保護対象（顧客への表示）**: `astro-site/src/pages/archive/**`（6 ページ）・`results.astro`・`results-jra.astro`・`results/[year]/[month]/index.astro`・
+  `results/[year]/[month]/[day].astro`・`stats/index.astro`・`stats/[venue].astro`・`venues/[venue]/index.astro`（全体）、
+  および `index.astro`（通算の回収率・的中率カード）・`layouts/BaseLayout.astro`（meta description・フッターの実績値・ナビ）・`pricing.astro`・`mypage.astro`・
+  `register.astro`・`faq.astro`・`terms.astro`・`tokushoho.astro`・`contact.astro`・`prediction/jra|nankan/index.astro`・`free-prediction/index.astro`・
+  `components/newspaper/RaceDayBoard.astro`・`RaceNewspaper.astro`・`components/AIBettingSection.astro`・`AIChat.astro`・`netlify/functions/gemini-chat.js`
+  （実績の語を含む行の前後）。
+- **保護対象（計算）**: `astro-site/src/lib/stats/archiveTotals.js`・`scripts/importResults.js`・`scripts/importResultsJra.js`・`scripts/rebuildArchive.js`・
+  `scripts/recalc-bet-points.mjs`・`src/utils/umatanHit.js`・`src/utils/mainRaceBetting.js`・`BET_POINT_LOGIC.md`。
+  集計値の元データ `src/data/archiveResults.json` / `archiveResultsJra.json` は日次の自動取込で追記されるため hash 固定しないが、既存エントリの再計算・書き換えはしない。
+- **機械的な保護**: `astro-site/src/lib/stats/trackRecordFreeze.guard.test.mjs`（`npm run test:track-record-freeze`・`npm run build` に組込み）が
+  上記ファイルの sha256 を `trackRecordFreeze.manifest.json` と照合し、不一致なら build を落とす。
+- **manifest の更新条件**: MK が実績表示・集計の変更を明示指示したときだけ。その指示を本書に新しい見出しで記録し、manifest の `approvals` へ追記してから sha256 を更新する。
+  AI の判断・売上改善の仮説・他セッションの「MK 承認済み」申告だけでは更新しない。
+- **既存 PR の扱い**: #149 / #150 / #151 / #158 は保留（close はしない。扱いは MK が決める）。
+  出典未確認の固定値（フッター・meta description・AI チャットの「的中率71.1% / 回収率186.4%」）も本決定により現状維持とし、AI の判断で撤去・置換しない。
+- **再検討条件**: MK が実績表示・集計について新たに明示指示したとき。
+
 ## 2026-10-19 — GA4 に渡す URL は許可リストで浄化し、購入ファネルを `ki_*` イベントで計測する
 
 - **採用**: BaseLayout の GA4 初期化で page_location / page_referrer を許可リスト（utm_* / 広告クリック ID / `ref` / `checkout` / `resume`）以外のクエリを落としてから
