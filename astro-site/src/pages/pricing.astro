@@ -273,6 +273,8 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
 
 <script>
   import { storeIntent } from '../lib/billing/purchaseIntent.js';
+  // GA4 の購入ファネル計測（PII なし。docs/measurements/FUNNEL_2026_10.md）
+  import { trackFunnel, FUNNEL_EVENTS } from '../lib/analytics/funnelEvents.js';
 
   // 価格は Stripe から取得する（金額をコードに持たない）
   async function loadPrices() {
@@ -308,7 +310,8 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     }
   }
 
-  async function startCheckout(planId, button) {
+  async function startCheckout(planId, button, resumed = false) {
+    trackFunnel(FUNNEL_EVENTS.CHECKOUT_CLICK, { plan: planId, resumed: resumed ? 'yes' : 'no' });
     const msg = document.getElementById('pr-plan-msg');
     const original = button.textContent;
     button.disabled = true;
@@ -326,6 +329,7 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       if (res.status === 401) {
         // 🔴 「まず無料会員登録を」ではなく、購入手続きの続きとして扱う
         openPurchaseAuth(planId);
+        trackFunnel(FUNNEL_EVENTS.PURCHASE_AUTH_OPEN, { plan: planId });
         button.disabled = false;
         button.textContent = original;
         return;
@@ -333,11 +337,13 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
 
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.url) {
+        trackFunnel(FUNNEL_EVENTS.CHECKOUT_REDIRECT, { plan: planId });
         window.location.href = data.url;
         return;
       }
       throw new Error(data.error || 'unavailable');
     } catch {
+      trackFunnel(FUNNEL_EVENTS.CHECKOUT_ERROR, { plan: planId });
       if (msg) {
         msg.hidden = false;
         msg.textContent = '現在お申し込みを受け付けられません。しばらくしてからお試しください。';
@@ -416,6 +422,7 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.sent) {
+        trackFunnel(FUNNEL_EVENTS.PURCHASE_EMAIL_RESULT, { plan: pendingPlan, result: 'sent' });
         // 🔴 メールのリンクから intent が落ちても購入へ戻れるように控えを残す。
         //    保存するのはプラン id だけ。認可には使わない。
         try { storeIntent(window.localStorage, pendingPlan); } catch { /* 使えなくても続行 */ }
@@ -430,6 +437,7 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       }
       throw new Error(data.error || 'failed');
     } catch {
+      trackFunnel(FUNNEL_EVENTS.PURCHASE_EMAIL_RESULT, { plan: pendingPlan, result: 'error' });
       if (msg) {
         msg.hidden = false;
         msg.className = 'pr-purchase-msg is-error';
@@ -451,7 +459,7 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     const btn = document.querySelector(`[data-checkout="${CSS.escape(plan)}"]`);
     // ボタンが無い＝未ログイン（Price 未設定 or 認証されていない）なら何もしない
     if (!btn) return;
-    startCheckout(plan, btn);
+    startCheckout(plan, btn, true);
   }
 
 
@@ -460,6 +468,11 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
 
     const purchaseForm = document.getElementById('pr-purchase-form');
     if (purchaseForm) purchaseForm.addEventListener('submit', submitPurchaseAuth);
+
+    // Stripe Checkout からキャンセルで戻ってきた（cancel_url）
+    if (new URLSearchParams(window.location.search).get('checkout') === 'cancelled') {
+      trackFunnel(FUNNEL_EVENTS.CHECKOUT_CANCELLED);
+    }
 
     // 認証から戻ってきたら、そのまま Checkout を開く
     resumeCheckout();

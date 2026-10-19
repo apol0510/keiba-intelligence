@@ -1,6 +1,7 @@
 ---
 import AIChat from '../components/AIChat.astro';
 import { checkedEntitlementFromAstro } from '../lib/auth/entitlement.js';
+import { ga4BootstrapScript } from '../lib/analytics/pageLocation.js';
 
 interface Props {
   title: string;
@@ -87,12 +88,11 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
 
   <!-- Google Analytics (GA4) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-LRX40ZYJB6"></script>
-  <script is:inline>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-LRX40ZYJB6');
-  </script>
+  {/*
+    🔴 page_location / page_referrer は許可リストで落としてから送る
+       （マジックリンクの email・token を GA4 へ送らない。docs/measurements/FUNNEL_2026_10.md §2）。
+  */}
+  <script is:inline set:html={ga4BootstrapScript('G-LRX40ZYJB6')}></script>
 </head>
 <body>
   <!-- ナビゲーション -->
@@ -898,6 +898,17 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
     }
 
     syncAuthNav();
+  </script>
+
+  <script>
+    // 料金ページへのリンクのクリック（GA4・PII なし。docs/measurements/FUNNEL_2026_10.md）
+    import { trackFunnel, FUNNEL_EVENTS, isPricingHref, placementOf } from '../lib/analytics/funnelEvents.js';
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      const link = t && typeof t.closest === 'function' ? t.closest('a[href]') : null;
+      if (!link || !isPricingHref(link.getAttribute('href'), window.location.origin)) return;
+      trackFunnel(FUNNEL_EVENTS.PRICING_LINK_CLICK, { placement: placementOf(link) });
+    }, { capture: true });
   </script>
 
   <!-- AI Chat Widget -->
