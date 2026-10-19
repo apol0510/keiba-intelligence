@@ -16,11 +16,14 @@
  *   `start-purchase` は `pending` だけを `register-free` へ回していたが、
  *   `inactive` の人がプランを申し込むと `send-magic-link` の 403 → 502 で **再契約もできなかった**。
  *
- * 🔴 権限（tier）は変えない。tier は従来どおり `PlanType` と有効期限・退会記録だけで決まる
- *    （`verify-magic-link` の `planTypeToTier` / `applyExpiry` / `tierForNewSession`）。
- *    ここで決めるのは「本人のメールアドレスへログインリンクを送るか」だけ。
+ * 🔴 ここで決めるのは「本人のメールアドレスへログインリンクを送るか」だけ。
+ *    有料権限（tier）は **別に** `paidEntitlement.js` の `customerSessionTier` で決める
+ *    （PlanType が有料・Status が active / payment_failed・有効期限が読めて切れていない、
+ *    かつ退会記録で未反映でない）。ログインできることから有料は生まれない（MK 2026-10-19）。
  * 🔴 `suspended` / `cancelled`（管理者による停止・旧運用）や未知の値は従来どおり送らない（fail-closed）。
  */
+
+import { isPaidPlanType } from './paidEntitlement.js';
 
 /** ログインリンクを送ってよい Status。これ以外（未知・空を含む）は 403。 */
 export const LOGIN_LINK_STATUSES = Object.freeze(['active', 'pending', 'inactive', 'payment_failed']);
@@ -40,6 +43,10 @@ export function canRequestLoginLink(status) {
  *    それが当てはまるのは `pending`（未確認）と空。`active` は従来どおり同じ値を書く（挙動不変）。
  *    `inactive`（契約終了）や `payment_failed`（決済失敗）を `active` に戻すと、
  *    契約状態の記録を消してしまう（配信対象の条件などにも使われている）ので **書かない**。
+ * 🔴 ただし `pending` / 空で **PlanType が有料**のレコードは active にしない。
+ *    銀行振込の申込（bank-transfer-application）は Status=pending・PlanType=有料で作られ、
+ *    入金を確認した運営が active にする（その変更で入金確認メールと有効期限が動く）。
+ *    ログインのメール認証でそれを代行すると、入金前に有料会員になってしまう。
  * 🔴 PlanType が空なら free-registered を入れる（従来どおり。有料プランは上書きしない）。
  *
  * @param {{Status?: unknown, PlanType?: unknown}} fields
@@ -49,7 +56,8 @@ export function verifiedCustomerUpdate(fields) {
   const f = fields && typeof fields === 'object' ? fields : {};
   const status = typeof f.Status === 'string' ? f.Status : '';
   const update = {};
-  if (status === '' || status === 'pending' || status === 'active') {
+  const unverified = status === '' || status === 'pending';
+  if (status === 'active' || (unverified && !isPaidPlanType(f.PlanType))) {
     update.Status = 'active';
     update.AccessEnabled = true;
   }

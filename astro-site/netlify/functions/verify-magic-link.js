@@ -16,7 +16,7 @@
  */
 
 import Airtable from 'airtable';
-import { planTypeToTier, applyExpiry, TIER } from '../../src/lib/auth/tiers.js';
+import { customerSessionTier } from '../../src/lib/auth/paidEntitlement.js';
 import { signSession, serializeSessionCookie, SESSION_TTL_SECONDS } from '../../src/lib/auth/session.js';
 import { readRevocation, tierForNewSession } from '../../src/lib/auth/revocation.js';
 
@@ -109,7 +109,8 @@ export async function handler(event) {
 
     // 3.5. 顧客ステータス更新（PlanType は上書きしない＝有料プランが消えるバグ防止）
     // 🔴 本人確認の完了（pending → active）だけを書く。契約終了（inactive）・決済失敗（payment_failed）の
-    //    記録は消さない（loginEligibility.js）。tier は従来どおり PlanType から決まる。
+    //    記録は消さない（loginEligibility.js）。有料プランの申込で入金確認前（pending）の人も
+    //    active にしない（入金確認は運営の操作）。tier は下の customerSessionTier で別に決める。
     const currentPlanType = customer.PlanType || 'free-registered';
     const { verifiedCustomerUpdate } = await import('../../src/lib/auth/loginEligibility.js');
     const updateFields = verifiedCustomerUpdate(customer);
@@ -123,7 +124,10 @@ export async function handler(event) {
     // 🔴 退会直後で webhook の反映前（Airtable がまだ premium）なら有料を出さない
     //    （docs/WITHDRAWAL_2026_10.md §4）
     const { revocation } = await readRevocation(customer.Email, { event });
-    const tier = tierForNewSession(applyExpiry(planTypeToTier(currentPlanType), planExpiresAt, nowMs), revocation);
+    // 🔴 ログインできること（loginEligibility.js）と有料が見られることは別に判定する。
+    //    有料は PlanType が有料・Status が active / payment_failed・有効期限が読めて切れていない
+    //    ときだけ（paidEntitlement.js）。Status は **認証で書き換える前** の値で判定する。
+    const tier = tierForNewSession(customerSessionTier(customer, nowMs), revocation);
 
     const signed = signSession({
       email: customer.Email,

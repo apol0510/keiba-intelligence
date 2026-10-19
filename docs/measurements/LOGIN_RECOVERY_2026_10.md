@@ -41,12 +41,37 @@ Playwright（Chromium）で本番 `keiba-intelligence.jp` を開き、アクセ�
 |---|---|
 | `src/lib/auth/loginEligibility.js`（新規） | ログインリンクを送る Status を **active / pending / inactive / payment_failed** に固定。`suspended` / `cancelled` / 未知 / 空は従来どおり 403（fail-closed） |
 | `send-magic-link.js` | 上の判定を使う（有効期限 15 分・token の作り方・応答形は不変） |
-| `verify-magic-link.js` | 認証で書くのは本人確認の完了だけ（空 / pending / active → `Status: active`・`AccessEnabled: true`、従来どおり）。**inactive・payment_failed の記録は書き換えない**。tier は従来どおり PlanType・有効期限・退会記録で決まる |
+| `verify-magic-link.js` | 認証で書くのは本人確認の完了だけ（空 / pending / active → `Status: active`・`AccessEnabled: true`、従来どおり）。**inactive・payment_failed の記録は書き換えない**。🔴 pending / 空でも **PlanType が有料（銀行振込の入金確認前）なら active にしない**。tier は §2.1 の `customerSessionTier` で別に決める |
+| `src/lib/auth/paidEntitlement.js`（新規） | §2.1。`verify-magic-link` と `refresh-session` が同じ関数で発行 tier を決める |
 | `register-free.js` | 確認リンクから `&email=` を外し、ログインと同じ `buildMagicLinkUrl` に統一（token の作り方は PR #161 が扱うため本 PR では変えない） |
 | `/auth/verify` | リンクが使えなかったら get-session（署名付き Cookie をサーバーが検証）で確認し、**ログイン済みならそのままマイページ（購入導線なら申し込みの続き）へ**。未ログインなら「使用済み / 期限切れ（15 分）/ 確認できない」を言い分け、「新しいログインリンクを受け取る」ボタンと、メールアプリ内ブラウザの補足を出す |
 | GA4 | `ki_verify_fallback{result: signed_in \| relogin}` を追加（FUNNEL_2026_10.md と同じ契約。PII なし） |
 
 🔴 権限は広げていない: inactive（PlanType=free）で認証しても free のセッション。退会記録が未反映なら有料は出ない（`tierForNewSession`）。
+
+### 2.1 ログイン可否と有料権限の分離（MK 2026-10-19）
+
+MK 指示: 「ログイン可能な状態と有料閲覧権限は厳密に分離する。inactive で PlanType=premium が残存し、失効・退会記録が不完全なケースでも有料権限が復活しないこと」。
+
+**検証で見つかった漏れ（本 PR の修正前のコード）**: 発行 tier は `applyExpiry(planTypeToTier(PlanType), 有効期限)` だけで決まり、**Status を見ていなかった**。
+以前は `send-magic-link` が active 以外を止めていたため表に出なかったが、ログイン可能な Status を広げると次が有料になる。
+
+| レコード | 修正前 | 修正後 |
+|---|---|---|
+| inactive・PlanType=premium・有効期限なし or 未来 or 読めない・退会記録なし | 🔴 premium（ログイン・refresh・有料ページ） | free |
+| pending・PlanType=premium（銀行振込の申込・入金確認前） | 🔴 認証で Status を active に書き換え＋premium（入金確認の自動処理も起動しうる） | Status は pending のまま・free |
+| cancelled / suspended・PlanType=premium（ログイン後に Status が変わった・refresh） | 🔴 premium（refresh-session） | free |
+| active・PlanType=premium・有効期限が読めない値 | premium（誤剥奪防止） | free（fail-closed。日付型の列では発生しない） |
+
+**発行 tier の規則（`customerSessionTier`。ログインと refresh-session で共通）** — 有料（light / premium）はすべて満たすときだけ:
+
+1. PlanType が有料（`planTypeToTier` が light 以上）
+2. Status が **active / payment_failed**（payment_failed はアクセスを即時停止しない正本どおり: MEMBERSHIP_REWARDS.md §7.7・TBD-10）。inactive / pending / cancelled / suspended / 空 / 未知は free
+3. 有効期限が **無い（Stripe 月額会員）か未来**。過去・読めない値は free
+4. 退会記録（Blobs）が未反映でない（`tierForNewSession`。従来どおり）
+
+ページ・API のゲート（`entitlement.js`）は、この規則で署名された Cookie の tier と退会記録だけを見る。クライアント保存値（`keiba_session` 等）は表示補助で、認可に使っていない。
+🔴 正しく記録された active 会員（PlanType 有料・期限なし or 未来）の tier は変わらない。価格・プラン・会員権利・実績表示は触っていない。
 🔴 認証の意味（1 回だけ・15 分）は変えていない。送り先は本人のアドレスだけで、`register-free` の再送と同じ。
 
 ## 3. 検証
@@ -54,6 +79,10 @@ Playwright（Chromium）で本番 `keiba-intelligence.jp` を開き、アクセ�
 - `src/lib/auth/loginEligibility.test.mjs`（14 件。`npm run test:login-eligibility` → `npm run build`）:
   Status の許可・拒否、認証時の書き込み、**verify-magic-link の実ハンドラ**で pending → active / inactive は free のまま書き換えない /
   退会記録が未反映なら有料を出さない / payment_failed は PlanType どおり / 使用済み・期限切れは従来どおり 403。
+- `src/lib/auth/paidEntitlement.test.mjs`（33 件・同じ `npm run test:login-eligibility`）: Status 6 種 × PlanType（premium / free / 空）× 有効期限（未来 / 過去 / 無し / 読めない）×
+  退会記録（無し / 反映済み＋CancelledAt / 未反映）の 216 組を、**verify-magic-link の実ハンドラ**（Cookie の tier・Status / PlanType を書き換えない）、
+  **refresh-session の実ハンドラ**（free / premium の Cookie から）、**ゲート**（その Cookie → `resolveEntitlement` → `applyRevocation` → `showBetting` / `paidPageRedirect`）で検査。
+  修正前のコードでは 26 件が失敗する（上の表の漏れを検出）ことを確認済み。
 - `src/lib/auth/verifyRecovery.test.mjs`（5 件・`test:auth`）: 文言・ログイン済み判定・verify.astro の配線・認証判定の不変。
 - `src/lib/auth/magicLinkBase.test.mjs`: 確認リンクに email が無い。
 - ブラウザ（Playwright・localhost・関数応答と GA 通信は差し替え）375px / 1280px で 38 項目:

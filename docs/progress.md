@@ -16,6 +16,10 @@
   認証時は本人確認の完了だけを書き、契約終了・決済失敗の記録は保持。確認リンクから `&email=` を外した（token の乱数化は #161）。
   `/auth/verify` は失敗時に get-session でログイン済みなら先へ進め、未ログインなら理由と「新しいログインリンクを受け取る」を出す。GA4 `ki_verify_fallback` を追加。
 - **検証**: `test:login-eligibility` 14 件（verify-magic-link 実ハンドラ）・`verifyRecovery` 5 件・`magicLinkBase` 21 件・funnelEvents 14 件、`npm run build` green。localhost Playwright 38 項目。
+- **ログイン可否と有料権限の分離（MK 2026-10-19 指示）**: 発行 tier が Status を見ておらず、inactive・PlanType=premium 残存（退会記録なし）や
+  銀行振込の入金確認前（pending・premium）がログインで premium になる漏れを検出・修正。`paidEntitlement.js` の `customerSessionTier`
+  （PlanType 有料 ∧ Status ∈ {active, payment_failed} ∧ 有効期限が無い or 未来、読めない値は free）を verify-magic-link / refresh-session で共通化。
+  pending・有料 PlanType は認証で active にしない。`paidEntitlement.test.mjs` 33 件（216 組 × ログイン / refresh / ゲート）。正本 §2.1。
 - **評価期間**: 2026-10-20 〜 2026-11-16。
 - **範囲外（KAO registry）**: 無料予想ページの HTML 1.4MB / 3.5MB、ゲスト帯にログイン導線なし、`/login` の未登録案内が料金ページ、robots.txt の旧ホスト。
   `/free-prediction/nankan` の 375px 横スクロールは 2026-10-19 に再現せず。
