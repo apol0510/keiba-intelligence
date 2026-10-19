@@ -19,6 +19,8 @@ import Airtable from 'airtable';
 import { planTypeToTier, applyExpiry, TIER } from '../../src/lib/auth/tiers.js';
 import { signSession, serializeSessionCookie, SESSION_TTL_SECONDS } from '../../src/lib/auth/session.js';
 import { readRevocation, tierForNewSession } from '../../src/lib/auth/revocation.js';
+import { escapeFormulaString } from '../../src/lib/airtable/formula.js';
+import { isValidMagicLinkToken } from '../../src/lib/auth/magicLinkToken.js';
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -66,11 +68,17 @@ export async function handler(event) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Token is required' }) };
     }
 
+    // 🔴 発行側が作る形式以外は Airtable へ問い合わせずに 400（式インジェクション対策・registry 5a5dd591）
+    if (!isValidMagicLinkToken(token)) {
+      console.error('❌ Token format invalid');
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid token' }) };
+    }
+
     console.log('🔐 Verifying token: [redacted]');
 
     // 1. トークン検証
     const tokens = await authTokensTable
-      .select({ filterByFormula: `{Token} = "${token}"`, maxRecords: 1 })
+      .select({ filterByFormula: `{Token} = "${escapeFormulaString(token)}"`, maxRecords: 1 })
       .firstPage();
 
     if (tokens.length === 0) {
@@ -97,7 +105,7 @@ export async function handler(event) {
 
     // 3. 顧客情報を取得
     const customers = await customersTable
-      .select({ filterByFormula: `{Email} = "${tokenData.Email}"`, maxRecords: 1 })
+      .select({ filterByFormula: `{Email} = "${escapeFormulaString(tokenData.Email)}"`, maxRecords: 1 })
       .firstPage();
 
     if (customers.length === 0) {
