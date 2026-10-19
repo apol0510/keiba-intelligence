@@ -14,6 +14,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -196,7 +197,9 @@ describe('isValidMagicLinkToken', () => {
     const send = readFileSync(path.join(ROOT, 'netlify/functions/send-magic-link.js'), 'utf8');
     assert.match(send, /const token = uuidv4\(\);/);
     const reg = readFileSync(path.join(ROOT, 'netlify/functions/register-free.js'), 'utf8');
-    assert.match(reg, /const token = Math\.random\(\)\.toString\(36\)\.substring\(2, 15\) \+ Math\.random\(\)\.toString\(36\)\.substring\(2, 15\);/);
+    // #161（registry 7a7522ac）で register-free も UUID v4 に統一。isValidMagicLinkToken は UUID v4 を受け付ける
+    assert.match(reg, /const token = crypto\.randomUUID\(\);/);
+    assert.equal(isValidMagicLinkToken(randomUUID()), true);
   });
 });
 
