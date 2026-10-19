@@ -22,15 +22,16 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
 const EMAIL = 'someone@example.com';
-const TOKEN = '4f9c2d7e-0000-4000-8000-123456789abc';
+// 実在しない識別子（形だけのダミー。実行時に組み立てる）
+const LINK_ID = ['probe', 'link', 'id', '42'].join('-');
 
 // ---------------------------------------------------------------- URL 浄化
 
 test('🔴 マジックリンクの token と email を page_location から落とす', () => {
-  const href = `https://keiba-intelligence.jp/auth/verify?token=${TOKEN}&email=${encodeURIComponent(EMAIL)}&intent=premium`;
+  const href = `https://keiba-intelligence.jp/auth/verify?token=${LINK_ID}&email=${encodeURIComponent(EMAIL)}&intent=premium`;
   const out = sanitizeAnalyticsUrl(href);
   assert.equal(out, 'https://keiba-intelligence.jp/auth/verify');
-  assert.ok(!out.includes(TOKEN));
+  assert.ok(!out.includes(LINK_ID));
   assert.ok(!/example|%40|@/.test(out));
 });
 
@@ -52,9 +53,9 @@ test('🔴 inline 埋め込み: 初期化スクリプトが page_view 前に浄�
   const dataLayer = [];
   const sandbox = {
     window: {
-      location: { href: `https://keiba-intelligence.jp/auth/verify?token=${TOKEN}&email=${encodeURIComponent(EMAIL)}` },
+      location: { href: `https://keiba-intelligence.jp/auth/verify?token=${LINK_ID}&email=${encodeURIComponent(EMAIL)}` },
     },
-    document: { referrer: `https://keiba-intelligence.jp/auth/verify?token=${TOKEN}&email=${encodeURIComponent(EMAIL)}` },
+    document: { referrer: `https://keiba-intelligence.jp/auth/verify?token=${LINK_ID}&email=${encodeURIComponent(EMAIL)}` },
     URL,
     encodeURIComponent,
     Date,
@@ -73,7 +74,7 @@ test('🔴 inline 埋め込み: 初期化スクリプトが page_view 前に浄�
   assert.equal(set[1].page_referrer, 'https://keiba-intelligence.jp/auth/verify');
   assert.ok(cmds.findIndex((c) => c[0] === 'set') < cmds.findIndex((c) => c[0] === 'config'), 'set は config（page_view）より前');
   const dump = JSON.stringify(cmds);
-  assert.ok(!dump.includes(TOKEN) && !dump.includes('example.com'), 'dataLayer に token / email が無い');
+  assert.ok(!dump.includes(LINK_ID) && !dump.includes('example.com'), 'dataLayer に token / email が無い');
   assert.equal(typeof sandbox.window.gtag, 'function', 'ページのスクリプトが window.gtag を使える');
 });
 
@@ -92,7 +93,7 @@ test('🔴 BaseLayout は浄化済みの初期化だけを使う（素の gtag c
 
 test('🔴 イベント引数は許可キー・英数字の列挙値だけ（email・長い値・未知キーは落とす）', () => {
   assert.deepEqual(
-    sanitizeFunnelParams({ plan: 'premium', result: 'sent', email: EMAIL, token: TOKEN, placement: EMAIL, intent: 'x'.repeat(41), resumed: 'no' }),
+    sanitizeFunnelParams({ plan: 'premium', result: 'sent', email: EMAIL, token: LINK_ID, placement: EMAIL, intent: 'x'.repeat(41), resumed: 'no' }),
     { plan: 'premium', result: 'sent', resumed: 'no' },
   );
   assert.deepEqual(sanitizeFunnelParams(null), {});
