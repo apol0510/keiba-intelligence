@@ -142,3 +142,7 @@ test('🔴 モバイルメニューが閉じる契機を減らさない', () => 
   // 閉じたらインラインスタイルを残さない
   assert.match(layout, /navLinks\.removeAttribute\(['"]style['"]\)/, 'インラインスタイルが残る');
 });
+
+// ログイン画面・帯の案内（docs/measurements/LOGIN_GUIDANCE_2026_10.md）。
+// test:auth に載せるため、ここから読み込む（package.json の build 行は変えない）。
+import './loginGuidance.guard.test.mjs';

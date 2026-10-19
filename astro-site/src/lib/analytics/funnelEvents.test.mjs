@@ -159,6 +159,7 @@ const WIRING = {
   'src/pages/auth/verify.astro': ['LOGIN_VERIFY_RESULT', 'VERIFY_FALLBACK'],
   'src/pages/mypage.astro': ['CHECKOUT_RETURN', 'CHECKOUT_SYNCED'],
   'src/layouts/BaseLayout.astro': ['PRICING_LINK_CLICK'],
+  'src/pages/login.astro': ['LOGIN_LINK_RESULT'],
 };
 
 test('🔴 各ファネル段のイベントがページに配線されている（全イベントを網羅）', () => {
