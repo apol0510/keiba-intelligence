@@ -460,8 +460,34 @@
     }
 
     .chat-toggle-btn {
-      bottom: 16px;
-      right: 16px;
+      bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+      right: calc(16px + env(safe-area-inset-right, 0px));
+    }
+  }
+
+  /*
+   * 小さい画面（375px 等）でボタンが本文の右端に重なる範囲を減らす（registry 1e59b115）。
+   *   - ボタンを少し小さく（60→48px・タップ領域 48px は確保）・端へ寄せる（16→12px）
+   *     → ボタンが覆う範囲を約 1/3 減らす（60×60 → 48×48）
+   *   - ページ末尾の余白は BaseLayout の `.main-footer` が既に確保している（二重に足さない）
+   *   🔴 チャットの入口は隠さない。
+   */
+  @media (max-width: 480px) {
+    .chat-toggle-btn {
+      width: 48px;
+      height: 48px;
+      bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+      right: calc(12px + env(safe-area-inset-right, 0px));
+    }
+
+    .chat-toggle-btn svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .chat-window {
+      bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+      height: calc(100vh - 120px);
     }
   }
 </style>
