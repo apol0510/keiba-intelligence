@@ -19,6 +19,8 @@ import { LOCK_STATUS } from '../lib/membership/priceLock.js';
 import { resolveMembershipStore, STORE_RESULT } from '../lib/membership/store.js';
 import { readRedeemContext } from '../lib/membership/redeemHandler.js';
 import { MONTHLY_LIST_PRICE_YEN } from '../lib/billing/plans.js';
+import { readContractFields } from '../lib/billing/contractFields.js';
+import { contractState, contractEndedNotice } from '../lib/billing/contractState.js';
 import rewardCatalogSource from '../data/membership/rewardCatalog.json';
 
 export const prerender = false;
@@ -225,6 +227,16 @@ const reentryNote = club.rewards.status === 'ready' && club.rewards.balancePoint
 
 /** 退会完了の案内（stripe-subscription の withdraw 成功後に ?withdrawn=1 で戻ってくる） */
 const justWithdrawn = ent.authenticated && !isPaid && Astro.url.searchParams.get('withdrawn') === '1';
+
+/**
+ * 契約が終わった元会員への 1 行（docs/measurements/CONTRACT_ENDED_VISIBILITY_2026_10.md）。
+ * 🔴 表示だけ。権限は上の entitlement（署名付きセッション）のまま。ここで読む値で tier を変えない。
+ * 🔴 有料の人・未ログイン・退会直後（専用の案内あり）は読まない。読めなければ何も出さない。
+ * 🔴 導線は既存の「プランを見る」1 つだけ。値引き・期限煽りは出さない。
+ */
+const contractNotice = ent.authenticated && !isPaid && !justWithdrawn && ent.email
+  ? contractEndedNotice(contractState(await readContractFields({ email: ent.email, env: runtimeEnv }), Date.now()))
+  : null;
 
 // 🔴 2026-08-30: 会場で分ける概念を廃止。有料は常に南関東＋中央
 const venueLabel = '南関東＋中央競馬';
@@ -596,6 +608,7 @@ const expiresLabel = ent.expiresAtMs
               </div>
             ) : (
               <div class="mp-billing">
+                {contractNotice && <p class="mp-contract-ended" id="mp-contract-ended">{contractNotice}</p>}
                 <p>買い目をご覧いただくには有料プランへのお申し込みが必要です。</p>
                 <a class="mp-btn mp-btn-primary" href="/pricing">プランを見る</a>
               </div>
@@ -1475,6 +1488,11 @@ const expiresLabel = ent.expiresAtMs
   }
 
   /* 解約予約中（docs/RETENTION_2026_10.md）。🔴 警告色で煽らない。落ち着いた案内にする */
+  .mp-contract-ended {
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+
   .mp-sub-cancel {
     margin-top: 16px;
     padding: 16px;

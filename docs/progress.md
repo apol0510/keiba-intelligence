@@ -7,6 +7,13 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-10-20 マイページで契約終了を示す（正本: `docs/measurements/CONTRACT_ENDED_VISIBILITY_2026_10.md`）
+
+- **問題**: 期限切れの元会員 7 件（Status active のまま）・inactive 5 件に、マイページが無料会員と同じ表示で契約終了も終了日も示していなかった。
+- **実装**: `contractState.js`（純関数・active は `customerSessionTier` を呼ぶだけ）・`contractFields.js`（本人 1 件の読み取りのみ・失敗は非表示）。
+  `/mypage` のお支払い欄に「ご契約期間はYYYY年M月D日に終了しました。」。導線は既存の /pricing 1 つ。権限・価格・実績表示は不変。
+- **検証**: `contractState.test.mjs`（`test:billing`）・`npm run build` green。評価期間 2026-10-21 〜 2026-11-17。
+
 ### 2026-10-19 ログイン後に元のページへ戻す（正本: `docs/measurements/LOGIN_RETURN_TO_2026_10.md`・registry e52a3c07）
 
 - **問題**: ログイン後は常に `/mypage`。セッション切れの有料会員が `/prediction/*` からログインしても予想ページへ戻れなかった。
