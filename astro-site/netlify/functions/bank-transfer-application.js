@@ -3,6 +3,9 @@
  * プロプラン (¥4,980/月、¥49,800/年) の銀行振込申請を受け付け、確認メールを送信
  */
 
+// 🔴 メールアドレスはログへ平文で出さない（src/lib/log/maskEmail.cjs）
+const { maskEmail, redactEmails } = require('../../src/lib/log/maskEmail.cjs');
+
 exports.handler = async (event, context) => {
   // CORS設定（セキュリティ強化：特定ドメインのみ許可）
   const allowedOrigins = [
@@ -333,7 +336,7 @@ exports.handler = async (event, context) => {
 
     if (!adminResponse.ok) {
       const errorText = await adminResponse.text();
-      console.error('SendGrid admin email error:', errorText);
+      console.error('SendGrid admin email error:', redactEmails(errorText));
       throw new Error(`Failed to send admin email: ${adminResponse.status}`);
     }
 
@@ -349,7 +352,7 @@ exports.handler = async (event, context) => {
 
     if (!userResponse.ok) {
       const errorText = await userResponse.text();
-      console.error('SendGrid user email error:', errorText);
+      console.error('SendGrid user email error:', redactEmails(errorText));
       throw new Error(`Failed to send user email: ${userResponse.status}`);
     }
 
@@ -417,11 +420,11 @@ exports.handler = async (event, context) => {
 
           if (!updateResponse.ok) {
             const errorText = await updateResponse.text();
-            console.error('❌ Airtable update error details:', errorText);
+            console.error('❌ Airtable update error details:', redactEmails(errorText));
             throw new Error(`Airtable update failed: ${updateResponse.status} - ${errorText}`);
           }
 
-          console.log('✅ Airtable updated (existing customer):', email);
+          console.log('✅ Airtable updated (existing customer):', maskEmail(email), recordId);
         } else {
           // 新規顧客 - Create
           const createUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Customers`;
@@ -441,7 +444,10 @@ exports.handler = async (event, context) => {
             }
           };
 
-          console.log('📤 Airtable create payload:', JSON.stringify(createPayload, null, 2));
+          // 🔴 アドレスはマスク、氏名は出さない（値の有無だけ）
+          console.log('📤 Airtable create payload:', JSON.stringify({
+            fields: { ...createPayload.fields, Email: maskEmail(email), Name: fullName ? '[redacted]' : '' }
+          }, null, 2));
 
           const createResponse = await fetch(createUrl, {
             method: 'POST',
@@ -454,15 +460,15 @@ exports.handler = async (event, context) => {
 
           if (!createResponse.ok) {
             const errorText = await createResponse.text();
-            console.error('❌ Airtable create error details:', errorText);
+            console.error('❌ Airtable create error details:', redactEmails(errorText));
             throw new Error(`Airtable create failed: ${createResponse.status} - ${errorText}`);
           }
 
-          console.log('✅ Airtable created (new customer):', email);
+          console.log('✅ Airtable created (new customer):', maskEmail(email));
         }
       }
     } catch (airtableError) {
-      console.error('❌ Airtable registration error:', airtableError);
+      console.error('❌ Airtable registration error:', redactEmails(airtableError));
       // Airtableエラーでも処理は続行（メール送信は成功しているため）
     }
 
@@ -492,7 +498,7 @@ exports.handler = async (event, context) => {
           ]
         };
 
-        console.log('📧 SendGrid Marketing Campaigns: Registering contact:', email);
+        console.log('📧 SendGrid Marketing Campaigns: Registering contact:', maskEmail(email));
 
         const response = await fetch(url, {
           method: 'PUT',
@@ -505,21 +511,21 @@ exports.handler = async (event, context) => {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('❌ SendGrid Marketing Campaigns error:', response.status, errorText);
+          console.error('❌ SendGrid Marketing Campaigns error:', response.status, redactEmails(errorText));
           throw new Error(`SendGrid Marketing Campaigns error: ${response.status} - ${errorText}`);
         }
 
         const result = await response.json();
-        console.log('✅ SendGrid Marketing Campaigns registered:', email);
+        console.log('✅ SendGrid Marketing Campaigns registered:', maskEmail(email));
       }
     } catch (sendGridMarketingError) {
-      console.error('❌ SendGrid Marketing Campaigns registration error:', sendGridMarketingError);
+      console.error('❌ SendGrid Marketing Campaigns registration error:', redactEmails(sendGridMarketingError));
       // SendGridエラーでも処理は続行（メール送信・Airtable登録は成功しているため）
     }
 
+    // 🔴 アドレスはマスク、氏名は出さない
     console.log('✅ Bank transfer application submitted:', {
-      email,
-      fullName,
+      email: maskEmail(email),
       transferDate,
       transferTime,
       transferAmount,
@@ -536,7 +542,7 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error('Bank transfer application error:', error);
+    console.error('Bank transfer application error:', redactEmails(error));
     return {
       statusCode: 500,
       headers,

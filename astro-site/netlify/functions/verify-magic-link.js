@@ -21,6 +21,8 @@ import { signSession, serializeSessionCookie, SESSION_TTL_SECONDS } from '../../
 import { readRevocation, tierForNewSession } from '../../src/lib/auth/revocation.js';
 import { escapeFormulaString } from '../../src/lib/airtable/formula.js';
 import { isValidMagicLinkToken } from '../../src/lib/auth/magicLinkToken.js';
+// 🔴 メールアドレスはログへ平文で出さない（src/lib/log/maskEmail.cjs）
+import { redactEmails } from '../../src/lib/log/maskEmail.cjs';
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -194,7 +196,7 @@ export async function handler(event) {
       }),
     };
   } catch (error) {
-    console.error('❌ Verify magic link error:', error);
+    console.error('❌ Verify magic link error:', redactEmails(error));
     return {
       statusCode: 500,
       headers,

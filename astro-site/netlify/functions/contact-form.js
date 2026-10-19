@@ -3,6 +3,9 @@
  * SendGrid経由で管理者にメール通知
  */
 
+// 🔴 メールアドレスはログへ平文で出さない（src/lib/log/maskEmail.cjs）
+const { maskEmail, redactEmails } = require('../../src/lib/log/maskEmail.cjs');
+
 exports.handler = async (event, context) => {
   const allowedOrigins = [
     'https://keiba-intelligence.netlify.app',
@@ -132,7 +135,7 @@ exports.handler = async (event, context) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('SendGrid admin email error:', errorText);
+      console.error('SendGrid admin email error:', redactEmails(errorText));
       throw new Error(`SendGrid error: ${response.status}`);
     }
 
@@ -190,11 +193,12 @@ exports.handler = async (event, context) => {
     });
 
     if (!userResponse.ok) {
-      console.error('SendGrid user email error:', await userResponse.text());
+      console.error('SendGrid user email error:', redactEmails(await userResponse.text()));
       // ユーザー控えメール失敗は致命的ではないので続行
     }
 
-    console.log('✅ Contact form submitted:', { name, email, category });
+    // 🔴 氏名・アドレスは平文で出さない（アドレスはマスク、氏名は出さない）
+    console.log('✅ Contact form submitted:', { email: maskEmail(email), category });
 
     return {
       statusCode: 200,
@@ -203,7 +207,7 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error('Contact form error:', error);
+    console.error('Contact form error:', redactEmails(error));
     return {
       statusCode: 500,
       headers,

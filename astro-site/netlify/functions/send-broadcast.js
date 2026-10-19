@@ -10,6 +10,8 @@
 
 const Airtable = require('airtable');
 const sgMail = require('@sendgrid/mail');
+// 🔴 メールアドレスはログへ平文で出さない（src/lib/log/maskEmail.cjs）
+const { maskEmail, redactEmails } = require('../../src/lib/log/maskEmail.cjs');
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -165,7 +167,7 @@ async function sendBatch(emails, broadcast, broadcastId) {
         // 既送信チェック
         const alreadySent = await checkAlreadySent(broadcastId, email);
         if (alreadySent) {
-          console.log('⏭️ Already sent to:', email);
+          console.log('⏭️ Already sent to:', maskEmail(email));
           results.push({ email, status: 'skipped', reason: 'already sent' });
           continue;
         }
@@ -186,9 +188,9 @@ async function sendBatch(emails, broadcast, broadcastId) {
         sentCount++;
         results.push({ email, status: 'sent', message_id: messageId });
 
-        console.log(`✅ Sent (${sentCount}/${emails.length}):`, email);
+        console.log(`✅ Sent (${sentCount}/${emails.length}):`, maskEmail(email));
       } catch (error) {
-        console.error('❌ Send error:', email, error.message);
+        console.error('❌ Send error:', maskEmail(email), redactEmails(error.message));
 
         // エラーログ記録
         await createRecipient({
@@ -364,7 +366,7 @@ exports.handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error('❌ Send broadcast error:', error);
+    console.error('❌ Send broadcast error:', redactEmails(error));
     return {
       statusCode: 500,
       headers,

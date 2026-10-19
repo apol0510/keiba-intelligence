@@ -7,6 +7,8 @@
 const { v4: uuidv4 } = require('uuid');
 const Airtable = require('airtable');
 const sgMail = require('@sendgrid/mail');
+// 🔴 メールアドレスはログへ平文で出さない（src/lib/log/maskEmail.cjs）
+const { maskEmail, redactEmails } = require('../../src/lib/log/maskEmail.cjs');
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -96,7 +98,7 @@ exports.handler = async (event) => {
       };
     }
 
-    console.log('📧 Sending magic link to:', email);
+    console.log('📧 Sending magic link to:', maskEmail(email));
 
     // 1. Customersテーブル確認
     const customers = await customersTable
@@ -107,7 +109,7 @@ exports.handler = async (event) => {
       .firstPage();
 
     if (customers.length === 0) {
-      console.error('❌ Customer not found:', email);
+      console.error('❌ Customer not found:', maskEmail(email));
       return {
         statusCode: 404,
         headers,
@@ -124,7 +126,7 @@ exports.handler = async (event) => {
     //    正本: docs/measurements/LOGIN_RECOVERY_2026_10.md
     const { canRequestLoginLink } = await import('../../src/lib/auth/loginEligibility.js');
     if (!canRequestLoginLink(customer.Status)) {
-      console.error('❌ Account is not active:', email);
+      console.error('❌ Account is not active:', maskEmail(email));
       return {
         statusCode: 403,
         headers,
@@ -218,7 +220,7 @@ exports.handler = async (event) => {
 
     await sgMail.send(msg);
 
-    console.log('✅ Magic link sent to:', email);
+    console.log('✅ Magic link sent to:', maskEmail(email));
 
     return {
       statusCode: 200,
@@ -229,7 +231,7 @@ exports.handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error('❌ Send magic link error:', error);
+    console.error('❌ Send magic link error:', redactEmails(error));
     return {
       statusCode: 500,
       headers,
