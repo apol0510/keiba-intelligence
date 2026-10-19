@@ -215,6 +215,7 @@ register-free.js → PaymentMethod未設定 → Automationの条件に一致し�
    - `PaymentEmailSent` が既に `true` → チェックを外す
    - `PaymentMethod` が `Bank Transfer` でない → 値を確認
    - `Email` または `Name` フィールドが空 → 入力する
+     （400 応答の `details` は `{ hasEmail, hasName }` の真偽値と `airtableRecordId` だけ。アドレス・氏名は応答に含めない・2026-10-19）
    - 環境変数が未設定 → Netlify管理画面で確認
 
 ### 手動でメール送信をテストする場合
