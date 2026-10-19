@@ -35,7 +35,7 @@ describe('refresh-session', () => {
     assert.equal(src.includes('JSON.parse(event'), false);
     assert.equal(src.includes('queryStringParameters'), false);
     assert.match(src, /\{Email\} = "\$\{escaped\}"/);
-    assert.match(src, /const escaped = String\(ent\.email\)/);
+    assert.match(src, /const escaped = escapeFormulaString\(ent\.email\)/);
   });
 
   test('🔴 tier は Airtable からだけ決める', () => {
