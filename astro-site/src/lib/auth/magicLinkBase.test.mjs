@@ -136,48 +136,42 @@ describe('🔴 不正値は fail-closed（production 以外へ倒さない）', 
 describe('register-free.js（無料登録の確認 URL）も同じポリシー', () => {
   const src = () => read('netlify/functions/register-free.js');
 
-  /** register-free が組み立てる確認 URL を、実装と同じ手順で再現する。 */
-  const registerUrl = (env, email, token = 'tok_reg') =>
-    `${resolveMagicLinkBase(env)}/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
+  /** register-free が組み立てる確認 URL を、実装と同じ手順で再現する（ログインと同じ組み立て）。 */
+  const registerUrl = (env, token = 'tok_reg') => buildMagicLinkUrl(token, env);
 
   test('🔴 本番 URL をハードコードしていない', () => {
     assert.doesNotMatch(src(), /const magicLink = `https:\/\/keiba-intelligence\.jp\/auth\/verify/,
       '確認 URL が本番へハードコードされている');
-    assert.match(src(), /resolveMagicLinkBase\(process\.env\)/, '共有ポリシーを使っていない');
+    assert.match(src(), /buildMagicLinkUrl\(token, process\.env\) \+ intentQuery\(intent\)/,
+      '共有ポリシー（buildMagicLinkUrl）を使っていない');
   });
 
   test('Branch URL → Branch の登録確認 URL', () => {
     const base = 'https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app';
-    assert.equal(
-      registerUrl({ [MAGIC_LINK_BASE_ENV]: base }, 'a@example.com'),
-      `${base}/auth/verify?token=tok_reg&email=a%40example.com`,
-    );
+    assert.equal(registerUrl({ [MAGIC_LINK_BASE_ENV]: base }), `${base}/auth/verify?token=tok_reg`);
   });
 
   test('env 未設定（Production）→ Production URL', () => {
-    assert.equal(
-      registerUrl({}, 'a@example.com'),
-      'https://keiba-intelligence.jp/auth/verify?token=tok_reg&email=a%40example.com',
-    );
+    assert.equal(registerUrl({}), 'https://keiba-intelligence.jp/auth/verify?token=tok_reg');
   });
 
   test('🔴 許可外 → Production へ fallback（token を外部へ出さない）', () => {
     for (const bad of ['https://evil.example.com', 'https://keiba-intelligence.jp.evil.com',
       'http://keiba-intelligence.jp', 'javascript:alert(1)', 'not-a-url', '']) {
-      const url = registerUrl({ [MAGIC_LINK_BASE_ENV]: bad }, 'a@example.com');
+      const url = registerUrl({ [MAGIC_LINK_BASE_ENV]: bad });
       assert.ok(url.startsWith('https://keiba-intelligence.jp/'), `🔴 外部へ向いた: ${bad} → ${url}`);
     }
   });
 
-  test('🔴 + 付きメールアドレスを壊さない', () => {
-    const base = 'https://test-stripe-testmode-e2e-2026-09-01--keiba-intelligence.netlify.app';
-    const email = '0510apolon+test2@gmail.com';
-    const url = registerUrl({ [MAGIC_LINK_BASE_ENV]: base }, email);
-    // + は %2B にエンコードされる（生の + はスペースと解釈されうる）
-    assert.match(url, /email=0510apolon%2Btest2%40gmail\.com$/);
-    assert.equal(decodeURIComponent(new URL(url).searchParams.get('email')), email);
-    // 実装が encodeURIComponent を使っていること
-    assert.match(src(), /email=\$\{encodeURIComponent\(email\)\}/);
+  test('🔴 確認リンクに email を載せない（2026-10-19。認証は token だけで行う）', () => {
+    const s2 = src();
+    assert.doesNotMatch(s2, /[?&]email=/, '確認リンクに email クエリが残っている');
+    // /auth/verify と verify-magic-link は email を読まない（読むようになったらこのテストで気づく）
+    const verifyPage = read('src/pages/auth/verify.astro');
+    const verifyFn = read('netlify/functions/verify-magic-link.js');
+    assert.doesNotMatch(verifyPage, /get\(['"]email['"]\)/);
+    assert.doesNotMatch(verifyFn, /queryStringParameters[^\n]*email/);
+    assert.doesNotMatch(verifyFn, /const \{[^}]*email[^}]*\} = event\.queryStringParameters/);
   });
 
   test('🔴 既存の登録フロー（Status / PlanType / AccessEnabled）を変えていない', () => {

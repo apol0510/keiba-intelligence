@@ -42,6 +42,8 @@ export const FUNNEL_EVENTS = Object.freeze({
   LOGIN_LINK_RESULT: 'ki_login_link_result',
   /** マジックリンクの確認結果 `{result: ok|expired|used|not_found|error, intent: purchase|none}` */
   LOGIN_VERIFY_RESULT: 'ki_login_verify_result',
+  /** リンクが使えなかった後の分岐 `{result: signed_in|relogin}`（この端末がログイン済みだったか。LOGIN_RECOVERY_2026_10.md） */
+  VERIFY_FALLBACK: 'ki_verify_fallback',
 });
 
 const EVENT_NAMES = new Set(Object.values(FUNNEL_EVENTS));
