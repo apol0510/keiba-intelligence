@@ -151,6 +151,7 @@ export const prerender = false;
   // ログイン前に見ていたページ（許可リストのパスだけ。LOGIN_RETURN_TO_2026_10.md）
   import { normalizeReturnTo, returnToKind, loginHrefFor, paidEquivalentPath, RETURN_PARAM } from '../../lib/auth/returnTo.js';
   import { canSeeBetting } from '../../lib/auth/tiers.js';
+  import { verifySourceOf, SIGNUP_SOURCE_PARAM } from '../../lib/auth/signupGuidance.js';
 
   const statusEl = document.getElementById('status') as HTMLHeadingElement;
   const messageEl = document.getElementById('message') as HTMLParagraphElement;
@@ -182,6 +183,8 @@ export const prerender = false;
         result: verifyResultOf(response.status, response.ok && data.success, data.error),
         intent: intent ? 'purchase' : 'none',
         return_to: returnToKind(next),
+        // 登録の確認リンク（&src=signup）から来たか。固定の列挙値だけ（SIGNUP_COMPLETION_2026_10.md）
+        source: verifySourceOf(urlParams.get(SIGNUP_SOURCE_PARAM)),
       });
 
       if (response.ok && data.success) {

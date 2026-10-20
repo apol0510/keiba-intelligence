@@ -185,6 +185,33 @@ describe('send-magic-link（実ハンドラ）: マジックリンクに載せ�
   });
 });
 
+// ── send-magic-link: 登録画面からの再送（SIGNUP_COMPLETION_2026_10.md） ─────────
+describe('send-magic-link（実ハンドラ）: 登録画面からの再送の目印 src=signup', () => {
+  test('source=signup なら &src=signup を付ける（email は載せない・pending にも送る）', async () => {
+    db.reset({ Status: 'pending', PlanType: 'free-registered' });
+    const { res, link } = await send({ email: MEMBER, source: 'signup' });
+    assert.equal(res.statusCode, 200);
+    assert.equal(mail.sent.length, 1, '送るのは 1 通だけ');
+    assert.deepEqual([...link.searchParams.keys()], ['token', 'src']);
+    assert.equal(link.searchParams.get('src'), 'signup');
+    assert.equal(link.href.includes(MEMBER) || link.href.includes(encodeURIComponent(MEMBER)), false, '🔴 email を URL に載せた');
+  });
+
+  for (const bad of ['login', 'SIGNUP', 'signup&next=/admin', '', null, ['signup'], { v: 'signup' }]) {
+    test(`🔴 それ以外の source は無視: ${JSON.stringify(bad)}`, async () => {
+      const { res, link } = await send({ email: MEMBER, source: bad });
+      assert.equal(res.statusCode, 200);
+      assert.deepEqual([...link.searchParams.keys()], ['token']);
+    });
+  }
+
+  test('メールの種類は従来のログインリンクのまま（新しい種類を作らない）', async () => {
+    await send({ email: MEMBER, source: 'signup' });
+    const plain = await (async () => { const m = mail.sent[0]; mail.sent = []; await send({ email: MEMBER }); return [m, mail.sent[0]]; })();
+    assert.equal(plain[0].subject, plain[1].subject);
+  });
+});
+
 // ── verify-magic-link ─────────────────────────────────────────────
 describe('verify-magic-link（実ハンドラ）: 認証後の戻り先', () => {
   test('next が無ければ従来どおり /mypage', async () => {
