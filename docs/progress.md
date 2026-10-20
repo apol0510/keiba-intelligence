@@ -7,6 +7,13 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-10-20 Checkout の申込元を metadata `ki_entry` で分類（正本: `docs/measurements/CHECKOUT_ATTRIBUTION_2026_10.md`）
+
+- **問題**: 購入が新規・無料会員・元会員（期限切れ / 退会）のどこから来たかを Stripe 側で集計できなかった（GA4 は読めない）。
+- **実装**: `checkoutEntry.js`（new|free|pending|lapsed|withdrawn の固定値・分類できなければ付けない）。`stripe-create-checkout` が
+  セッションの email で顧客を 1 件読み（読み取りのみ・失敗しても Checkout は止めない）、session / subscription の metadata に足す。PII なし。
+- **検証**: `checkoutEntry.test.mjs`・`stripeCheckout.test.mjs`（実ハンドラ）・`npm run build` green。
+
 ### 2026-10-20 マイページで契約終了を示す（正本: `docs/measurements/CONTRACT_ENDED_VISIBILITY_2026_10.md`）
 
 - **問題**: 期限切れの元会員 7 件（Status active のまま）・inactive 5 件に、マイページが無料会員と同じ表示で契約終了も終了日も示していなかった。

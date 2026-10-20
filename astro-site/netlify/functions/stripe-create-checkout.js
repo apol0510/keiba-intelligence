@@ -9,6 +9,7 @@
  *     クライアントが送ってきた email を信用しない（他人のプランを買い替えられないため）。
  *   - 秘密鍵 / Price ID が未設定なら **503**（推測で課金しない）
  *   - metadata に `ki_plan` と `ki_email` を入れ、webhook 側で tier を復元する
+ *   - `ki_entry`（new|free|pending|lapsed|withdrawn の固定値・計測専用）は分類できたときだけ足す
  *   - Stripe のエラー内容を呼び出し元へ返さない
  */
 
@@ -16,6 +17,7 @@ import Stripe from 'stripe';
 import { planById, priceIdFor, hasStripeSecret, STRIPE_ENV } from '../../src/lib/billing/plans.js';
 import { resolveSiteOrigin, normalizeSiteOrigin } from '../../src/lib/http/siteOrigin.js';
 import { resolveEntitlement } from '../../src/lib/auth/entitlement.js';
+import { checkoutEntryOf, entryMetadata, readEntryFields } from '../../src/lib/billing/checkoutEntry.js';
 
 const ALLOWED_ORIGINS = [
   'https://keiba-intelligence.jp',
@@ -90,6 +92,17 @@ export async function handler(event) {
   const base = siteBase(event);
   const stripe = new Stripe(process.env[STRIPE_ENV.SECRET_KEY]);
 
+  // ── 申込元の分類（計測専用・docs/measurements/CHECKOUT_ATTRIBUTION_2026_10.md） ──
+  // 🔴 セッションの email で顧客レコードを読む（読み取りのみ）。値は固定の列挙値だけ。
+  //    読めない・分類できないときは付けない。失敗しても Checkout は止めない。課金・権限には使わない。
+  let entry = {};
+  try {
+    const nowMs = Date.now();
+    entry = entryMetadata(checkoutEntryOf(await readEntryFields({ email: ent.email, env: process.env }), nowMs));
+  } catch {
+    entry = {};
+  }
+
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -106,9 +119,9 @@ export async function handler(event) {
       //    Stripe の webhook ペイロードは `line_items` を既定で展開しないため、
       //    metadata に入れておかないと **Price ID が取れず契約価格が保存されない**
       //    （2026-09-02 の Test Mode E2E で実際に空のまま通過した）。
-      metadata: { ki_plan: plan.id, ki_email: ent.email, ki_price_id: priceId },
+      metadata: { ki_plan: plan.id, ki_email: ent.email, ki_price_id: priceId, ...entry },
       subscription_data: {
-        metadata: { ki_plan: plan.id, ki_email: ent.email, ki_price_id: priceId },
+        metadata: { ki_plan: plan.id, ki_email: ent.email, ki_price_id: priceId, ...entry },
       },
     });
 
