@@ -147,6 +147,19 @@ test('印の強さは「指数の一致」で決まる（順位だけでは決�
   assert.ok(after.includes('◎'), '総合指数の ◎ は残るはず');
 });
 
+test('全軸 2 位の馬に ◎ を足さない（◎ 持ちより重くなっても ○ のまま）', () => {
+  // 2026-10-21 浦和 7R と同じ形: 1 位が軸ごとに割れ、2 位は同じ馬。
+  // 総合指数: 1◎ 2○ 4▲ 5,3,6,7△ / 基礎指数: 3◎ 2○ 4▲ 5,6,1,7△
+  const spec = [[1, 100, 75], [2, 95, 95], [3, 86, 99], [4, 90, 90], [5, 88, 85],
+    [6, 84, 80], [7, 80, 70], [8, 75, 65], [9, 70, 60], [10, 55, 55]];
+  const horses = spec.map(([no, pt, ci]) => ({ horseNumber: no, horseName: `馬${no}`, pt, computerIndex: ci }));
+  const m = assignFreeMarks(horses, { pastRacesOf: () => [], raceInfo: RACE_INFO });
+
+  assert.equal(m.get(2), '○○');
+  assert.equal(m.get(1), '◎△');
+  assert.equal(m.get(3), '◎△');
+});
+
 /* ---------- 3. データが無い軸は使わない ---------- */
 
 test('過去走が無ければ軸が減り、印も減る（捏造しない）', () => {
@@ -275,10 +288,12 @@ test('実データ: 全レースで △ の広さ・空欄・軸の本数を満�
   assert.deepEqual(bad.slice(0, 5), [], `${bad.length} 件の逸脱`);
 });
 
-test('実データ: 印が最も重い馬は ◎ を持つ（新聞と同じ重みで読める）', () => {
-  // 新聞の読み方と同じ重み。△ の数だけでは上に来ない
-  const WEIGHT = { '◎': 4, '○': 3, '▲': 2, '△': 1 };
-  const weigh = (s) => [...s].reduce((n, c) => n + (WEIGHT[c] || 0), 0);
+test('実データ: 各軸が ◎ をちょうど 1 つ出す（◎ の総数 ＝ 軸の本数）', () => {
+  // 🔴 「印が最も重い馬は ◎ を持つ」はここで要求しない（2026-10-21 浦和 7R で崩れた）。
+  //    全軸 2 位の馬は '○○○○○'（15）になり、軸ごとに 1 位が割れれば ◎ 持ちより重くなる。
+  //    これは R-3（1 頭だけを特別扱いしない）どおりの正しい出力で、仕様が保証する性質ではない。
+  //    仕様どおりであることは「全軸 2 位の馬に ◎ を足さない」で固定している（§2）。
+  const count = (m, sym) => [...m.values()].reduce((n, s) => n + [...s].filter((c) => c === sym).length, 0);
 
   const day = loadNankanRaceDay(ROOT);
   if (day.error && !day.venues.length) return;
@@ -290,15 +305,10 @@ test('実データ: 印が最も重い馬は ◎ を持つ（新聞と同じ重�
       if (horses.length < 8) continue;
       const info = race.raceInfo || {};
       const m = assignFreeMarks(horses, { pastRacesOf: past, raceInfo: info });
-      // 最重量が同点になることがある（例: '◎◎◎△△' と '○○○○▲' はどちらも 14）。
-      // 並べ替えの先頭 1 頭だけを見ると同点の片方を取りこぼすので、同率最高を全部見る。
-      const weighed = [...m.entries()].map(([n, s]) => [n, s, weigh(s)]);
-      const top = Math.max(...weighed.map(([, , w]) => w));
-      const heaviest = weighed.filter(([, , w]) => w === top);
-      assert.ok(
-        heaviest.some(([, s]) => s.includes('◎')),
-        `${info.raceNumber}R: 印が最も重い馬に ◎ が無い（${heaviest.map(([, s]) => s).join(' / ')}）`,
+      const axes = availableAxes(
+        evaluationOrder(horses).slice(0, poolSizeFor(horses.length)), past, info,
       );
+      assert.equal(count(m, '◎'), axes.length, `${info.raceNumber}R: ◎ の総数が軸の本数と一致しない`);
       checked += 1;
     }
   }
