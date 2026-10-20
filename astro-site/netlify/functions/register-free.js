@@ -291,7 +291,9 @@ async function sendMagicLink(email, intent) {
   // 🔴 リンクに email を載せない（2026-10-19）。認証は token だけで行い、`/auth/verify` も
   //    `verify-magic-link` も email を読まない。email 付きの URL はメールの転送・閲覧履歴・
   //    アクセス解析に残る（docs/measurements/FUNNEL_2026_10.md §1）。ログインと同じ組み立てにそろえる。
-  const magicLink = buildMagicLinkUrl(token, process.env) + intentQuery(intent);
+  // 🔴 登録からの確認であることを GA4 で区別するため固定の `&src=signup` を付ける（PII なし・signupGuidance.js）
+  const { signupSourceQuery } = await import('../../src/lib/auth/signupGuidance.js');
+  const magicLink = buildMagicLinkUrl(token, process.env) + intentQuery(intent) + signupSourceQuery('signup');
 
   /*
    * 🔴 購入導線から来た人に「無料会員登録ありがとうございます！」は出さない。

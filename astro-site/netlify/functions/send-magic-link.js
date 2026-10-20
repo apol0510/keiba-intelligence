@@ -79,7 +79,8 @@ exports.handler = async (event) => {
   try {
     // `intent` は任意。購入導線から来たときだけ入る（従来の /login は送らない）
     // `next` も任意。ログイン後に戻るページ（許可リストのパスだけ・src/lib/auth/returnTo.js）
-    const { email, intent, next } = JSON.parse(event.body);
+    // `source` も任意。無料登録画面の「確認メールを再送」からだけ 'signup' が来る（GA4 の区別用・signupGuidance.js）
+    const { email, intent, next, source } = JSON.parse(event.body);
 
     if (!email) {
       return {
@@ -169,7 +170,9 @@ exports.handler = async (event) => {
     const { intentQuery } = await import('../../src/lib/billing/purchaseIntent.js');
     // 🔴 戻り先（next）は許可リストの相対パスだけ運ぶ。購入意図があれば購入が優先なので付けない。
     const { returnToQuery } = await import('../../src/lib/auth/returnTo.js');
-    const magicLink = buildMagicLinkUrl(token, process.env) + (intentQuery(intent) || returnToQuery(next));
+    // 🔴 登録画面からの再送だけ `&src=signup` を付ける（固定値。それ以外の source は無視）。認証の意味は変わらない
+    const { signupSourceQuery } = await import('../../src/lib/auth/signupGuidance.js');
+    const magicLink = buildMagicLinkUrl(token, process.env) + (intentQuery(intent) || returnToQuery(next)) + signupSourceQuery(source);
 
     // 🔴 購入導線から来た場合は「ログインリンク」ではなく、お支払いへの案内にする
     const { emailCopyFor } = await import('../../src/lib/billing/purchaseEmailCopy.js');

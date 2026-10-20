@@ -22,6 +22,8 @@ export const FUNNEL_EVENTS = Object.freeze({
   PRICING_LINK_CLICK: 'ki_pricing_link_click',
   /** 無料登録フォームの結果 `{result: sent|resent|already|mismatch|error}` */
   SIGNUP_RESULT: 'ki_signup_result',
+  /** 登録後の画面で「確認メールを再送」を押した結果 `{result: sent|error}`（SIGNUP_COMPLETION_2026_10.md） */
+  SIGNUP_RESEND_RESULT: 'ki_signup_resend_result',
   /** 「このプランを申し込む」を押した（認証から戻った自動再開を含む）`{plan, resumed}` */
   CHECKOUT_CLICK: 'ki_checkout_click',
   /** 未ログインのためメール確認フォームを開いた `{plan}` */
@@ -40,7 +42,7 @@ export const FUNNEL_EVENTS = Object.freeze({
   CHECKOUT_SYNCED: 'ki_checkout_synced',
   /** /login のログインリンク送信結果 `{result: sent|not_found|blocked|error, return_to}`（LOGIN_GUIDANCE_2026_10.md・return_to は LOGIN_RETURN_TO_2026_10.md） */
   LOGIN_LINK_RESULT: 'ki_login_link_result',
-  /** マジックリンクの確認結果 `{result: ok|expired|used|not_found|error, intent: purchase|none, return_to: prediction|free_prediction|results|mypage|none}` */
+  /** マジックリンクの確認結果 `{result: ok|expired|used|not_found|error, intent: purchase|none, return_to: prediction|free_prediction|results|mypage|none, source: signup|login}`（source は SIGNUP_COMPLETION_2026_10.md） */
   LOGIN_VERIFY_RESULT: 'ki_login_verify_result',
   /** リンクが使えなかった後の分岐 `{result: signed_in|relogin}`（この端末がログイン済みだったか。LOGIN_RECOVERY_2026_10.md） */
   VERIFY_FALLBACK: 'ki_verify_fallback',
@@ -49,7 +51,7 @@ export const FUNNEL_EVENTS = Object.freeze({
 const EVENT_NAMES = new Set(Object.values(FUNNEL_EVENTS));
 
 /** 送ってよいキー（これ以外は落とす）。 */
-const ALLOWED_KEYS = new Set(['placement', 'plan', 'result', 'resumed', 'intent', 'return_to']);
+const ALLOWED_KEYS = new Set(['placement', 'plan', 'result', 'resumed', 'intent', 'return_to', 'source']);
 
 /** 値は短い英数字・`_`・`-` だけ。`@` や `.` を含む値（email 等）はここで弾かれる。 */
 const VALUE_RE = /^[a-z0-9_-]{1,40}$/i;
