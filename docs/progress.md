@@ -14,6 +14,13 @@
   セッションの email で顧客を 1 件読み（読み取りのみ・失敗しても Checkout は止めない）、session / subscription の metadata に足す。PII なし。
 - **検証**: `checkoutEntry.test.mjs`・`stripeCheckout.test.mjs`（実ハンドラ）・`npm run build` green。
 
+### 2026-10-20 マイページで契約終了を示す（正本: `docs/measurements/CONTRACT_ENDED_VISIBILITY_2026_10.md`）
+
+- **問題**: 期限切れの元会員 7 件（Status active のまま）・inactive 5 件に、マイページが無料会員と同じ表示で契約終了も終了日も示していなかった。
+- **実装**: `contractState.js`（純関数・active は `customerSessionTier` を呼ぶだけ）・`contractFields.js`（本人 1 件の読み取りのみ・失敗は非表示）。
+  `/mypage` のお支払い欄に「ご契約期間はYYYY年M月D日に終了しました。」。導線は既存の /pricing 1 つ。権限・価格・実績表示は不変。
+- **検証**: `contractState.test.mjs`（`test:billing`）・`npm run build` green。評価期間 2026-10-21 〜 2026-11-17。
+
 ### 2026-10-20 無料登録の確認メール送信後の案内（正本: `docs/measurements/SIGNUP_COMPLETION_2026_10.md`）
 
 - **問題**: 顧客 186 件中 34 件が pending（10 月登録の約 4 割）。送信後は 1 行の完了表示だけで、送信先・迷惑メール・期限・再送の手段が無かった。
