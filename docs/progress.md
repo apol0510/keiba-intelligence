@@ -14,6 +14,14 @@
   `/mypage` のお支払い欄に「ご契約期間はYYYY年M月D日に終了しました。」。導線は既存の /pricing 1 つ。権限・価格・実績表示は不変。
 - **検証**: `contractState.test.mjs`（`test:billing`）・`npm run build` green。評価期間 2026-10-21 〜 2026-11-17。
 
+### 2026-10-20 無料登録の確認メール送信後の案内（正本: `docs/measurements/SIGNUP_COMPLETION_2026_10.md`）
+
+- **問題**: 顧客 186 件中 34 件が pending（10 月登録の約 4 割）。送信後は 1 行の完了表示だけで、送信先・迷惑メール・期限・再送の手段が無かった。
+- **実装**: `/register` 送信後に案内パネル（伏せた送信先・件名・迷惑メール・期限 15 分・`/login` と同じメールアプリ内ブラウザの注意・本人が押す再送〔既存 send-magic-link・60 秒の待ち〕）。
+  確認リンクに固定の `&src=signup`、GA4 `ki_login_verify_result.source`（signup|login）・`ki_signup_resend_result` を追加（PII なし）。
+  価格・会員権利・有効期限・実績表示は不変（frozen guard green）。新しいメールの種類・自動送信なし。
+- **検証**: `signupGuidance.test.mjs`・`returnTo.handlers.test.mjs`（実ハンドラ）・`npm run build` green。評価期間 2026-10-21 〜 2026-11-17。
+
 ### 2026-10-19 ログイン後に元のページへ戻す（正本: `docs/measurements/LOGIN_RETURN_TO_2026_10.md`・registry e52a3c07）
 
 - **問題**: ログイン後は常に `/mypage`。セッション切れの有料会員が `/prediction/*` からログインしても予想ページへ戻れなかった。
