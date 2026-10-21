@@ -11,6 +11,8 @@
  *   - metadata に `ki_plan` と `ki_email` を入れ、webhook 側で tier を復元する
  *   - `ki_entry`（new|free|pending|lapsed|withdrawn の固定値・計測専用）は分類できたときだけ足す
  *   - Stripe のエラー内容を呼び出し元へ返さない
+ *   - 🔴 同じ email に有効な Stripe 契約（active / trialing / past_due）があれば **409**（二重契約・二重課金の防止）。
+ *     確認できないときは作らない（502・fail-closed）。支払いの確認・カード変更はお支払い管理（stripe-portal）へ
  */
 
 import Stripe from 'stripe';
@@ -38,6 +40,19 @@ const ALLOWED_ORIGINS = [
  */
 function siteBase(event) {
   return resolveSiteOrigin(event.headers);
+}
+
+/** 二重契約とみなす Stripe の subscription 状態（past_due は再試行中＝まだ請求が続く）。 */
+const LIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due']);
+
+/** 同じ email の Stripe 顧客に有効な契約があるか（読み取りのみ）。 */
+export async function hasLiveSubscription(stripe, email) {
+  const customers = await stripe.customers.list({ email, limit: 10 });
+  for (const c of customers?.data || []) {
+    const subs = await stripe.subscriptions.list({ customer: c.id, status: 'all', limit: 20 });
+    if ((subs?.data || []).some((sub) => LIVE_SUBSCRIPTION_STATUSES.has(sub.status))) return true;
+  }
+  return false;
 }
 
 export async function handler(event) {
@@ -91,6 +106,16 @@ export async function handler(event) {
 
   const base = siteBase(event);
   const stripe = new Stripe(process.env[STRIPE_ENV.SECRET_KEY]);
+
+  // ── 二重契約の防止 ──
+  try {
+    if (await hasLiveSubscription(stripe, ent.email)) {
+      return { statusCode: 409, headers, body: JSON.stringify({ error: 'already_subscribed' }) };
+    }
+  } catch {
+    console.error('❌ stripe checkout: existing subscription check failed');
+    return { statusCode: 502, headers, body: JSON.stringify({ error: 'checkout_unavailable' }) };
+  }
 
   // ── 申込元の分類（計測専用・docs/measurements/CHECKOUT_ATTRIBUTION_2026_10.md） ──
   // 🔴 セッションの email で顧客レコードを読む（読み取りのみ）。値は固定の列挙値だけ。
