@@ -7,6 +7,14 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-10-21 🔴 再契約しても有料にならない不具合の修正（Stripe webhook）
+
+- **問題**: 契約終了した元会員（過去の ExpirationDate / 有効期限が残る・期限切れ 7 件が該当）が Stripe で再契約すると、webhook は PlanType・Status・AccessEnabled だけを書き、
+  過去の期限が残るため `customerSessionTier` が expired → free にしていた。決済は成功するのに有料にならない（#172 のマイページ導線「プランを見る」→ 決済の先で発生）。
+- **実装**: `checkout.session.completed` と `customer.subscription.updated(active/trialing)` のときだけ、**過去の**期限を null にする。未来の期限（買い切り 2099-12-31）・値の無い列・
+  payment_failed・解約は触らない。価格・会員権利・実績表示は不変。
+- **検証**: `stripeWebhook.test.mjs` に 7 件（修正前のコードで 4 件 fail を確認）・`npm run build` green。計測: Stripe `ki_entry=lapsed` の決済後に有料セッションが出ること。
+
 ### 2026-10-20 Checkout の申込元を metadata `ki_entry` で分類（正本: `docs/measurements/CHECKOUT_ATTRIBUTION_2026_10.md`）
 
 - **問題**: 購入が新規・無料会員・元会員（期限切れ / 退会）のどこから来たかを Stripe 側で集計できなかった（GA4 は読めない）。

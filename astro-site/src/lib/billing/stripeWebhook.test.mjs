@@ -26,6 +26,7 @@ import { TIER, planTypeToTier, applyExpiry } from '../auth/tiers.js';
 import { signSession, SESSION_COOKIE_NAME } from '../auth/session.js';
 import { resolveEntitlement, viewFlags, applyRevocation, paidPageRedirect } from '../auth/entitlement.js';
 import { revocationKey, updateRevocation } from '../auth/revocation.js';
+import { customerSessionTier } from '../auth/paidEntitlement.js';
 
 /* ------------------------------------------------------------------
    テスト用の env（🔴 本番の値は一切使わない）
@@ -555,6 +556,43 @@ test('E2E: subscription.updated(active / trialing) で付与、その他の状�
     assert.equal(res.statusCode, 200);
     assert.equal(updatesFor(ALICE).length, 0, `${st} で書き込みが起きた`);
   }
+});
+
+/* ------------------------------------------------------------------
+   🔴 再契約: 契約が終わった元会員（過去の有効期限が残っている）が Stripe で払ったら有料になる
+   ------------------------------------------------------------------ */
+const lapse = (fields) => Object.assign(db.rows.find((r) => r.fields.Email === ALICE).fields,
+  { PlanType: 'free-registered', Status: 'inactive', AccessEnabled: false, ...fields });
+const tierNow = () => customerSessionTier(db.rows.find((r) => r.fields.Email === ALICE).fields, Date.now());
+
+for (const [label, evt] of [['checkout.session.completed', () => checkoutCompleted(ALICE)], ['subscription.updated(active)', () => subUpdated(ALICE, 'active')]]) {
+  for (const key of ['ExpirationDate', '有効期限']) {
+    test(`🔴 再契約（${label}・過去の ${key}）: 期限を外して有料になる`, async () => {
+      lapse({ [key]: '2026-08-31' });
+      assert.equal(tierNow(), TIER.FREE);
+      const res = await post(evt());
+      assert.equal(res.statusCode, 200);
+      const last = updatesFor(ALICE).at(-1).fields;
+      assert.equal(last[key], null, '🔴 過去の有効期限が残っている');
+      assert.equal(tierNow(), TIER.PREMIUM, '🔴 払ったのに有料にならない');
+    });
+  }
+  test(`🔴 ${label}: 未来の有効期限（買い切り 2099-12-31）と期限の無い会員は触らない`, async () => {
+    lapse({ ExpirationDate: '2099-12-31' });
+    await post(evt());
+    assert.equal('ExpirationDate' in updatesFor(ALICE).at(-1).fields, false, '🔴 未来の有効期限を書き換えている');
+    assert.equal(db.rows.find((r) => r.fields.Email === ALICE).fields.ExpirationDate, '2099-12-31');
+    db.reset();
+    await post(evt());
+    assert.deepEqual(Object.keys(updatesFor(ALICE).at(-1).fields).sort(), ['AccessEnabled', 'PlanType', 'Status']);
+  });
+}
+
+test('🔴 payment_failed・解約では有効期限を触らない', async () => {
+  lapse({ PlanType: 'premium', Status: 'active', AccessEnabled: true, ExpirationDate: '2026-08-31' });
+  await post(paymentFailed(ALICE));
+  await post(subUpdated(ALICE, 'canceled'));
+  for (const u of updatesFor(ALICE)) assert.equal('ExpirationDate' in u.fields, false);
 });
 
 test('E2E: payment_failed は Status だけ変え、アクセスを即時停止しない', async () => {
