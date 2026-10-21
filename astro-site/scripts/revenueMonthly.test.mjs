@@ -86,3 +86,29 @@ test('取得失敗は 0 円として書かない', async () => {
   await assert.rejects(buildRevenueMonth({ month: '2026-09', key: 'k', fetchImpl: async () => ({ ok: false, status: 401 }) }), RevenueError);
   await assert.rejects(buildRevenueMonth({ month: '2026-09', key: undefined }), /STRIPE_SECRET_KEY/);
 });
+
+test('当月は速報値（partial）で、達成・連続月数に数えない・未来の月は拒否', async () => {
+  const big = { data: [{ id: 'ch_1', status: 'succeeded', paid: true, currency: 'jpy', amount_captured: 1200000 }], has_more: false };
+  const s = fakeStripe({ charges: { first: big }, refunds: { first: { data: [], has_more: false } } });
+  const nowMs = Date.parse('2026-10-21T00:19:11Z');
+  const doc = await buildRevenueMonth({ month: '2026-10', key: 'k', fetchImpl: s.fetchImpl, previous: new Map([['2026-09', 1000000]]), nowMs });
+  assert.equal(doc.partial, true);
+  assert.equal(doc.period_end, '2026-10-21');
+  assert.equal(doc.achieved, false);
+  assert.equal(doc.sustained_months, 0);
+  assert.match(doc.data_quality[0], /^月途中の速報値（2026-10-21 まで）/);
+  assert.ok(s.calls[0].url.includes(`created%5Blt%5D=${Math.floor(nowMs / 1000)}`));
+  const full = await buildRevenueMonth({ month: '2026-09', key: 'k', fetchImpl: fakeStripe({ charges: { first: big }, refunds: { first: { data: [], has_more: false } } }).fetchImpl, nowMs });
+  assert.equal(full.partial, undefined);
+  assert.equal(full.period_end, undefined);
+  await assert.rejects(buildRevenueMonth({ month: '2026-11', key: 'k', fetchImpl: s.fetchImpl, nowMs }), /future/);
+});
+
+test('速報値の measurement は連続月数に数えない', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ki-rev-partial-'));
+  writeFileSync(join(dir, 'revenue-2026-09-01.json'), JSON.stringify({ schema: 'kao.revenue-month/v1', month: '2026-09', net_jpy: 1200000 }));
+  writeFileSync(join(dir, 'revenue-2026-10-01.json'), JSON.stringify({ schema: 'kao.revenue-month/v1', month: '2026-10', net_jpy: 1200000, partial: true }));
+  const prev = readPrevious(dir);
+  assert.equal(prev.get('2026-09'), 1200000);
+  assert.equal(prev.has('2026-10'), false);
+});

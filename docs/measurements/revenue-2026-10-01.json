@@ -17,7 +17,10 @@
   "achieved": false,
   "sustained_months": 0,
   "data_quality": [
+    "月途中の速報値（2026-10-21 まで）— 月末の確定値ではない",
     "年払いの銀行振込は入金日時の記録が無いため未計上（Stripe のみ）"
   ],
-  "next_tasks": []
+  "next_tasks": [],
+  "partial": true,
+  "period_end": "2026-10-21"
 }

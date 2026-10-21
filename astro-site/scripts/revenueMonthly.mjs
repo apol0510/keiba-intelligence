@@ -42,6 +42,8 @@ export function monthRangeJst(month) {
   return { gte: Math.floor(start / 1000), lt: Math.floor(end / 1000) };
 }
 
+const periodEndJst = (nowMs) => new Date(nowMs + JST_OFFSET_MS).toISOString().slice(0, 10);
+
 /** JST の前月（'YYYY-MM'）。 */
 export function previousMonthJst(nowMs = Date.now()) {
   const d = new Date(nowMs + JST_OFFSET_MS);
@@ -110,7 +112,8 @@ export function readPrevious(dir) {
     if (!/^revenue-20\d{2}-\d{2}-01\.json$/.test(name)) continue;
     try {
       const doc = JSON.parse(readFileSync(join(dir, name), 'utf8'));
-      if (doc.schema === SCHEMA && typeof doc.month === 'string' && typeof doc.net_jpy === 'number') out.set(doc.month, doc.net_jpy);
+      // 速報値（月途中）は連続月数に数えない
+      if (doc.schema === SCHEMA && typeof doc.month === 'string' && typeof doc.net_jpy === 'number' && doc.partial !== true) out.set(doc.month, doc.net_jpy);
     } catch { /* 壊れた file は連続月数に数えない */ }
   }
   return out;
@@ -118,7 +121,11 @@ export function readPrevious(dir) {
 
 export async function buildRevenueMonth({ month, key, fetchImpl, previous = new Map(), nowMs = Date.now() }) {
   const range = monthRangeJst(month);
-  const params = { 'created[gte]': String(range.gte), 'created[lt]': String(range.lt) };
+  const nowSec = Math.floor(nowMs / 1000);
+  if (range.gte > nowSec) throw new RevenueError(`month is in the future: ${month}`);
+  // 当月は実行時点までの速報値（partial）。達成・連続月数に数えず、月末の定期実行が確定値で上書きする
+  const partial = nowSec < range.lt;
+  const params = { 'created[gte]': String(range.gte), 'created[lt]': String(partial ? nowSec : range.lt) };
   const charges = await listAll('charges', params, { key, fetchImpl });
   const refunds = await listAll('refunds', params, { key, fetchImpl });
   const s = summarize(charges, refunds);
@@ -133,17 +140,21 @@ export async function buildRevenueMonth({ month, key, fetchImpl, previous = new 
     refunds_jpy: s.refunded,
     net_jpy: s.net,
     by_channel: { stripe: { net_jpy: s.net, payments: s.payments } },
-    achieved: s.net >= TARGET_JPY,
-    sustained_months: sustainedMonths(month, s.net, previous),
-    data_quality: ['年払いの銀行振込は入金日時の記録が無いため未計上（Stripe のみ）'],
+    achieved: !partial && s.net >= TARGET_JPY,
+    sustained_months: partial ? 0 : sustainedMonths(month, s.net, previous),
+    data_quality: [
+      ...(partial ? [`月途中の速報値（${periodEndJst(nowMs)} まで）— 月末の確定値ではない`] : []),
+      '年払いの銀行振込は入金日時の記録が無いため未計上（Stripe のみ）',
+    ],
     next_tasks: [],
+    ...(partial ? { partial: true, period_end: periodEndJst(nowMs) } : {}),
   };
 }
 
 async function main(argv) {
   const arg = (name) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : undefined; };
   const month = arg('--month') ?? previousMonthJst();
-  const out = arg('--out');
+  const out = argv.includes('--dry-run') ? undefined : arg('--out');
   const doc = await buildRevenueMonth({
     month, key: process.env.STRIPE_SECRET_KEY,
     previous: out ? readPrevious(dirname(out)) : new Map(),
