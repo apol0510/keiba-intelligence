@@ -90,7 +90,7 @@ const showLogin = !view?.authenticated && !view?.preview;
 
   {nextStep && (
     <div class="tr-actions">
-      <a class="tr-cta" href={nextStep.href}>{nextStep.label}</a>
+      <a class="tr-cta" href={nextStep.href} data-ki-placement={`tier_ribbon_${nextStep.tone}`}>{nextStep.label}</a>
       {showLogin && <a class="tr-login" href={loginHref}>登録済みの方はログイン</a>}
     </div>
   )}
