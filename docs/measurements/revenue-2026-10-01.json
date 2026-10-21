@@ -1,0 +1,23 @@
+{
+  "schema": "kao.revenue-month/v1",
+  "repo": "keiba-intelligence",
+  "month": "2026-10",
+  "currency": "JPY",
+  "generatedAt": "2026-10-21T00:19:11.498Z",
+  "target_jpy": 1000000,
+  "gross_jpy": 7960,
+  "refunds_jpy": 0,
+  "net_jpy": 7960,
+  "by_channel": {
+    "stripe": {
+      "net_jpy": 7960,
+      "payments": 2
+    }
+  },
+  "achieved": false,
+  "sustained_months": 0,
+  "data_quality": [
+    "年払いの銀行振込は入金日時の記録が無いため未計上（Stripe のみ）"
+  ],
+  "next_tasks": []
+}
