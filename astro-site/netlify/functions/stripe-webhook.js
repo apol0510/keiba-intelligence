@@ -42,6 +42,7 @@ import { buildPaidPeriodEntry, PERIOD_MONTHS } from '../../src/lib/membership/re
 import { updateRevocation } from '../../src/lib/auth/revocation.js';
 import { CUSTOMER_FIELDS, toAirtableDate } from '../../src/lib/membership/airtableStore.js';
 import { escapeFormulaString } from '../../src/lib/airtable/formula.js';
+import { expiryState } from '../../src/lib/auth/paidEntitlement.js';
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -243,7 +244,10 @@ async function findCustomer(email) {
   return rows.length ? rows[0] : null;
 }
 
-async function applyPlan(email, { planType, status, accessEnabled }) {
+/** 有効期限の列（どちらの名前でも読まれる・paidEntitlement.customerSessionTier と同じ）。 */
+const EXPIRY_FIELDS = ['ExpirationDate', '有効期限'];
+
+async function applyPlan(email, { planType, status, accessEnabled, clearPastExpiry = false }) {
   const record = await findCustomer(email);
   if (!record) {
     console.warn('⚠️ stripe-webhook: customer record not found (skipped)');
@@ -253,6 +257,16 @@ async function applyPlan(email, { planType, status, accessEnabled }) {
   if (planType != null) fields.PlanType = planType;
   if (status != null) fields.Status = status;
   if (accessEnabled != null) fields.AccessEnabled = accessEnabled;
+  // 🔴 再契約（契約終了した元会員が Stripe で払った）では、過去の有効期限が残ると
+  //    customerSessionTier が expired → free にしてしまい、払ったのに有料にならない。
+  //    過去の日付だけを外す。未来の日付（買い切りの 2099-12-31 等）と値の無い列は触らない。
+  if (clearPastExpiry) {
+    const nowMs = Date.now();
+    for (const key of EXPIRY_FIELDS) {
+      const raw = record.fields?.[key];
+      if (raw != null && raw !== '' && expiryState(raw, nowMs) === 'expired') fields[key] = null;
+    }
+  }
 
   if (!Object.keys(fields).length) return false;
   await customersTable().update([{ id: record.id, fields }]);
@@ -774,6 +788,7 @@ export async function handler(event) {
           planType: plan.id,
           status: 'active',
           accessEnabled: true,
+          clearPastExpiry: true,
         });
         console.log('✅ stripe-webhook: plan granted:', plan.id);
         // 🔴 新規契約側は失敗しても止めない（決済の付与を巻き込まない）。
@@ -810,6 +825,7 @@ export async function handler(event) {
             planType: plan.id,
             status: 'active',
             accessEnabled: true,
+            clearPastExpiry: true,
           });
           console.log('✅ stripe-webhook: subscription active:', plan.id);
           track(await recordCancellation(email, null)); // 再開したので解約日を消す
