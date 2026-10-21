@@ -17,6 +17,7 @@
 
 import { test, mock, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { TIER } from '../auth/tiers.js';
 import { signSession, SESSION_COOKIE_NAME } from '../auth/session.js';
@@ -28,10 +29,10 @@ const ALICE = 'alice@example.com';
 const NOW = Date.parse('2026-09-01T00:00:00Z');
 
 /** Stripe へ渡された内容を記録する。 */
-const calls = { checkout: [], customers: [], portal: [], portalConfigs: [] };
+const calls = { checkout: [], customers: [], subscriptions: [], portal: [], portalConfigs: [] };
 /** Stripe 側に存在するポータル構成（テストごとに差し替える）。 */
 const portalState = { configs: [] };
-const behavior = { checkoutUrl: 'https://checkout.stripe.test/s/1', customers: [], portalUrl: 'https://portal.stripe.test/p/1', throwOn: null };
+const behavior = { checkoutUrl: 'https://checkout.stripe.test/s/1', customers: [], subscriptions: {}, portalUrl: 'https://portal.stripe.test/p/1', throwOn: null };
 
 before(() => {
   process.env.SESSION_SIGNING_SECRET = SESSION_SECRET;
@@ -53,6 +54,13 @@ before(() => {
           calls.customers.push(params);
           if (behavior.throwOn === 'customers') throw new Error('stripe exploded');
           return { data: behavior.customers };
+        },
+      };
+      subscriptions = {
+        list: async (params) => {
+          calls.subscriptions.push(params);
+          if (behavior.throwOn === 'subscriptions') throw new Error('stripe exploded');
+          return { data: behavior.subscriptions[params.customer] || [] };
         },
       };
       billingPortal = {
@@ -95,10 +103,11 @@ before(() => {
 const PORTAL_RETURN_URL_FIXTURE = 'https://portal-return.invalid/mypage';
 
 beforeEach(() => {
-  calls.checkout = []; calls.customers = []; calls.portal = []; calls.portalConfigs = [];
+  calls.checkout = []; calls.customers = []; calls.subscriptions = []; calls.portal = []; calls.portalConfigs = [];
   portalState.configs = [];
   behavior.checkoutUrl = 'https://checkout.stripe.test/s/1';
   behavior.customers = [];
+  behavior.subscriptions = {};
   behavior.portalUrl = 'https://portal.stripe.test/p/1';
   behavior.throwOn = null;
   process.env['STRIPE_SECRET_KEY'] = SECRET_KEY;
@@ -442,4 +451,45 @@ test('🔴 秘密鍵未設定は 503 / Stripe 例外は 502（内容を返さな
   const res = await portal({ cookie: cookieFor(ALICE, TIER.PREMIUM) });
   assert.equal(res.statusCode, 502);
   assert.ok(!/exploded|Error:/i.test(res.body));
+});
+
+/* ------------------------------------------------------------------
+   🔴 二重契約・二重課金の防止
+   ------------------------------------------------------------------ */
+for (const status of ['active', 'trialing', 'past_due']) {
+  test(`🔴 同じ email に ${status} の契約があれば 409・Checkout を作らない`, async () => {
+    behavior.customers = [{ id: 'cus_old' }, { id: 'cus_a' }];
+    behavior.subscriptions = { cus_a: [{ id: 'sub_1', status }] };
+    const res = await checkout({ cookie: cookieFor(ALICE, TIER.PREMIUM) });
+    assert.equal(res.statusCode, 409);
+    assert.equal(JSON.parse(res.body).error, 'already_subscribed');
+    assert.equal(calls.checkout.length, 0, '🔴 2 本目の Checkout を作っている');
+    assert.equal(calls.customers[0].email, ALICE);
+  });
+}
+
+test('終了した契約（canceled / unpaid / incomplete_expired）だけなら再契約できる', async () => {
+  behavior.customers = [{ id: 'cus_a' }];
+  behavior.subscriptions = { cus_a: [{ status: 'canceled' }, { status: 'unpaid' }, { status: 'incomplete_expired' }] };
+  const res = await checkout({ cookie: cookieFor(ALICE) });
+  assert.equal(res.statusCode, 200);
+  assert.equal(calls.checkout.length, 1);
+});
+
+for (const where of ['customers', 'subscriptions']) {
+  test(`🔴 既存契約を確認できない（${where} の失敗）ときは作らない（502・fail-closed）`, async () => {
+    behavior.customers = [{ id: 'cus_a' }];
+    behavior.throwOn = where;
+    const res = await checkout({ cookie: cookieFor(ALICE) });
+    assert.equal(res.statusCode, 502);
+    assert.equal(JSON.parse(res.body).error, 'checkout_unavailable');
+    assert.ok(!res.body.includes('exploded'));
+    assert.equal(calls.checkout.length, 0);
+  });
+}
+
+test('料金ページは 409 already_subscribed で申込を作らず、お支払い管理を案内する', () => {
+  const src = readFileSync(new URL('../../pages/pricing.astro', import.meta.url), 'utf8');
+  assert.match(src, /res\.status === 409 && data\.error === 'already_subscribed'/);
+  assert.match(src, /すでにご契約中です/);
 });

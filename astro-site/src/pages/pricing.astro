@@ -336,6 +336,17 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       }
 
       const data = await res.json().catch(() => ({}));
+      if (res.status === 409 && data.error === 'already_subscribed') {
+        // 🔴 二重契約の防止。新しい申込は作らず、お支払い管理へ案内する
+        trackFunnel(FUNNEL_EVENTS.CHECKOUT_ERROR, { plan: planId });
+        if (msg) {
+          msg.hidden = false;
+          msg.textContent = 'すでにご契約中です。お支払いの確認・カードの変更はマイページの「お支払い管理」から行えます。';
+        }
+        button.disabled = false;
+        button.textContent = original;
+        return;
+      }
       if (res.ok && data.url) {
         trackFunnel(FUNNEL_EVENTS.CHECKOUT_REDIRECT, { plan: planId });
         window.location.href = data.url;

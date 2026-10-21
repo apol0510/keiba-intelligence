@@ -15,6 +15,14 @@
   payment_failed・解約は触らない。価格・会員権利・実績表示は不変。
 - **検証**: `stripeWebhook.test.mjs` に 7 件（修正前のコードで 4 件 fail を確認）・`npm run build` green。計測: Stripe `ki_entry=lapsed` の決済後に有料セッションが出ること。
 
+### 2026-10-21 🔴 二重契約・二重課金の防止（Checkout 作成前の確認）
+
+- **問題**: 料金ページの「このプランを申し込む」は契約中の会員にも出て、`stripe-create-checkout` は既存の Stripe 契約を確認していなかった。押すと 2 本目の subscription が作れた（二重課金）。
+- **実装**: Checkout 作成前に同じ email の Stripe 顧客の subscription を読み（読み取りのみ・`stripe-subscription.js` と同じ API）、active / trialing / past_due があれば 409 `already_subscribed`。
+  確認できなければ作らない（502・fail-closed）。料金ページは 409 で「すでにご契約中です。…マイページの『お支払い管理』から」を表示。終了した契約（canceled / unpaid / incomplete_expired）だけなら再契約できる。
+  価格・会員権利・実績表示は不変。
+- **検証**: `stripeCheckout.test.mjs` に 7 件・`npm run build` green。計測: 409 の件数（`ki_checkout_error`）。
+
 ### 2026-10-20 Checkout の申込元を metadata `ki_entry` で分類（正本: `docs/measurements/CHECKOUT_ATTRIBUTION_2026_10.md`）
 
 - **問題**: 購入が新規・無料会員・元会員（期限切れ / 退会）のどこから来たかを Stripe 側で集計できなかった（GA4 は読めない）。
