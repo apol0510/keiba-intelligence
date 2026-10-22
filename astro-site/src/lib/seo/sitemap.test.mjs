@@ -43,6 +43,7 @@ describe('URL の選定', () => {
       }
     }
     assert.ok(!STATIC_PATHS.includes('/login'));
+    assert.ok(!STATIC_PATHS.includes('/lab/shutsuba'), 'noindex のページを載せない');
   });
 
   test('形式が不正なデータは URL にしない', () => {
@@ -96,6 +97,10 @@ describe('配信経路', () => {
     assert.match(src, /export const prerender = true;/);
     assert.match(src, /buildSitemapEntries\(/);
     assert.match(src, /renderSitemapXml\(/);
+  });
+
+  test('開催日別予想の JSON を SSR Function へ明示同梱する（sitemap の prerender 化で依存トレースが消えるため）', () => {
+    assert.match(read('astro.config.mjs'), /'\.\/src\/data\/predictions\/\*\*\/\*\.json',/);
   });
 
   test('@netlify/plugin-sitemap を使わない（dist の sitemap.xml が上書きされる）', () => {

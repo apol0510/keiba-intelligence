@@ -62,9 +62,10 @@
   #
   # SSR Function への同梱は次の2経路だけで足りることを実測で確認した。
   #   1. astro.config.mjs の adapter includeFiles
-  #      → horseHistories / horseStats / recentHorseHistories / entries
+  #      → horseHistories / horseStats / recentHorseHistories / entries / predictions（2026-10-22 から明示）
   #   2. @astrojs/netlify の依存トレース（`join(process.cwd(), 'src','data', …)` の静的解析）
-  #      → predictions / featureScores / archiveResults*
+  #      → featureScores / archiveResults*
+  #   （predictions は以前 SSR の sitemap.xml.js 経由のトレースで偶然同梱されていた。sitemap の prerender 化に伴い明示した）
   # ここに全ディレクトリの glob を残すと、ビルド後の
   # `npm run prune:function-data`（scripts/pruneFunctionBundleData.mjs）で落とした過去日データを
   # deploy 時に repo から再同梱してしまい、Lambda のサイズ上限超過（deploy 400）が再発しうる。

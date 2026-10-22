@@ -8,7 +8,7 @@
  *    開催日別の無料予想・月別アーカイブ）が 1 件も載らず、Google サイト確認ファイルや /login が載っていた。
  *    ここで「検索から来てほしい公開ページ」だけを、正規 URL（末尾スラッシュなし・canonical と同じ形）で列挙する。
  *
- * 🔴 載せないもの: /login・/mypage・/auth/*・/admin/*・/apply・/unsubscribe・Google 確認ファイル・
+ * 🔴 載せないもの: /lab/*（noindex のデモ）・/login・/mypage・/auth/*・/admin/*・/apply・/unsubscribe・Google 確認ファイル・
  *    /prediction/*（未ログインは /free-prediction/* へ 302）・/free-prediction/jra/detail/*（最新開催日だけの一時ページ）。
  * 🔴 実績の数値・表示には触れない（URL を列挙するだけ）。
  */
@@ -31,7 +31,6 @@ export const STATIC_PATHS = Object.freeze([
   '/stats',
   '/about',
   '/faq',
-  '/lab/shutsuba',
   '/terms',
   '/privacy',
   '/tokushoho',
@@ -49,6 +48,7 @@ export const NANKAN_VENUE_SLUGS = Object.freeze(['ooi', 'kawasaki', 'funabashi',
 /** URL に出さない（sitemap に載せてはいけない）パスの接頭辞。test で固定する。 */
 export const EXCLUDED_PREFIXES = Object.freeze([
   '/login', '/mypage', '/auth', '/admin', '/apply', '/unsubscribe', '/google', '/prediction', '/free-prediction/jra/detail',
+  '/lab', // /lab/shutsuba は noindex のデモ
 ]);
 
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
