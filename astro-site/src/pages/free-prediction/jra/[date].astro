@@ -4,6 +4,9 @@
  *
  * 正本: docs/RENEWAL_2026_08.md
  * 🔴 2026-08-28 全面改修。理由と方針は free-prediction/nankan/[slug].astro と同じ。
+ *
+ * 🔴 2026-10-22（docs/measurements/TRAFFIC_GROWTH_2026_10.md §2.1）: タイトルの「 - KEIBA Intelligence」は
+ *   BaseLayout が「 | KEIBA Intelligence」を付けるため二重になっていたので外す。データの無い日付は 404。
  */
 
 import BaseLayout from '../../../layouts/BaseLayout.astro';
@@ -21,10 +24,14 @@ const entitlement = await checkedEntitlementFromAstro(Astro);
 const view = freePageViewFlags(entitlement);
 const day = loadJraRaceDayByDate(date, process.cwd());
 
+// 🔴 データが無い日付は 404（以前は 200 の空ページ＝soft 404 で、任意の日付 URL が索引対象になり得た）。
+//    画面の案内（「予想データが見つかりません」と最新予想への戻りリンク）は従来どおり出す。
+if (!day.date) Astro.response.status = 404;
+
 const venueNames = day.venues.map((v) => v.venueName).join('・');
 const title = day.date
-  ? `${venueNames} ${day.date} の中央競馬予想 - KEIBA Intelligence`
-  : '中央競馬予想 - KEIBA Intelligence';
+  ? `${venueNames} ${day.date} の中央競馬予想`
+  : '中央競馬予想';
 const description = `${venueNames || '中央競馬'}${day.date || ''}の全レース馬柱・過去走・AI短評・展開予想を無料公開。`;
 ---
 

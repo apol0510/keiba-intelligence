@@ -25,6 +25,11 @@ export default defineConfig({
       './src/data/recentHorseHistories/**/*.json',
       './src/data/entries/**/*.json',
       './src/data/horseStats/**/*.json',
+      // 🔴 2026-10-22: 開催日別の無料 / 有料予想（/free-prediction/jra/[date]・/free-prediction/nankan/[slug]・/prediction/[slug]）が
+      //    実行時に読む予想 JSON。以前は SSR の sitemap.xml.js が `join(process.cwd(),'src','data','predictions')` を持っていたため
+      //    依存トレースで偶然同梱されていた。sitemap を prerender にすると同梱されず、開催日別ページが全て 404 になった
+      //    （Deploy Preview #179 で実測）。明示して偶然に頼らない。prune では predictions は全期間保持（従来と同じ量）。
+      './src/data/predictions/**/*.json',
     ],
   }),
 

@@ -62,17 +62,20 @@
   #
   # SSR Function への同梱は次の2経路だけで足りることを実測で確認した。
   #   1. astro.config.mjs の adapter includeFiles
-  #      → horseHistories / horseStats / recentHorseHistories / entries
+  #      → horseHistories / horseStats / recentHorseHistories / entries / predictions（2026-10-22 から明示）
   #   2. @astrojs/netlify の依存トレース（`join(process.cwd(), 'src','data', …)` の静的解析）
-  #      → predictions / featureScores / archiveResults*
+  #      → featureScores / archiveResults*
+  #   （predictions は以前 SSR の sitemap.xml.js 経由のトレースで偶然同梱されていた。sitemap の prerender 化に伴い明示した）
   # ここに全ディレクトリの glob を残すと、ビルド後の
   # `npm run prune:function-data`（scripts/pruneFunctionBundleData.mjs）で落とした過去日データを
   # deploy 時に repo から再同梱してしまい、Lambda のサイズ上限超過（deploy 400）が再発しうる。
   # 同梱範囲を変えたい場合は prune スクリプトの DATASETS で一元管理すること。
 
 # プラグイン
-[[plugins]]
-  package = "@netlify/plugin-sitemap"
+# 🔴 2026-10-22 `@netlify/plugin-sitemap` を外した（docs/measurements/TRAFFIC_GROWTH_2026_10.md §2.1）。
+#    plugin は dist の静的 HTML だけから sitemap.xml を作り、SSR の主要ページ（/free-prediction/jra・
+#    /free-prediction/nankan・/pricing・/register・開催日別の無料予想・月別アーカイブ）が載らず、
+#    Google 確認ファイルや /login が載っていた。sitemap は src/pages/sitemap.xml.js（prerender）が唯一の生成元。
 
 # コンテキスト別設定
 [context.production]
@@ -109,15 +112,16 @@
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 # --- archive: /archive-jra/* → /archive/jra/:splat ---
+# 裸の URL を先に評価する（後ろに置くと "/archive-jra/*" の空 splat が先に一致し、スラッシュ付きへ転送されていた・2026-10-22）
 [[redirects]]
-  from = "/archive-jra/*"
-  to = "/archive/jra/:splat"
+  from = "/archive-jra"
+  to = "/archive/jra"
   status = 301
   force = true
 
 [[redirects]]
-  from = "/archive-jra"
-  to = "/archive/jra/"
+  from = "/archive-jra/*"
+  to = "/archive/jra/:splat"
   status = 301
   force = true
 
@@ -141,15 +145,16 @@
   force = true
 
 # --- free-prediction 中央: /free-prediction-jra/* → /free-prediction/jra/:splat ---
+# 裸の URL を先に評価する（後ろに置くと "/free-prediction-jra/*" の空 splat が先に一致し、スラッシュ付きへ転送されていた・2026-10-22）
 [[redirects]]
-  from = "/free-prediction-jra/*"
-  to = "/free-prediction/jra/:splat"
+  from = "/free-prediction-jra"
+  to = "/free-prediction/jra"
   status = 301
   force = true
 
 [[redirects]]
-  from = "/free-prediction-jra"
-  to = "/free-prediction/jra/"
+  from = "/free-prediction-jra/*"
+  to = "/free-prediction/jra/:splat"
   status = 301
   force = true
 
@@ -181,4 +186,110 @@
   from = "/prediction"
   to = "/prediction/nankan"
   status = 301
+  force = true
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 静的生成ページを末尾スラッシュなしの URL で直接 200 にする（2026-10-22・TRAFFIC_GROWTH_2026_10.md §2.1）
+#
+# astro.config.mjs は trailingSlash: 'never' で、canonical・sitemap・内部リンクはすべて「/about」形式。
+# しかし prerender のページは dist/about/index.html として出力され、Netlify は「/about」を
+# 「/about/」へ 301 していた（canonical が転送される URL を指し、内部リンクのたびに 1 往復増える）。
+# ここで「/about」を同じ index.html へ内部 rewrite（200）する。末尾スラッシュ付きも同じ規則に一致して 200。
+# 🔴 ページの中身・canonical・認可は不変。rollback はこのブロックの削除だけ。
+# 🔴 prerender のページを増減したら src/lib/seo/sitemap.test.mjs の PRERENDERED_REWRITES と合わせる。
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[[redirects]]
+  from = "/about"
+  to = "/about/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/faq"
+  to = "/faq/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/terms"
+  to = "/terms/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/privacy"
+  to = "/privacy/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/tokushoho"
+  to = "/tokushoho/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/login"
+  to = "/login/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/free-prediction"
+  to = "/free-prediction/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/free-prediction/jra/archive"
+  to = "/free-prediction/jra/archive/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/free-prediction/nankan/archive"
+  to = "/free-prediction/nankan/archive/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/archive"
+  to = "/archive/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/archive/jra"
+  to = "/archive/jra/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/archive/nankan"
+  to = "/archive/nankan/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/lab/shutsuba"
+  to = "/lab/shutsuba/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/stats/:venue"
+  to = "/stats/:venue/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/results/:year/:month"
+  to = "/results/:year/:month/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/results/:year/:month/:day"
+  to = "/results/:year/:month/:day/index.html"
+  status = 200
   force = true
