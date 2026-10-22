@@ -97,6 +97,19 @@ robots.txt の Sitemap は 2026-10-19 に本番ドメインへ修正済み（`RO
 
 🔴 母数が小さい（登録は月 2 桁、決済は月 1 桁）。短期の増減で仕様を変えない。
 
-## 4. Deploy Preview での検証（PR A）
+## 4. Deploy Preview での検証（PR A・#179）
 
-（PR 作成後に記入）
+| 確認 | 結果 |
+|---|---|
+| `/sitemap.xml` | 200 `application/xml`。**608 URL**（本番は 335）。plugin 形式ではなく本 PR の生成物 |
+| sitemap の全 URL を GET | **608 / 608 が 200 かつ canonical = loc**（`/free-prediction/jra`・`/free-prediction/nankan`・`/pricing`・`/register`・開催日別 南関 207・JRA 76 を含む） |
+| 末尾スラッシュ | `/free-prediction`・`/archive/jra`・`/about`・`/login?next=…`・`/stats/ohi`・`/results/2026/10/20`・`/free-prediction/jra/archive` が 301 なしで 200。スラッシュ付きも 200 |
+| soft 404 | `/free-prediction/jra/2099-01-01`・`/free-prediction/nankan/2099-01-01-ooi`・`/stats/foo` が 404 |
+| 既存の転送 | `/prediction/jra` → 302 `/free-prediction/jra`（不変）、`/archive/2026/10` → 301 `/archive/nankan/2026/10`（不変） |
+
+🔴 **検証で見つけた隠れた依存（修正済み）**: 1 回目の Preview では開催日別の無料予想が**全て 404** になった。予想 JSON（`src/data/predictions`）は
+SSR の旧 `sitemap.xml.js` にあった `join(process.cwd(),'src','data','predictions')` の依存トレースで**偶然** SSR Function に同梱されていたため、
+sitemap を prerender にすると同梱されなくなった。`astro.config.mjs` の adapter `includeFiles` に明示（prune 後 283 件・117.9MB で main と同量）し、
+`sitemap.test.mjs` で固定した。2 回目の Preview build は Netlify 側で exit code 2（ログは API で取得できず、ローカル build は green）→ 同一 commit の retry で ready（一過性）。
+
+`/archive-jra`・`/free-prediction-jra` の裸 URL 規則は `/*` の splat 規則の後ろにあり一度も使われていなかった（空 splat が先に一致してスラッシュ付きへ転送）。順序を入れ替えた。

@@ -112,15 +112,16 @@
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 # --- archive: /archive-jra/* → /archive/jra/:splat ---
+# 裸の URL を先に評価する（後ろに置くと "/archive-jra/*" の空 splat が先に一致し、スラッシュ付きへ転送されていた・2026-10-22）
 [[redirects]]
-  from = "/archive-jra/*"
-  to = "/archive/jra/:splat"
+  from = "/archive-jra"
+  to = "/archive/jra"
   status = 301
   force = true
 
 [[redirects]]
-  from = "/archive-jra"
-  to = "/archive/jra"
+  from = "/archive-jra/*"
+  to = "/archive/jra/:splat"
   status = 301
   force = true
 
@@ -144,15 +145,16 @@
   force = true
 
 # --- free-prediction 中央: /free-prediction-jra/* → /free-prediction/jra/:splat ---
+# 裸の URL を先に評価する（後ろに置くと "/free-prediction-jra/*" の空 splat が先に一致し、スラッシュ付きへ転送されていた・2026-10-22）
 [[redirects]]
-  from = "/free-prediction-jra/*"
-  to = "/free-prediction/jra/:splat"
+  from = "/free-prediction-jra"
+  to = "/free-prediction/jra"
   status = 301
   force = true
 
 [[redirects]]
-  from = "/free-prediction-jra"
-  to = "/free-prediction/jra"
+  from = "/free-prediction-jra/*"
+  to = "/free-prediction/jra/:splat"
   status = 301
   force = true
 
