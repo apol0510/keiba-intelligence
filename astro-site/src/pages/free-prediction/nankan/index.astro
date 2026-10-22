@@ -7,11 +7,16 @@
  * 🔴 2026-08-28 全面改修:
  *   tier をサーバーで判定するようになったため、**free 用 URL と有料用 URL を分ける必要が無くなった**。
  *   既存の被リンク・ブックマークを壊さないため URL は残し、内容は `/prediction/nankan` と同じ
- *   `RaceDayBoard` を描画する。重複コンテンツを避けるため canonical は `/prediction/nankan` を指す。
+ *   `RaceDayBoard` を描画する。（canonical は 2026-10-22 から自分自身。下記）
  *
  *   （301 で寄せない理由: `netlify.toml` の 301 群は既存契約であり、
  *     予想ページの経路を新たに転送へ変えると挙動差分の影響範囲が読めないため。
  *     canonical で正規化するに留める。）
+ *
+ * 🔴 2026-10-22 canonical を自分自身へ（docs/measurements/TRAFFIC_GROWTH_2026_10.md §2.1）:
+ *   以前は canonical が `/prediction/*` を指していたが、未ログイン（＝検索エンジン）では `/prediction/*` が
+ *   この無料ページへ 302 で戻るため、canonical と転送が循環していた。無料ページを正規 URL にする。
+ *   タイトルの「 - KEIBA Intelligence」は BaseLayout が「 | KEIBA Intelligence」を付けるため二重になっていたので外す。
  */
 
 import BaseLayout from '../../../layouts/BaseLayout.astro';
@@ -29,12 +34,12 @@ const day = loadNankanRaceDay(process.cwd());
 
 const venueNames = day.venues.map((v) => v.venueName).join('・');
 const title = day.date
-  ? `${venueNames || '南関東'}の無料予想（${day.date}） - KEIBA Intelligence`
-  : '南関東競馬 無料予想 - KEIBA Intelligence';
+  ? `${venueNames || '南関東'}の無料予想（${day.date}）`
+  : '南関東競馬 無料予想';
 const description = '南関東4競馬場の全レース馬柱・過去走・AI短評・展開予想を登録不要で公開。印（◎○▲△）は無料会員、AI指数の数値と馬単買い目は有料プランです。';
 ---
 
-<BaseLayout title={title} description={description} canonicalPath="/prediction/nankan">
+<BaseLayout title={title} description={description}>
   <div class="container prediction-page">
     <TierRibbon view={view} />
     <RaceDayBoard day={day} view={view} category="nankan" />

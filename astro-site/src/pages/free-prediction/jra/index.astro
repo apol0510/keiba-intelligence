@@ -4,6 +4,11 @@
  *
  * 正本: docs/RENEWAL_2026_08.md
  * 🔴 2026-08-28 全面改修。理由と方針は free-prediction/nankan/index.astro と同じ。
+ *
+ * 🔴 2026-10-22 canonical を自分自身へ（docs/measurements/TRAFFIC_GROWTH_2026_10.md §2.1）:
+ *   以前は canonical が `/prediction/*` を指していたが、未ログイン（＝検索エンジン）では `/prediction/*` が
+ *   この無料ページへ 302 で戻るため、canonical と転送が循環していた。無料ページを正規 URL にする。
+ *   タイトルの「 - KEIBA Intelligence」は BaseLayout が「 | KEIBA Intelligence」を付けるため二重になっていたので外す。
  */
 
 import BaseLayout from '../../../layouts/BaseLayout.astro';
@@ -21,12 +26,12 @@ const day = loadJraRaceDay(process.cwd());
 
 const venueNames = day.venues.map((v) => v.venueName).join('・');
 const title = day.date
-  ? `${venueNames || '中央競馬'}の無料予想（${day.date}） - KEIBA Intelligence`
-  : '中央競馬 無料予想 - KEIBA Intelligence';
+  ? `${venueNames || '中央競馬'}の無料予想（${day.date}）`
+  : '中央競馬 無料予想';
 const description = '中央競馬（JRA）の全レース馬柱・過去走・AI短評・展開予想を登録不要で公開。印（◎○▲△）は無料会員、AI指数の数値と馬単買い目は有料プランです。';
 ---
 
-<BaseLayout title={title} description={description} canonicalPath="/prediction/jra">
+<BaseLayout title={title} description={description}>
   <div class="container prediction-page">
     <TierRibbon view={view} />
     <RaceDayBoard day={day} view={view} category="jra" />

@@ -1,164 +1,56 @@
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+/**
+ * /sitemap.xml — build 時に静的生成する（正本: docs/measurements/TRAFFIC_GROWTH_2026_10.md §2.1）
+ *
+ * 🔴 以前の本ファイルは `readdirSync` を import しておらず予想ページを 1 件も出せず、
+ *    しかも `@netlify/plugin-sitemap` が dist に書く sitemap.xml が優先されて一度も配信されていなかった。
+ *    plugin は netlify.toml から外し、ここを唯一の生成元にする。URL の選定は src/lib/seo/sitemap.js。
+ */
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { buildSitemapEntries, renderSitemapXml } from '../lib/seo/sitemap.js';
+
+export const prerender = true;
+
+function readJsonArray(path) {
+  try {
+    if (!existsSync(path)) return [];
+    const v = JSON.parse(readFileSync(path, 'utf-8'));
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+function listDir(path) {
+  try { return existsSync(path) ? readdirSync(path) : []; } catch { return []; }
+}
 
 export async function GET() {
-  const baseUrl = 'https://keiba-intelligence.jp';
+  const dataDir = join(process.cwd(), 'src', 'data');
+  const predDir = join(dataDir, 'predictions');
 
-  // 静的ページのURL
-  const staticPages = [
-    { url: '', priority: '1.0', changefreq: 'daily' },
-    { url: '/pricing', priority: '0.9', changefreq: 'weekly' },
-    { url: '/results', priority: '0.9', changefreq: 'daily' },
-    { url: '/free-prediction', priority: '0.8', changefreq: 'daily' },
-    { url: '/free-prediction/jra', priority: '0.8', changefreq: 'daily' },
-    { url: '/login', priority: '0.5', changefreq: 'monthly' },
-  ];
+  const nankanPredictionSlugs = listDir(predDir)
+    .filter((f) => /^\d{4}-\d{2}-\d{2}-[a-z]+\.json$/.test(f))
+    .map((f) => f.replace(/\.json$/, ''));
 
-  let dynamicPages = [];
-
-  try {
-    // archiveResults.jsonから動的URLを生成
-    const archivePath = join(process.cwd(), 'src', 'data', 'archiveResults.json');
-
-    if (existsSync(archivePath)) {
-      const fileContent = readFileSync(archivePath, 'utf-8');
-      const archiveData = JSON.parse(fileContent);
-
-      // 年・月・会場のセットを作成
-      const years = new Set();
-      const yearMonths = new Set();
-      const venues = new Set();
-      const dates = [];
-
-      archiveData.forEach(entry => {
-        const [year, month, day] = entry.date.split('-');
-
-        years.add(year);
-        yearMonths.add(`${year}/${month}`);
-        venues.add(entry.venue);
-        dates.push({ year, month, day, date: entry.date });
-      });
-
-      // 年別ページ
-      years.forEach(year => {
-        dynamicPages.push({
-          url: `/archive/${year}`,
-          priority: '0.8',
-          changefreq: 'weekly',
-        });
-      });
-
-      // 月別ページ
-      yearMonths.forEach(yearMonth => {
-        dynamicPages.push({
-          url: `/archive/${yearMonth}`,
-          priority: '0.8',
-          changefreq: 'daily',
-        });
-      });
-
-      // 日別ページ（最重要SEO）
-      dates.forEach(({ year, month, day, date }) => {
-        dynamicPages.push({
-          url: `/results/${year}/${month}/${day}`,
-          priority: '0.9',
-          changefreq: 'weekly',
-          lastmod: date,
-        });
-      });
-
-      // 会場別ページ
-      const venueMap = {
-        '船橋': 'funabashi',
-        '川崎': 'kawasaki',
-        '大井': 'ooi',
-        '浦和': 'urawa',
-      };
-
-      venues.forEach(venue => {
-        const venueSlug = venueMap[venue];
-        if (venueSlug) {
-          dynamicPages.push({
-            url: `/venues/${venueSlug}`,
-            priority: '0.8',
-            changefreq: 'daily',
-          });
-        }
-      });
-    }
-  } catch (error) {
-    console.error('Error generating dynamic sitemap URLs:', error);
-  }
-
-  // 予想アーカイブページ（南関）
-  try {
-    const predDir = join(process.cwd(), 'src', 'data', 'predictions');
-    if (existsSync(predDir)) {
-      const predFiles = readdirSync(predDir)
-        .filter(f => /^\d{4}-\d{2}-\d{2}-[a-z]+\.json$/.test(f));
-      predFiles.forEach(f => {
-        const slug = f.replace('.json', '');
-        const date = slug.substring(0, 10);
-        dynamicPages.push({
-          url: `/free-prediction/${slug}`,
-          priority: '0.7',
-          changefreq: 'never',
-          lastmod: date,
-        });
-      });
-      dynamicPages.push({ url: '/free-prediction/archive', priority: '0.7', changefreq: 'weekly' });
-    }
-  } catch (error) {
-    console.error('Error generating prediction sitemap URLs:', error);
-  }
-
-  // 予想アーカイブページ（JRA）
-  try {
-    const jraDir = join(process.cwd(), 'src', 'data', 'predictions', 'jra');
-    if (existsSync(jraDir)) {
-      const years = readdirSync(jraDir).filter(d => /^\d{4}$/.test(d));
-      for (const year of years) {
-        const yearDir = join(jraDir, year);
-        const months = readdirSync(yearDir).filter(d => /^\d{2}$/.test(d));
-        for (const month of months) {
-          const monthDir = join(yearDir, month);
-          readdirSync(monthDir)
-            .filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
-            .forEach(f => {
-              const date = f.replace('.json', '');
-              dynamicPages.push({
-                url: `/free-prediction/jra/${date}`,
-                priority: '0.7',
-                changefreq: 'never',
-                lastmod: date,
-              });
-            });
-        }
+  const jraPredictionDates = [];
+  const jraDir = join(predDir, 'jra');
+  for (const y of listDir(jraDir).filter((d) => /^\d{4}$/.test(d))) {
+    for (const m of listDir(join(jraDir, y)).filter((d) => /^\d{2}$/.test(d))) {
+      for (const f of listDir(join(jraDir, y, m))) {
+        if (/^\d{4}-\d{2}-\d{2}\.json$/.test(f)) jraPredictionDates.push(f.replace(/\.json$/, ''));
       }
-      dynamicPages.push({ url: '/free-prediction/jra/archive', priority: '0.7', changefreq: 'weekly' });
     }
-  } catch (error) {
-    console.error('Error generating JRA prediction sitemap URLs:', error);
   }
 
-  // 全URLを結合
-  const allPages = [...staticPages, ...dynamicPages];
+  const entries = buildSitemapEntries({
+    archiveNankan: readJsonArray(join(dataDir, 'archiveResults.json')),
+    archiveJra: readJsonArray(join(dataDir, 'archiveResultsJra.json')),
+    nankanPredictionSlugs,
+    jraPredictionDates,
+  });
 
-  // sitemap.xmlを生成
-  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${allPages.map(page => `  <url>
-    <loc>${baseUrl}${page.url}</loc>
-    <changefreq>${page.changefreq}</changefreq>
-    <priority>${page.priority}</priority>${page.lastmod ? `
-    <lastmod>${page.lastmod}</lastmod>` : ''}
-  </url>`).join('\n')}
-</urlset>`;
-
-  return new Response(sitemap, {
-    headers: {
-      'Content-Type': 'application/xml',
-      'Cache-Control': 'public, max-age=3600',
-    },
+  return new Response(renderSitemapXml(entries), {
+    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
   });
 }
