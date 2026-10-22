@@ -240,6 +240,9 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  /* 🔴 固定ヘッダー（.main-nav・sticky・74〜84px）の分だけページ内リンクの到達位置を下げる。
+     無いと /register#registerForm でラベルとメール欄がヘッダーの下に隠れる（TRAFFIC_GROWTH_2026_10.md §2.2）。 */
+  scroll-padding-top: 6rem;
 }
 
 body {

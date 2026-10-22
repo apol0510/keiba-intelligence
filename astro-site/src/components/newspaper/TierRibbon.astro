@@ -47,8 +47,16 @@ const items = paid
       { label: '馬単の買い目', open: false },
     ];
 
+/**
+ * 🔴 無料会員の導線はフォームへ直接つなぐ（2026-10-22・docs/measurements/TRAFFIC_GROWTH_2026_10.md §2.2）。
+ *    `/register` のメール欄は特典カードの下にあり、帯から来た直後はスマホで 2 画面以上スクロールしないと見えなかった。
+ *    帯で「何が開くか」を既に示しているので、登録ページではフォームから見せる（特典はスクロールで上に残る）。
+ *    固定ヘッダーで隠れないよう global.scss の `scroll-padding-top` と組で使う。文言・特典・価格は不変。
+ */
+const REGISTER_FORM_HREF = '/register#registerForm';
+
 const nextStep = !view?.showMarks
-  ? { href: '/register', label: '無料会員に登録して印を見る', tone: 'free' }
+  ? { href: REGISTER_FORM_HREF, label: '無料会員に登録して印を見る', tone: 'free' }
   : (!view?.showBetting ? { href: '/pricing', label: 'プランを見て買い目を受け取る', tone: 'paid' } : null);
 
 /**
