@@ -12,7 +12,7 @@
 - **問題**: 28 日 455 users（GA4 2026-09-23〜10-20）。本番監査で、無料予想ページの canonical が `/prediction/*`（未ログインは 302 で戻る）を指す循環、
   sitemap（`@netlify/plugin-sitemap`）に `/free-prediction/{jra,nankan}`・`/pricing`・`/register`・開催日別予想が無い、静的ページの末尾スラッシュ 301、
   存在しない開催日が 200（soft 404）、タイトル二重を確認。`/register` はフォームが帯から来た直後に画面外（スマホで 2 画面下）・`#registerForm` は固定ヘッダーが覆う。
-- **実装（PR A・SEO）**: canonical を自分自身に・sitemap を `src/lib/seo/sitemap.js` ＋ prerender の `sitemap.xml.js` に一本化（plugin 削除・335 → 609 URL）・
+- **実装（PR A・SEO）**: canonical を自分自身に・sitemap を `src/lib/seo/sitemap.js` ＋ prerender の `sitemap.xml.js` に一本化（plugin 削除・335 → 608 URL・Preview で全 URL 200 かつ canonical 一致）・予想 JSON を SSR Function へ明示同梱（旧 sitemap の依存トレースで偶然同梱されていた）・
   netlify.toml に prerender ページの rewrite（200）・データの無い日付は 404・タイトル修正。`test:seo` を build に組込み。
 - **実装（PR B・登録導線）**: `html { scroll-padding-top: 6rem }`、帯の無料会員導線を `/register#registerForm` に。文言・価格・特典は不変。
 - **不変**: 的中率・回収率・実績表示・価格・商品・会員権利。`trackRecordFreeze` の固定ファイルは未変更（guard green）。
