@@ -1,5 +1,417 @@
 [
   {
+    "date": "2026-10-28",
+    "venue": "大井",
+    "venues": [
+      "大井"
+    ],
+    "totalRaces": 12,
+    "hitRaces": 9,
+    "missRaces": 3,
+    "hitRate": 75,
+    "betAmount": 6000,
+    "betPointsPerRace": 5,
+    "totalBetPoints": 60,
+    "totalInvestment": 6000,
+    "totalPayout": 11940,
+    "returnRate": 199,
+    "recoveryRate": 199,
+    "races": [
+      {
+        "raceNumber": 1,
+        "raceName": "２歳",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 6,
+            "name": "ディオライズ"
+          },
+          "second": {
+            "number": 7,
+            "name": "イノセントワールド"
+          },
+          "third": {
+            "number": 11,
+            "name": "ソーラウィンド"
+          }
+        },
+        "bettingLines": [
+          "6-11.1.4.7.2.3(抑え5.8)",
+          "11-6.1.4.7.2.3(抑え5.8)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "6-11.1.4.7.2.3(抑え5.8)"
+        ],
+        "umatan": {
+          "combination": "6-7",
+          "payout": 2150
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 2,
+        "raceName": "２歳",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 6,
+            "name": "フレネミー"
+          },
+          "second": {
+            "number": 5,
+            "name": "ウズ"
+          },
+          "third": {
+            "number": 4,
+            "name": "トーケンリッキー"
+          }
+        },
+        "bettingLines": [
+          "6-5.4.7.3.2.1",
+          "5-6.4.7.3.2.1"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "6-5.4.7.3.2.1",
+          "5-6.4.7.3.2.1"
+        ],
+        "umatan": {
+          "combination": "6-5",
+          "payout": 320
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 3,
+        "raceName": "あだワンＣＭグランプリ賞",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 6,
+            "name": "ジョイグリーン"
+          },
+          "second": {
+            "number": 8,
+            "name": "ココミサイル"
+          },
+          "third": {
+            "number": 4,
+            "name": "ラジャブルック"
+          }
+        },
+        "bettingLines": [
+          "5-4.11.6.8.10.9(抑え7.1)",
+          "4-5.11.6.8.10.9(抑え7.1)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "6-8",
+          "payout": 9690
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 4,
+        "raceName": "みんなにかけ橋いたばし賞",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 12,
+            "name": "ノースブレス"
+          },
+          "second": {
+            "number": 7,
+            "name": "ムーンシェイド"
+          },
+          "third": {
+            "number": 6,
+            "name": "ベルベットオニキス"
+          }
+        },
+        "bettingLines": [
+          "12-8.7.9.5.1.2(抑え6.3.13)",
+          "8-12.7.9.5.1.2(抑え6.3.13)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "12-8.7.9.5.1.2(抑え6.3.13)"
+        ],
+        "umatan": {
+          "combination": "12-7",
+          "payout": 1890
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 5,
+        "raceName": "アニメで夢を！中野応援賞",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 10,
+            "name": "アップタウンガール"
+          },
+          "second": {
+            "number": 8,
+            "name": "ブルーキャット"
+          },
+          "third": {
+            "number": 7,
+            "name": "ナックジャスパー"
+          }
+        },
+        "bettingLines": [
+          "13-10.8.12.4.7.1(抑え3.14.6)",
+          "10-13.8.12.4.7.1(抑え3.14.6)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "10-13.8.12.4.7.1(抑え3.14.6)"
+        ],
+        "umatan": {
+          "combination": "10-8",
+          "payout": 2220
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 6,
+        "raceName": "都電とバラの街あらかわ賞",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 3,
+            "name": "リコーヘンメリー"
+          },
+          "second": {
+            "number": 11,
+            "name": "ナムラソラン"
+          },
+          "third": {
+            "number": 13,
+            "name": "ムービングアップ"
+          }
+        },
+        "bettingLines": [
+          "3-14.11.13.7.8.4(抑え1.10.5.6.2)",
+          "14-3.11.13.7.8.4(抑え1.10.5.6.2)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "3-14.11.13.7.8.4(抑え1.10.5.6.2)"
+        ],
+        "umatan": {
+          "combination": "3-11",
+          "payout": 1980
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 7,
+        "raceName": "マンガ・アニメ・トシマ賞",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 11,
+            "name": "ジャズスマイル"
+          },
+          "second": {
+            "number": 10,
+            "name": "エロース"
+          },
+          "third": {
+            "number": 6,
+            "name": "ワールドフォンテン"
+          }
+        },
+        "bettingLines": [
+          "6-9.10.2.8.11.13(抑え12.5.3.7.1)",
+          "9-6.10.2.8.11.13(抑え12.5.3.7.1)"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "11-10",
+          "payout": 7240
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 8,
+        "raceName": "ブラッディ・ブル賞",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 5,
+            "name": "リコーヒューズ"
+          },
+          "second": {
+            "number": 9,
+            "name": "ダイヤメ"
+          },
+          "third": {
+            "number": 10,
+            "name": "エスプリワールド"
+          }
+        },
+        "bettingLines": [
+          "5-4.10.7.11.9.6(抑え3.1.8.2)",
+          "4-5.10.7.11.9.6(抑え3.1.8.2)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "5-4.10.7.11.9.6(抑え3.1.8.2)"
+        ],
+        "umatan": {
+          "combination": "5-9",
+          "payout": 780
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 9,
+        "raceName": "金魚のふるさと江戸川区賞",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 7,
+            "name": "ピコピンク"
+          },
+          "second": {
+            "number": 8,
+            "name": "ペイシャケリー"
+          },
+          "third": {
+            "number": 1,
+            "name": "オレンジマン"
+          }
+        },
+        "bettingLines": [
+          "7-4.9.2.8.1.6(抑え5.10.3)",
+          "4-7.9.2.8.1.6(抑え5.10.3)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "7-4.9.2.8.1.6(抑え5.10.3)"
+        ],
+        "umatan": {
+          "combination": "7-8",
+          "payout": 580
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 10,
+        "raceName": "名光坂賞",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 2,
+            "name": "ミクニサンシャイン"
+          },
+          "second": {
+            "number": 8,
+            "name": "ブラックタロー"
+          },
+          "third": {
+            "number": 10,
+            "name": "サヨノホーチュラス"
+          }
+        },
+        "bettingLines": [
+          "2-11.10.8.1.4.3(抑え7.5)",
+          "11-2.10.8.1.4.3(抑え7.5)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "2-11.10.8.1.4.3(抑え7.5)"
+        ],
+        "umatan": {
+          "combination": "2-8",
+          "payout": 620
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 11,
+        "raceName": "マイルグランプリ ＳⅡ",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 3,
+            "name": "ソニックスター"
+          },
+          "second": {
+            "number": 7,
+            "name": "リコースパロー"
+          },
+          "third": {
+            "number": 13,
+            "name": "ナンセイホワイト"
+          }
+        },
+        "bettingLines": [
+          "7-3.9.5.13.1"
+        ],
+        "isHit": false,
+        "hitLines": [],
+        "umatan": {
+          "combination": "3-7",
+          "payout": 950
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      },
+      {
+        "raceNumber": 12,
+        "raceName": "霜降賞",
+        "venue": "大井",
+        "result": {
+          "first": {
+            "number": 13,
+            "name": "サンディエゴ"
+          },
+          "second": {
+            "number": 11,
+            "name": "ヴュルディヒ"
+          },
+          "third": {
+            "number": 3,
+            "name": "トクシーティグレ"
+          }
+        },
+        "bettingLines": [
+          "11-13.5.10.3.1.9(抑え4.8.7)",
+          "13-11.5.10.3.1.9(抑え4.8.7)"
+        ],
+        "isHit": true,
+        "hitLines": [
+          "11-13.5.10.3.1.9(抑え4.8.7)",
+          "13-11.5.10.3.1.9(抑え4.8.7)"
+        ],
+        "umatan": {
+          "combination": "13-11",
+          "payout": 1400
+        },
+        "betType": "馬単",
+        "betPoints": 5
+      }
+    ],
+    "verifiedAt": "2026-10-28T13:10:44.745Z"
+  },
+  {
     "date": "2026-10-27",
     "venue": "大井",
     "venues": [
