@@ -3,24 +3,21 @@
   "repo": "keiba-intelligence",
   "month": "2026-10",
   "currency": "JPY",
-  "generatedAt": "2026-10-21T00:19:11.498Z",
+  "generatedAt": "2026-11-01T06:28:38.711Z",
   "target_jpy": 1000000,
-  "gross_jpy": 7960,
+  "gross_jpy": 11940,
   "refunds_jpy": 0,
-  "net_jpy": 7960,
+  "net_jpy": 11940,
   "by_channel": {
     "stripe": {
-      "net_jpy": 7960,
-      "payments": 2
+      "net_jpy": 11940,
+      "payments": 3
     }
   },
   "achieved": false,
   "sustained_months": 0,
   "data_quality": [
-    "月途中の速報値（2026-10-21 まで）— 月末の確定値ではない",
     "年払いの銀行振込は入金日時の記録が無いため未計上（Stripe のみ）"
   ],
-  "next_tasks": [],
-  "partial": true,
-  "period_end": "2026-10-21"
+  "next_tasks": []
 }
