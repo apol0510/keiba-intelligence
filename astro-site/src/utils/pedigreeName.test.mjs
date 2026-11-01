@@ -80,9 +80,10 @@ test('実データ: dam は全件通り、damsire の列ずれだけが弾かれ
   assert.ok(damTotal > 0, '照合対象が 0 件');
   // 母は上流で壊れていない（壊れ始めたら検知したい）
   assert.equal(damRejected, 0, `母（dam）に妥当でない値が ${damRejected} 件ある`);
-  // 母の父は壊れているレコードがあり、それが弾かれていること
-  assert.ok(damsireRejected > 0, '母の父の列ずれが検出できていない（判定が緩い）');
-  assert.ok(damsireRejected < damsireTotal, '母の父が全件弾かれている（判定が厳しすぎる）');
+  // 母の父: 上流（KDSA PR #232・shared 76d0e6ae）で列ずれを修正し null に修復済み。
+  // 列ずれの検出自体は上の合成ケースで固定している。実データでは「妥当な名前が弾かれない」ことを見る。
+  assert.ok(damsireTotal > 0, '母の父の照合対象が 0 件');
+  assert.equal(damsireRejected, 0, `母の父に妥当でない値が ${damsireRejected} 件ある（上流の列ずれ再発 or 判定が厳しすぎる）`);
 });
 
 test('HorseDetailPanel が血統名の妥当性判定を通している', () => {
