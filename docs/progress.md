@@ -7,6 +7,14 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-11-05 AI モードの「完全無料」誤認の改善（正本: `docs/measurements/AI_SEARCH_2026_11.md`）
+
+- **問題**: AI モードが KI を「登録なし・完全無料」「有料誘導なし」と説明した。baseline は GSC 28 日で 221 クリック・1,510 表示・平均 17.4 位、登録 404・未登録 2,150。
+- **実装**: `/about` に無料と有料の範囲の本文と Organization / WebSite の JSON-LD、開催日ページの description に有料の範囲。`serviceScope.test.mjs` で `/pricing` の表との一致を固定。
+- **実測で修正不要**: sitemap 639 URL はすべて 200。GSC の 404 は過去の `/free-prediction/jra/detail/*`。末尾スラッシュ違いは canonical が一致。
+- **不変**: 的中率・回収率・実績表示・価格・商品・会員権利。`trackRecordFreeze` の 38 ファイルは未変更（guard green）。
+- **未完了**: 固定ファイル側の FAQ・無料予想ハブ・ホームの JSON-LD（同文書 §5）。本番反映と評価（2026-11-06〜12-03）。
+
 ### 2026-10-22 集客: 技術 SEO の欠陥修正と登録導線（正本: `docs/measurements/TRAFFIC_GROWTH_2026_10.md`）
 
 - **問題**: 28 日 455 users（GA4 2026-09-23〜10-20）。本番監査で、無料予想ページの canonical が `/prediction/*`（未ログインは 302 で戻る）を指す循環、

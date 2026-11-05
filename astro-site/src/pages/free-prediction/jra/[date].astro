@@ -10,6 +10,7 @@
  */
 
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { DAY_PAGE_SCOPE_NOTE } from '../../../lib/seo/serviceScope.js';
 import RaceDayBoard from '../../../components/newspaper/RaceDayBoard.astro';
 import TierRibbon from '../../../components/newspaper/TierRibbon.astro';
 import { loadJraRaceDayByDate } from '../../../lib/prediction/loadRaceDay.js';
@@ -32,7 +33,7 @@ const venueNames = day.venues.map((v) => v.venueName).join('・');
 const title = day.date
   ? `${venueNames} ${day.date} の中央競馬予想`
   : '中央競馬予想';
-const description = `${venueNames || '中央競馬'}${day.date || ''}の全レース馬柱・過去走・AI短評・展開予想を無料公開。`;
+const description = `${venueNames || '中央競馬'}${day.date || ''}の全レース馬柱・過去走・AI短評・展開予想を登録なしで無料公開。${DAY_PAGE_SCOPE_NOTE}`;
 ---
 
 <BaseLayout title={title} description={description}>
