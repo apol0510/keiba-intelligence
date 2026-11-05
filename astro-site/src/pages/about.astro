@@ -76,11 +76,11 @@ export const prerender = true;
     </div>
   </section>
 
-  <!-- 無料と有料の範囲（正本は /pricing の表。lib/seo/serviceScope.js） -->
-  <section class="about-scope" id="free-and-paid">
+  <!-- 無料で見られる範囲（正本は /pricing の表。lib/seo/serviceScope.js） -->
+  <section class="about-scope" id="free-scope">
     <div class="container">
-      <h2 class="about-scope-title">無料で見られる範囲と有料プラン</h2>
-      <p class="about-scope-lead">KEIBA Intelligence は無料の範囲と有料の月額プランがあるサービスです。{SERVICE_SCOPE_SUMMARY}</p>
+      <h2 class="about-scope-title">無料で見られるAI分析</h2>
+      <p class="about-scope-lead">{SERVICE_SCOPE_SUMMARY}</p>
       <div class="about-point-grid">
         {SERVICE_TIERS.map((tier) => (
           <div class="about-point card">
@@ -92,7 +92,7 @@ export const prerender = true;
           </div>
         ))}
       </div>
-      <p class="about-scope-link"><a href="/pricing">料金と各プランの詳しい内容は料金プランのページをご覧ください →</a></p>
+      <p class="about-scope-link"><a href="/pricing">プレミアムの内容と料金は料金プランのページをご覧ください →</a></p>
     </div>
   </section>
 
