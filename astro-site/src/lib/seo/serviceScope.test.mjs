@@ -52,9 +52,15 @@ describe('/pricing の表との一致', () => {
 describe('文面', () => {
   const texts = [SERVICE_SCOPE_SUMMARY, DAY_PAGE_SCOPE_NOTE, JSON.stringify(SERVICE_TIERS), JSON.stringify(buildAboutJsonLd())];
 
-  test('有料の範囲があることを必ず書く', () => {
-    assert.match(SERVICE_SCOPE_SUMMARY, /有料/);
-    assert.match(DAY_PAGE_SCOPE_NOTE, /有料/);
+  test('全体の説明は無料を先に書き、月額プレミアムにも触れる（完全無料と読ませない）', () => {
+    assert.match(SERVICE_SCOPE_SUMMARY, /^全レース/);
+    assert.match(SERVICE_SCOPE_SUMMARY, /月額プレミアム/);
+    assert.ok(SERVICE_SCOPE_SUMMARY.indexOf('無料') < SERVICE_SCOPE_SUMMARY.indexOf('月額プレミアム'));
+  });
+  test('説明と構造化データで「有料」を前に出さない（MK 2026-11-05）', () => {
+    for (const t of texts) assert.doesNotMatch(t, /有料/);
+    assert.doesNotMatch(DAY_PAGE_SCOPE_NOTE, /プレミアム|月額/);
+    assert.doesNotMatch(read('src/pages/about.astro'), /有料/);
   });
   test('「完全無料」と書かず、金額と実績の数値を書かない', () => {
     for (const t of texts) {
@@ -71,7 +77,7 @@ describe('ページへの組込み', () => {
     assert.match(src, /application\/ld\+json/);
     assert.match(src, /href="\/pricing"/);
   });
-  test('開催日ページの description に有料の範囲がある', () => {
+  test('開催日ページの description に無料会員の案内がある', () => {
     for (const p of ['src/pages/free-prediction/jra/[date].astro', 'src/pages/free-prediction/nankan/[slug].astro']) {
       assert.match(read(p), /DAY_PAGE_SCOPE_NOTE/, p);
     }

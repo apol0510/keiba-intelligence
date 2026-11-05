@@ -313,6 +313,14 @@ devDependency: `netlify-cli ^23.5.0`。Node は `netlify.toml` で `NODE_VERSION
 本書ではその内容を重複させない。§6 Contracts / §10 Prohibited Changes は改修中も有効であり、
 改修が既存契約を変更することはない（同書 §12）。
 
+## 10.6 検索・AI 向けの無料とプレミアムの説明（2026-11-05 MK 確定）
+
+- 目的は「完全無料」という誤認の解消。「一部有料」を必要以上に強調しない。
+- 主役は無料予想・AI 分析の魅力。プレミアムは自然な説明にとどめ、詳細は `/pricing` で案内する。
+- title・description・構造化データでも、有料であることを過度に前面へ出さない。
+- 料金、会員権利、実績表示、無料登録導線は変えない。
+- 文面の単一源は `astro-site/src/lib/seo/serviceScope.js`。経緯は `docs/decisions.md`、測定は `docs/measurements/AI_SEARCH_2026_11.md`。
+
 ## 11. Known Unknowns
 
 - **`CLAUDE.md` の「メインレース10点ロジック」節（2026-05-08）と F3・5点固定（2026-07-02）の関係が文書上未整理。**

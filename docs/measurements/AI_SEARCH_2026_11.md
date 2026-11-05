@@ -30,19 +30,19 @@
 ## 4. 実装
 
 - `src/lib/seo/serviceScope.js`: 無料・有料の範囲の単一源。`serviceScope.test.mjs` が `/pricing` の表との一致、「完全無料」・金額・実績の数値を書かないことを固定する（`test:seo`）。
-- `/about`: 「無料で見られる範囲と有料プラン」の本文、Organization と WebSite の JSON-LD、南関東 4 場を含む説明へ修正。
-- 開催日ページ（`/free-prediction/jra/[date]`・`/free-prediction/nankan/[slug]`）: description に有料の範囲を追加（一覧ページと同じ事実）。
+- `/about`: 「無料で見られるAI分析」の本文、Organization と WebSite の JSON-LD、南関東 4 場を含む説明へ修正。
+- 開催日ページ（`/free-prediction/jra/[date]`・`/free-prediction/nankan/[slug]`）: description に無料会員の案内を追加。
+- 2026-11-05 MK 確定: 主役は無料予想・AI 分析。「一部有料」を強調せず、プレミアムは自然な一言にとどめる（`docs/spec.md` §10.6）。
 
 ## 5. 未完了（固定ファイルのため今回変更していない）
 
 | ファイル | 内容 |
 |---|---|
 | `faq.astro` | 「無料で利用できますか？」が「無料会員登録で全レースの予想を閲覧」と読め、未登録で見える範囲の説明とずれる。「支払い方法は？」が銀行振込のみと読め、`/pricing` の月額（カード）とずれる。FAQPage JSON-LD も未追加 |
-| `free-prediction/index.astro` | description が「高精度予想を毎日無料公開」で、有料の範囲が無い |
 | `index.astro`・`BaseLayout.astro` | ホームの Organization / WebSite JSON-LD を未追加。BaseLayout の既定 description は撤去済みの固定値を含む |
 
 ## 6. 評価
 
 - 評価期間: 2026-11-06 〜 2026-12-03（反映日が遅れた場合は反映日から 28 日）。
-- 見るもの: AI モードの「KEIBA Intelligence 競馬 評判」で有料の範囲が説明されるか（複数回）、GSC の表示・クリック、`/pricing`・`/register` への遷移、GA4 の AI Assistant チャネル。
+- 見るもの: AI モードの「KEIBA Intelligence 競馬 評判」で「完全無料」と説明されなくなるか（複数回）、GSC の表示・クリック、`/pricing`・`/register` への遷移、GA4 の AI Assistant チャネル。
 - 短期のノイズで仕様を変えない。AI モードの回答は 1 回では判定しない。
