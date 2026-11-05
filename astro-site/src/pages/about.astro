@@ -1,13 +1,16 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { SERVICE_TIERS, SERVICE_SCOPE_SUMMARY, buildAboutJsonLd, renderJsonLd } from '../lib/seo/serviceScope.js';
 
 export const prerender = true;
 ---
 
 <BaseLayout
   title="サイト概要"
-  description="KEIBA Intelligenceは、中央競馬主要10場（東京・中山・京都・阪神・中京・新潟・福島・小倉・札幌・函館）に対応したAI予想プラットフォーム。オッズ予測・騎手馬データ・コース別傾向をデータで可視化します。"
+  description={`KEIBA Intelligenceは、南関東4場と中央競馬（JRA全10場）に対応したAI競馬予想サービスです。${SERVICE_SCOPE_SUMMARY}`}
 >
+  <script type="application/ld+json" set:html={renderJsonLd(buildAboutJsonLd())} />
+
   <!-- イントロ -->
   <section class="about-intro">
     <div class="container">
@@ -15,7 +18,7 @@ export const prerender = true;
       <h1 class="about-title">KEIBA Intelligence とは</h1>
       <p class="about-lead">
         感覚ではなく、データで判断する。<br>
-        AIが中央競馬の主要レースを横断分析し、予想の根拠を可視化する次世代プラットフォームです。
+        AIが南関東4場と中央競馬（JRA全10場）のレースを横断分析し、予想の根拠を可視化するプラットフォームです。
       </p>
     </div>
   </section>
@@ -73,6 +76,26 @@ export const prerender = true;
     </div>
   </section>
 
+  <!-- 無料と有料の範囲（正本は /pricing の表。lib/seo/serviceScope.js） -->
+  <section class="about-scope" id="free-and-paid">
+    <div class="container">
+      <h2 class="about-scope-title">無料で見られる範囲と有料プラン</h2>
+      <p class="about-scope-lead">KEIBA Intelligence は無料の範囲と有料の月額プランがあるサービスです。{SERVICE_SCOPE_SUMMARY}</p>
+      <div class="about-point-grid">
+        {SERVICE_TIERS.map((tier) => (
+          <div class="about-point card">
+            <h3>{tier.name}</h3>
+            <p>{tier.lead}</p>
+            <ul class="about-scope-list">
+              {tier.items.map((item) => <li>{item}</li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <p class="about-scope-link"><a href="/pricing">料金と各プランの詳しい内容は料金プランのページをご覧ください →</a></p>
+    </div>
+  </section>
+
   <!-- CTA -->
   <section class="about-cta-section">
     <div class="container">
@@ -88,6 +111,32 @@ export const prerender = true;
   </section>
 
   <style>
+    .about-scope {
+      padding: var(--spacing-xl) 0;
+    }
+    .about-scope-title {
+      font-size: 1.75rem;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: var(--spacing-md);
+    }
+    .about-scope-lead {
+      color: var(--text-secondary);
+      line-height: 1.9;
+      max-width: 760px;
+      margin: 0 auto var(--spacing-lg);
+    }
+    .about-scope-list {
+      margin: var(--spacing-sm) 0 0;
+      padding-left: 1.25em;
+      text-align: left;
+      color: var(--text-secondary);
+      line-height: 1.8;
+    }
+    .about-scope-link {
+      text-align: center;
+      margin-top: var(--spacing-lg);
+    }
     .about-intro {
       padding: var(--spacing-2xl) 0 var(--spacing-xl);
       text-align: center;

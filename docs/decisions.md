@@ -1096,3 +1096,12 @@ production の値が入るため。宛先は受信できない QA 用アドレ�
 - 🔴 **production env は変更していない**
 
 ---
+
+---
+
+## 2026-11-05 — 無料・有料の範囲に関する AI の誤認を公開ページの本文と構造化データで直す（**MK 確定**）
+
+- 決定: Google 検索と AI モードでの集客改善を調査結果に従って自律継続する。KI は AI モードの「完全無料」「有料誘導なし」という誤認を改善する
+- 正本: 無料と有料の範囲は `/pricing` の表。`src/lib/seo/serviceScope.js` は事実の言い換えだけで、`serviceScope.test.mjs` が一致を固定する
+- 変えないもの: 的中率・回収率・実績表示（2026-10-19 の固定）・価格・商品内容・会員権利
+- 今回は `trackRecordFreeze.manifest.json` 掲載の 38 ファイルを変更していない。未対応の箇所は `docs/measurements/AI_SEARCH_2026_11.md` §5
