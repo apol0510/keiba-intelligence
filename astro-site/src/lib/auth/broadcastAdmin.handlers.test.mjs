@@ -19,6 +19,16 @@ import Module from 'node:module';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import {
+  BROADCAST_STAGES,
+  DRY_RUN_REQUIRED_MESSAGE,
+  STAGE_MISMATCH_MESSAGE,
+  STAGE_REQUIRED_MESSAGE,
+  buildCreateBroadcastBody,
+  buildDryRunBody,
+  buildSendBody,
+  parseBroadcastStage,
+} from '../newsletter/broadcastStage.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -267,4 +277,94 @@ describe('CORS', () => {
       assert.equal(sideEffects(), 0);
     });
   }
+});
+
+describe('🔴 管理画面のステージ（未選択では送らない・API の拒否は不変）', () => {
+  const broadcast = (fields) => ({ broadcast_id: 'b-1', status: 'draft', stage: 50, ...fields });
+
+  test('選択肢は NEWSLETTER_MIGRATION.md の 8 段階だけ', () => {
+    assert.deepEqual(BROADCAST_STAGES.map((s) => s.value), [50, 100, 300, 500, 1000, 3000, 7000, 15000]);
+  });
+
+  test('未選択・一覧にない値は null（既定値へ丸めない）', () => {
+    for (const raw of ['', ' ', '0', '1', '49', '50.5', '-50', '1e3', '999999', 'all', null, undefined, {}, true]) {
+      assert.equal(parseBroadcastStage(raw), null, String(raw));
+    }
+    assert.equal(parseBroadcastStage('50'), 50);
+    assert.equal(parseBroadcastStage(15000), 15000);
+  });
+
+  test('未選択なら body を作らない（作成・Dry-Run・本番送信）', () => {
+    const base = { subject: 's', bodyHtml: 'b', createdBy: 'admin' };
+    assert.throws(() => buildCreateBroadcastBody({ ...base, stageInput: '' }), { message: STAGE_REQUIRED_MESSAGE });
+    assert.throws(() => buildDryRunBody(broadcast(), ''), { message: STAGE_REQUIRED_MESSAGE });
+    assert.throws(() => buildSendBody(broadcast({ status: 'dry-run' }), ''), { message: STAGE_REQUIRED_MESSAGE });
+  });
+
+  test('本番送信は同じステージの Dry-Run の後だけ', () => {
+    assert.throws(() => buildSendBody(broadcast({ status: 'draft' }), '50'), { message: DRY_RUN_REQUIRED_MESSAGE });
+    assert.throws(() => buildSendBody(broadcast({ status: 'dry-run', stage: 50 }), '15000'), { message: STAGE_MISMATCH_MESSAGE });
+    assert.deepEqual(buildSendBody(broadcast({ status: 'dry-run', stage: 50 }), '50'), { broadcast_id: 'b-1', dry_run: false, confirm: true, stage: 50 });
+  });
+
+  test('作成フォームの body は実ハンドラで下書きになり、stage は数値で保存される', async () => {
+    const body = buildCreateBroadcastBody({ subject: 's', bodyHtml: 'b', stageInput: '100', createdBy: 'admin' });
+    const res = await handlers['create-broadcast'](event('POST', { key: ADMIN_KEY, body }));
+    assert.equal(res.statusCode, 201, res.body);
+    assert.equal(calls.creates[0].records[0].fields.stage, 100);
+    assert.equal(calls.sends.length, 0);
+  });
+
+  test('Dry-Run の body は実ハンドラで送信 0・上限は選んだステージ・数値で保存される', async () => {
+    const body = buildDryRunBody(broadcast(), '300');
+    const res = await handlers['send-broadcast'](event('POST', { key: ADMIN_KEY, body }));
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(calls.sends.length, 0);
+    assert.equal(calls.selects.find((c) => c.tableName === 'Customers').opts.maxRecords, 300);
+    assert.strictEqual(calls.updates[0].records[0].fields.stage, 300);
+    assert.equal(JSON.parse(res.body).recipient_count_planned, 2);
+  });
+
+  test('本番送信の body は実ハンドラで受理される', async () => {
+    const body = buildSendBody(broadcast({ status: 'dry-run', stage: 50 }), '50');
+    const res = await handlers['send-broadcast'](event('POST', { key: ADMIN_KEY, body }));
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(calls.selects.find((c) => c.tableName === 'Customers').opts.maxRecords, 50);
+    assert.equal(calls.sends.length, 2);
+  });
+
+  test('get-broadcast は確認に使う stage と送信予定件数を返す', async () => {
+    db.Broadcasts[0].fields = { ...db.Broadcasts[0].fields, status: 'dry-run', stage: 50, recipient_count_planned: 2 };
+    const res = await handlers['get-broadcast'](event('GET', { key: ADMIN_KEY, query: { broadcast_id: 'b-1' } }));
+    const got = JSON.parse(res.body).broadcast;
+    assert.equal(got.stage, 50);
+    assert.equal(got.recipient_count_planned, 2);
+  });
+
+  test('API は stage なしを従来どおり 400 で拒否し、副作用 0', async () => {
+    const create = await handlers['create-broadcast'](event('POST', { key: ADMIN_KEY, body: { subject: 's', body_html: 'b', created_by: 'admin' } }));
+    assert.equal(create.statusCode, 400, create.body);
+    for (const body of [{ broadcast_id: 'b-1', dry_run: true }, { broadcast_id: 'b-1', dry_run: false, confirm: true }]) {
+      const res = await handlers['send-broadcast'](event('POST', { key: ADMIN_KEY, body }));
+      assert.equal(res.statusCode, 400, res.body);
+    }
+    assert.equal(sideEffects(), 0);
+  });
+
+  test('画面はステージに既定値を置かず、body を上の関数でだけ作る', () => {
+    const read = (rel) => readFileSync(path.join(ROOT, rel), 'utf8');
+    const newPage = read('src/pages/admin/newsletter/new.astro');
+    const detailPage = read('src/pages/admin/newsletter/[id].astro');
+
+    assert.match(newPage, /<select id="stage" name="stage" required/);
+    for (const page of [newPage, detailPage]) {
+      assert.match(page, /<option value="">選択してください<\/option>/);
+      assert.doesNotMatch(page, /<option[^>]*\bselected\b/);
+      assert.doesNotMatch(page, /\b(dry_run|created_by):/, 'body を画面で直接組み立てている');
+    }
+    assert.match(newPage, /buildCreateBroadcastBody\(/);
+    assert.match(detailPage, /buildDryRunBody\(broadcast, selectedStage\(\)\)/);
+    assert.match(detailPage, /buildSendBody\(broadcast, selectedStage\(\)\)/);
+    assert.match(detailPage, /data\.recipient_count_planned/);
+  });
 });

@@ -63,6 +63,8 @@ exports.handler = async (event) => {
       subject: record.fields.subject,
       body_html: record.fields.body_html,
       status: record.fields.status,
+      stage: record.fields.stage ?? null,
+      recipient_count_planned: record.fields.recipient_count_planned ?? null,
       created_at: record.fields.created_at,
       sent_at: record.fields.sent_at || null,
       recipient_count: record.fields.recipient_count || 0,

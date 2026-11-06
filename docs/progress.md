@@ -7,6 +7,13 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-11-07 メルマガ管理画面のステージ選択（2026-10-19 の既存不具合の修復）
+
+- **原因**: `/admin/newsletter` の作成・Dry-Run・本番送信が `stage` を送らず、`create-broadcast` / `send-broadcast` が 400。Dry-Run の完了表示も `recipient_count`（API は `recipient_count_planned`）で `undefined件` だった。
+- **実装**: `src/lib/newsletter/broadcastStage.js`。選択肢は `NEWSLETTER_MIGRATION.md` の 50〜15,000 の 8 段階、既定値なし。未選択では API を呼ばない。本番送信は同じステージの Dry-Run の後だけ（画面の確認）。`get-broadcast` が `stage`・`recipient_count_planned` を返す。API の検証は不変。
+- **test**: `test:admin-auth` に追加。本番には送らず、ローカルの実ブラウザで API を mock して確認。
+- **未確認**: 本番 Airtable の `Broadcasts` の列名（`AIRTABLE_SCHEMA.md` は `Stage` = 1〜8、コードと `NEWSLETTER_MIGRATION.md` は `stage` = 件数で食い違う）。KMA 配信方針（decisions 2026-08-28）との関係で、この画面を使い続けるかは運用判断。
+
 ### 2026-11-05 KI の説明を無料中心へ修正（MK 確定・`docs/spec.md` §10.6）
 
 - #182 の文面が「有料」を強く出していたため、`serviceScope.js`・`/about`・開催日ページの description を無料が主役の文へ修正。ホームと `/pricing` は自然な表現のため変更なし。

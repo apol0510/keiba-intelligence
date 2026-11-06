@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import AuthCheck from '../../../components/AuthCheck.astro';
+import { BROADCAST_STAGES } from '../../../lib/newsletter/broadcastStage.js';
 ---
 
 <BaseLayout
@@ -37,6 +38,15 @@ import AuthCheck from '../../../components/AuthCheck.astro';
             placeholder="<h2>本日の予想</h2>&#10;<p>KEIBA Intelligence会員の皆様</p>&#10;..."
             class="form-control"
           ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="stage">ステージ（送信上限件数） *</label>
+          <select id="stage" name="stage" required class="form-control">
+            <option value="">選択してください</option>
+            {BROADCAST_STAGES.map((s) => <option value={s.value}>{s.label}</option>)}
+          </select>
+          <p class="form-help">送信対象は有料・アクティブ・配信停止なし・SendGrid 配信対象の会員だけです。ステージはその上限件数です。</p>
         </div>
 
         <div class="form-actions">
@@ -98,6 +108,12 @@ import AuthCheck from '../../../components/AuthCheck.astro';
       border-color: var(--primary-end);
     }
 
+    .form-help {
+      margin-top: var(--spacing-sm);
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
     textarea.form-control {
       font-family: 'Monaco', 'Courier New', monospace;
       font-size: 0.875rem;
@@ -148,6 +164,7 @@ import AuthCheck from '../../../components/AuthCheck.astro';
 
   <script>
     import { adminFetch, ADMIN_FORBIDDEN_MESSAGE } from '../../../lib/auth/adminKeyClient.js';
+    import { buildCreateBroadcastBody } from '../../../lib/newsletter/broadcastStage.js';
     const form = document.getElementById('create-form') as HTMLFormElement;
     const previewBtn = document.getElementById('preview-btn');
     const previewArea = document.getElementById('preview-area');
@@ -171,19 +188,19 @@ import AuthCheck from '../../../components/AuthCheck.astro';
 
       const subject = (document.getElementById('subject') as HTMLInputElement).value;
       const bodyHtml = (document.getElementById('body_html') as HTMLTextAreaElement).value;
+      const stageInput = (document.getElementById('stage') as HTMLSelectElement).value;
 
       // 作成者の表示ラベル（🔴 認証には使わない。認証は管理キーのヘッダーのみ）
       const createdBy = 'admin';
 
       try {
+        // 🔴 ステージ未選択なら throw し、API を呼ばない
+        const requestBody = buildCreateBroadcastBody({ subject, bodyHtml, stageInput, createdBy });
+
         const response = await adminFetch('/.netlify/functions/create-broadcast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            subject,
-            body_html: bodyHtml,
-            created_by: createdBy,
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         const data = await response.json();
