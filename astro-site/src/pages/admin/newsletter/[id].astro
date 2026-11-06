@@ -140,6 +140,7 @@ export const prerender = false;
 
   <script>
     import { adminFetch, ADMIN_FORBIDDEN_MESSAGE } from '../../../lib/auth/adminKeyClient.js';
+    import { BROADCAST_STAGES, buildDryRunBody, buildSendBody } from '../../../lib/newsletter/broadcastStage.js';
     const broadcastId = window.location.pathname.split('/').pop();
     const messageEl = document.getElementById('message');
 
@@ -159,6 +160,10 @@ export const prerender = false;
         console.error('Error loading broadcast:', error);
         document.getElementById('detail-content')!.innerHTML = `<p>エラー: ${error.message}</p>`;
       }
+    }
+
+    function selectedStage() {
+      return (document.getElementById('stage-select') as HTMLSelectElement | null)?.value ?? '';
     }
 
     function renderBroadcast(broadcast: any) {
@@ -207,6 +212,14 @@ export const prerender = false;
             <span class="detail-value">${broadcast.recipient_count || '-'}</span>
           </div>
           <div class="detail-row">
+            <span class="detail-label">ステージ（上限件数）</span>
+            <span class="detail-value">${broadcast.stage ?? '-'}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Dry-Run の送信予定件数</span>
+            <span class="detail-value">${isDryRun ? (broadcast.recipient_count_planned ?? '-') : '-'}</span>
+          </div>
+          <div class="detail-row">
             <span class="detail-label">作成者</span>
             <span class="detail-value">${broadcast.created_by}</span>
           </div>
@@ -219,6 +232,14 @@ export const prerender = false;
 
         <div class="detail-card">
           <h2>操作</h2>
+          <div class="stage-field">
+            <label for="stage-select">ステージ（送信上限件数） *</label>
+            <select id="stage-select" class="stage-select" ${isSent ? 'disabled' : ''}>
+              <option value="">選択してください</option>
+              ${BROADCAST_STAGES.map((s) => `<option value="${s.value}">${s.label}</option>`).join('')}
+            </select>
+            <p class="stage-help">送信対象は有料・アクティブ・配信停止なし・SendGrid 配信対象の会員だけです。本番送信は、同じステージの Dry-Run の後にだけ実行できます。</p>
+          </div>
           <div class="actions-card">
             <button id="test-btn" class="btn btn-secondary" ${isSent ? 'disabled' : ''}>テスト送信</button>
             <button id="dryrun-btn" class="btn btn-secondary" ${isSent ? 'disabled' : ''}>Dry-Run実行</button>
@@ -272,16 +293,15 @@ export const prerender = false;
     }
 
     async function handleDryRun(broadcast: any) {
-      if (!confirm('Dry-Runを実行しますか？（送信件数のみ算出します）')) return;
-
       try {
+        // 🔴 ステージ未選択なら throw し、API を呼ばない
+        const requestBody = buildDryRunBody(broadcast, selectedStage());
+        if (!confirm(`ステージ ${requestBody.stage}件 で Dry-Runを実行しますか？（送信件数のみ算出します）`)) return;
+
         const response = await adminFetch('/.netlify/functions/send-broadcast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            broadcast_id: broadcast.broadcast_id,
-            dry_run: true,
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         const data = await response.json();
@@ -293,7 +313,7 @@ export const prerender = false;
 
         if (messageEl) {
           messageEl.className = 'message success';
-          messageEl.textContent = `Dry-Run完了: 送信予定件数 ${data.recipient_count}件`;
+          messageEl.textContent = `Dry-Run完了: 送信予定件数 ${data.recipient_count_planned}件`;
         }
 
         // リロード
@@ -308,28 +328,29 @@ export const prerender = false;
     }
 
     async function handleSend(broadcast: any) {
-      // 最終確認ダイアログ
-      const confirmed = confirm(
-        `以下の内容で送信します。よろしいですか？\n\n` +
-        `件名: ${broadcast.subject}\n\n` +
-        `送信後は取り消しできません。`
-      );
-
-      if (!confirmed) return;
-
-      // 二重確認
-      const doubleConfirmed = confirm('本当に送信しますか？この操作は取り消せません。');
-      if (!doubleConfirmed) return;
-
       try {
+        // 🔴 未選択・Dry-Run 未実施・ステージ不一致なら throw し、API を呼ばない
+        const requestBody = buildSendBody(broadcast, selectedStage());
+
+        // 最終確認ダイアログ
+        const confirmed = confirm(
+          `以下の内容で送信します。よろしいですか？\n\n` +
+          `件名: ${broadcast.subject}\n` +
+          `ステージ: ${requestBody.stage}件\n` +
+          `送信予定件数: ${broadcast.recipient_count_planned ?? '不明'}件\n\n` +
+          `送信後は取り消しできません。`
+        );
+
+        if (!confirmed) return;
+
+        // 二重確認
+        const doubleConfirmed = confirm('本当に送信しますか？この操作は取り消せません。');
+        if (!doubleConfirmed) return;
+
         const response = await adminFetch('/.netlify/functions/send-broadcast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            broadcast_id: broadcast.broadcast_id,
-            dry_run: false,
-            confirm: true,
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         const data = await response.json();
