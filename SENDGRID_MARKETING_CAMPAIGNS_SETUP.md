@@ -2,21 +2,11 @@
 
 ## 📋 概要
 
-**BlastMail → SendGrid Marketing Campaigns への完全移行**
+**SendGrid Marketing Campaigns の設定ガイド**
 
 ### 背景・経緯
 
 **移行日**: 2026年2月26日
-
-**BlastMailの制約（判明した問題）**:
-- ❌ フィルタ配信でカスタムフィールド（c20, c21）を条件に使えない
-- ❌ フィルタ配信でリスト（グループ）を条件に使えない
-- ❌ REST API v1.0で既存ユーザーの検索・更新ができない（404エラー）
-- ❌ API v2はCookie認証必須（Netlify Functionsから使用不可）
-
-**ビジネス影響**:
-- ❌ 両方のサイトに登録したユーザーは、最初のサイトのメールしか受け取れない
-- ❌ サイト別メルマガ配信の完全自動化が不可能
 
 **SendGrid Marketing Campaigns の利点**:
 - ✅ 既存ユーザーのカスタムフィールド更新が可能（PUT /v3/marketing/contacts）
@@ -40,8 +30,6 @@ SendGrid Marketing Campaigns Advanced プラン（$90/月、100,000通）
 
 **⚠️ 重要: 現在の状況（2026-02-26）**
 - ✅ **keiba-intelligence**: SendGrid Marketing Campaigns 移行完了
-- ⏳ **nankan-analytics**: BlastMail 継続使用（安定運用確認まで）
-- 📅 **nankan移行時期**: keiba-intelligence安定運用後に実施
 
 ### カスタムフィールド設計
 
@@ -107,10 +95,6 @@ https://app.sendgrid.com/
 ```bash
 SENDGRID_CUSTOM_FIELD_INTELLIGENCE=e2_T  # Step 4で確認したID
 ```
-
-**⚠️ nankan-analyticsについて:**
-- 現在はBlastMail継続使用のため、環境変数設定は不要
-- keiba-intelligence安定運用後に移行予定
 
 ### Step 6: Netlifyサイトを再デプロイ
 
@@ -255,16 +239,10 @@ try {
 - [ ] Netlify環境変数 `SENDGRID_CUSTOM_FIELD_INTELLIGENCE` に設定
 - [ ] Netlifyサイトを再デプロイ
 
-**⚠️ nankan-analyticsについて:**
-- 現在はBlastMail継続使用（作業不要）
-- keiba-intelligence安定運用後に移行予定
-
 ### クロ作業（完了済み ✅）
 
 - [x] `register-free.js` をSendGrid Marketing Campaigns対応に修正
 - [x] `bank-transfer-application.js` をSendGrid Marketing Campaigns対応に修正
-- [x] BLASTMAIL_SETUP.md削除
-- [x] CLAUDE.md, README.md, DESIGN.md からBlastMail記述削除
 - [x] NETLIFY_ENV_CHECKLIST.md更新
 - [x] SENDGRID_MARKETING_CAMPAIGNS_SETUP.md作成
 
@@ -310,13 +288,11 @@ try {
 ## 🎉 移行完了後のメリット
 
 **技術的成果（keiba-intelligence）**:
-- ✅ BlastMailのAPI制約から解放
 - ✅ 既存ユーザーのカスタムフィールド更新が可能（upsert対応）
 - ✅ 完全自動化（手動作業ゼロ）
 
 **ビジネス価値（現在）**:
 - ✅ **keiba-intelligence: 2,000通/月対応**
-- ⏳ **nankan-analytics: BlastMail継続使用**（安定運用確認後に移行）
 
 **将来的なメリット（nankan移行後）**:
 - ✅ **nankan-analytics: 10万通/月対応**
@@ -340,4 +316,4 @@ try {
 
 **📅 作成日**: 2026-02-26
 **👤 作成者**: Claude Code（クロちゃん）
-**🎯 目的**: BlastMail → SendGrid Marketing Campaigns 完全移行
+**🎯 目的**: SendGrid Marketing Campaigns の設定

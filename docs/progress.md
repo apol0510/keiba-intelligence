@@ -7,6 +7,10 @@
 > **本書は PR #69 で新規追加された、KI リポジトリにおける進捗の正本である。**
 
 
+### 2026-11-07 BlastMail の記述を削除（MK 確定）
+
+- BlastMail は解約済みで今後使わない。現行文書の記述を削除し、本番 Netlify の `BLASTMAIL_*` 3 件を削除した。KI のコードに参照は無い。登録者の連携先は SendGrid Marketing Campaigns。
+
 ### 2026-11-05 KI の説明を無料中心へ修正（MK 確定・`docs/spec.md` §10.6）
 
 - #182 の文面が「有料」を強く出していたため、`serviceScope.js`・`/about`・開催日ページの description を無料が主役の文へ修正。ホームと `/pricing` は自然な表現のため変更なし。
