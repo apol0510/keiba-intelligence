@@ -89,21 +89,9 @@ cd "/Users/apolon/Projects/keiba-intelligence/astro-site"
 
 ### **背景・目的**
 - **日時**: 2026年2月26日
-- **問題**: BlastMailのAPI制約により、複数サイト登録ユーザーの完全自動化が不可能
+- **目的**: 複数サイト登録ユーザーのメール配信を完全自動化する
 - **解決策**: SendGrid Marketing Campaigns への完全移行
 - **方針**: 1つのアカウントで統合管理（nankan-analytics + keiba-intelligence）
-
-### **BlastMailの制約（判明した問題）**
-
-**技術的制約:**
-- ❌ フィルタ配信でカスタムフィールド（c20, c21）を条件に使えない
-- ❌ フィルタ配信でリスト（グループ）を条件に使えない
-- ❌ REST API v1.0で既存ユーザーの検索・更新ができない（404エラー）
-- ❌ API v2はCookie認証必須（Netlify Functionsから使用不可）
-
-**ビジネス影響:**
-- ❌ 両方のサイトに登録したユーザーは、最初のサイトのメールしか受け取れない
-- ❌ サイト別メルマガ配信の完全自動化が不可能
 
 ### **SendGrid Marketing Campaigns の利点**
 
@@ -202,13 +190,12 @@ const updateContact = async (email, customFields) => {
 
 **keiba-intelligence の実装ファイル:**
 1. `netlify/functions/register-free.js` 修正
-   - BlastMail登録を削除
-   - SendGrid Marketing Campaigns 登録に置き換え
+   - SendGrid Marketing Campaigns へ登録
    - `registered_intelligence = 'true'` 設定
 
 **技術実装:**
 ```javascript
-// register-free.js の BlastMail部分を置き換え
+// register-free.js の登録処理
 async function registerToSendGridMarketing(email) {
   const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
   const CUSTOM_FIELD_INTELLIGENCE = 'e2_T';  // マコさんから取得
@@ -262,9 +249,8 @@ async function registerToSendGridMarketing(email) {
 
 **コミットメッセージ例:**
 ```
-🚀 BlastMail → SendGrid Marketing Campaigns 完全移行
+🚀 SendGrid Marketing Campaigns 統合
 
-- BlastMail登録削除（API制約により複数サイト対応不可）
 - SendGrid Marketing Campaigns統合（完全自動化実現）
 - カスタムフィールド: registered_intelligence
 - nankan-analyticsと統合管理 ✅
@@ -281,7 +267,6 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 **技術的成果:**
 - ✅ 複数サイト登録ユーザーの完全自動化
 - ✅ 既存ユーザーのカスタムフィールド更新が可能
-- ✅ BlastMailのAPI制約から解放
 
 **ビジネス価値:**
 - ✅ **keiba-intelligence: 2,000通/月対応**
@@ -330,12 +315,10 @@ filterByFormula: `AND({Email} = '${email}', OR({Source} = 'keiba-intelligence', 
 ### ✅ **2026-02-26 SendGrid Marketing Campaigns 移行決定**
 
 #### **背景・経緯**
-- **問題**: BlastMailのAPI制約（複数サイト登録ユーザーの自動化不可）
-- **調査**: フィルタ配信でカスタムフィールド・リスト条件が使えないことが判明
+- **目的**: 複数サイト登録ユーザーの配信の自動化
 - **決定**: SendGrid Marketing Campaigns への完全移行
 
 #### **技術的成果**
-- ✅ BlastMailの制約を完全に理解
 - ✅ SendGrid Marketing Campaigns の優位性を確認
 - ✅ nankan-analyticsと統合管理の方針決定
 
