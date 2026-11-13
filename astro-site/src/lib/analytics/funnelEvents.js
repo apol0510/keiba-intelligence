@@ -133,3 +133,56 @@ export function loginLinkResultOf(status) {
   if (status === 403) return 'blocked';
   return 'error';
 }
+
+/* ------------------------------------------------------------------
+   GA4 標準のコンバージョン（2026-11-13・KAO docs/offsite-presence/README.md §6）
+   ------------------------------------------------------------------
+   上の `ki_*` は途中の段を数えるためのもの。検索・AI 経由の「登録」「購入」を
+   GA4 の経路別に数えるには、GA4 標準の `sign_up` / `purchase` が要る（これまで 0 件だった）。
+
+   🔴 送るのは固定のキーだけ（method / currency / value / plan）。email・会員 ID・token・
+      Stripe の ID は送らない（transaction_id も送らない。重複はこのブラウザの印で防ぐ）。
+   🔴 同じブラウザで 1 回だけ（localStorage の印）。再読み込み・戻るで二重に数えない。
+   🔴 売上の正本は Stripe。GA4 の値は経路別の比較に使うだけ。
+*/
+
+/** 標準イベントの名前（これ以外は送らない）。 */
+export const STANDARD_CONVERSIONS = Object.freeze({ SIGN_UP: 'sign_up', PURCHASE: 'purchase' });
+
+const ONCE_PREFIX = 'ki_conv_sent:';
+
+function sendOnce(win, onceKey, name, params) {
+  try {
+    if (!win || typeof win.gtag !== 'function') return false;
+    const store = win.localStorage;
+    const key = ONCE_PREFIX + onceKey;
+    try { if (store && store.getItem(key)) return false; } catch { /* 読めなくても送る */ }
+    win.gtag('event', name, params);
+    try { if (store) store.setItem(key, '1'); } catch { /* 書けなくてもよい */ }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 無料会員の登録完了（登録の確認リンクでログインできた）。
+ * @param {{ gtag?: Function, localStorage?: Storage }} [win]
+ */
+export function trackSignUp(win = typeof window !== 'undefined' ? window : undefined) {
+  return sendOnce(win, 'sign_up', STANDARD_CONVERSIONS.SIGN_UP, { method: 'email' });
+}
+
+/**
+ * 有料プランの購入完了（決済から戻り、権限の反映を確認できた）。
+ * @param {{ planId: string, priceYen: number }} purchase 価格は plans.js の実売価格（請求額の正本は Stripe）
+ * @param {{ gtag?: Function, localStorage?: Storage }} [win]
+ */
+export function trackPurchase(purchase, win = typeof window !== 'undefined' ? window : undefined) {
+  const planId = purchase && typeof purchase.planId === 'string' && VALUE_RE.test(purchase.planId) ? purchase.planId : null;
+  const value = purchase && Number.isInteger(purchase.priceYen) && purchase.priceYen > 0 ? purchase.priceYen : null;
+  if (!planId || value === null) return false;
+  // 同じプランを解約後に買い直すことはあるが、同じブラウザで同じ日に 2 回は数えない
+  const day = new Date().toISOString().slice(0, 10);
+  return sendOnce(win, `purchase:${planId}:${day}`, STANDARD_CONVERSIONS.PURCHASE, { currency: 'JPY', value, plan: planId });
+}

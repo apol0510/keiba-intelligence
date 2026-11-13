@@ -745,7 +745,9 @@ const expiresLabel = ent.expiresAtMs
 
 <script>
   // 決済から戻った後の計測（PII なし。docs/measurements/FUNNEL_2026_10.md）
-  import { trackFunnel, FUNNEL_EVENTS } from '../lib/analytics/funnelEvents.js';
+  import { trackFunnel, FUNNEL_EVENTS, trackPurchase } from '../lib/analytics/funnelEvents.js';
+  import { planById } from '../lib/billing/plans.js';
+  const PURCHASE_PLAN = planById('premium');
 
   /**
    * 決済から戻ってきたら、いまの権限で Cookie を出し直す。
@@ -773,6 +775,8 @@ const expiresLabel = ent.expiresAtMs
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.changed) {
           trackFunnel(FUNNEL_EVENTS.CHECKOUT_SYNCED, { result: 'changed' });
+          // GA4 標準の購入完了（有料プランは 1 種類・価格は plans.js の実売価格）
+          if (PURCHASE_PLAN) trackPurchase({ planId: PURCHASE_PLAN.id, priceYen: PURCHASE_PLAN.priceYen });
           // 反映済み。?checkout を落として読み込み直す（同じ処理を繰り返さない）
           window.location.replace(window.location.pathname);
           return;

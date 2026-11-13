@@ -146,7 +146,7 @@ export const prerender = false;
 <script>
   import { readStoredIntent, clearStoredIntent, resumePathFor } from '../../lib/billing/purchaseIntent.js';
   // GA4 計測（PII なし。token・email は送らない。docs/measurements/FUNNEL_2026_10.md）
-  import { trackFunnel, FUNNEL_EVENTS, verifyResultOf } from '../../lib/analytics/funnelEvents.js';
+  import { trackFunnel, FUNNEL_EVENTS, verifyResultOf, trackSignUp } from '../../lib/analytics/funnelEvents.js';
   import { verifyFailureCopy, isSignedInSession } from '../../lib/auth/verifyRecovery.js';
   // ログイン前に見ていたページ（許可リストのパスだけ。LOGIN_RETURN_TO_2026_10.md）
   import { normalizeReturnTo, returnToKind, loginHrefFor, paidEquivalentPath, RETURN_PARAM } from '../../lib/auth/returnTo.js';
@@ -188,6 +188,9 @@ export const prerender = false;
       });
 
       if (response.ok && data.success) {
+        // GA4 標準の登録完了（登録の確認リンクから来たときだけ・1 回だけ）
+        if (verifySourceOf(urlParams.get(SIGNUP_SOURCE_PARAM)) === 'signup') trackSignUp();
+
         // セッション情報をsessionStorageに保存
         sessionStorage.setItem('keiba_session', JSON.stringify(data.session));
 

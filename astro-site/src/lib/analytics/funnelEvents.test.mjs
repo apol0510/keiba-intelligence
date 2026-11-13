@@ -192,3 +192,50 @@ test('🔴 ページの trackFunnel 呼び出しに email・token・セッショ
     }
   }
 });
+
+// ---------------------------------------------------------------- GA4 標準のコンバージョン（2026-11-13）
+
+import { trackSignUp, trackPurchase, STANDARD_CONVERSIONS } from './funnelEvents.js';
+
+function fakeWin() {
+  const sent = [];
+  const mem = new Map();
+  return {
+    sent,
+    gtag: (...a) => sent.push(a),
+    localStorage: { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)) },
+  };
+}
+
+test('sign_up は method だけを 1 回だけ送る', () => {
+  const w = fakeWin();
+  assert.equal(trackSignUp(w), true);
+  assert.equal(trackSignUp(w), false);
+  assert.deepEqual(w.sent, [['event', 'sign_up', { method: 'email' }]]);
+});
+
+test('purchase は currency・value・plan だけを送り、同じ日に二重に数えない', () => {
+  const w = fakeWin();
+  assert.equal(trackPurchase({ planId: 'premium', priceYen: 3980 }, w), true);
+  assert.equal(trackPurchase({ planId: 'premium', priceYen: 3980 }, w), false);
+  assert.deepEqual(w.sent, [['event', 'purchase', { currency: 'JPY', value: 3980, plan: 'premium' }]]);
+});
+
+test('🔴 purchase は形式外のプラン・価格を送らない（email 等が紛れても送らない）', () => {
+  const w = fakeWin();
+  assert.equal(trackPurchase({ planId: 'a@b.jp', priceYen: 3980 }, w), false);
+  assert.equal(trackPurchase({ planId: 'premium', priceYen: 0 }, w), false);
+  assert.equal(trackPurchase(null, w), false);
+  assert.equal(w.sent.length, 0);
+});
+
+test('gtag が無いときは何もしない（導線を止めない）', () => {
+  assert.equal(trackSignUp({}), false);
+  assert.equal(trackPurchase({ planId: 'premium', priceYen: 3980 }, {}), false);
+  assert.deepEqual(Object.values(STANDARD_CONVERSIONS).sort(), ['purchase', 'sign_up']);
+});
+
+test('🔴 登録完了と購入完了が配線されている', () => {
+  assert.match(read('src/pages/auth/verify.astro'), /=== 'signup'\) trackSignUp\(\)/);
+  assert.match(read('src/pages/mypage.astro'), /trackPurchase\(\{ planId: PURCHASE_PLAN\.id, priceYen: PURCHASE_PLAN\.priceYen \}\)/);
+});
