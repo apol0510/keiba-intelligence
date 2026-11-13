@@ -221,9 +221,9 @@ test('purchase は currency・value・plan だけを送り、同じ日に二重�
   assert.deepEqual(w.sent, [['event', 'purchase', { currency: 'JPY', value: 3980, plan: 'premium' }]]);
 });
 
-test('🔴 purchase は形式外のプラン・価格を送らない（email 等が紛れても送らない）', () => {
+test('🔴 purchase は形式外のプラン・価格を送らない（記号入りの値が紛れても送らない）', () => {
   const w = fakeWin();
-  assert.equal(trackPurchase({ planId: 'a@b.jp', priceYen: 3980 }, w), false);
+  assert.equal(trackPurchase({ planId: 'premium.annual', priceYen: 3980 }, w), false);
   assert.equal(trackPurchase({ planId: 'premium', priceYen: 0 }, w), false);
   assert.equal(trackPurchase(null, w), false);
   assert.equal(w.sent.length, 0);
