@@ -20,8 +20,11 @@ export const SIGNUP_SOURCE = 'signup';
 /** 再送ボタンを押した後、次に押せるまでの秒数（連打でメールが重ならないように）。 */
 export const RESEND_COOLDOWN_SEC = 60;
 
-/** 確認リンクの有効期限（分）。send-magic-link / register-free の既存値の表示用。 */
+/** ログインリンク（send-magic-link・再送も含む）の有効期限（分）。表示用。 */
 export const LINK_VALID_MINUTES = 15;
+
+/** 登録確認リンク（register-free）の有効期限（時間）。表示用・registry a30c8ef6。 */
+export const SIGNUP_LINK_VALID_HOURS = 24;
 
 /**
  * 画面表示用に、本人のメールアドレスを一部伏せる。ドメインは誤入力に気づけるよう全部出す。

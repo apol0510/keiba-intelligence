@@ -347,6 +347,17 @@ describe('🔴 register-free: 形式外の email は問い合わせずに 400', 
     const token = JSON.parse(save.body).records[0].fields.Token;
     assert.equal(isValidMagicLinkToken(token), true, '🔴 発行した token を verify 側が受け付けない');
   });
+
+  test('登録確認リンクの有効期限は 24 時間・1 回限り（Used: false で保存）（a30c8ef6）', async () => {
+    const before = Date.now();
+    await registerFree(post({ email: MEMBER }));
+    const save = fetchLog.find((f) => f.url.endsWith('/AuthTokens') && f.method === 'POST');
+    assert.ok(save, 'AuthTokens へ保存していない');
+    const fields = JSON.parse(save.body).records[0].fields;
+    const ttl = new Date(fields.ExpiresAt).getTime() - before;
+    assert.ok(ttl > 24 * 60 * MIN - 60 * 1000 && ttl <= 24 * 60 * MIN + 1000, `有効期限が 24 時間でない: ${ttl}`);
+    assert.equal(fields.Used, false);
+  });
 });
 
 describe('🔴 bank-transfer-application: 形式外の email は送信・問い合わせ前に 400', () => {
