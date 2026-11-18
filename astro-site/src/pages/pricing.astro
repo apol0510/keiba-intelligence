@@ -274,7 +274,7 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
 <script>
   import { storeIntent } from '../lib/billing/purchaseIntent.js';
   // GA4 の購入ファネル計測（PII なし。docs/measurements/FUNNEL_2026_10.md）
-  import { trackFunnel, FUNNEL_EVENTS } from '../lib/analytics/funnelEvents.js';
+  import { trackFunnel, FUNNEL_EVENTS, checkoutErrorResultOf } from '../lib/analytics/funnelEvents.js';
 
   // 価格は Stripe から取得する（金額をコードに持たない）
   async function loadPrices() {
@@ -318,6 +318,9 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     button.textContent = '手続きへ移動中…';
     if (msg) msg.hidden = true;
 
+    // 失敗の理由（GA4 の result）。通信自体が失敗したら 0 のまま
+    let errorStatus = 0;
+    let errorCode;
     try {
       const res = await fetch('/.netlify/functions/stripe-create-checkout', {
         method: 'POST',
@@ -338,7 +341,7 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
       const data = await res.json().catch(() => ({}));
       if (res.status === 409 && data.error === 'already_subscribed') {
         // 🔴 二重契約の防止。新しい申込は作らず、お支払い管理へ案内する
-        trackFunnel(FUNNEL_EVENTS.CHECKOUT_ERROR, { plan: planId });
+        trackFunnel(FUNNEL_EVENTS.CHECKOUT_ERROR, { plan: planId, result: checkoutErrorResultOf(res.status, data.error) });
         if (msg) {
           msg.hidden = false;
           msg.textContent = 'すでにご契約中です。お支払いの確認・カードの変更はマイページの「お支払い管理」から行えます。';
@@ -352,9 +355,11 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
         window.location.href = data.url;
         return;
       }
+      errorStatus = res.status;
+      errorCode = data.error;
       throw new Error(data.error || 'unavailable');
     } catch {
-      trackFunnel(FUNNEL_EVENTS.CHECKOUT_ERROR, { plan: planId });
+      trackFunnel(FUNNEL_EVENTS.CHECKOUT_ERROR, { plan: planId, result: checkoutErrorResultOf(errorStatus, errorCode) });
       if (msg) {
         msg.hidden = false;
         msg.textContent = '現在お申し込みを受け付けられません。しばらくしてからお試しください。';
