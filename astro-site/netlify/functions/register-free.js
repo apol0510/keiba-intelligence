@@ -222,6 +222,16 @@ async function registerToSendGridMarketing(email) {
   }
 }
 
+/**
+ * 登録確認リンクの有効期限（24 時間・registry a30c8ef6・2026-11-18）。
+ * 登録直後にメールを開かない人（あとで受信箱を見る人）が期限切れで登録を完了できないため、
+ * ログインリンク（send-magic-link・15 分）より長くする。token は従来どおり 1 回限り
+ * （verify-magic-link が Used を立てる）で、期限の判定も verify 側の ExpiresAt のまま。
+ * 表示用の値は src/lib/auth/signupGuidance.js の SIGNUP_LINK_VALID_HOURS（test で一致を固定）。
+ */
+const SIGNUP_LINK_VALID_HOURS = 24;
+const SIGNUP_LINK_TTL_MS = SIGNUP_LINK_VALID_HOURS * 60 * 60 * 1000;
+
 // トークンをAirtable AuthTokensテーブルに保存
 async function saveAuthToken(email, token) {
   const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
@@ -233,7 +243,7 @@ async function saveAuthToken(email, token) {
   }
 
   try {
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15分後
+    const expiresAt = new Date(Date.now() + SIGNUP_LINK_TTL_MS); // 24時間後
     const createUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/AuthTokens`;
     const createPayload = {
       records: [{
@@ -363,7 +373,7 @@ ${copy.showBenefits ? `    <hr style="border: none; border-top: 1px solid #e2e8f
     <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; margin: 24px 0; border-radius: 4px;">
       <p style="color: #991b1b; font-size: 14px; margin: 0; line-height: 1.6;">
         このメールに心当たりがない場合は、このメールを無視してください。<br>
-        リンクの有効期限は15分です。
+        リンクの有効期限は24時間です。
       </p>
     </div>
 

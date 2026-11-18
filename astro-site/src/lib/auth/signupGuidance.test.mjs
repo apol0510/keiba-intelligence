@@ -23,6 +23,7 @@ import {
   resendResultCopy,
   RESEND_COOLDOWN_SEC,
   LINK_VALID_MINUTES,
+  SIGNUP_LINK_VALID_HOURS,
   SIGNUP_SOURCE_PARAM,
 } from './signupGuidance.js';
 import { sanitizeFunnelParams, FUNNEL_EVENTS } from '../analytics/funnelEvents.js';
@@ -76,12 +77,19 @@ test('resendResultCopy: 固定文言・成功判定', () => {
   assert.match(resendResultCopy(404).message, /お問い合わせ/);
 });
 
-test('有効期限の表示は既存値（15 分）のまま・再送の待ち時間がある', () => {
+test('有効期限: ログインリンクは 15 分のまま・登録確認リンクは 24 時間（a30c8ef6）・再送の待ち時間がある', () => {
   assert.equal(LINK_VALID_MINUTES, 15);
+  assert.equal(SIGNUP_LINK_VALID_HOURS, 24);
   assert.ok(RESEND_COOLDOWN_SEC >= 30);
-  // 有効期限の実体は変えていない
+  // ログインリンク（再送も含む）の実体は変えていない
   assert.match(read('netlify/functions/send-magic-link.js'), /Date\.now\(\) \+ 15 \* 60 \* 1000/);
-  assert.match(read('netlify/functions/register-free.js'), /リンクの有効期限は15分です。/);
+  // 登録確認リンクの実体・メール本文・画面表示が同じ値
+  const fn = read('netlify/functions/register-free.js');
+  assert.match(fn, new RegExp(`const SIGNUP_LINK_VALID_HOURS = ${SIGNUP_LINK_VALID_HOURS};`));
+  assert.match(fn, /new Date\(Date\.now\(\) \+ SIGNUP_LINK_TTL_MS\)/);
+  assert.match(fn, new RegExp(`リンクの有効期限は${SIGNUP_LINK_VALID_HOURS}時間です。`));
+  assert.doesNotMatch(fn, /有効期限は15分/);
+  assert.match(read('src/pages/register.astro'), new RegExp(`リンクの有効期限は ${SIGNUP_LINK_VALID_HOURS} 時間です（`));
 });
 
 test('register.astro: 送信後の案内（送信先・探し方・期限・ブラウザ注意・再送）', () => {
@@ -89,7 +97,7 @@ test('register.astro: 送信後の案内（送信先・探し方・期限・ブ�
   assert.match(src, /<div id="sentPanel" class="sent-panel" hidden>/);
   assert.match(src, /sentTo\.textContent = maskEmailForDisplay\(email\);/);
   assert.match(src, /迷惑メール/);
-  assert.match(src, /リンクの有効期限は 15 分です。/);
+  assert.match(src, /リンクの有効期限は 24 時間です（下の「確認メールを再送する」で届くリンクは 15 分）。/);
   assert.match(src, /件名「【KEIBA Intelligence】無料会員登録ありがとうございます！」/);
   // 成功時だけ案内を出す
   assert.match(src, /form\.reset\(\);\n\s*showSentPanel\(email\);/);
