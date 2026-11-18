@@ -14,7 +14,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 import {
-  FUNNEL_EVENTS, sanitizeFunnelParams, trackFunnel, placementOf, isPricingHref, verifyResultOf,
+  FUNNEL_EVENTS, sanitizeFunnelParams, trackFunnel, placementOf, isPricingHref, verifyResultOf, checkoutErrorResultOf,
 } from './funnelEvents.js';
 import { sanitizeAnalyticsUrl, ga4BootstrapScript } from './pageLocation.js';
 
@@ -238,4 +238,32 @@ test('gtag が無いときは何もしない（導線を止めない）', () => 
 test('🔴 登録完了と購入完了が配線されている', () => {
   assert.match(read('src/pages/auth/verify.astro'), /=== 'signup'\) trackSignUp\(\)/);
   assert.match(read('src/pages/mypage.astro'), /trackPurchase\(\{ planId: PURCHASE_PLAN\.id, priceYen: PURCHASE_PLAN\.priceYen \}\)/);
+});
+
+// ---------------------------------------------------------------- Checkout を開けなかった理由（2026-11-18）
+
+test('ki_checkout_error の result: 契約中の案内と本当の失敗を区別する（固定の列挙値だけ）', () => {
+  assert.equal(checkoutErrorResultOf(409, 'already_subscribed'), 'already_subscribed');
+  assert.equal(checkoutErrorResultOf(502, 'checkout_unavailable'), 'checkout_unavailable');
+  assert.equal(checkoutErrorResultOf(503, 'billing_not_configured'), 'billing_not_configured');
+  assert.equal(checkoutErrorResultOf(503, 'plan_not_configured'), 'plan_not_configured');
+  assert.equal(checkoutErrorResultOf(400, 'unknown_plan'), 'unknown_plan');
+  assert.equal(checkoutErrorResultOf(400, 'invalid_body'), 'invalid_request');
+  assert.equal(checkoutErrorResultOf(0, undefined), 'network');
+  assert.equal(checkoutErrorResultOf(200, undefined), 'no_url');
+  assert.equal(checkoutErrorResultOf(500, undefined), 'error');
+  // 🔴 未知のコード・文言・email は値にしない
+  assert.equal(checkoutErrorResultOf(500, EMAIL), 'error');
+  assert.equal(checkoutErrorResultOf(500, 'toString'), 'error');
+  assert.equal(checkoutErrorResultOf(500, '__proto__'), 'error');
+  for (const v of ['already_subscribed', 'checkout_unavailable', 'invalid_request', 'no_url', 'network', 'error']) {
+    assert.deepEqual(sanitizeFunnelParams({ plan: 'premium', result: v }), { plan: 'premium', result: v });
+  }
+});
+
+test('/pricing の ki_checkout_error は 2 か所とも result を付けて送る', () => {
+  const src = read('src/pages/pricing.astro');
+  const calls = src.match(/trackFunnel\(FUNNEL_EVENTS\.CHECKOUT_ERROR,[^)]*\)/g) || [];
+  assert.equal(calls.length, 2);
+  for (const c of calls) assert.match(c, /result: checkoutErrorResultOf\(/);
 });

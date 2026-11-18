@@ -32,7 +32,7 @@ export const FUNNEL_EVENTS = Object.freeze({
   PURCHASE_EMAIL_RESULT: 'ki_purchase_email_result',
   /** Stripe Checkout へ移動する直前 `{plan}` */
   CHECKOUT_REDIRECT: 'ki_checkout_redirect',
-  /** Checkout を開けなかった `{plan}` */
+  /** Checkout を開けなかった `{plan, result}`（result は checkoutErrorResultOf の列挙値・2026-11-18〜） */
   CHECKOUT_ERROR: 'ki_checkout_error',
   /** Stripe からキャンセルで戻った */
   CHECKOUT_CANCELLED: 'ki_checkout_cancelled',
@@ -123,6 +123,30 @@ export function verifyResultOf(status, ok, errorCode) {
   if (ok) return 'ok';
   if (status === 404) return 'not_found';
   if (status === 403) return errorCode === 'Token already used' ? 'used' : 'expired';
+  return 'error';
+}
+
+/**
+ * stripe-create-checkout が Checkout を開けなかった理由を固定の列挙値にする（2026-11-18・KAO 06a4aa7e）。
+ * それまでの `ki_checkout_error` は理由が無く、契約中の人への案内（409）と本当の失敗を区別できなかった。
+ * サーバーの error コード（固定の英字）だけを見る。文言・email・Stripe の ID は使わない。
+ * @param {number} status HTTP 状態（通信自体の失敗は 0）
+ * @param {unknown} errorCode 応答 JSON の error
+ * @returns {'already_subscribed'|'billing_not_configured'|'plan_not_configured'|'unknown_plan'|'invalid_request'|'checkout_unavailable'|'no_url'|'network'|'error'}
+ */
+export function checkoutErrorResultOf(status, errorCode) {
+  if (status === 0) return 'network';
+  const known = {
+    already_subscribed: 'already_subscribed',
+    billing_not_configured: 'billing_not_configured',
+    plan_not_configured: 'plan_not_configured',
+    unknown_plan: 'unknown_plan',
+    invalid_body: 'invalid_request',
+    method_not_allowed: 'invalid_request',
+    checkout_unavailable: 'checkout_unavailable',
+  };
+  if (typeof errorCode === 'string' && Object.prototype.hasOwnProperty.call(known, errorCode)) return known[errorCode];
+  if (status >= 200 && status < 300) return 'no_url';
   return 'error';
 }
 
