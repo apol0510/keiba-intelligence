@@ -305,7 +305,14 @@ const hasFeatures = !!features && Object.keys(features).length > 0;
   )}
 </div>
 
-<style>
+{/*
+  🔴 is:global（2026-11-20・性能）: このパネルは 1 頭ごとに描画され、JRA の無料予想ページでは
+     全レース×全頭ぶん（約 500 頭）を 1 枚の HTML に含む。scoped style だと要素ごとに
+     data-astro-cid 属性が付き、それだけで HTML が約 1MB 増えていた。
+     セレクタはすべて hdp- 接頭辞（rk-* は .hdp-rank に限定）で、他のコンポーネントと衝突しない。
+     scoped の :where() は詳細度 0 なので、global にしても詳細度は変わらない。
+*/}
+<style is:global>
   .hdp {
     padding: 12px 14px 16px;
     background: var(--bg-muted);
@@ -486,7 +493,7 @@ const hasFeatures = !!features && Object.keys(features).length > 0;
     color: var(--text-secondary);
   }
 
-  .rk-1 { background: #fef3c7; color: #92400e; }
-  .rk-2 { background: #e0e7ff; color: #3730a3; }
-  .rk-3 { background: #dcfce7; color: #166534; }
+  .hdp-rank.rk-1 { background: #fef3c7; color: #92400e; }
+  .hdp-rank.rk-2 { background: #e0e7ff; color: #3730a3; }
+  .hdp-rank.rk-3 { background: #dcfce7; color: #166534; }
 </style>
