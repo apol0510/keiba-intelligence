@@ -52,7 +52,12 @@ const rows = METRICS
   </div>
 )}
 
-<style>
+{/*
+  🔴 is:global（2026-11-20・性能）: 1 頭ごとに 6 行描画され、無料予想ページ全体で数千要素になる。
+     scoped だと data-astro-cid 属性だけで HTML が数百 KB 増えるため global にする。
+     セレクタは feature-bars / fb- 接頭辞に限り、他と衝突しない（:where() の詳細度 0 なので詳細度も不変）。
+*/}
+<style is:global>
   .feature-bars {
     display: grid;
     grid-template-columns: 1fr 1fr;
