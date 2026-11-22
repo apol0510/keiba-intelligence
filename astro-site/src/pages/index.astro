@@ -11,6 +11,7 @@
  *   - 価格をトップに書かない（金額の正本は Stripe。docs/RENEWAL_2026_08.md §6.1）。
  */
 
+import { buildAboutJsonLd, renderJsonLd } from '../lib/seo/serviceScope.js';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import archiveNankan from '../data/archiveResults.json';
 import archiveJra from '../data/archiveResultsJra.json';
@@ -26,6 +27,9 @@ const totals = combinedTotals(archiveNankan, archiveJra);
   title="ホーム"
   description="南関東4場と中央競馬（JRA全10場）の全レース馬柱・過去走・AI短評・展開予想を登録不要で無料公開。印は無料会員、馬単の買い目は月額プランで提供します。"
 >
+  <!-- 運営者・サイトの構造化データ（/about と同じ単一源・lib/seo/serviceScope.js） -->
+  <script type="application/ld+json" set:html={renderJsonLd(buildAboutJsonLd())} />
+
   <!-- ヒーローキービジュアル（ヒーローセクションの上） -->
   <section class="hero-keyvisual">
     <picture>

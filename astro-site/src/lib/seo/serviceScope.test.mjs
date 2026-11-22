@@ -77,6 +77,11 @@ describe('ページへの組込み', () => {
     assert.match(src, /application\/ld\+json/);
     assert.match(src, /href="\/pricing"/);
   });
+  test('トップにも同じ単一源の JSON-LD（Organization / WebSite）がある', () => {
+    const src = read('src/pages/index.astro');
+    assert.match(src, /application\/ld\+json/);
+    assert.match(src, /renderJsonLd\(buildAboutJsonLd\(\)\)/);
+  });
   test('開催日ページの description に無料会員の案内がある', () => {
     for (const p of ['src/pages/free-prediction/jra/[date].astro', 'src/pages/free-prediction/nankan/[slug].astro']) {
       assert.match(read(p), /DAY_PAGE_SCOPE_NOTE/, p);
