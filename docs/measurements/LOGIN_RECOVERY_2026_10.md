@@ -94,7 +94,7 @@ MK 指示: 「ログイン可能な状態と有料閲覧権限は厳密に分離
 | 項目 | 内容 |
 |---|---|
 | 問題 | 確認リンクの期限切れ・契約終了・決済失敗の人がログインできず、自力で戻れない。2 回目に開いたリンクはログイン済みでも失敗表示 |
-| baseline | `send-magic-link` の 403 件数・`/auth/verify` の失敗件数は **未計測**（2026-10-19 以前はイベントなし）。構造上の該当: 契約終了者は 10-28 までに最大 5 件、未確認の登録者は Airtable の pending 件数（API 読み取り権限なしで未取得） |
+| baseline | `send-magic-link` の 403 件数・`/auth/verify` の失敗件数は **未計測**（2026-10-19 以前はイベントなし）。構造上の該当: 契約終了者は 10-28 までに最大 5 件、未確認の登録者は Airtable の pending 件数（下の §4.2 で 2026-11-24 に実測: pending 37 件） |
 | 仮説 | 行き止まりを外すと、(1) 期限切れから無料会員になる人、(2) 退会者の無料利用と再契約、(3) 決済失敗者のカード更新 が自力で完了する |
 | 介入 | §2（ログイン可能な Status の拡張・認証時の記録保持・verify 失敗時の分岐と案内）。価格・権利・実績表示は不変 |
 | 期待結果 | `ki_login_verify_result{result:expired\|used}` の後に `ki_verify_fallback{relogin}` → 同一セッションでの `ki_login_verify_result{ok}` が出る。`ki_verify_fallback{signed_in}` の件数 = 以前は失敗表示で止まっていた件数。Netlify の `send-magic-link` 403 ログが 0 件近くになる（suspended のみ） |
@@ -107,3 +107,24 @@ MK 指示: 「ログイン可能な状態と有料閲覧権限は厳密に分離
 
 - GA4 の探索で `ki_login_verify_result` → `ki_verify_fallback` → `ki_login_verify_result{ok}` の経路を作る（FUNNEL_2026_10.md §3.1 の GA4 読み取り権限が前提）。
 - Airtable の Status 別件数（pending / inactive / payment_failed）を月初に集計する（read-only・件数のみ）。
+
+### 4.2 Airtable Customers の Status 別件数（2026-11-24 07:45 JST 実測・read-only・件数のみ）
+
+Airtable REST API の GET だけで、`Status`・`PlanType`・`CancelledAt` の有無・`AccessEnabled` の 4 列を数えた（メールアドレス等の個人情報は読んでいない・書き込みなし）。全 240 件。
+
+| Status | 件数 | PlanType | CancelledAt | AccessEnabled | §2 後のログイン / tier |
+|---|---:|---|---|---|---|
+| active | 191 | free-registered 177・pro 8・premium 4・light 2 | なし | あり | ログイン可・PlanType どおり（有料 14 件） |
+| pending | 37 | free-registered 37 | なし | なし | ログイン可（確認で active）・free（群 A の母数） |
+| inactive | 11 | free 11 | 11 件すべてあり | なし | ログイン可・free（群 B の母数・退会記録は反映済み） |
+| payment_failed | 1 | free 1 | あり | なし | ログイン可・free（PlanType が free なので有料は出ない） |
+| cancelled | 0 | — | — | — | 403（該当者なし） |
+| suspended | 0 | — | — | — | 403（該当者なし） |
+
+**旧運用の `cancelled` の扱い（確定）**: Customers に `Status: cancelled` の記録は **0 件**。
+退会・契約終了は `inactive`＋`CancelledAt`（11 件すべて PlanType=free）で記録されており、`cancelled` を退会の意味で使った旧データは残っていない。
+したがって `loginEligibility` が `cancelled` を 403 のままにしていても、締め出される会員はいない（変更不要）。
+`cancelled` は特典申込（RewardRedemptions）の取り消しの Status としてだけ使われる（MEMBERSHIP_REWARDS.md）。
+
+**有料権限の確認**: inactive / payment_failed で PlanType が有料のまま残っている記録は 0 件。§3 の「退会記録が不完全で有料が復活する」組み合わせは現在のデータには無い。
+PlanType の値（free-registered / free / light / premium / pro）は `planTypeToTier` がすべて既知の値として扱う。
