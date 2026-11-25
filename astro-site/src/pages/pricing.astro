@@ -221,9 +221,6 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
         ))}
       </ul>
 
-      <p class="pr-club-pending">
-        <b>準備中</b>：プレゼントの品目は選定中です。決まりしだい、このページとマイページでご案内します。
-      </p>
       <p class="pr-club-legal">
         KIリワードは会員特典のポイントです。現金・預金ではなく、換金・払い戻し・第三者への譲渡はできません。
       </p>
@@ -256,7 +253,7 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
         <p>いつでも退会できます。マイページの「アカウント管理」から「退会する」を選び、確認画面で「退会を確定する」を押すと手続きが完了します。退会すると、現在の利用期限を待たずにすぐ有料機能をご利用いただけなくなります（残り期間分の返金・日割り精算はありません）。残り期間の利用を希望する場合は、退会手続きを行わずそのままご利用ください。退会後も無料会員として印までご覧いただけます。</p>
       </details>
       <details><summary>KIリワードとは何ですか？</summary>
-        <p>プレミアムを続けていただくと毎月100ptずつ自動で積み上がる、会員特典のポイントです。ログインや操作は必要ありません。600ptと1,200ptの2段階でプレゼントとお引き換えいただけます。抽選はありません。現金・預金ではなく、換金・払い戻し・第三者への譲渡はできません。プレゼントの品目は準備中です。</p>
+        <p>プレミアムを続けていただくと毎月100ptずつ自動で積み上がる、会員特典のポイントです。ログインや操作は必要ありません。600ptと1,200ptの2段階でプレゼントとお引き換えいただけます。抽選はありません。現金・預金ではなく、換金・払い戻し・第三者への譲渡はできません。</p>
       </details>
       <details><summary>ポイントの有効期限はありますか？</summary>
         <p>ご契約が続いている間は失効しません。解約された場合は90日以内に再開されるとポイントが戻ります。それを過ぎると失効します。</p>
@@ -922,16 +919,6 @@ const yen = (n) => new Intl.NumberFormat('ja-JP').format(n);
     line-height: 1.75;
     color: var(--text-secondary);
     margin: 0;
-  }
-
-  .pr-club-pending {
-    font-size: 0.82rem;
-    line-height: 1.75;
-    color: var(--text-secondary);
-    background: var(--bg-muted);
-    border-radius: var(--radius-md);
-    padding: 12px 14px;
-    margin-bottom: 10px;
   }
 
   .pr-club-legal {

@@ -1,7 +1,8 @@
 {
   "_comment": "🛑 MK 最終決定（2026-10-19）で固定した実績表示・集計ファイルの sha256。MK の明示指示なしに更新しない。更新時は docs/decisions.md に MK の指示を記録し approvals に見出しを追記する。",
   "approvals": [
-    "2026-10-19 — 的中率・回収率・実績表示を現行のまま固定する（MK 最終決定。表示変更は保留・AI の独断変更禁止）"
+    "2026-10-19 — 的中率・回収率・実績表示を現行のまま固定する（MK 最終決定。表示変更は保留・AI の独断変更禁止）",
+    "2026-11-25 — 旧い特典説明の文言だけを事実に直す（登録・お問い合わせ・MK 指示。実績の表示・数値は不変）"
   ],
   "baseCommit": "6b055122",
   "files": [
@@ -156,12 +157,6 @@
       "sha256": "8be638d25368c46fa513b3a9c42d5ef05a20638463c53cbcd7bb2611c8607b4b"
     },
     {
-      "path": "astro-site/src/pages/register.astro",
-      "role": "display",
-      "mode": "lines",
-      "sha256": "f0dcddbbbaa48a5c301542ef3d6e5cba3ef88b0cd246e11c4209eeab19b8d787"
-    },
-    {
       "path": "astro-site/src/pages/faq.astro",
       "role": "display",
       "mode": "lines",
@@ -183,7 +178,7 @@
       "path": "astro-site/src/pages/contact.astro",
       "role": "display",
       "mode": "lines",
-      "sha256": "5834ba831b0095f2ebe108bf883b3d65f3385a940442119a63c022fac6a1454e"
+      "sha256": "b890282d7ec16909e69bedf1d67aa02667a64f9b33e4e1ec37c3d9815c88cf93"
     },
     {
       "path": "astro-site/src/pages/prediction/jra/index.astro",
