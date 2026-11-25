@@ -375,7 +375,10 @@ const expiresLabel = ent.expiresAtMs
                 {/*
                   🔴 縦に長いので開閉できるようにする（`<details>`・JS 不要）。
                      交換できる品があるときだけ最初から開く。
+                  🔴 品目が無い（カタログ未公開）あいだは欄ごと出さない（「準備中」を出さない・MK 2026-11-25）。
+                     品目が公開されれば（club.catalog.published）自動で表示に戻る。
                 */}
+                {club.catalog.published ? (
                 <details class="mp-cat" open={hasAffordableGift()}>
                 <summary class="mp-cat-summary">
                   <span>プレゼントカタログ</span>
@@ -476,11 +479,10 @@ const expiresLabel = ent.expiresAtMs
                       </div>
                     ) : null}
                   </>
-                ) : (
-                  <p class="mp-club-note">{PENDING}</p>
-                )}
+                ) : null}
 
                 </details>
+                ) : null}
 
                 {/*
                   申込フォーム（§7.9・TBD-12）
@@ -1292,6 +1294,7 @@ const expiresLabel = ent.expiresAtMs
   }
 
   .mp-club-sub { padding-top: 14px; border-top: 1px solid var(--border-color); margin-top: 10px; }
+  .mp-club-sub:not(:has(*)) { display: none; }
 
   .mp-club-sub h3 {
     font-size: 0.86rem;
