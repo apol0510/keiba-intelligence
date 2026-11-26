@@ -28,6 +28,11 @@ computer/形式でimport
 - 印1◎の馬を本命 or 対抗に固定
 - 連下3頭制限（連下最上位1頭 + 連下最大3頭）
 
+## 独自指数 OWN_INDEX_KI_V1（2026-11-28 の開催から）
+
+正規化の後に `scripts/lib/ownIndexImport.mjs` が役割を独自指数（指数 ＋ 先行力・近走・騎手・上がり・コース）の順に付け直す。正本は docs/spec.md §4。
+下の「コンピ指数による役割判定」は 2026-11-27 までの開催の仕様。
+
 ## コンピ指数による役割判定（normalizePrediction.js）
 - **`COMPI_MIN = 45`**（`normalizePrediction.js`）
 - 印あり → totalScoreでrawScore決定

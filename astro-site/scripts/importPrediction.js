@@ -39,6 +39,8 @@ import { normalizeAndAdjust } from '../src/utils/normalizePrediction.js';
 
 // メインレース10点ロジック
 import { isMainRace, generateMainRaceUmatanLines } from '../src/utils/mainRaceBetting.js';
+// KI の独自指数 OWN_INDEX_KI_V1（2026-11-28 の開催から・docs/spec.md §4）
+import { applyOwnIndexToDay, publishedPt, publishedOwnEval } from './lib/ownIndexImport.mjs';
 
 // データ検証関数をインポート
 import { validateNankanPrediction } from './utils/validatePrediction.js';
@@ -489,6 +491,7 @@ export async function importPrediction(date, venue = 'nankan', { client } = {}) 
     console.log(`📍 [IMPORT] 複数会場形式を検出: ${sharedJSON.venues.length}会場`);
 
     const results = [];
+    const ownTargets = [];
 
     for (const venueData of sharedJSON.venues) {
       const venueName = venueData.venue || venueData.name || '不明';
@@ -518,7 +521,10 @@ export async function importPrediction(date, venue = 'nankan', { client } = {}) 
       }
 
       results.push(normalizedAndAdjusted);
+      ownTargets.push({ normalized: normalizedAndAdjusted, raw: venueData });
     }
+
+    await applyOwnIndexToDay(ownTargets, { date, category: venue, client });
 
     return { results, horseDataMap };
   } else {
@@ -550,6 +556,7 @@ export async function importPrediction(date, venue = 'nankan', { client } = {}) 
       }
     }
 
+    await applyOwnIndexToDay([{ normalized: normalizedAndAdjusted, raw: sharedJSON }], { date, category: venue, client });
     return { results: [normalizedAndAdjusted], horseDataMap }; // オブジェクトで返す
   }
 }
@@ -691,7 +698,7 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
           const horseObj = {
             horseNumber: h.number,
             horseName: h.name,
-            pt: (() => { const v = Number(h.displayScore) || Number(h.rawScore) || 70; return isNaN(v) ? 70 : v; })(), // ptフィールド（数値保証）
+            pt: publishedPt(h, (() => { const v = Number(h.displayScore) || Number(h.rawScore) || 70; return isNaN(v) ? 70 : v; })()), // ptフィールド（数値保証）。独自指数がある開催は 独自指数 + 70
             role: h.role, // 印1システムではroleをそのまま保持
             jockey: h.jockey || h.kisyu || '', // 騎手
             trainer: h.trainer || h.kyusya || '', // 厩舎
@@ -733,6 +740,8 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
               horseObj.recentFormSource = 'racebook';
             }
           }
+          // 基礎指数の列（独自評価 50 + 5 × 点）。独自指数のある開催だけ
+          if (publishedOwnEval(h) != null) horseObj.ownEval = publishedOwnEval(h);
           if (h._training) horseObj.training = h._training;
           if (h._shortComment) horseObj.shortComment = h._shortComment;
           if (h._predictedOdds) horseObj.predictedOdds = h._predictedOdds;
