@@ -157,10 +157,10 @@ GitHub Actions ──▶ main への commit ──▶ Netlify build（npm run bu
 ### 予想ロジック（要点のみ・詳細は各実装とドキュメント）
 
 - **独自指数 OWN_INDEX_KI_V1（2026-11-28 の開催から・MK 2026-11-26 指示・decisions.md 2026-11-26）**: `src/utils/ownIndexKi.js` ＋ 取込の `scripts/lib/ownIndexImport.mjs`。
-  独自指数 = 指数（45 以上を評価）＋ 先行力・近走（近 5 走の重み付き着順）・騎手・上がり・コース（同じ競馬場の 3 着以内率）の 5 項目（各項目でレース内上位 3 分の 1 が +1・下位 3 分の 1 が −1）。
-  印・役割はこの順（独自指数 → 指数 → 馬番）。新聞の印・本紙順位は使わない。騎手成績は開催日より前の確定結果だけ（予想 × 結果を馬番で照合・市場ごと）。
+  独自指数 = 指数（45 以上を評価）＋ 独自評価の点。KI は**近 5 走重視**: 近走（近 5 走の重み付き着順）×2・上がり（近 3 走の最速）×1・コース（同じ競馬場の 3 着以内率）×1（`src/utils/ownIndex.js` `SITE_WEIGHTS.KI`）。各項目でレース内上位 3 分の 1 が +重み・下位 3 分の 1 が −重み（点は −4〜+4）。
+  印・役割はこの順（独自指数 → 指数 → 馬番）。新聞の印・本紙順位は使わない。
   公開: AI指数（pt）= 表示値 + 70（表示値 = round(1.15 × 独自指数 − 20)・順位を変えない）・基礎指数の列 = 独自評価 50 + 5 × 点（`ownEval`）。指数そのもの（`computerIndex`）は出さない。
-  analytics-keiba は OWN_INDEX_V1（4 項目）。KI と AK の最終の印・役割・買い目は同じにしない（AK docs/PREDICTION_LOGIC.md の共通化ルール）。
+  サイトごとに重みを変える（AK・HIBI・NANKAN PICKS と最終の印・役割・買い目を同じにしない・MK 2026-11-26・AK docs/PREDICTION_LOGIC.md の共通化ルール）。
   買い目の作り方（`mainRaceBetting.js`・通常レースの本命軸 / 対抗軸）と、相手を選ぶときの同じ役割内の順（指数の高い順）は変えない。
   騎手成績を読めない回は従来の順のまま（fail-closed・`[OWN-INDEX] stats_unavailable`）。開催日より前の予想・実績は書き換えない。
 - `normalizePrediction.js`: `COMPI_THRESHOLD = 45` によるコンピ指数ベースの役割判定（2026-11-27 までの開催。以後は独自指数で付け直す）。

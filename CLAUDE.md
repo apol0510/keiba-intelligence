@@ -558,7 +558,7 @@ SHA が消えて困る情報は、**文書側に本文として書く**こと。
 ## 🧠 racebook連携・特徴量システム 🧠
 
 - 元データの印・振り分けをそのまま使わない（著作権対応。独自スコアで役割を決める・`src/utils/adjustPrediction.js`）。
-- 2026-11-28 の開催から、印・役割・AI指数は KI の独自指数 OWN_INDEX_KI_V1（`src/utils/ownIndexKi.js`・取込 `scripts/lib/ownIndexImport.mjs`・正本 docs/spec.md §4・decisions.md 2026-11-26）。指数そのもの（`computerIndex`）は公開データに出さない。AK（OWN_INDEX_V1）と同じ項目構成にしない。
+- 2026-11-28 の開催から、印・役割・AI指数は KI の独自指数 OWN_INDEX_KI_V1（近 5 走重視・`src/utils/ownIndexKi.js`・取込 `scripts/lib/ownIndexImport.mjs`・正本 docs/spec.md §4・decisions.md 2026-11-26）。指数そのもの（`computerIndex`）は公開データに出さない。サイトごとに重みを変える（他サイトと同じ印・買い目にしない）。
 - 取込パイプライン・コンピ指数の役割判定・特徴量の算出は [`docs/RACEBOOK_PIPELINE.md`](./docs/RACEBOOK_PIPELINE.md)。
 
 ---

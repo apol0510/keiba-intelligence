@@ -13,6 +13,22 @@
  */
 
 export const OWN_INDEX_VERSION = 'OWN_INDEX_V1';
+/**
+ * サイトごとの配点（MK 2026-11-26「各サイトで独自の評価項目や配点を工夫し、それぞれに特色を」）。
+ *   AK = 4 項目のバランス型（OWN_INDEX_V1）・KI = 近 5 走重視・HIBI = 騎手重視・NANKAN PICKS = 前走重視。
+ *   各項目で上位 3 分の 1 が +配点・下位 3 分の 1 が −配点。
+ */
+export const SITE_WEIGHTS = Object.freeze({
+  AK: Object.freeze({ early: 1, last: 1, jockey: 1, f3: 1 }),
+  KI: Object.freeze({ form5: 2, f3: 1, course: 1 }),
+  HIBI: Object.freeze({ jockey: 2, form5: 1, course: 1 }),
+  NKJP: Object.freeze({ last: 3, early: 1 }),
+});
+/** 競馬場コード → 過去走の場名に含まれる文字（コース実績の照合） */
+export const COURSE_KEY = Object.freeze({
+  OOI: '大井', KAW: '川崎', FUN: '船橋', URA: '浦和',
+  TOK: '東', NAK: '中', KYO: '京', HAN: '阪', CHU: '名', NII: '新', FKS: '福', KOK: '小', SAP: '札', HKD: '函',
+});
 export const OWN_INDEX_MIN_BASE = 45;
 export const OWN_INDEX_FACTORS = Object.freeze(['early', 'last', 'jockey', 'f3']);
 
@@ -72,6 +88,53 @@ export function ownFactors(recent, jockeyRecord) {
     jockey: (wins + 1) / (rides + 10),
     f3: f3s.length ? -Math.min(...f3s) : -40.5,
   };
+}
+
+/** 近 5 走の着順点の加重平均（新しい走ほど重い: 1.0・0.8・0.6・0.4・0.2）。記録が無ければ 40 */
+export function form5Of(recent) {
+  const w = [1, 0.8, 0.6, 0.4, 0.2];
+  let t = 0;
+  let tt = 0;
+  (Array.isArray(recent) ? recent : []).slice(0, 5).forEach((r, i) => {
+    const k = finishOf(r);
+    if (k > 0) { t += finishPoint(k) * w[i]; tt += w[i]; }
+  });
+  return tt ? t / tt : 40;
+}
+
+/** コース実績: 近 5 走のうち同じ競馬場の走の 3 着内率（(3 着内 + 0.5) / (走数 + 1.5)） */
+export function courseRateOf(recent, venueCode) {
+  const key = COURSE_KEY[venueCode];
+  const runs = key ? (Array.isArray(recent) ? recent : []).slice(0, 5).filter((r) => String(r?.venue ?? '').includes(key) && finishOf(r) > 0) : [];
+  return (runs.filter((r) => finishOf(r) <= 3).length + 0.5) / (runs.length + 1.5);
+}
+
+/**
+ * 配点つきの独自指数（サイトごとの SITE_WEIGHTS）。並びと点の付け方は ownIndexRace と同じ。
+ * @param {Array<{ number, base, recent, jockeyRecord?, jockey? }>} horses
+ * @param {{ weights: Record<string, number>, venueCode?: string, jockeyStats?: Map }} opts
+ */
+export function ownIndexRaceWeighted(horses, { weights, venueCode = null, jockeyStats = new Map() } = {}) {
+  const rated = (Array.isArray(horses) ? horses : [])
+    .filter((h) => Number.isInteger(h?.number) && typeof h.base === 'number' && Number.isFinite(h.base) && h.base >= OWN_INDEX_MIN_BASE);
+  const n = rated.length;
+  const fx = new Map(rated.map((h) => {
+    const f = ownFactors(h.recent, h.jockeyRecord ?? jockeyStats.get(jockeyKey(h.jockey)));
+    return [h.number, { ...f, form5: form5Of(h.recent), course: courseRateOf(h.recent, venueCode) }];
+  }));
+  const points = new Map(rated.map((h) => [h.number, 0]));
+  for (const [k, w] of Object.entries(weights ?? {})) {
+    const vals = rated.map((h) => fx.get(h.number)[k]);
+    if (!vals.length || vals.some((v) => typeof v !== 'number') || Math.max(...vals) - Math.min(...vals) < 1e-9) continue;
+    const order = [...rated].sort((a, b) => fx.get(b.number)[k] - fx.get(a.number)[k] || a.number - b.number);
+    order.forEach((h, r) => {
+      if (r < n / 3) points.set(h.number, points.get(h.number) + w);
+      else if (r >= n - n / 3) points.set(h.number, points.get(h.number) - w);
+    });
+  }
+  return new Map(rated.map((h) => [h.number, {
+    ownIndex: h.base + points.get(h.number), base: h.base, points: points.get(h.number), factors: fx.get(h.number),
+  }]));
 }
 
 /**
