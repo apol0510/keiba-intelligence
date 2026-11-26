@@ -35,6 +35,8 @@ import { toComputerIndexString } from '../src/utils/computerIndexContract.js';
 
 // メインレース10点ロジック
 import { isMainRace, generateMainRaceUmatanLines } from '../src/utils/mainRaceBetting.js';
+// KI の独自指数 OWN_INDEX_KI_V1（2026-11-28 の開催から・docs/spec.md §4）
+import { applyOwnIndexToDay, publishedPt, publishedOwnEval } from './lib/ownIndexImport.mjs';
 
 // データ検証関数をインポート
 import { validateJRAPrediction } from './utils/validatePrediction.js';
@@ -384,6 +386,7 @@ export async function importPrediction(date, venue = 'jra', { client } = {}) {
   if (sharedJSON.venues && Array.isArray(sharedJSON.venues)) {
     console.log(`⚙️  複数会場データを正規化中...`);
     const normalizedVenues = [];
+    const ownTargets = [];
 
     for (const venueData of sharedJSON.venues) {
       // 各会場のデータを正規化
@@ -396,9 +399,13 @@ export async function importPrediction(date, venue = 'jra', { client } = {}) {
 
       const normalized = normalizeAndAdjust(singleVenueData);
       normalizedVenues.push(normalized);
+      ownTargets.push({ normalized, raw: venueData });
 
       console.log(`   ✅ ${normalized.venue}: ${normalized.totalRaces}レース`);
     }
+
+    // 独自指数（2026-11-28 の開催から）: 役割を独自指数の順に付け直す（新聞の印・本紙順位は使わない）
+    await applyOwnIndexToDay(ownTargets, { date, category: venue, client });
 
     // 複数会場統合データ
     const result = {
@@ -419,6 +426,7 @@ export async function importPrediction(date, venue = 'jra', { client } = {}) {
   // 単一会場の場合（従来フォーマット）
   console.log(`⚙️  正規化 + 調整ルール適用中...`);
   const normalizedAndAdjusted = normalizeAndAdjust(sharedJSON);
+  await applyOwnIndexToDay([{ normalized: normalizedAndAdjusted, raw: sharedJSON }], { date, category: venue, client });
 
   console.log(`✅ 正規化完了`);
   console.log(`   - 開催日: ${normalizedAndAdjusted.date}`);
@@ -565,7 +573,7 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
           const horseObj = {
             horseNumber: h.number,
             horseName: h.name,
-            pt: h.displayScore || h.rawScore || 70, // ptフィールド
+            pt: publishedPt(h, h.displayScore || h.rawScore || 70), // ptフィールド。独自指数がある開催は 独自指数 + 70
             role: h.role, // roleをそのまま保持（JRAのassignmentをそのまま使用）
             jockey: h.jockey || h.kisyu || '', // 騎手
             trainer: h.trainer || h.kyusya || '', // 厩舎
@@ -585,7 +593,8 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
               if (rbInfo.sire) horseObj.sire = rbInfo.sire;
               if (rbInfo.predictedOdds != null) horseObj.predictedOdds = rbInfo.predictedOdds;
               // 契約外値は注入しない（既存 horseObj 側の値も上書きしない）
-              if (toComputerIndexString(rbInfo.computerIndex) != null) horseObj.computerIndex = toComputerIndexString(rbInfo.computerIndex);
+              // 独自指数のある開催は指数そのものを出さない（基礎指数の列は ownEval）
+              if (!Number.isFinite(h.ownIndex) && toComputerIndexString(rbInfo.computerIndex) != null) horseObj.computerIndex = toComputerIndexString(rbInfo.computerIndex);
             }
           }
           // 過去走データ: racebook由来(_pastRaces) > horseDataMap
@@ -613,6 +622,8 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
           }
           if (h._predictedOdds) horseObj.predictedOdds = h._predictedOdds;
           if (h._sire) horseObj.sire = h._sire;
+          // 基礎指数の列（独自評価 50 + 5 × 点）。独自指数のある開催だけ
+          if (publishedOwnEval(h) != null) horseObj.ownEval = publishedOwnEval(h);
           return horseObj;
         })
         .sort((a, b) => {
