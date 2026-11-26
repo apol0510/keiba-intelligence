@@ -141,8 +141,9 @@ const rows = horses.map((h: any) => {
     weight: Number.isFinite(weightNum) ? weightNum : null,
     jockey: h?.jockey || null,
     trainer: h?.trainer || null,
-    // 裏側の呼称は computerIndex。表示名は「基礎指数」。契約（10–99）外は表示しない
-    baseIndex: toComputerIndex(h?.computerIndex),
+    // 表示名は「基礎指数」。独自指数 OWN_INDEX_KI_V1 の開催（2026-11-28〜）は独自評価 ownEval（50 + 5 × 点・30〜70）。
+    // それより前の開催は従来の computerIndex（契約 10–99 外は表示しない）
+    baseIndex: Number.isInteger(h?.ownEval) ? h.ownEval : toComputerIndex(h?.computerIndex),
   };
 });
 
