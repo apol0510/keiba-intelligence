@@ -1,8 +1,8 @@
 /**
- * ownIndexImport.mjs — 取込（importPrediction.js / importPredictionJra.js）で KI の独自指数 OWN_INDEX_KI_V1（src/utils/ownIndexKi.js）を当てる。
+ * ownIndexImport.mjs — 取込（importPrediction.js / importPredictionJra.js）で KI の独自指数 OWN_INDEX_KI_V1（src/utils/ownIndexKi.js・近 5 走重視）を当てる。
  *
  * 正本: docs/spec.md §4「独自指数 OWN_INDEX_KI_V1」・docs/decisions.md 2026-11-26（MK 指示）。
- *   - OWN_INDEX_START 以降の開催は、印・役割の順を独自指数（指数 ＋ 先行力・近走・騎手・上がり・コースの 5 項目）で決める。
+ *   - OWN_INDEX_START 以降の開催は、印・役割の順を独自指数（指数 ＋ 近走 ×2・上がり・コース）で決める。
  *   - 買い目の作り方（mainRaceBetting.js・通常レースの本命軸 / 対抗軸）は変えない。
  *     相手を選ぶときの同じ役割内の順は従来どおり指数の高い順（displayScore = 指数 + 70 のまま）。
  *   - 公開する pt（AI指数）は 表示値 round(1.15 × 独自指数 − 20) + 70、基礎指数の列は独自評価 50 + 5 × 点。指数そのもの（computerIndex）は出さない。

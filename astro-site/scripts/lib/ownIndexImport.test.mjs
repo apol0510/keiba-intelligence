@@ -5,7 +5,8 @@ import {
   OWN_INDEX_START, ownIndexOn, loadJockeyStats, clearJockeyStatsMemo, applyOwnIndexToVenue, applyOwnIndexToDay, publishedPt, publishedOwnEval,
 } from './ownIndexImport.mjs';
 import { ownOrder } from '../../src/utils/ownIndex.js';
-import { ownIndexKiRace, displayOwnIndex, form5, courseRate } from '../../src/utils/ownIndexKi.js';
+import { ownIndexKiRace, displayOwnIndex, KI_WEIGHTS } from '../../src/utils/ownIndexKi.js';
+import { form5Of, courseRateOf } from '../../src/utils/ownIndex.js';
 import { generateMainRaceUmatanLines } from '../../src/utils/mainRaceBetting.js';
 
 beforeEach(() => clearJockeyStatsMemo());
@@ -113,12 +114,13 @@ test('取込の 1 日分: 開始日より前は何もしない・騎手成績を
   assert.equal(v3.races[0].rankVersion, 'OWN_INDEX_KI_V1');
 });
 
-test('KI の 5 項目: 近走（近 5 走の重み付き）・コース（同じ競馬場の 3 着以内率）・表示値は単調で同じ値にならない', () => {
+test('KI の重み（近 5 走重視）: 近走 ×2・上がり・コース。近走とコースの値・表示値は単調で同じ値にならない', () => {
+  assert.deepEqual({ ...KI_WEIGHTS }, { form5: 2, f3: 1, course: 1 });
   const runs = [{ finish: '1', venue: '浦和 11.6' }, { finish: '9', venue: '大井 10.2' }, { finish: '3', venue: '浦和 9.1' }];
-  assert.equal(form5([]), 40);
-  assert.equal(form5(runs), (100 * 1 + 15 * 0.8 + 70 * 0.6) / (1 + 0.8 + 0.6));
-  assert.equal(courseRate(runs, 'URA'), (2 + 0.5) / (2 + 1.5));
-  assert.equal(courseRate(runs, 'XXX'), 0.5 / 1.5);
+  assert.equal(form5Of([]), 40);
+  assert.equal(form5Of(runs), (100 * 1 + 15 * 0.8 + 70 * 0.6) / (1 + 0.8 + 0.6));
+  assert.equal(courseRateOf(runs, 'URA'), (2 + 0.5) / (2 + 1.5));
+  assert.equal(courseRateOf(runs, 'XXX'), 0.5 / 1.5);
   const shown = Array.from({ length: 60 }, (_, i) => displayOwnIndex(40 + i));
   assert.ok(shown.every((v, i) => i === 0 || v > shown[i - 1]));
   assert.equal(displayOwnIndex(60), 49);
