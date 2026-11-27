@@ -232,6 +232,7 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
                 <li>船橋競馬場</li>
                 <li>浦和競馬場</li>
               </ul>
+              <a href="/course" class="footer-course-link">南関4場のコース別データ →</a>
             </div>
             <div class="footer-venue-group">
               <h5>中央競馬（JRA）全10場</h5>
@@ -628,6 +629,14 @@ const canonicalURL = new URL(canonicalPath || Astro.url.pathname, Astro.site);
       color: var(--text-secondary);
       font-size: 0.82rem;
       white-space: nowrap;
+    }
+    .footer-course-link {
+      display: inline-block;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary-blue);
+      text-decoration: none;
     }
 
     /* リーガル下部バー */

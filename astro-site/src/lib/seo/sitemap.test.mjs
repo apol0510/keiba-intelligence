@@ -76,6 +76,17 @@ describe('URL の選定', () => {
     assert.equal(renderSitemapXml([{ path: '/a&b' }]).includes('/a&amp;b'), true);
   });
 
+  test('南関コース別データ: 集計ファイルのコースと一覧が載り、不正な slug は載らない', () => {
+    const paths = buildSitemapEntries({ courseSlugs: ['ooi-1200', 'urawa-800', '../x', 'OOI-1200', null] }).map((e) => e.path);
+    for (const p of ['/course', '/course/ooi-1200', '/course/urawa-800']) assert.ok(paths.includes(p), `${p} が無い`);
+    assert.ok(!paths.some((p) => p.includes('..') || p.includes('OOI')));
+    assert.ok(!buildSitemapEntries({}).some((e) => e.path.startsWith('/course')), 'コースが無ければ /course も載せない');
+    const real = JSON.parse(read('src/data/course/nankanCourseStats.json')).courses.map((c) => c.slug);
+    const realPaths = new Set(buildSitemapEntries({ courseSlugs: real }).map((e) => e.path));
+    for (const s of real) assert.ok(realPaths.has(`/course/${s}`));
+    assert.match(read('src/pages/sitemap.xml.js'), /courseSlugs: readCourseSlugs\(/);
+  });
+
   test('実データでも組み立てられ、予想ファイルのある日がすべて載る', () => {
     const dataDir = join(siteRoot, 'src', 'data');
     const nankan = readdirSync(join(dataDir, 'predictions')).filter((f) => /^\d{4}-\d{2}-\d{2}-[a-z]+\.json$/.test(f)).map((f) => f.slice(0, -5));

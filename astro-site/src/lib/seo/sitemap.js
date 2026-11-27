@@ -53,6 +53,7 @@ export const EXCLUDED_PREFIXES = Object.freeze([
 
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const NANKAN_SLUG_RE = /^(\d{4}-\d{2}-\d{2})-([a-z]+)$/;
+const COURSE_SLUG_RE = /^[a-z]+-\d{3,4}$/;
 
 function datesOf(entries) {
   const out = [];
@@ -69,9 +70,10 @@ function datesOf(entries) {
  * @param {Array<{date:string}>} input.archiveJra      src/data/archiveResultsJra.json
  * @param {string[]} input.nankanPredictionSlugs       src/data/predictions/YYYY-MM-DD-venue.json の basename
  * @param {string[]} input.jraPredictionDates          src/data/predictions/jra/YYYY/MM/YYYY-MM-DD.json の basename
+ * @param {string[]} [input.courseSlugs]               src/data/course/nankanCourseStats.json の courses[].slug（/course/<slug>）
  * @returns {Array<{path:string, lastmod?:string}>}    path で一意・並びは決定的
  */
-export function buildSitemapEntries({ archiveNankan = [], archiveJra = [], nankanPredictionSlugs = [], jraPredictionDates = [] } = {}) {
+export function buildSitemapEntries({ archiveNankan = [], archiveJra = [], nankanPredictionSlugs = [], jraPredictionDates = [], courseSlugs = [] } = {}) {
   const map = new Map();
   const add = (path, lastmod) => {
     const prev = map.get(path);
@@ -82,6 +84,11 @@ export function buildSitemapEntries({ archiveNankan = [], archiveJra = [], nanka
   for (const p of STATIC_PATHS) add(p);
   for (const v of STATS_VENUE_SLUGS) add(`/stats/${v}`);
   for (const v of NANKAN_VENUE_SLUGS) add(`/venues/${v}`);
+
+  // 南関コース別データ（/course・/course/<venue>-<distance>）: 集計ファイルにあるコースだけ
+  const courses = (Array.isArray(courseSlugs) ? courseSlugs : []).filter((c) => typeof c === 'string' && COURSE_SLUG_RE.test(c));
+  if (courses.length > 0) add('/course');
+  for (const c of courses) add(`/course/${c}`);
 
   const nankanDates = datesOf(archiveNankan);
   const jraDates = datesOf(archiveJra);
