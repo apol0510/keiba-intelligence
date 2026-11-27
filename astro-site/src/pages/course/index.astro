@@ -1,0 +1,103 @@
+---
+/**
+ * /course — 南関 4 場のコース別傾向の一覧（確定結果の集計）
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import data from '../../data/course/nankanCourseStats.json';
+import { NANKAN_VENUES } from '../../lib/course/courseStats.js';
+import { SITE_ORIGIN } from '../../lib/seo/sitemap.js';
+
+// SSR（[slug].astro と同じ理由）。
+export const prerender = false;
+
+const pct = (n) => (n === null || n === undefined ? '—' : `${n}%`);
+const yen = (n) => (n === null || n === undefined ? '—' : `${n.toLocaleString('ja-JP')}円`);
+const groups = NANKAN_VENUES
+  .map((v) => ({ ...v, courses: data.courses.filter((c) => c.venueSlug === v.slug) }))
+  .filter((g) => g.courses.length > 0);
+
+const title = '南関競馬 コース別データ｜大井・川崎・船橋・浦和の距離別傾向';
+const description = `南関東4場（大井・川崎・船橋・浦和）の${data.courses.length}コースを、確定結果${data.baseline.races}レース（${data.baseline.from}〜${data.baseline.to}）で比較。1番人気の勝率・枠順・脚質・配当の傾向を距離別に掲載。`;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'ホーム', item: `${SITE_ORIGIN}/` },
+    { '@type': 'ListItem', position: 2, name: '南関コース別データ', item: `${SITE_ORIGIN}/course` },
+  ],
+};
+---
+
+<BaseLayout title={title} description={description} canonicalPath="/course">
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  <main class="container">
+    <nav class="breadcrumb" aria-label="パンくずリスト">
+      <a href="/">ホーム</a>
+      <span>›</span>
+      <span>南関コース別データ</span>
+    </nav>
+
+    <header class="page-header">
+      <h1>南関競馬 コース別データ</h1>
+      <p class="subtitle">{data.baseline.from}〜{data.baseline.to}の確定結果 {data.baseline.races}レースを、競馬場と距離ごとに集計しました。</p>
+    </header>
+
+    <section class="baseline">
+      <p>南関4場の平均は、1番人気の勝率 {pct(data.baseline.popularity[0].winRate)}、勝ち馬の4コーナー2番手以内 {pct(data.baseline.winnerCorner.frontRate)}、単勝配当の中央値 {yen(data.baseline.payouts.tanshoMedian)}です。コースごとの違いは各ページで確認できます。</p>
+    </section>
+
+    {groups.map((g) => (
+      <section class="venue">
+        <h2>{g.name}競馬場</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>コース</th><th>レース数</th><th>1番人気 勝率</th><th>4角2番手以内</th><th>内枠 3着以内率</th><th>外枠 3着以内率</th><th>単勝 中央値</th></tr></thead>
+            <tbody>
+              {g.courses.map((c) => (
+                <tr>
+                  <th scope="row"><a href={`/course/${c.slug}`}>{c.surface}{c.distance}m</a></th>
+                  <td>{c.races}</td>
+                  <td>{pct(c.popularity[0].winRate)}</td>
+                  <td>{pct(c.winnerCorner.frontRate)}</td>
+                  <td>{pct(c.inner.top3Rate)}</td>
+                  <td>{pct(c.outer.top3Rate)}</td>
+                  <td>{yen(c.payouts.tanshoMedian)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="venue-link"><a href={`/venues/${g.slug}`}>{g.name}競馬の予想結果を見る →</a></p>
+      </section>
+    ))}
+
+    <section class="cta">
+      <h2>今日の南関はAI予想で</h2>
+      <p>全レースの馬柱・過去走・AI短評・展開予想を、登録なしで無料公開しています。</p>
+      <a class="btn primary" href="/free-prediction/nankan" data-cta="course_index_free_prediction">南関の無料AI予想を見る</a>
+    </section>
+
+    <p class="source">集計: 南関東4競馬の確定結果（着順・枠番・単勝人気・4コーナー通過順・払戻）。{data.minRaces}レース以上あるコースを掲載。内枠は1〜4枠、外枠は5〜8枠。</p>
+  </main>
+</BaseLayout>
+
+<style>
+.container { max-width: 1000px; margin: 0 auto; padding: 2rem 1rem; }
+.breadcrumb { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--text-muted); }
+.breadcrumb a { color: var(--primary-blue); text-decoration: none; }
+.page-header h1 { font-size: 1.8rem; margin: 0 0 0.5rem; color: var(--primary-blue); }
+.subtitle { color: var(--text-muted); margin: 0 0 1rem; }
+h2 { font-size: 1.25rem; margin: 0 0 0.75rem; color: var(--heading-color); }
+section { margin-bottom: 2rem; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: var(--card-bg); }
+th, td { padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--border-color); text-align: right; white-space: nowrap; }
+thead th, tbody th { text-align: left; }
+a { color: var(--primary-blue); }
+.venue-link { margin: 0.5rem 0 0; font-size: 0.9rem; }
+.cta { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; text-align: center; }
+.btn { display: inline-block; margin-top: 0.75rem; padding: 0.75rem 1.25rem; border-radius: 8px; text-decoration: none; font-weight: 700; }
+.btn.primary { background: var(--primary-blue); color: #fff; }
+.source { font-size: 0.85rem; color: var(--text-muted); }
+</style>

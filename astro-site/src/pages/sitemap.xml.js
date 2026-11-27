@@ -21,6 +21,16 @@ function readJsonArray(path) {
   }
 }
 
+function readCourseSlugs(path) {
+  try {
+    if (!existsSync(path)) return [];
+    const v = JSON.parse(readFileSync(path, 'utf-8'));
+    return Array.isArray(v?.courses) ? v.courses.map((c) => c?.slug) : [];
+  } catch {
+    return [];
+  }
+}
+
 function listDir(path) {
   try { return existsSync(path) ? readdirSync(path) : []; } catch { return []; }
 }
@@ -48,6 +58,7 @@ export async function GET() {
     archiveJra: readJsonArray(join(dataDir, 'archiveResultsJra.json')),
     nankanPredictionSlugs,
     jraPredictionDates,
+    courseSlugs: readCourseSlugs(join(dataDir, 'course', 'nankanCourseStats.json')),
   });
 
   return new Response(renderSitemapXml(entries), {

@@ -1,0 +1,201 @@
+---
+/**
+ * /course/<venue>-<distance> — 南関 4 場のコース別傾向（確定結果の集計）
+ * データ: src/data/course/nankanCourseStats.json（scripts/buildCourseStats.mjs）
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import data from '../../data/course/nankanCourseStats.json';
+import { SITE_ORIGIN } from '../../lib/seo/sitemap.js';
+
+// SSR（prerender にすると末尾スラッシュなしの URL に netlify.toml の rewrite が要る）。データは JSON の import で bundle に入る。
+export const prerender = false;
+
+const course = data.courses.find((c) => c.slug === Astro.params.slug);
+if (!course) {
+  return new Response('Not Found', { status: 404 });
+}
+const base = data.baseline;
+const courseName = `${course.venue} ${course.surface}${course.distance}m`;
+const siblings = data.courses.filter((c) => c.venueSlug === course.venueSlug && c.slug !== course.slug);
+const fav = course.popularity[0];
+const yen = (n) => (n === null || n === undefined ? '—' : `${n.toLocaleString('ja-JP')}円`);
+const pct = (n) => (n === null || n === undefined ? '—' : `${n}%`);
+
+const title = `${courseName}のコース傾向｜1番人気・枠順・脚質・配当データ`;
+const description = `${courseName}の${course.races}レース（${course.from}〜${course.to}）を集計。1番人気の勝率${pct(fav.winRate)}、勝ち馬の4コーナー2番手以内${pct(course.winnerCorner.frontRate)}、単勝配当の中央値${yen(course.payouts.tanshoMedian)}。枠番別・人気別の成績も掲載。`;
+
+const faq = [
+  {
+    q: `${courseName}は1番人気が強いですか？`,
+    a: `${course.from}〜${course.to}の${course.races}レースで、1番人気の勝率は${pct(fav.winRate)}、3着以内率は${pct(fav.top3Rate)}です（南関4場の平均は勝率${pct(base.popularity[0].winRate)}）。`,
+  },
+  {
+    q: `${courseName}は内枠と外枠のどちらが有利ですか？`,
+    a: `3着以内に入る率は内枠（1〜4枠）${pct(course.inner.top3Rate)}、外枠（5〜8枠）${pct(course.outer.top3Rate)}です。`,
+  },
+  {
+    q: `${courseName}は逃げ・先行が有利ですか？`,
+    a: `勝ち馬の${pct(course.winnerCorner.frontRate)}が4コーナーを2番手以内で回っています（南関4場の平均${pct(base.winnerCorner.frontRate)}）。`,
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: `${SITE_ORIGIN}/` },
+      { '@type': 'ListItem', position: 2, name: '南関コース別データ', item: `${SITE_ORIGIN}/course` },
+      { '@type': 'ListItem', position: 3, name: courseName, item: `${SITE_ORIGIN}/course/${course.slug}` },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+  },
+];
+---
+
+<BaseLayout title={title} description={description} canonicalPath={`/course/${course.slug}`}>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  <main class="container course-page">
+    <nav class="breadcrumb" aria-label="パンくずリスト">
+      <a href="/">ホーム</a>
+      <span>›</span>
+      <a href="/course">南関コース別データ</a>
+      <span>›</span>
+      <span>{courseName}</span>
+    </nav>
+
+    <header class="page-header">
+      <h1>{courseName}のコース傾向</h1>
+      <p class="subtitle">{course.from}〜{course.to}の確定結果 {course.races}レース（平均{course.avgField}頭立て）を集計</p>
+    </header>
+
+    <section class="points" aria-labelledby="points-h">
+      <h2 id="points-h">このコースのポイント</h2>
+      <ul>
+        {course.summary.map((s) => <li>{s}</li>)}
+      </ul>
+    </section>
+
+    <section class="tiles" aria-label="主な数値">
+      <div class="tile"><div class="tile-label">1番人気の勝率</div><div class="tile-value">{pct(fav.winRate)}</div><div class="tile-sub">3着以内 {pct(fav.top3Rate)}</div></div>
+      <div class="tile"><div class="tile-label">勝ち馬の4角2番手以内</div><div class="tile-value">{pct(course.winnerCorner.frontRate)}</div><div class="tile-sub">南関平均 {pct(base.winnerCorner.frontRate)}</div></div>
+      <div class="tile"><div class="tile-label">単勝配当の中央値</div><div class="tile-value">{yen(course.payouts.tanshoMedian)}</div><div class="tile-sub">単勝1,000円以上 {pct(course.payouts.tanshoOver1000Rate)}</div></div>
+      <div class="tile"><div class="tile-label">馬単配当の中央値</div><div class="tile-value">{yen(course.payouts.umatanMedian)}</div><div class="tile-sub">三連単 {yen(course.payouts.sanrentanMedian)}</div></div>
+    </section>
+
+    <section class="table-section" aria-labelledby="pop-h">
+      <h2 id="pop-h">人気別の成績</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>人気</th><th>出走</th><th>1着</th><th>勝率</th><th>3着以内率</th></tr></thead>
+          <tbody>
+            {course.popularity.map((p) => (
+              <tr><th scope="row">{p.label}</th><td>{p.starters}</td><td>{p.win}</td><td>{pct(p.winRate)}</td><td>{pct(p.top3Rate)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="table-section" aria-labelledby="bracket-h">
+      <h2 id="bracket-h">枠番別の成績</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>枠</th><th>出走</th><th>1着</th><th>勝率</th><th>3着以内率</th></tr></thead>
+          <tbody>
+            {course.brackets.map((b) => (
+              <tr><th scope="row"><span class={`waku waku-${b.bracket}`}>{b.bracket}</span></th><td>{b.starters}</td><td>{b.win}</td><td>{pct(b.winRate)}</td><td>{pct(b.top3Rate)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="note">内枠（1〜4枠）の3着以内率 {pct(course.inner.top3Rate)}・外枠（5〜8枠）{pct(course.outer.top3Rate)}</p>
+    </section>
+
+    <section class="table-section" aria-labelledby="corner-h">
+      <h2 id="corner-h">勝ち馬の4コーナー位置</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>4コーナーの位置</th><th>勝ち馬</th><th>割合</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">2番手以内</th><td>{course.winnerCorner.front}</td><td>{pct(course.winnerCorner.frontRate)}</td></tr>
+            <tr><th scope="row">3〜5番手</th><td>{course.winnerCorner.mid}</td><td>{pct(course.winnerCorner.midRate)}</td></tr>
+            <tr><th scope="row">6番手以下</th><td>{course.winnerCorner.back}</td><td>{pct(course.winnerCorner.backRate)}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">通過順が記録されたレース {course.winnerCorner.known}レースで集計</p>
+    </section>
+
+    <section class="faq" aria-labelledby="faq-h">
+      <h2 id="faq-h">よくある質問</h2>
+      {faq.map((f) => (
+        <div class="faq-item"><h3>{f.q}</h3><p>{f.a}</p></div>
+      ))}
+    </section>
+
+    <section class="cta">
+      <h2>{course.venue}競馬の予想はAIで</h2>
+      <p>全レースの馬柱・過去走・AI短評・展開予想を、登録なしで無料公開しています。</p>
+      <div class="cta-buttons">
+        <a class="btn primary" href="/free-prediction/nankan" data-cta="course_free_prediction">南関の無料AI予想を見る</a>
+        <a class="btn" href="/register" data-cta="course_register">無料会員登録で印も見る</a>
+      </div>
+    </section>
+
+    <nav class="related" aria-labelledby="related-h">
+      <h2 id="related-h">{course.venue}競馬のほかの距離</h2>
+      <ul>
+        {siblings.map((c) => <li><a href={`/course/${c.slug}`}>{c.venue} {c.surface}{c.distance}m</a></li>)}
+        <li><a href={`/venues/${course.venueSlug}`}>{course.venue}競馬の予想結果</a></li>
+        <li><a href="/course">南関4場のコース一覧</a></li>
+      </ul>
+    </nav>
+
+    <p class="source">集計: 南関東4競馬の確定結果（着順・枠番・単勝人気・4コーナー通過順・払戻）。{data.baseline.from}〜{data.baseline.to}の南関4場 {data.baseline.races}レースのうち、{data.minRaces}レース以上あるコースを掲載。</p>
+  </main>
+</BaseLayout>
+
+<style>
+.container { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
+.breadcrumb { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--text-muted); }
+.breadcrumb a { color: var(--primary-blue); text-decoration: none; }
+.page-header { margin-bottom: 1.5rem; }
+.page-header h1 { font-size: 1.8rem; margin: 0 0 0.5rem; color: var(--primary-blue); }
+.subtitle { color: var(--text-muted); margin: 0; }
+h2 { font-size: 1.25rem; margin: 0 0 0.75rem; color: var(--heading-color); }
+section { margin-bottom: 2rem; }
+.points ul { margin: 0; padding-left: 1.2rem; line-height: 1.8; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+.tile { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem; text-align: center; }
+.tile-label { font-size: 0.85rem; color: var(--text-muted); }
+.tile-value { font-size: 1.6rem; font-weight: 700; margin: 0.25rem 0; color: var(--primary-blue); }
+.tile-sub { font-size: 0.8rem; color: var(--text-muted); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: var(--card-bg); border-radius: 8px; }
+th, td { padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--border-color); text-align: right; white-space: nowrap; }
+thead th, tbody th { text-align: left; }
+.note, .source { font-size: 0.85rem; color: var(--text-muted); }
+.waku { display: inline-block; width: 1.6rem; text-align: center; border-radius: 4px; font-weight: 700; border: 1px solid #999; }
+.waku-1 { background: #fff; color: #000; }
+.waku-2 { background: #222; color: #fff; }
+.waku-3 { background: #e60012; color: #fff; }
+.waku-4 { background: #0068b7; color: #fff; }
+.waku-5 { background: #ffe100; color: #000; }
+.waku-6 { background: #00a040; color: #fff; }
+.waku-7 { background: #f39800; color: #000; }
+.waku-8 { background: #f5a3c7; color: #000; }
+.faq-item { margin-bottom: 1rem; }
+.faq-item h3 { font-size: 1rem; margin: 0 0 0.25rem; }
+.faq-item p { margin: 0; line-height: 1.7; }
+.cta { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; text-align: center; }
+.cta-buttons { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; margin-top: 1rem; }
+.btn { display: inline-block; padding: 0.75rem 1.25rem; border-radius: 8px; border: 1px solid var(--primary-blue); color: var(--primary-blue); text-decoration: none; font-weight: 700; }
+.btn.primary { background: var(--primary-blue); color: #fff; }
+.related ul { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; list-style: none; padding: 0; margin: 0; }
+.related a { color: var(--primary-blue); }
+</style>
