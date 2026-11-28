@@ -147,6 +147,17 @@ export function publishedPt(h, fallback) {
   return Number.isFinite(h?.ownDisplay) ? h.ownDisplay + 70 : fallback;
 }
 
+/**
+ * 公開してよい指数そのもの（computerIndex）。独自指数の開催（OWN_INDEX_START 以降）は、独自指数の無い馬（指数 45 未満・役割「無」）も含めて出さない（docs/spec.md §4）。
+ * それより前の開催は従来どおり契約（10–99）を満たす値だけ。
+ * @param {string} date 開催日
+ * @param {string|null} contractValue toComputerIndexString 済みの値
+ */
+export function publishedComputerIndex(date, contractValue) {
+  if (ownIndexOn(date)) return null;
+  return contractValue ?? null;
+}
+
 /** 公開する基礎指数（独自評価 50 + 5 × 点・30〜70）。独自指数の無い馬は null */
 export function publishedOwnEval(h) {
   return Number.isInteger(h?.ownPoints) ? 50 + 5 * h.ownPoints : null;

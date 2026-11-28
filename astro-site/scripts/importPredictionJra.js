@@ -36,7 +36,7 @@ import { toComputerIndexString } from '../src/utils/computerIndexContract.js';
 // メインレース10点ロジック
 import { isMainRace, generateMainRaceUmatanLines } from '../src/utils/mainRaceBetting.js';
 // KI の独自指数 OWN_INDEX_KI_V1（2026-11-28 の開催から・docs/spec.md §4）
-import { applyOwnIndexToDay, publishedPt, publishedOwnEval } from './lib/ownIndexImport.mjs';
+import { applyOwnIndexToDay, publishedPt, publishedOwnEval, publishedComputerIndex } from './lib/ownIndexImport.mjs';
 
 // データ検証関数をインポート
 import { validateJRAPrediction } from './utils/validatePrediction.js';
@@ -593,8 +593,9 @@ function convertToLegacyFormat(data, date, horseDataMap = null) {
               if (rbInfo.sire) horseObj.sire = rbInfo.sire;
               if (rbInfo.predictedOdds != null) horseObj.predictedOdds = rbInfo.predictedOdds;
               // 契約外値は注入しない（既存 horseObj 側の値も上書きしない）
-              // 独自指数のある開催は指数そのものを出さない（基礎指数の列は ownEval）
-              if (!Number.isFinite(h.ownIndex) && toComputerIndexString(rbInfo.computerIndex) != null) horseObj.computerIndex = toComputerIndexString(rbInfo.computerIndex);
+              // 独自指数の開催は指数そのものを出さない（独自指数の無い馬も・基礎指数の列は ownEval）
+              const ci = publishedComputerIndex(date, toComputerIndexString(rbInfo.computerIndex));
+              if (ci != null) horseObj.computerIndex = ci;
             }
           }
           // 過去走データ: racebook由来(_pastRaces) > horseDataMap
