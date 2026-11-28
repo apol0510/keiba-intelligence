@@ -2,7 +2,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  OWN_INDEX_START, ownIndexOn, loadJockeyStats, clearJockeyStatsMemo, applyOwnIndexToVenue, applyOwnIndexToDay, publishedPt, publishedOwnEval,
+  OWN_INDEX_START, ownIndexOn, loadJockeyStats, clearJockeyStatsMemo, applyOwnIndexToVenue, applyOwnIndexToDay, publishedPt, publishedOwnEval, publishedComputerIndex,
 } from './ownIndexImport.mjs';
 import { ownOrder } from '../../src/utils/ownIndex.js';
 import { ownIndexKiRace, displayOwnIndex, KI_WEIGHTS } from '../../src/utils/ownIndexKi.js';
@@ -124,4 +124,11 @@ test('KI の重み（近 5 走重視）: 近走 ×2・上がり・コース。�
   const shown = Array.from({ length: 60 }, (_, i) => displayOwnIndex(40 + i));
   assert.ok(shown.every((v, i) => i === 0 || v > shown[i - 1]));
   assert.equal(displayOwnIndex(60), 49);
+});
+
+test('指数そのもの（computerIndex）: 独自指数の開催は独自指数の無い馬（役割「無」）にも出さない・それより前の開催は従来どおり', () => {
+  assert.equal(publishedComputerIndex(OWN_INDEX_START, '44'), null);
+  assert.equal(publishedComputerIndex('2026-12-05', '40'), null);
+  assert.equal(publishedComputerIndex('2026-11-27', '44'), '44');
+  assert.equal(publishedComputerIndex('2026-11-27', null), null);
 });
