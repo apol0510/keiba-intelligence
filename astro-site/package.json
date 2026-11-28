@@ -48,7 +48,7 @@
     "membership:check": "node scripts/membershipMigration.mjs --check",
     "membership:dry-run": "node scripts/membershipMigration.mjs --dry-run",
     "test:digest": "node --test src/lib/digest/digest.test.mjs",
-    "test:raceday": "node --test src/lib/prediction/raceDayContract.test.mjs src/lib/prediction/raceDayDate.test.mjs",
+    "test:raceday": "node --test src/lib/prediction/raceDayContract.test.mjs src/lib/prediction/raceDayDate.test.mjs src/lib/prediction/newspaperGlobalStyles.guard.test.mjs",
     "generate:digest": "node scripts/generateDailyDigest.mjs",
     "test:mail-guard": "node --test src/lib/mail/previewMailGuard.test.mjs",
     "test:payment-confirmation-auto": "node src/lib/mail/paymentConfirmationAuto.handlers.test.mjs",
